@@ -7,6 +7,7 @@ import {
   normalizeFontBevelType,
   resolveFontExtrudeBevelSettingsForType,
   resolveFontExtrudeCreaseAngleDeg,
+  resolveFontExtrudePathSofteningSize,
 } from './extrudeBevel.js';
 import {
   applyExtrudeDirectionOffset,
@@ -24,9 +25,10 @@ import {
   resolveBevelSideCurveSegments,
   resolveFontExtrudeDetailSettings,
 } from './extrudeDetail.js';
+import { softenFontExtrudeShapeForBevel } from './extrudeBevelCorner.js';
 import { geometryHasNaNPositions } from './extrudeShapeSanitize.js';
 import {
-  flattenFontExtrudeSimpleBevelFrontNormals,
+  applyFontExtrudeSimpleBevelNormals,
   withFontCdtCapTriangulation,
 } from './fontExtrudeCapTriangulation.js';
 import { fontExtrudeHoleCapLooksFilled } from './fontExtrudeValidate.js';
@@ -282,6 +284,10 @@ export class FontExtrudeImporter {
       bevelEnabled
         ? resolveBevelSideCurveSegments(this._detailLevel, detailSettings.curveSegments)
         : detailSettings.curveSegments;
+
+    const glyphShapeSets = this._glyphEntries.map(({ glyphPath }) =>
+      opentypePathToShapes(glyphPath, detailSettings.curveDivisions),
+    );
     const extrudeSettings = {
       depth: effectiveDepth,
       steps: 1,
@@ -291,15 +297,15 @@ export class FontExtrudeImporter {
 
     let meshCount = 0;
     let glyphIndex = 0;
-    for (const { glyphPath, wordIndex } of this._glyphEntries) {
+    for (let entryIndex = 0; entryIndex < this._glyphEntries.length; entryIndex += 1) {
+      const { wordIndex } = this._glyphEntries[entryIndex];
+      const shapes = glyphShapeSets[entryIndex];
       const glyphGroup = new THREE.Group();
       glyphGroup.userData.orbyFontGlyphGroup = true;
       glyphGroup.userData.orbyFontGlyphIndex = glyphIndex;
       if (Number.isFinite(wordIndex)) {
         glyphGroup.userData.orbyFontRevealWordIndex = wordIndex;
       }
-
-      const shapes = opentypePathToShapes(glyphPath, detailSettings.curveDivisions);
       for (const shape of shapes) {
         const extrudeOptions = {
           ...extrudeSettings,
@@ -311,27 +317,28 @@ export class FontExtrudeImporter {
           curveSegments,
           detailSettings.curveDivisions,
         );
-        let geometry = withFontCdtCapTriangulation(
-          () => new THREE.ExtrudeGeometry(shapeToExtrude, extrudeOptions),
-        );
-        if (geometryHasNaNPositions(geometry) && bevelEnabled) {
-          geometry.dispose();
-          geometry = withFontCdtCapTriangulation(
-            () => new THREE.ExtrudeGeometry(shapeToExtrude, {
-              ...extrudeOptions,
-              bevelEnabled: false,
-            }),
-          );
-        }
+        const outline = bevelEnabled
+          ? softenFontExtrudeShapeForBevel(
+            shapeToExtrude,
+            resolveFontExtrudePathSofteningSize(extrudeOptions),
+            detailSettings.curveDivisions,
+          )
+          : shapeToExtrude;
+        let geometry = this._extrudeFontShape(outline, extrudeOptions, bevelEnabled);
         if (geometryHasNaNPositions(geometry)) {
           geometry.dispose();
           continue;
         }
 
-        // mergeVertices + crease-aware smoothing (slider): curves smooth, sharp corners + bevel edges hard.
-        const smoothedGeometry = toCreasedNormals(geometry, creaseAngleRad);
-        geometry.dispose();
-        const mesh = new THREE.Mesh(smoothedGeometry, material.clone());
+        // Smooth: crease in mesh space. Simple: full normal pipeline after normalize.
+        let meshGeometry = geometry;
+        if (!simpleBevel) {
+          meshGeometry = toCreasedNormals(geometry, creaseAngleRad);
+          if (meshGeometry !== geometry) {
+            geometry.dispose();
+          }
+        }
+        const mesh = new THREE.Mesh(meshGeometry, material.clone());
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         mesh.userData.orbySvgExtrude = true;
@@ -371,12 +378,32 @@ export class FontExtrudeImporter {
     if (simpleBevel) {
       group.traverse((child) => {
         if (!child.isMesh || !child.geometry) return;
-        flattenFontExtrudeSimpleBevelFrontNormals(child.geometry);
+        child.geometry = applyFontExtrudeSimpleBevelNormals(child.geometry, creaseAngleRad);
       });
     }
     this._centerGlyphGroupPivots(group);
 
     return group;
+  }
+
+  /**
+   * @param {THREE.Shape} shape
+   * @param {Object} extrudeOptions
+   * @param {boolean} bevelEnabled
+   * @returns {THREE.BufferGeometry}
+   */
+  _extrudeFontShape(shape, extrudeOptions, bevelEnabled) {
+    const build = (options) => withFontCdtCapTriangulation(
+      () => new THREE.ExtrudeGeometry(shape, options),
+    );
+
+    let geometry = build(extrudeOptions);
+    if (!bevelEnabled || !geometryHasNaNPositions(geometry)) {
+      return geometry;
+    }
+
+    geometry.dispose();
+    return build({ ...extrudeOptions, bevelEnabled: false });
   }
 
   /**

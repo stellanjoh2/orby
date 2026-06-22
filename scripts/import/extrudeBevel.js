@@ -34,8 +34,10 @@ export function clampExtrudeBevelAmount(value, depth) {
   return Math.max(EXTRUDE_BEVEL_AMOUNT_MIN, Math.min(max, numeric));
 }
 
-/** Three.js TextGeometry default — rounded profile (webgl_geometry_text). */
-export const FONT_EXTRUDE_BEVEL_SEGMENTS = 3;
+/** Smooth profile steps — rounded bevel layers along the slope. */
+export const FONT_EXTRUDE_BEVEL_SEGMENTS = 12;
+/** Simple = same outset extrude as Smooth, one segment → flat chamfer (not rounded). */
+export const FONT_SIMPLE_EXTRUDE_BEVEL_SEGMENTS = 1;
 
 /** @typedef {'smooth' | 'simple'} FontExtrudeBevelType */
 
@@ -58,15 +60,21 @@ export function normalizeFontBevelType(value) {
  * @param {{ amount?: unknown, depth?: unknown, xyNormalizeScale?: number, bevelSegments?: number }} params
  */
 export function resolveFontExtrudeBevelSettingsForType(type, params = {}) {
-  // Simple = inset chamfer (flat caps + vertical sides); Smooth = TextGeometry rounded outset.
-  return normalizeFontBevelType(type) === 'simple'
-    ? resolveExtrudeBevelSettings(params)
-    : resolveFontExtrudeBevelSettings(params);
+  // Simple and Smooth share the same TextGeometry-style outset extrude; Simple uses one
+  // bevel segment (flat chamfer). Shading differs — see applyFontExtrudeSimpleBevelNormals.
+  return resolveFontExtrudeBevelSettings({
+    ...params,
+    bevelSegments:
+      normalizeFontBevelType(type) === 'simple'
+        ? FONT_SIMPLE_EXTRUDE_BEVEL_SEGMENTS
+        : FONT_EXTRUDE_BEVEL_SEGMENTS,
+  });
 }
 
 /**
- * Crease angle for side/bevel smoothing (degrees). Simple bevel also uses the slider so curved
- * walls interpolate smoothly; front caps are flattened separately in FontExtrudeImporter.
+ * Crease angle for side/bevel smoothing (degrees). Simple bevel uses the same slider for
+ * toCreasedNormals and for bevel shoulder hardening — lower angles stay sharper on tight
+ * corners; higher angles soften chamfer transitions on expressive display faces.
  *
  * @param {FontExtrudeBevelType} bevelType
  * @param {unknown} normalAngleDeg
@@ -137,4 +145,18 @@ export function resolveExtrudeBevelSettings({
     bevelOffset: -fontBevelInset,
     bevelSegments: segments,
   };
+}
+
+/**
+ * Path softening distance for uniform font bevel (shape-space bevelSize, plus any inset offset).
+ *
+ * @param {{ bevelEnabled?: boolean, bevelSize?: unknown, bevelOffset?: unknown }} [options]
+ * @returns {number}
+ */
+export function resolveFontExtrudePathSofteningSize(options = {}) {
+  if (!options?.bevelEnabled) return 0;
+  const bevelSize = Number(options.bevelSize);
+  const bevelOffset = Number(options.bevelOffset);
+  if (!Number.isFinite(bevelSize) || bevelSize <= 0) return 0;
+  return bevelSize + Math.max(0, Number.isFinite(bevelOffset) ? -bevelOffset : 0);
 }

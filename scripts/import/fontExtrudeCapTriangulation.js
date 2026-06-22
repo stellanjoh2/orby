@@ -6,6 +6,7 @@
 import cdt2d from '../vendor/cdt2d.module.js';
 import * as THREE from 'three';
 import { ShapeUtils } from 'three';
+import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 import { originalTriangulateShape } from './extrudeCapTriangulation.js';
 
 function removeDupEndPts(points) {
@@ -230,11 +231,129 @@ export function subdivideFontExtrudeCapFaces(geometry, options = {}) {
   return geom;
 }
 
+const FONT_EXTRUDE_SIDE_Z_MAX = 0.12;
+const FONT_EXTRUDE_CAP_Z_MIN = 0.92;
+
+/**
+ * @param {import('three').BufferAttribute} pos
+ * @param {number} ia
+ * @param {number} ib
+ * @param {number} ic
+ * @returns {{ nx: number, ny: number, nz: number, absNz: number } | null}
+ */
+function fontExtrudeTriangleFaceNormal(pos, ia, ib, ic) {
+  const ax = pos.getX(ia);
+  const ay = pos.getY(ia);
+  const az = pos.getZ(ia);
+  const bx = pos.getX(ib);
+  const by = pos.getY(ib);
+  const bz = pos.getZ(ib);
+  const cx = pos.getX(ic);
+  const cy = pos.getY(ic);
+  const cz = pos.getZ(ic);
+
+  const ux = bx - ax;
+  const uy = by - ay;
+  const uz = bz - az;
+  const vx = cx - ax;
+  const vy = cy - ay;
+  const vz = cz - az;
+  let fnx = uy * vz - uz * vy;
+  let fny = uz * vx - ux * vz;
+  let fnz = ux * vy - uy * vx;
+  const len = Math.hypot(fnx, fny, fnz);
+  if (len < 1e-10) return null;
+  fnx /= len;
+  fny /= len;
+  fnz /= len;
+  return { nx: fnx, ny: fny, nz: fnz, absNz: Math.abs(fnz) };
+}
+
+function forEachExtrudeTriangle(geometry, callback) {
+  const pos = geometry.attributes.position;
+  if (geometry.index) {
+    const idx = geometry.index.array;
+    for (let i = 0; i < idx.length; i += 3) {
+      callback(idx[i], idx[i + 1], idx[i + 2]);
+    }
+    return;
+  }
+  for (let t = 0; t < pos.count; t += 3) {
+    callback(t, t + 1, t + 2);
+  }
+}
+
+/**
+ * Simple chamfer — harden every bevel shoulder face (flat chamfer shading).
+ *
+ * @param {import('three').BufferGeometry} geometry
+ * @param {number} creaseAngleRad
+ * @returns {import('three').BufferGeometry}
+ */
+export function hardenFontExtrudeSimpleBevelFaceNormals(geometry, creaseAngleRad) {
+  if (!geometry?.attributes?.position || !geometry.attributes.normal) {
+    return geometry;
+  }
+
+  const creaseDot = Math.cos(
+    Number.isFinite(creaseAngleRad) ? creaseAngleRad : Math.PI / 6,
+  );
+  const pos = geometry.attributes.position;
+  const norm = geometry.attributes.normal;
+
+  const snapVertex = (index, face) => {
+    const dot =
+      norm.getX(index) * face.nx +
+      norm.getY(index) * face.ny +
+      norm.getZ(index) * face.nz;
+    if (dot < creaseDot) {
+      norm.setXYZ(index, face.nx, face.ny, face.nz);
+    }
+  };
+
+  forEachExtrudeTriangle(geometry, (ia, ib, ic) => {
+    const face = fontExtrudeTriangleFaceNormal(pos, ia, ib, ic);
+    if (!face) return;
+    if (
+      face.absNz <= FONT_EXTRUDE_SIDE_Z_MAX ||
+      face.absNz >= FONT_EXTRUDE_CAP_Z_MIN
+    ) {
+      return;
+    }
+
+    snapVertex(ia, face);
+    snapVertex(ib, face);
+    snapVertex(ic, face);
+  });
+
+  norm.needsUpdate = true;
+  return geometry;
+}
+
+/**
+ * Simple bevel normal pipeline on final studio-space geometry (post normalize + UVs).
+ *
+ * @param {import('three').BufferGeometry} geometry
+ * @param {number} creaseAngleRad
+ * @returns {import('three').BufferGeometry}
+ */
+export function applyFontExtrudeSimpleBevelNormals(geometry, creaseAngleRad) {
+  if (!geometry) return geometry;
+
+  let geom = toCreasedNormals(geometry, creaseAngleRad);
+  if (geom !== geometry) {
+    geometry.dispose();
+  }
+
+  hardenFontExtrudeSimpleBevelFaceNormals(geom, creaseAngleRad);
+  flattenFontExtrudeSimpleBevelFrontNormals(geom);
+  return geom;
+}
+
 /**
  * Hard normals on the flat front cap only (simple bevel).
  * Must run after {@link FontExtrudeImporter#_normalizeFontGeometrySpace} and
- * {@link finalizeExtrudeGroupGeometry}. Side/bevel creases come from toCreasedNormals + smoothing slider.
- * Do not call computeVertexNormals here; it flat-shades non-indexed side walls.
+ * {@link finalizeExtrudeGroupGeometry}. Side curves use toCreasedNormals; chamfer faces hardened separately.
  *
  * @param {import('three').BufferGeometry} geometry
  * @returns {import('three').BufferGeometry}
@@ -246,54 +365,18 @@ export function flattenFontExtrudeSimpleBevelFrontNormals(geometry) {
 
   const pos = geometry.attributes.position;
   const norm = geometry.attributes.normal;
-  const SIDE_Z_MAX = 0.12;
-  const CAP_Z_MIN = 0.92;
 
-  const flattenCaps = () => {
-    const processTri = (ia, ib, ic) => {
-      const ax = pos.getX(ia);
-      const ay = pos.getY(ia);
-      const az = pos.getZ(ia);
-      const bx = pos.getX(ib);
-      const by = pos.getY(ib);
-      const bz = pos.getZ(ib);
-      const cx = pos.getX(ic);
-      const cy = pos.getY(ic);
-      const cz = pos.getZ(ic);
-
-      const ux = bx - ax;
-      const uy = by - ay;
-      const uz = bz - az;
-      const vx = cx - ax;
-      const vy = cy - ay;
-      const vz = cz - az;
-      let fnx = uy * vz - uz * vy;
-      let fny = uz * vx - ux * vz;
-      let fnz = ux * vy - uy * vx;
-      const len = Math.hypot(fnx, fny, fnz);
-      if (len < 1e-10) return;
-      fnz /= len;
-
-      if (Math.abs(fnz) < SIDE_Z_MAX || fnz < CAP_Z_MIN) return;
-
-      norm.setXYZ(ia, 0, 0, 1);
-      norm.setXYZ(ib, 0, 0, 1);
-      norm.setXYZ(ic, 0, 0, 1);
-    };
-
-    if (geometry.index) {
-      const idx = geometry.index.array;
-      for (let i = 0; i < idx.length; i += 3) {
-        processTri(idx[i], idx[i + 1], idx[i + 2]);
-      }
-    } else {
-      for (let t = 0; t < pos.count; t += 3) {
-        processTri(t, t + 1, t + 2);
-      }
+  forEachExtrudeTriangle(geometry, (ia, ib, ic) => {
+    const face = fontExtrudeTriangleFaceNormal(pos, ia, ib, ic);
+    if (!face || face.absNz < FONT_EXTRUDE_SIDE_Z_MAX || face.nz < FONT_EXTRUDE_CAP_Z_MIN) {
+      return;
     }
-  };
 
-  flattenCaps();
+    norm.setXYZ(ia, 0, 0, 1);
+    norm.setXYZ(ib, 0, 0, 1);
+    norm.setXYZ(ic, 0, 0, 1);
+  });
+
   norm.needsUpdate = true;
   return geometry;
 }
