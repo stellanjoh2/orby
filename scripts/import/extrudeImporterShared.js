@@ -106,6 +106,8 @@ export function applyExtrudeDirectionOffset(group, flipDirection, defaultDepth) 
 
 /**
  * Cap normal fix + box UVs on extruded meshes tagged with `orbySvgExtrude`.
+ * Font meshes skip cap flipping — asymmetric counters (A, e, R) break under the
+ * SVG z-plane heuristic; stock Earcut caps are correct after shape winding fix.
  *
  * @param {THREE.Group} group
  * @param {number} creaseAngleRad
@@ -113,9 +115,12 @@ export function applyExtrudeDirectionOffset(group, flipDirection, defaultDepth) 
 export function finalizeExtrudeGroupGeometry(group, creaseAngleRad) {
   group.traverse((child) => {
     if (!child.isMesh || !child.geometry || !child.userData?.orbySvgExtrude) return;
-    let geom = fixExtrudedSvgCapFaceOrientations(child.geometry, creaseAngleRad);
-    if (geom !== child.geometry) {
-      child.geometry.dispose();
+    let geom = child.geometry;
+    if (!child.userData?.orbyFontExtrude) {
+      geom = fixExtrudedSvgCapFaceOrientations(child.geometry, creaseAngleRad);
+      if (geom !== child.geometry) {
+        child.geometry.dispose();
+      }
     }
     child.geometry = applyExtrudeBoxUvs(geom);
   });

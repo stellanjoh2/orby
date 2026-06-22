@@ -145,9 +145,8 @@ export class UIHelpers {
 
     const root = this.ui?.dom?.panelsContainer ?? document;
     root.addEventListener('dblclick', (event) => {
-      const label = event.target.closest('.value[data-output]');
+      const label = event.target.closest('.value[data-output], #svgExtrudeColorDepths .value');
       if (!label) return;
-      if (label.closest('#svgExtrudeColorDepths')) return;
       event.preventDefault();
       this.startValueLabelEdit(label);
     });

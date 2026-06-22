@@ -78,6 +78,11 @@ export function resolveWireframeSurfaceOffset(maxDimension) {
 /** Negative values pull wireframe toward the camera in the depth buffer (matches UV/normal overlays). */
 export const WIREFRAME_POLYGON_OFFSET_FACTOR = -4;
 export const WIREFRAME_POLYGON_OFFSET_UNITS = -4;
+/**
+ * EdgesGeometry threshold (degrees). Coplanar cap triangulation is ~0° and stays hidden;
+ * use a low value so high-segment SVG/font extrude side walls still draw ring edges.
+ */
+export const WIREFRAME_EDGES_THRESHOLD_DEG = 0.05;
 export const WIREFRAME_OPACITY_VISIBLE = 1.0;
 export const WIREFRAME_OPACITY_OVERLAY = 0.8;
 /** Default wireframe line thickness slider value (maps to screen-space pixels via LineMaterial). */

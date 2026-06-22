@@ -8,6 +8,7 @@ import {
   ROADMAP_LAUNCH_MILESTONE as ROADMAP_LAUNCH_MILESTONE_DATA,
   ROADMAP_QUARTERS,
   ROADMAP_Q2_2026_START_GRID,
+  ROADMAP_Q3_2026_START_GRID,
   ROADMAP_TASK_GRID_DEFS,
   ROADMAP_YEARS,
 } from './orbyMarketingRoadmapData.js';
@@ -15,6 +16,7 @@ import {
 export {
   ROADMAP_QUARTERS,
   ROADMAP_Q2_2026_START_GRID,
+  ROADMAP_Q3_2026_START_GRID,
   ROADMAP_TASK_GRID_DEFS,
   ROADMAP_YEARS,
 } from './orbyMarketingRoadmapData.js';
@@ -31,6 +33,9 @@ export {
 
 /** Statuses whose lane is fixed in content data. Todo/future pack into the topmost free lane. */
 const ROADMAP_FIXED_LANE_STATUSES = new Set(['done', 'active']);
+
+/** Priority 1 tasks render in dedicated rows below all standard lanes. */
+const ROADMAP_PRIORITY1_STATUS = 'priority1';
 
 /**
  * @param {number} aStart
@@ -71,8 +76,11 @@ function roadmapFindLowestFreeLane(task, placed) {
  * @returns {RoadmapTaskGridDef[]}
  */
 export function assignRoadmapTaskLanes(defs) {
-  const fixed = defs.filter((task) => ROADMAP_FIXED_LANE_STATUSES.has(task.status));
-  const flexible = defs
+  const standard = defs.filter((task) => task.status !== ROADMAP_PRIORITY1_STATUS);
+  const priority1 = defs.filter((task) => task.status === ROADMAP_PRIORITY1_STATUS);
+
+  const fixed = standard.filter((task) => ROADMAP_FIXED_LANE_STATUSES.has(task.status));
+  const flexible = standard
     .filter((task) => !ROADMAP_FIXED_LANE_STATUSES.has(task.status))
     .sort(
       (a, b) =>
@@ -86,6 +94,31 @@ export function assignRoadmapTaskLanes(defs) {
     placed.push({
       ...task,
       lane: roadmapFindLowestFreeLane(task, placed),
+    });
+  }
+
+  const maxStandardLane = placed.reduce((max, task) => Math.max(max, task.lane ?? 0), 0);
+  const priorityBaseLane = maxStandardLane + 1;
+
+  /** @type {Pick<RoadmapTaskGridDef, 'lane' | 'startGrid' | 'endGrid'>[]} */
+  const priorityPlaced = [];
+  const sortedPriority = [...priority1].sort(
+    (a, b) =>
+      a.startGrid - b.startGrid || b.endGrid - b.startGrid - (a.endGrid - a.startGrid),
+  );
+
+  for (const task of sortedPriority) {
+    let lane = 0;
+    while (roadmapLaneHasConflict(lane, task, priorityPlaced)) lane += 1;
+    const absoluteLane = priorityBaseLane + lane;
+    priorityPlaced.push({
+      startGrid: task.startGrid,
+      endGrid: task.endGrid,
+      lane: absoluteLane,
+    });
+    placed.push({
+      ...task,
+      lane: absoluteLane,
     });
   }
 

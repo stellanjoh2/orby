@@ -135,19 +135,6 @@ function buildSortedOuterEntries(outer, center) {
   return entries;
 }
 
-function meanOuterEdgeLength(outer) {
-  if (outer.length < 2) return 0;
-  let total = 0;
-  let count = 0;
-  for (let i = 0; i < outer.length; i += 1) {
-    const j = (i + 1) % outer.length;
-    if (dist(outer[i], outer[j]) < DUP_EPS) continue;
-    total += dist(outer[i], outer[j]);
-    count += 1;
-  }
-  return count > 0 ? total / count : 0;
-}
-
 function triangleArea2(a, b, c) {
   return Math.abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y));
 }
@@ -165,7 +152,7 @@ function validateCapFaces(faces, contourLength, holes) {
   return true;
 }
 
-function pushCapTriangle(faces, a, b, c, allPoints, maxEdgeLength) {
+function pushCapTriangle(faces, a, b, c, allPoints) {
   if (a === b || b === c || c === a) return;
   const pa = allPoints[a];
   const pb = allPoints[b];
@@ -176,10 +163,39 @@ function pushCapTriangle(faces, a, b, c, allPoints, maxEdgeLength) {
   if (!Number.isFinite(pc.x) || !Number.isFinite(pc.y)) return;
   if (triangleArea2(pa, pb, pc) < 1e-10) return;
 
-  const maxEdge = Math.max(dist(pa, pb), dist(pb, pc), dist(pc, pa));
-  if (Number.isFinite(maxEdgeLength) && maxEdgeLength > 0 && maxEdge > maxEdgeLength) return;
-
   faces.push([a, b, c]);
+}
+
+function capEdgeKey(a, b) {
+  return a < b ? `${a}:${b}` : `${b}:${a}`;
+}
+
+/**
+ * Every outer boundary edge must appear in at least one cap triangle — otherwise
+ * ExtrudeGeometry leaves a wedge gap that reads as a missing side face at some angles.
+ *
+ * @param {number[][]} faces
+ * @param {{ x: number, y: number }[]} outer
+ * @param {Array<{ index: number }>} outerSorted
+ * @returns {boolean}
+ */
+function annulusCoversAllOuterEdges(faces, outer, outerSorted) {
+  const covered = new Set();
+  for (const face of faces) {
+    if (!face || face.length !== 3) continue;
+    covered.add(capEdgeKey(face[0], face[1]));
+    covered.add(capEdgeKey(face[1], face[2]));
+    covered.add(capEdgeKey(face[2], face[0]));
+  }
+
+  for (let i = 0; i < outerSorted.length; i += 1) {
+    const j = (i + 1) % outerSorted.length;
+    const o0 = outerSorted[i].index;
+    const o1 = outerSorted[j].index;
+    if (o0 === o1 || dist(outer[o0], outer[o1]) < DUP_EPS) continue;
+    if (!covered.has(capEdgeKey(o0, o1))) return false;
+  }
+  return true;
 }
 
 /**
@@ -201,11 +217,6 @@ export function triangulateSingleHoleAnnulusStrip(outer, hole, center) {
   const faces = [];
   const holeOffset = outer.length;
   const allPoints = [...outer, ...hole];
-  const maxCapEdge = Math.max(
-    meanOuterEdgeLength(outer) * 5,
-    meanOuterEdgeLength(hole) * 5,
-    1e-6,
-  );
 
   for (let i = 0; i < outerSorted.length; i += 1) {
     const j = (i + 1) % outerSorted.length;
@@ -222,13 +233,15 @@ export function triangulateSingleHoleAnnulusStrip(outer, hole, center) {
     const hi0 = holeOffset + holeEdge.h0;
     const hi1 = holeOffset + holeEdge.h1;
     if (holeEdge.h0 === holeEdge.h1) {
-      pushCapTriangle(faces, o0, o1, hi0, allPoints, maxCapEdge);
+      pushCapTriangle(faces, o0, o1, hi0, allPoints);
       continue;
     }
 
-    pushCapTriangle(faces, o0, o1, hi1, allPoints, maxCapEdge);
-    pushCapTriangle(faces, o0, hi1, hi0, allPoints, maxCapEdge);
+    pushCapTriangle(faces, o0, o1, hi1, allPoints);
+    pushCapTriangle(faces, o0, hi1, hi0, allPoints);
   }
+
+  if (!annulusCoversAllOuterEdges(faces, outer, outerSorted)) return null;
 
   const minFaces = Math.max(3, outerSorted.length * 2);
   if (faces.length < minFaces * 0.75) return null;

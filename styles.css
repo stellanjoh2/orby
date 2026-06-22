@@ -6144,45 +6144,36 @@ input[type='range']:disabled::-moz-range-thumb {
   margin-bottom: 0;
 }
 
-#svgExtrudeColorDepths .slider-line {
+/*
+ * Font Extrude — flat control stack (match SVG Extrude): no in-block rules between rows.
+ */
+[data-subsection='font-extrude'] .extrude-bevel-group,
+[data-subsection='font-extrude'] .font-extrude-surface-group {
+  display: contents;
+}
+
+[data-subsection='font-extrude'] :is(.slider-line, .select-line):has(+ .extrude-bevel-group) {
   margin-bottom: var(--shelf-section-gap);
 }
 
-#svgExtrudeColorDepths .svg-extrude-inline-number {
-  grid-column: var(--shelf-place-value);
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  /* Reserve trailing gutter so WebKit steppers sit beside the digits, not on top */
-  --svg-extrude-number-spin-gutter: 0.85rem;
-  padding: 0.18rem var(--svg-extrude-number-spin-gutter) 0.18rem 0.3rem;
-  border: none;
-  border-radius: 6px;
-  background-color: rgba(255, 255, 255, 0.15);
-  color: var(--text);
-  font-size: var(--shelf-label-font-size);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  appearance: textfield;
-  -moz-appearance: textfield;
+[data-subsection='font-extrude'] .extrude-bevel-group > :last-child {
+  margin-bottom: var(--shelf-section-gap);
 }
 
-#svgExtrudeColorDepths .svg-extrude-inline-number::-webkit-inner-spin-button,
-#svgExtrudeColorDepths .svg-extrude-inline-number::-webkit-outer-spin-button {
-  opacity: 0;
-  margin: 0;
-  margin-inline-end: -0.05rem;
-  transition: opacity 0.12s ease;
+[data-subsection='font-extrude'] .font-extrude-post-gen:not([hidden]) > :is(.slider-line, .select-line):last-of-type {
+  margin-bottom: var(--shelf-section-gap);
 }
 
-#svgExtrudeColorDepths .svg-extrude-inline-number:is(:hover, :focus)::-webkit-inner-spin-button,
-#svgExtrudeColorDepths .svg-extrude-inline-number:is(:hover, :focus)::-webkit-outer-spin-button {
-  opacity: 1;
+[data-subsection='font-extrude'] .font-extrude-reveal-emissive > :first-child {
+  margin-top: var(--shelf-section-gap);
 }
 
-#svgExtrudeColorDepths .svg-extrude-inline-number:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-primary) 55%, transparent);
+[data-subsection='font-extrude'] .font-extrude-reveal-preview.animation-controls {
+  margin-top: var(--shelf-section-gap);
+}
+
+#svgExtrudeColorDepths .slider-line {
+  margin-bottom: var(--shelf-section-gap);
 }
 
 .svg-extrude-note {
@@ -8670,7 +8661,7 @@ body.ui-hidden .shelf {
 }
 
 .font-extrude-animation {
-  margin-top: 0;
+  margin-top: var(--shelf-section-gap);
 }
 
 .font-extrude-animation .font-extrude-reveal-emissive .color-line:last-child {

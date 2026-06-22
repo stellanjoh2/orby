@@ -30,6 +30,26 @@ export function dedupeRingPoints(points) {
 }
 
 /**
+ * Drop ring verts whose outgoing edge is zero-length (including wrap seam).
+ *
+ * @param {THREE.Vector2[]} points
+ * @returns {THREE.Vector2[]}
+ */
+export function collapseZeroLengthRingSegments(points) {
+  const deduped = dedupeRingPoints(points);
+  if (deduped.length < 3) return deduped;
+
+  const out = [];
+  for (let i = 0; i < deduped.length; i += 1) {
+    const curr = deduped[i];
+    const next = deduped[(i + 1) % deduped.length];
+    if (curr.distanceTo(next) < DUP_EPS) continue;
+    out.push(curr);
+  }
+  return out.length >= 3 ? out : deduped;
+}
+
+/**
  * Rebuild a shape from sampled points with clean rings for ExtrudeGeometry.
  *
  * @param {THREE.Shape} shape

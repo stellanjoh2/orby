@@ -3,14 +3,14 @@
  * Edit here when shipping features or adjusting the timeline.
  */
 
-/** @typedef {'done' | 'active' | 'todo' | 'future'} RoadmapTaskStatus */
+/** @typedef {'done' | 'active' | 'todo' | 'future' | 'priority1'} RoadmapTaskStatus */
 
 /**
  * @typedef {Object} RoadmapTaskGridDef
  * @property {string} label
  * @property {number} startGrid — inclusive month-line index (0–39)
  * @property {number} endGrid — exclusive month-line index (1–40)
- * @property {number} [lane] — required for done/active; todo/future lanes are auto-packed
+ * @property {number} [lane] — required for done/active; todo/future/priority1 lanes are auto-packed
  * @property {RoadmapTaskStatus} status
  */
 
@@ -38,8 +38,11 @@ export const ROADMAP_QUARTERS = [
 /** Grid index for the start of Q2 2026 (quarter boundary). */
 export const ROADMAP_Q2_2026_START_GRID = 16;
 
-/** Grid index for public launch — mid Q2 2026 (~2 months into the quarter). */
-export const ROADMAP_LAUNCH_GRID = 18;
+/** Grid index for the start of Q3 2026 (quarter boundary). */
+export const ROADMAP_Q3_2026_START_GRID = 20;
+
+/** Grid index for public launch — start of Q3 2026. */
+export const ROADMAP_LAUNCH_GRID = ROADMAP_Q3_2026_START_GRID;
 
 /** @type {{ label: string, grid: number }} */
 export const ROADMAP_LAUNCH_MILESTONE = {
@@ -75,23 +78,24 @@ export const ROADMAP_TASK_GRID_DEFS = [
   /* Q1 2026 (grid 12–16) */
   { label: 'Look filters', startGrid: 12, endGrid: 14, lane: 1, status: 'done' },
   { label: 'Custom HDRI', startGrid: 12, endGrid: 14, lane: 0, status: 'done' },
-  { label: 'Landing page', startGrid: 13, endGrid: 18, lane: 4, status: 'active' },
+  { label: 'Landing page', startGrid: 13, endGrid: 20, lane: 4, status: 'active' },
   { label: 'Isometric cam', startGrid: 13, endGrid: 16, lane: 3, status: 'active' },
   { label: 'Spotlight gobos', startGrid: 14, endGrid: 16, lane: 2, status: 'active' },
   { label: 'Histogram', startGrid: 12, endGrid: 14, lane: 2, status: 'done' },
   { label: 'Lens effects', startGrid: 14, endGrid: 16, lane: 1, status: 'done' },
 
-  /* Q2 2026 — launch quarter (grid 16–20); launch milestone @ grid 18 */
+  /* Q2 2026 — pre-launch (grid 16–20) */
   { label: 'Stability & QA', startGrid: 16, endGrid: 20, lane: 0, status: 'active' },
   { label: 'ColorChecker', startGrid: 16, endGrid: 18, lane: 1, status: 'done' },
   { label: 'Presskit', startGrid: 16, endGrid: 18, status: 'todo' },
+  { label: 'Mobile preview', startGrid: 16, endGrid: 24, lane: 3, status: 'active' },
+  { label: 'Performance pass', startGrid: 16, endGrid: 28, lane: 2, status: 'active' },
 
-  /* Q3 2026 (grid 20–24) */
+  /* Q3 2026 (grid 20–24) — launch milestone @ grid 20 */
+  { label: 'Bevels V2', startGrid: 21, endGrid: 24, status: 'priority1' },
   { label: 'Scene sharing', startGrid: 20, endGrid: 23, status: 'todo' },
   { label: 'Batch export', startGrid: 21, endGrid: 24, status: 'todo' },
-  { label: 'Mobile preview', startGrid: 20, endGrid: 23, status: 'future' },
   { label: 'OUTLINER', startGrid: 20, endGrid: 24, status: 'future' },
-  { label: 'Performance pass', startGrid: 16, endGrid: 28, lane: 2, status: 'active' },
 
   /* Q4 2026 (grid 24–28) */
   { label: 'Collaboration', startGrid: 24, endGrid: 27, status: 'future' },

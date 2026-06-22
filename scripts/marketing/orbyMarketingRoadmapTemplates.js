@@ -36,7 +36,9 @@ function renderRoadmapTaskBar(task) {
         ? 'orby-marketing__roadmap-bar--done'
         : task.status === 'future'
           ? 'orby-marketing__roadmap-bar--future'
-          : 'orby-marketing__roadmap-bar--todo';
+          : task.status === 'priority1'
+            ? 'orby-marketing__roadmap-bar--priority1'
+            : 'orby-marketing__roadmap-bar--todo';
   return `<div class="orby-marketing__roadmap-bar ${statusClass}" data-orby-marketing-reveal="roadmap-bar" tabindex="0" aria-label="${escapeMarketingHtml(task.label)}" style="--orby-roadmap-start-grid: ${task.startGrid}; --orby-roadmap-end-grid: ${task.endGrid}; --orby-roadmap-lane: ${task.lane};">
       <span class="orby-marketing__roadmap-bar-label">${escapeMarketingHtml(task.label)}</span>
     </div>`;
@@ -48,6 +50,7 @@ function renderRoadmapLegend() {
     { label: 'Active', modifier: 'active' },
     { label: 'Upcoming', modifier: 'upcoming' },
     { label: 'Future', modifier: 'future' },
+    { label: 'Priority 1', modifier: 'priority1' },
   ];
 
   return `<ul class="orby-marketing__roadmap-legend" aria-label="Roadmap task status">
@@ -93,7 +96,7 @@ export function renderRoadmapSection(section) {
         <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title">${renderRoadmapHeadline(section.title)}</h2>
         ${ledeBlock}
       </header>
-      <div class="orby-marketing__roadmap-chart" style="--orby-roadmap-lanes: ${ROADMAP_LANE_COUNT}; --orby-roadmap-quarters: ${ROADMAP_QUARTER_COUNT}; --orby-roadmap-subdivisions: ${ROADMAP_SUBDIVISION_COUNT}; --orby-roadmap-months-per-quarter: ${ROADMAP_MONTHS_PER_QUARTER};" role="group" aria-label="Product roadmap from development through Q3 2027, with public launch in mid Q2 2026. Hover or focus a task to read its full name.">
+      <div class="orby-marketing__roadmap-chart" style="--orby-roadmap-lanes: ${ROADMAP_LANE_COUNT}; --orby-roadmap-quarters: ${ROADMAP_QUARTER_COUNT}; --orby-roadmap-subdivisions: ${ROADMAP_SUBDIVISION_COUNT}; --orby-roadmap-months-per-quarter: ${ROADMAP_MONTHS_PER_QUARTER};" role="group" aria-label="Product roadmap from development through Q3 2027, with public launch at the start of Q3 2026. Hover or focus a task to read its full name.">
         <div class="orby-marketing__roadmap-axis" aria-hidden="true">
           <div class="orby-marketing__roadmap-years">${yearLabels}</div>
           <div class="orby-marketing__roadmap-quarters">${quarterLabels}</div>

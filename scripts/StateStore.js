@@ -81,8 +81,8 @@ export class StateStore {
         lineHeight: 1,
         /** @type {'low' | 'medium' | 'high' | 'ultra'} — cap/side curve sampling for 3D extrude. */
         detail: 'high',
-        /** @type {'smooth' | 'simple'} — smooth = TextGeometry rounded bevel; simple = SVG chamfer. */
-        bevelType: 'simple',
+        /** @type {'smooth' | 'simple'} — smooth = TextGeometry rounded outset; simple = inset chamfer (hard caps/sides). */
+        bevelType: 'smooth',
         /** 0.15–3 — preview-only zoom (1× fills the box; higher may crop). */
         previewScale: 0.65,
         /** Letter fill for 2D preview and 3D extrude. */

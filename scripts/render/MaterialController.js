@@ -108,6 +108,7 @@ import {
 } from './ShadowTint.js';
 import {
   resolveWireframeSurfaceOffset,
+  WIREFRAME_EDGES_THRESHOLD_DEG,
   WIREFRAME_POLYGON_OFFSET_FACTOR,
   WIREFRAME_POLYGON_OFFSET_UNITS,
   WIREFRAME_OPACITY_VISIBLE,
@@ -4322,8 +4323,8 @@ export class MaterialController {
   }
 
   _buildWireframeLineGeometry(sourceGeometry) {
-    // EdgesGeometry hides coplanar cap triangulation (font/SVG extrude) while keeping creases.
-    const edges = new THREE.EdgesGeometry(sourceGeometry, 1);
+    // Low threshold: hide coplanar cap triangulation (~0°) but keep high-segment extrude ring edges.
+    const edges = new THREE.EdgesGeometry(sourceGeometry, WIREFRAME_EDGES_THRESHOLD_DEG);
     const lineGeometry = new LineSegmentsGeometry();
     lineGeometry.setPositions(edges.attributes.position.array);
     edges.dispose();

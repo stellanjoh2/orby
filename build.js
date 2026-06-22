@@ -121,6 +121,17 @@ console.log(
   `🎯 Font Awesome subset (${faSubset.iconCount} icons, ${faSubset.cssBytes} CSS + ${faSubset.fontBytes} woff2)`,
 );
 
+// Browser ESM vendor (dev serves raw modules — no bare npm specifier resolution).
+mkdirSync(join(__dirname, 'scripts', 'vendor'), { recursive: true });
+await esbuild.build({
+  entryPoints: [join(__dirname, 'node_modules', 'cdt2d', 'cdt2d.js')],
+  bundle: true,
+  format: 'esm',
+  platform: 'browser',
+  outfile: join(__dirname, 'scripts', 'vendor', 'cdt2d.module.js'),
+  legalComments: 'none',
+});
+
 // Build JavaScript bundle
 // Note: Three.js is kept external (loaded via import map in HTML)
 await esbuild.build({

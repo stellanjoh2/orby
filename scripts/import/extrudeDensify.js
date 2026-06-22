@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { isConcentricSingleHoleRing } from './extrudeCapTriangulation.js';
-import { dedupeRingPoints } from './extrudeShapeSanitize.js';
+import { dedupeRingPoints, collapseZeroLengthRingSegments } from './extrudeShapeSanitize.js';
 
-const DENSIFY_MIN_SEGMENTS = 40;
-const DENSIFY_MAX_SEGMENTS = 120;
-const DENSIFY_MAX_POINTS_PER_RING = 3000;
+const DENSIFY_MIN_SEGMENTS = 48;
+const DENSIFY_MAX_SEGMENTS = 512;
+const DENSIFY_MAX_POINTS_PER_RING = 8000;
 
 /**
  * @param {THREE.Vector2[]} ring
@@ -110,6 +110,20 @@ function pointOnRingAtDistance(base, distance) {
 }
 
 /**
+ * Target segment count for cap densify — upsample sparse rings but never decimate
+ * curves that SVGLoader already sampled at high resolution (e.g. circular logo rings).
+ *
+ * @param {THREE.Vector2[]} ring
+ * @param {number} targetSegments
+ * @returns {number}
+ */
+function resolveRingSegmentCount(ring, targetSegments) {
+  const baseCount = ringBasePoints(ring).length;
+  const target = Math.max(3, Math.round(Number(targetSegments) || 0));
+  return Math.min(DENSIFY_MAX_POINTS_PER_RING, Math.max(target, baseCount));
+}
+
+/**
  * Even arc-length resampling — keeps outer/hole vertex counts matched on annuli.
  *
  * @param {THREE.Vector2[]} ring
@@ -178,12 +192,12 @@ export function densifyShapeForExtrudeCaps(shape, detailSettings = {}) {
   const contourPerimeter = ringPerimeter(contour);
   const segmentFloor = Math.min(DENSIFY_MIN_SEGMENTS, maxSegments);
   const byPerimeter = THREE.MathUtils.clamp(
-    Math.round(contourPerimeter * 0.2),
+    Math.round(contourPerimeter * 0.35),
     segmentFloor,
     maxSegments,
   );
   const byDimension = THREE.MathUtils.clamp(
-    Math.round(maxDim * 0.45),
+    Math.round(maxDim * 0.65),
     segmentFloor,
     maxSegments,
   );
@@ -199,16 +213,25 @@ export function densifyShapeForExtrudeCaps(shape, detailSettings = {}) {
   const denseHoles = [];
 
   if (useMatchedResample) {
-    denseContour = dedupeRingPoints(resampleClosedRing(contour, desiredSegments));
-    const denseHole = dedupeRingPoints(resampleClosedRing(holes[0], desiredSegments));
+    const segmentCount = resolveRingSegmentCount(contour, desiredSegments);
+    denseContour = collapseZeroLengthRingSegments(
+      dedupeRingPoints(resampleClosedRing(contour, segmentCount)),
+    );
+    const denseHole = collapseZeroLengthRingSegments(
+      dedupeRingPoints(resampleClosedRing(holes[0], segmentCount)),
+    );
     if (denseHole.length >= 3) denseHoles.push(denseHole);
   } else {
     const targetSegmentLength = contourPerimeter > 0
       ? contourPerimeter / desiredSegments
       : maxDim / desiredSegments;
-    denseContour = dedupeRingPoints(densifyRing(contour, targetSegmentLength));
+    denseContour = collapseZeroLengthRingSegments(
+      dedupeRingPoints(densifyRing(contour, targetSegmentLength)),
+    );
     holes.forEach((hole) => {
-      const denseHole = dedupeRingPoints(densifyRing(hole, targetSegmentLength));
+      const denseHole = collapseZeroLengthRingSegments(
+        dedupeRingPoints(densifyRing(hole, targetSegmentLength)),
+      );
       if (denseHole.length >= 3) denseHoles.push(denseHole);
     });
   }

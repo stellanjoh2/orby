@@ -6,6 +6,7 @@ import {
   DEFAULT_FONT_BEVEL_TYPE,
   normalizeFontBevelType,
   resolveFontExtrudeBevelSettingsForType,
+  resolveFontExtrudeCreaseAngleDeg,
 } from './extrudeBevel.js';
 import {
   applyExtrudeDirectionOffset,
@@ -17,13 +18,18 @@ import {
   finalizeExtrudeGroupGeometry,
   preserveExtrudeGroupOnRebuild,
 } from './extrudeImporterShared.js';
-import { geometryHasNaNPositions, sanitizeShapeForExtrudeGeometry } from './extrudeShapeSanitize.js';
 import {
   FONT_EXTRUDE_TARGET_CAP_HEIGHT,
   normalizeExtrudeDetail,
+  resolveBevelSideCurveSegments,
   resolveFontExtrudeDetailSettings,
 } from './extrudeDetail.js';
-import { opentypePathHasArea, opentypePathToShapes } from './opentypePathToShape.js';
+import { geometryHasNaNPositions } from './extrudeShapeSanitize.js';
+import {
+  withFontCdtCapTriangulation,
+} from './fontExtrudeCapTriangulation.js';
+import { fontExtrudeHoleCapLooksFilled } from './fontExtrudeValidate.js';
+import { flipFontShapeHoles, opentypePathHasArea, opentypePathToShapes } from './opentypePathToShape.js';
 import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 
 const DEFAULT_GLYPH_FILL = '#808080';
@@ -37,7 +43,7 @@ export function normalizeGlyphFillHex(value) {
 }
 
 /**
- * opentype glyph → SVGLoader.createShapes() → stock ExtrudeGeometry (same cap path as SVG extrude).
+ * opentype glyph → native ShapePath.toShapes(true) → ExtrudeGeometry with CDT caps (not Earcut).
  */
 export class FontExtrudeImporter {
   constructor() {
@@ -236,72 +242,6 @@ export class FontExtrudeImporter {
     return this.group;
   }
 
-  /**
-   * Stock ExtrudeGeometry — NaN positions trigger sanitize/bevel-off, but never drop a glyph.
-   * (Spike heuristics are omitted here; they false-positive on simple glyphs with large cap tris.)
-   *
-   * @param {THREE.Shape} shape
-   * @param {Object} extrudeOptions
-   * @param {number} curveSegments
-   * @param {boolean} bevelEnabled
-   * @returns {THREE.BufferGeometry | null}
-   */
-  _buildFontExtrudeGeometry(shape, extrudeOptions, curveSegments, bevelEnabled) {
-    let sourceShape = shape;
-    let geometry = new THREE.ExtrudeGeometry(sourceShape, extrudeOptions);
-
-    if (geometryHasNaNPositions(geometry) && bevelEnabled) {
-      geometry.dispose();
-      sourceShape = sanitizeShapeForExtrudeGeometry(shape, curveSegments);
-      geometry = new THREE.ExtrudeGeometry(sourceShape, extrudeOptions);
-    }
-
-    if (geometryHasNaNPositions(geometry) && bevelEnabled) {
-      geometry.dispose();
-      geometry = new THREE.ExtrudeGeometry(sourceShape, {
-        ...extrudeOptions,
-        bevelEnabled: false,
-      });
-    }
-
-    if (geometryHasNaNPositions(geometry)) {
-      geometry.dispose();
-      return null;
-    }
-
-    return geometry;
-  }
-
-  /**
-   * @param {import('../vendor/opentype.module.js').Path} glyphPath
-   * @param {Object} extrudeSettings
-   * @param {number} curveSegments
-   * @param {boolean} bevelEnabled
-   * @param {number} curveDivisions
-   * @param {{ nativeCurves?: boolean }} [shapeOptions]
-   * @returns {THREE.BufferGeometry[]}
-   */
-  _extrudeGlyphGeometries(glyphPath, extrudeSettings, curveSegments, bevelEnabled, curveDivisions, shapeOptions = {}) {
-    const shapes = opentypePathToShapes(glyphPath, curveDivisions, shapeOptions);
-    const geometries = [];
-
-    for (const shape of shapes) {
-      const extrudeOptions = {
-        ...extrudeSettings,
-        curveSegments,
-      };
-      const geometry = this._buildFontExtrudeGeometry(
-        shape,
-        extrudeOptions,
-        curveSegments,
-        bevelEnabled,
-      );
-      if (geometry) geometries.push(geometry);
-    }
-
-    return geometries;
-  }
-
   _buildGroup(depth, normalAngleDeg) {
     const group = new THREE.Group();
     group.name = this.sourceName;
@@ -311,7 +251,9 @@ export class FontExtrudeImporter {
     group.userData.orbySvgNormalAngleDeg = normalAngleDeg;
     group.userData.orbySvgFlipDirection = this.currentFlipDirection;
 
-    const creaseAngleRad = THREE.MathUtils.degToRad(clampExtrudeNormalAngleDeg(normalAngleDeg));
+    const creaseAngleRad = THREE.MathUtils.degToRad(
+      resolveFontExtrudeCreaseAngleDeg(this.currentBevelType, normalAngleDeg),
+    );
     const fillHex = this.currentFillColor.toLowerCase();
     const effectiveDepth = Number.isFinite(this.currentColorDepths?.[fillHex])
       ? clampExtrudeDepth(this.currentColorDepths[fillHex])
@@ -319,11 +261,13 @@ export class FontExtrudeImporter {
     const effectiveOffset = clampExtrudeColorOffset(this.currentColorOffsets?.[fillHex]);
 
     const baseColor = new THREE.Color(this.currentFillColor);
+    const simpleBevel = this.currentBevelType === 'simple';
     const material = new THREE.MeshStandardMaterial({
       color: baseColor,
       roughness: DEFAULT_MATERIAL_ROUGHNESS,
       metalness: 0.0,
       side: THREE.FrontSide,
+      flatShading: simpleBevel,
     });
 
     const xyNormalizeScale = FONT_EXTRUDE_TARGET_CAP_HEIGHT / this._layoutFontSize;
@@ -334,7 +278,10 @@ export class FontExtrudeImporter {
     });
     const bevelEnabled = !!bevelSettings.bevelEnabled;
     const detailSettings = resolveFontExtrudeDetailSettings(this._detailLevel);
-    const curveSegments = detailSettings.curveSegments;
+    const curveSegments =
+      bevelEnabled
+        ? resolveBevelSideCurveSegments(this._detailLevel, detailSettings.curveSegments)
+        : detailSettings.curveSegments;
     const extrudeSettings = {
       depth: effectiveDepth,
       steps: 1,
@@ -352,25 +299,37 @@ export class FontExtrudeImporter {
         glyphGroup.userData.orbyFontRevealWordIndex = wordIndex;
       }
 
-      let geometries = this._extrudeGlyphGeometries(
-        glyphPath,
-        extrudeSettings,
-        curveSegments,
-        bevelEnabled,
-        detailSettings.curveDivisions,
-      );
-      if (!geometries.length) {
-        geometries = this._extrudeGlyphGeometries(
-          glyphPath,
-          extrudeSettings,
+      const shapes = opentypePathToShapes(glyphPath, detailSettings.curveDivisions);
+      for (const shape of shapes) {
+        const extrudeOptions = {
+          ...extrudeSettings,
           curveSegments,
-          bevelEnabled,
+        };
+        const shapeToExtrude = this._pickFontExtrudeShape(
+          shape,
+          extrudeOptions,
+          curveSegments,
           detailSettings.curveDivisions,
-          { nativeCurves: false },
         );
-      }
+        let geometry = withFontCdtCapTriangulation(
+          () => new THREE.ExtrudeGeometry(shapeToExtrude, extrudeOptions),
+        );
+        if (geometryHasNaNPositions(geometry) && bevelEnabled) {
+          geometry.dispose();
+          geometry = withFontCdtCapTriangulation(
+            () => new THREE.ExtrudeGeometry(shapeToExtrude, {
+              ...extrudeOptions,
+              bevelEnabled: false,
+            }),
+          );
+        }
+        if (geometryHasNaNPositions(geometry)) {
+          geometry.dispose();
+          continue;
+        }
 
-      for (const geometry of geometries) {
+        geometry.computeVertexNormals();
+
         const smoothedGeometry = toCreasedNormals(geometry, creaseAngleRad);
         geometry.dispose();
         const mesh = new THREE.Mesh(smoothedGeometry, material.clone());
@@ -379,6 +338,7 @@ export class FontExtrudeImporter {
         mesh.userData.orbySvgExtrude = true;
         mesh.userData.orbyFontExtrude = true;
         mesh.userData.orbyFontGenerated = true;
+        mesh.userData.orbyFontBevelType = this.currentBevelType;
         mesh.userData.orbyFontGlyphIndex = glyphIndex;
         mesh.userData.orbySvgEffectiveDepth = effectiveDepth;
         mesh.userData.orbySvgColorOffset = effectiveOffset;
@@ -412,6 +372,35 @@ export class FontExtrudeImporter {
     this._centerGlyphGroupPivots(group);
 
     return group;
+  }
+
+  /**
+   * Holed glyphs: pick original or hole-flipped shape so Earcut leaves counters empty.
+   *
+   * @param {THREE.Shape} shape
+   * @param {Object} extrudeOptions
+   * @param {number} curveSegments
+   * @param {number} curveDivisions
+   * @returns {THREE.Shape}
+   */
+  _pickFontExtrudeShape(shape, extrudeOptions, curveSegments, curveDivisions) {
+    if (!shape?.holes?.length) return shape;
+
+    const capFilled = (candidate) => {
+      const geometry = withFontCdtCapTriangulation(
+        () => new THREE.ExtrudeGeometry(candidate, extrudeOptions),
+      );
+      const filled = fontExtrudeHoleCapLooksFilled(geometry, candidate, curveSegments);
+      geometry.dispose();
+      return filled;
+    };
+
+    if (!capFilled(shape)) return shape;
+
+    const flipped = flipFontShapeHoles(shape, curveDivisions);
+    if (!capFilled(flipped)) return flipped;
+
+    return shape;
   }
 
   /**

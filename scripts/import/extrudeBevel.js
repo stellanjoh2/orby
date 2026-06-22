@@ -1,6 +1,9 @@
 /** Shared ExtrudeGeometry bevel helpers (font + SVG extrude). */
 
-import { DEFAULT_EXTRUDE_DEPTH } from './extrudeImporterShared.js';
+import {
+  clampExtrudeNormalAngleDeg,
+  DEFAULT_EXTRUDE_DEPTH,
+} from './extrudeImporterShared.js';
 
 export const EXTRUDE_BEVEL_AMOUNT_MIN = 0;
 /** Max bevel as a fraction of current extrusion depth. */
@@ -37,7 +40,7 @@ export const FONT_EXTRUDE_BEVEL_SEGMENTS = 3;
 /** @typedef {'smooth' | 'simple'} FontExtrudeBevelType */
 
 /** Rounded TextGeometry-style bevel (default). */
-export const DEFAULT_FONT_BEVEL_TYPE = 'simple';
+export const DEFAULT_FONT_BEVEL_TYPE = 'smooth';
 
 /** bevelSize / bevelThickness ratio in the Three.js text demo (1.5 / 2). */
 const FONT_BEVEL_SIZE_RATIO = 0.75;
@@ -55,9 +58,24 @@ export function normalizeFontBevelType(value) {
  * @param {{ amount?: unknown, depth?: unknown, xyNormalizeScale?: number, bevelSegments?: number }} params
  */
 export function resolveFontExtrudeBevelSettingsForType(type, params = {}) {
+  // Simple = inset chamfer (flat caps + vertical sides); Smooth = TextGeometry rounded outset.
   return normalizeFontBevelType(type) === 'simple'
     ? resolveExtrudeBevelSettings(params)
     : resolveFontExtrudeBevelSettings(params);
+}
+
+/**
+ * Simple bevel uses hard face groups (0° crease). Smooth respects the smoothing-angle slider.
+ *
+ * @param {FontExtrudeBevelType} bevelType
+ * @param {unknown} normalAngleDeg
+ * @returns {number}
+ */
+export function resolveFontExtrudeCreaseAngleDeg(bevelType, normalAngleDeg) {
+  if (normalizeFontBevelType(bevelType) === 'simple') {
+    return 0;
+  }
+  return clampExtrudeNormalAngleDeg(normalAngleDeg);
 }
 
 /**

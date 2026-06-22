@@ -158,7 +158,7 @@ export class ModelLifecycleManager {
     );
     s.stateStore.set('svgExtrude.bevelAmount', nextBevelAmount);
     const nextDetail = normalizeExtrudeDetail(
-      svgExtrude.detail ?? s.stateStore.getState()?.svgExtrude?.detail ?? 'medium',
+      svgExtrude.detail ?? s.stateStore.getState()?.svgExtrude?.detail ?? 'high',
     );
     s.stateStore.set('svgExtrude.detail', nextDetail);
     s.setSvgExtrudeColorDepths(nextColorDepths, { updateState: false });
@@ -471,7 +471,7 @@ export class ModelLifecycleManager {
         svgExtrudeColorOffsets: svgExtrudeState.colorOffsets || {},
         svgExtrudeFlipDirection: !!svgExtrudeState.flipDirection,
         svgExtrudeBevelAmount: svgExtrudeState.bevelAmount ?? 0,
-        svgExtrudeDetail: svgExtrudeState.detail ?? 'medium',
+        svgExtrudeDetail: svgExtrudeState.detail ?? 'high',
       });
       this.setModel(asset.object, asset.animations ?? []);
       this.applyAssetMetadata(asset);

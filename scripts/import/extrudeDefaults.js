@@ -34,7 +34,7 @@ export const DEFAULT_SVG_EXTRUDE_STATE = {
   surfaceStrength: DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
   bevelAmount: DEFAULT_EXTRUDE_BEVEL_AMOUNT,
   /** @type {'low' | 'medium' | 'high' | 'ultra'} */
-  detail: 'medium',
+  detail: 'high',
 };
 
 /**
@@ -61,7 +61,7 @@ export function resolveSvgExtrudeDefaults(source = {}) {
       Number(svg.surfaceStrength ?? DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH) ||
       DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
     bevelAmount: svg.bevelAmount ?? DEFAULT_EXTRUDE_BEVEL_AMOUNT,
-    detail: svg.detail ?? 'medium',
+    detail: svg.detail ?? 'high',
     enabled: !!svg.enabled,
   };
 }

@@ -7,7 +7,6 @@ import {
 } from './extrudeBevel.js';
 import {
   normalizeExtrudeDetail,
-  resolveBevelSideCurveSegments,
   resolveExtrudeDetailSettings,
 } from './extrudeDetail.js';
 import {
@@ -20,8 +19,9 @@ import {
   finalizeExtrudeGroupGeometry,
   preserveExtrudeGroupOnRebuild,
 } from './extrudeImporterShared.js';
+import { withPatchedCapTriangulation, withStockCapTriangulation } from './extrudeCapTriangulation.js';
 import { densifyShapeForExtrudeCaps } from './extrudeDensify.js';
-import { geometryHasNaNPositions, sanitizeShapeForExtrudeGeometry } from './extrudeShapeSanitize.js';
+import { geometryHasNaNPositions, geometryHasSpikeEdges, sanitizeShapeForExtrudeGeometry } from './extrudeShapeSanitize.js';
 import { SVGLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/SVGLoader.js';
 import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -51,7 +51,7 @@ export class SvgExtrudeImporter {
     this.currentFlipDirection = false;
     this.currentBevelAmount = DEFAULT_EXTRUDE_BEVEL_AMOUNT;
     /** @type {'low' | 'medium' | 'high' | 'ultra'} */
-    this.currentDetail = 'medium';
+    this.currentDetail = 'high';
   }
 
   async loadFromFile(file, options = {}) {
@@ -350,32 +350,45 @@ export class SvgExtrudeImporter {
    */
   _extrudeShapeWithBevel(shape, extrudeSettings, bevelSettings, detailSettings, creaseAngleRad) {
     const bevelEnabled = !!bevelSettings?.bevelEnabled;
+
+    // Bevel: native outline + high curveSegments — cap densify / annulus Earcut patch both
+    // break ExtrudeGeometry bevel slices (fan spikes on caps). Flat extrude keeps densify.
+    let sourceShape = bevelEnabled
+      ? shape
+      : densifyShapeForExtrudeCaps(shape, detailSettings);
     const curveSegments = bevelEnabled
-      ? resolveBevelSideCurveSegments(this.currentDetail, detailSettings.curveSegments)
-      : detailSettings.curveSegments;
+      ? Math.max(4, Math.round(Number(detailSettings.extractDivisions) || 24))
+      : 1;
+
     const extrudeOptions = {
       ...extrudeSettings,
       curveSegments,
       ...bevelSettings,
     };
 
-    // Bevel: stock shape + curveSegments (densify breaks bevel side walls).
-    // No bevel: cap densify for even ring density, then stock Earcut caps.
-    let sourceShape = bevelEnabled
-      ? shape
-      : densifyShapeForExtrudeCaps(shape, detailSettings);
-    let geometry = new THREE.ExtrudeGeometry(sourceShape, extrudeOptions);
+    const buildGeometry = (outline = sourceShape, options = extrudeOptions) =>
+      new THREE.ExtrudeGeometry(outline, options);
+
+    let geometry = bevelEnabled
+      ? buildGeometry()
+      : withPatchedCapTriangulation(() => buildGeometry());
+
+    if (!bevelEnabled && geometryHasSpikeEdges(geometry)) {
+      geometry.dispose();
+      geometry = withStockCapTriangulation(() => buildGeometry());
+    }
+
     if (geometryHasNaNPositions(geometry) && bevelEnabled) {
       geometry.dispose();
-      sourceShape = sanitizeShapeForExtrudeGeometry(shape, curveSegments);
-      geometry = new THREE.ExtrudeGeometry(sourceShape, extrudeOptions);
+      const fallbackShape = sanitizeShapeForExtrudeGeometry(
+        shape,
+        detailSettings.extractDivisions,
+      );
+      geometry = buildGeometry(fallbackShape, { ...extrudeOptions, curveSegments: 1 });
     }
     if (geometryHasNaNPositions(geometry) && bevelEnabled) {
       geometry.dispose();
-      geometry = new THREE.ExtrudeGeometry(sourceShape, {
-        ...extrudeOptions,
-        bevelEnabled: false,
-      });
+      geometry = buildGeometry(sourceShape, { ...extrudeOptions, bevelEnabled: false });
     }
 
     const smoothedGeometry = toCreasedNormals(geometry, creaseAngleRad);

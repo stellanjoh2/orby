@@ -251,7 +251,7 @@ export function buildExtrudeDetailSelectHtml(options = {}) {
   const tooltip =
     options.tooltip ??
     'Cap and side tessellation — Ultra is very dense; best for hero exports or simple shapes';
-  const value = normalizeExtrudeDetail(options.value ?? 'medium');
+  const value = normalizeExtrudeDetail(options.value ?? 'high');
   return `
             <label class="select-line">
               <span data-tooltip="${tooltip}">${label}</span>
@@ -789,8 +789,10 @@ export function bindSvgExtrudeControls(ctx) {
           : DEFAULT_EXTRUDE_DEPTH;
     writeRangeValue(input, clampedValue);
     const sliderLine = input.closest('.slider-line');
-    const numberInput = sliderLine?.querySelector('input[type="number"]');
-    if (numberInput) numberInput.value = clampedValue.toFixed(2);
+    const valueLabel = sliderLine?.querySelector('.value');
+    if (valueLabel && !valueLabel.classList.contains('is-editing')) {
+      valueLabel.textContent = clampedValue.toFixed(2);
+    }
     if (kind === 'offset') {
       const currentOffsets = {
         ...(stateStore.getState().svgExtrude?.colorOffsets || {}),
@@ -836,44 +838,7 @@ export function bindSvgExtrudeControls(ctx) {
     timers.colorDebounce.set(timerKey, timer);
   };
 
-  const onColorDepthChange = (event) => {
-    const input = event.target;
-    if (!input || input.tagName !== 'INPUT' || input.type !== 'number') return;
-    const color = input.dataset.color;
-    const kind = input.dataset.kind || 'depth';
-    if (!color) return;
-    const value = parseFloat(input.value);
-    const clampedValue =
-      kind === 'offset'
-        ? Number.isFinite(value)
-          ? Math.max(-1.0, Math.min(1.0, value))
-          : 0
-        : Number.isFinite(value)
-          ? Math.max(MIN_EXTRUDE_DEPTH, Math.min(MAX_EXTRUDE_DEPTH, value))
-          : DEFAULT_EXTRUDE_DEPTH;
-    input.value = clampedValue.toFixed(2);
-    const sliderLine = input.closest('.slider-line');
-    const rangeInput = sliderLine?.querySelector('input[type="range"]');
-    if (rangeInput) rangeInput.value = String(clampedValue);
-    if (kind === 'offset') {
-      const currentOffsets = {
-        ...(stateStore.getState().svgExtrude?.colorOffsets || {}),
-        [color]: clampedValue,
-      };
-      stateStore.set('svgExtrude.colorOffsets', currentOffsets);
-      eventBus.emit('mesh:svg-extrude-color-offset', { color, offset: clampedValue });
-    } else {
-      const currentDepths = {
-        ...(stateStore.getState().svgExtrude?.colorDepths || {}),
-        [color]: clampedValue,
-      };
-      stateStore.set('svgExtrude.colorDepths', currentDepths);
-      eventBus.emit('mesh:svg-extrude-color-depth', { color, depth: clampedValue });
-    }
-  };
-
   inputs.colorDepths?.addEventListener('input', onColorDepthInput);
-  inputs.colorDepths?.addEventListener('change', onColorDepthChange);
 }
 
 function syncExtrudeBevelControlInputs(ctx, svg, canEdit) {
@@ -963,7 +928,7 @@ export function syncSvgExtrudeControls(ctx, state, options = {}) {
     ui.setControlDisabled(inputs.normalAngle, !canEdit);
   }
   if (inputs.detail) {
-    const detail = normalizeExtrudeDetail(svg.detail ?? 'medium');
+    const detail = normalizeExtrudeDetail(svg.detail ?? 'high');
     if (document.activeElement !== inputs.detail) {
       inputs.detail.value = detail;
     }
@@ -1050,7 +1015,7 @@ export function renderSvgColorDepthControls(container, state, ui) {
     Depth ${index + 1}
   </span>
   <input type="range" min="0.01" max="2" step="0.005" value="${safeDepth.toFixed(2)}" data-color="${color}" data-kind="depth" aria-label="Per-color depth ${index + 1} (${color.toUpperCase()})" title="Depth for ${color.toUpperCase()}" />
-  <input type="number" min="0.01" max="2" step="0.01" class="svg-extrude-inline-number" value="${safeDepth.toFixed(2)}" data-color="${color}" data-kind="depth" aria-label="Per-color depth value ${index + 1} (${color.toUpperCase()})" />
+  <span class="value">${safeDepth.toFixed(2)}</span>
 </label>
 <label class="slider-line">
   <span>
@@ -1058,7 +1023,7 @@ export function renderSvgColorDepthControls(container, state, ui) {
     Position ${index + 1}
   </span>
   <input type="range" min="-1" max="1" step="0.005" value="${safeOffset.toFixed(2)}" data-color="${color}" data-kind="offset" aria-label="Per-color position ${index + 1} (${color.toUpperCase()})" title="Position for ${color.toUpperCase()}" />
-  <input type="number" min="-1" max="1" step="0.01" class="svg-extrude-inline-number" value="${safeOffset.toFixed(2)}" data-color="${color}" data-kind="offset" aria-label="Per-color position value ${index + 1} (${color.toUpperCase()})" />
+  <span class="value">${safeOffset.toFixed(2)}</span>
 </label>`;
     })
     .join('')}`;
@@ -1125,7 +1090,6 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                   <option value="front">From front</option>
                 </select>
               </label>
-              <div class="font-extrude-divider font-extrude-reveal-emissive-divider" aria-hidden="true"></div>
               <div class="font-extrude-reveal-emissive" role="group" aria-label="Emissive reveal">
                 <label class="slider-line slider-line--toggle-only font-extrude-reveal-emissive-slam">
                   <span data-tooltip="Each letter reveals with emissive glow, then fades to rest after it lands">Emissive Slam</span>
@@ -1150,7 +1114,6 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                   <input type="color" id="fontExtrudeRevealEmissiveColor" class="color-chip" value="#c4ff00" />
                 </label>
               </div>
-              <div class="font-extrude-divider font-extrude-reveal-preview-divider" aria-hidden="true"></div>
               <div class="font-extrude-reveal-preview animation-controls">
                 <button
                   type="button"
@@ -1217,7 +1180,6 @@ export const FONT_EXTRUDE_POST_GEN_CONTROLS_HTML = `
                 presetAriaLabel: 'Font extrude surface material',
               })}
             </div>
-            <div class="font-extrude-divider" aria-hidden="true"></div>
             ${FONT_EXTRUDE_ANIMATION_CONTROLS_HTML}
           </div>
 `;
