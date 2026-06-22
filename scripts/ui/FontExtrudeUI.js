@@ -6,9 +6,10 @@ import { FontFamilyPicker } from './FontFamilyPicker.js';
 import {
   bindExtrudeBevelControls,
   bindSvgExtrudeControls,
-  buildExtrudeBevelGroupHtml,
   syncSvgExtrudeControls,
   FONT_EXTRUDE_POST_GEN_CONTROLS_HTML,
+  FONT_EXTRUDE_SHAPE_CONTROLS_HTML,
+  FONT_EXTRUDE_SURFACE_POST_GEN_HTML,
 } from './svgExtrudeControlsShared.js';
 import { normalizeFontBevelType } from '../import/extrudeBevel.js';
 import {
@@ -135,6 +136,8 @@ export class FontExtrudeUI {
             <input id="fontExtrudePreviewScale" type="range" min="0.15" max="3" step="0.05" value="0.65" />
             <span class="value" data-output="fontExtrudePreviewScale">0.65×</span>
           </label>
+          <div class="panel-block-divider" aria-hidden="true"></div>
+          <div class="block-title font-extrude-section-title">Typography</div>
           <div id="fontExtrudeSystemFontsPrompt" class="font-extrude-system-fonts-prompt" hidden>
             <button
               type="button"
@@ -185,27 +188,14 @@ export class FontExtrudeUI {
             <input type="file" id="fontExtrudeFile" class="sr-only" accept=".ttf,.otf,.woff,.woff2,font/*" />
             <button type="button" id="fontExtrudeFileBtn" class="ghost-btn small">Load .ttf / .otf…</button>
           </div>
+          <div class="panel-block-divider" aria-hidden="true"></div>
+          <div class="block-title font-extrude-section-title">Appearance</div>
           <label class="color-line font-extrude-fill-color">
             <span data-tooltip="Fill color for 2D preview and generated 3D text">Color</span>
             <input type="color" id="fontExtrudeFillColor" class="color-chip" value="#808080" />
           </label>
-          <label class="select-line">
-            <span data-tooltip="Curve smoothness (curveSegments) — native Bézier outlines like Three.js TextGeometry; High is the default">Mesh Detail</span>
-            <select id="fontExtrudeDetail" aria-label="Mesh detail">
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high" selected>High</option>
-              <option value="ultra">Ultra</option>
-            </select>
-          </label>
-          ${buildExtrudeBevelGroupHtml({
-            bevelType: { id: 'fontExtrudeBevelType' },
-            bevel: {
-              id: 'fontExtrudeBevelAmount',
-              outputKey: 'fontExtrudeBevelAmount',
-              tooltip: 'Edge bevel size — max 10% of extrusion depth',
-            },
-          })}
+          ${FONT_EXTRUDE_SURFACE_POST_GEN_HTML}
+          ${FONT_EXTRUDE_SHAPE_CONTROLS_HTML}
           <button type="button" id="fontExtrudeGenerate" class="accent-action-btn font-extrude-generate" disabled data-tooltip="Extrude preview text into a 3D mesh">
             <i class="fa-solid fa-cube" aria-hidden="true"></i>
             <span>Generate 3D Text</span>
@@ -239,6 +229,7 @@ export class FontExtrudeUI {
       previewScale: block.querySelector('#fontExtrudePreviewScale'),
       align: block.querySelector('#fontExtrudeAlign'),
       postGen: block.querySelector('#fontExtrudePostGen'),
+      surfacePostGen: block.querySelector('#fontExtrudeSurfacePostGen'),
       meshDepth: block.querySelector('#fontExtrudeMeshDepth'),
       meshAngle: block.querySelector('#fontExtrudeMeshAngle'),
       bevelAmount: block.querySelector('#fontExtrudeBevelAmount'),
@@ -567,6 +558,9 @@ export class FontExtrudeUI {
 
   syncPostGenControlsVisibility() {
     const show = this._hasFontMesh();
+    if (this.els.surfacePostGen) {
+      this.els.surfacePostGen.hidden = !show;
+    }
     if (this.els.postGen) {
       this.els.postGen.hidden = !show;
     }

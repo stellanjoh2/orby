@@ -50,7 +50,16 @@ function buildControlLabelWithDevBadge(label, tooltip) {
 
 /**
  * Procedural surface library markup (single source for preset list + labels).
- * @param {{ presetId?: string, scaleId?: string, scaleOutput?: string, strengthId?: string, strengthOutput?: string, presetAriaLabel?: string }} [ids]
+ * @param {{
+ *   presetId?: string,
+ *   scaleId?: string,
+ *   scaleOutput?: string,
+ *   strengthId?: string,
+ *   strengthOutput?: string,
+ *   presetAriaLabel?: string,
+ *   presetLabel?: string,
+ *   strengthLabel?: string,
+ * }} [ids]
  */
 export function buildSvgExtrudeSurfaceControlsHtml(ids = {}) {
   const presetId = ids.presetId ?? 'svgExtrudeSurfacePreset';
@@ -59,12 +68,14 @@ export function buildSvgExtrudeSurfaceControlsHtml(ids = {}) {
   const strengthId = ids.strengthId ?? 'svgExtrudeSurfaceStrength';
   const strengthOutput = ids.strengthOutput ?? 'svgExtrudeSurfaceStrength';
   const presetAriaLabel = ids.presetAriaLabel ?? 'Extrude surface material';
+  const presetLabel = ids.presetLabel ?? 'Surface';
+  const strengthLabel = ids.strengthLabel ?? 'Strength';
   const options = SVG_EXTRUDE_SURFACE_PRESETS.map(
     (p) => `<option value="${p.id}">${p.label}</option>`,
   ).join('');
   return `
             <label class="select-line">
-              <span data-tooltip="Procedural PBR surface detail (roughness and metalness variation)">Surface</span>
+              <span data-tooltip="Procedural PBR surface detail (roughness and metalness variation)">${presetLabel}</span>
               <select id="${presetId}" aria-label="${presetAriaLabel}">
                 ${options}
               </select>
@@ -75,11 +86,46 @@ export function buildSvgExtrudeSurfaceControlsHtml(ids = {}) {
               <span class="value" data-output="${scaleOutput}">1.00</span>
             </label>
             <label class="slider-line svg-extrude-surface-strength-line">
-              <span data-tooltip="Normal-map bump intensity (map presets only)">Strength</span>
+              <span data-tooltip="Normal-map bump intensity (map presets only)">${strengthLabel}</span>
               <input id="${strengthId}" type="range" min="0" max="2" step="0.01" value="1" />
               <span class="value" data-output="${strengthOutput}">1.00</span>
             </label>`;
 }
+
+/**
+ * Font extrude outline tessellation — separate from svgExtrude.detail state.
+ *
+ * @param {{
+ *   id?: string,
+ *   label?: string,
+ *   tooltip?: string,
+ *   value?: 'low' | 'medium' | 'high' | 'ultra' | string,
+ * }} [options]
+ */
+export function buildFontExtrudeOutlineQualitySelectHtml(options = {}) {
+  const id = options.id ?? 'fontExtrudeDetail';
+  const label = options.label ?? 'Outline Quality';
+  const tooltip =
+    options.tooltip ??
+    'Curve smoothness along letter outlines — higher is smoother but denser';
+  const value = normalizeExtrudeDetail(options.value ?? 'high');
+  return `
+            <label class="select-line font-extrude-outline-quality-line">
+              <span data-tooltip="${tooltip}">${label}</span>
+              <select id="${id}" aria-label="Outline quality">
+                <option value="low"${value === 'low' ? ' selected' : ''}>Low</option>
+                <option value="medium"${value === 'medium' ? ' selected' : ''}>Medium</option>
+                <option value="high"${value === 'high' ? ' selected' : ''}>High</option>
+                <option value="ultra"${value === 'ultra' ? ' selected' : ''}>Ultra</option>
+              </select>
+            </label>`;
+}
+
+function buildFontExtrudeSectionTitleHtml(title) {
+  return `<div class="block-title font-extrude-section-title">${title}</div>`;
+}
+
+const PANEL_BLOCK_DIVIDER_HTML = '<div class="panel-block-divider" aria-hidden="true"></div>';
 
 /**
  * @param {{
@@ -1053,6 +1099,34 @@ function buildFontRevealUnitOptionsHtml() {
   ).join('');
 }
 
+/** All 3D shape controls — visible before first generate (depth applies on generate). */
+export const FONT_EXTRUDE_SHAPE_CONTROLS_HTML = `
+          ${PANEL_BLOCK_DIVIDER_HTML}
+          ${buildFontExtrudeSectionTitleHtml('3D Shape')}
+          ${buildExtrudeDepthSliderHtml({
+            id: 'fontExtrudeMeshDepth',
+            outputKey: 'fontExtrudeMeshDepth',
+            label: 'Extrude Depth',
+            tooltip: 'Overall extrusion depth for generated text',
+          })}
+          ${buildFontExtrudeOutlineQualitySelectHtml()}
+          ${buildExtrudeAngleSliderHtml({
+            id: 'fontExtrudeMeshAngle',
+            outputKey: 'fontExtrudeMeshAngle',
+            label: 'Smoothing Angle',
+            tooltip:
+              'Controls surface smoothing on letter edges (0 = faceted, higher = smoother)',
+            ariaLabel: 'Smoothing angle',
+          })}
+          ${buildExtrudeBevelGroupHtml({
+            bevelType: { id: 'fontExtrudeBevelType' },
+            bevel: {
+              id: 'fontExtrudeBevelAmount',
+              outputKey: 'fontExtrudeBevelAmount',
+              tooltip: 'Edge bevel size — max 10% of extrusion depth',
+            },
+          })}`;
+
 /** Reveal animation — only visible once 3D text exists. */
 export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
             <div class="font-extrude-animation" id="fontExtrudeAnimation">
@@ -1090,6 +1164,7 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                   <option value="front">From front</option>
                 </select>
               </label>
+              ${PANEL_BLOCK_DIVIDER_HTML}
               <div class="font-extrude-reveal-emissive" role="group" aria-label="Emissive reveal">
                 <label class="slider-line slider-line--toggle-only font-extrude-reveal-emissive-slam">
                   <span data-tooltip="Each letter reveals with emissive glow, then fades to rest after it lands">Emissive Slam</span>
@@ -1114,6 +1189,7 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                   <input type="color" id="fontExtrudeRevealEmissiveColor" class="color-chip" value="#c4ff00" />
                 </label>
               </div>
+              ${PANEL_BLOCK_DIVIDER_HTML}
               <div class="font-extrude-reveal-preview animation-controls">
                 <button
                   type="button"
@@ -1148,38 +1224,26 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
             </div>
 `;
 
-/** Depth + smoothing — shown after the first 3D text generate (rebuilds existing mesh). */
+/** Surface material — shown in Appearance after the first 3D text generate. */
+export const FONT_EXTRUDE_SURFACE_POST_GEN_HTML = `
+          <div id="fontExtrudeSurfacePostGen" class="font-extrude-surface-post-gen" hidden>
+            ${buildSvgExtrudeSurfaceControlsHtml({
+              presetId: 'fontExtrudeSurfacePreset',
+              scaleId: 'fontExtrudeSurfaceScale',
+              scaleOutput: 'fontExtrudeSurfaceScale',
+              strengthId: 'fontExtrudeSurfaceStrength',
+              strengthOutput: 'fontExtrudeSurfaceStrength',
+              presetAriaLabel: 'Font extrude surface material',
+              presetLabel: 'Material',
+              strengthLabel: 'Bump Strength',
+            })}
+          </div>`;
+
+/** Reveal animation — shown after the first 3D text generate. */
 export const FONT_EXTRUDE_POST_GEN_CONTROLS_HTML = `
           <div id="fontExtrudePostGen" class="font-extrude-post-gen" hidden>
-            ${buildExtrudeCoreControlsHtml({
-              depth: {
-                id: 'fontExtrudeMeshDepth',
-                outputKey: 'fontExtrudeMeshDepth',
-                label: 'Extrude Depth',
-                tooltip: 'Overall extrusion depth for generated text',
-              },
-              bevel: false,
-              bevelType: false,
-              detail: false,
-              angle: {
-                id: 'fontExtrudeMeshAngle',
-                outputKey: 'fontExtrudeMeshAngle',
-                label: 'Smoothing Angle',
-                tooltip:
-                  'Controls surface smoothing on letter edges (0 = faceted, higher = smoother)',
-                ariaLabel: 'Smoothing angle',
-              },
-            })}
-            <div class="font-extrude-surface-group">
-              ${buildSvgExtrudeSurfaceControlsHtml({
-                presetId: 'fontExtrudeSurfacePreset',
-                scaleId: 'fontExtrudeSurfaceScale',
-                scaleOutput: 'fontExtrudeSurfaceScale',
-                strengthId: 'fontExtrudeSurfaceStrength',
-                strengthOutput: 'fontExtrudeSurfaceStrength',
-                presetAriaLabel: 'Font extrude surface material',
-              })}
-            </div>
+            ${PANEL_BLOCK_DIVIDER_HTML}
+            ${buildFontExtrudeSectionTitleHtml('Reveal')}
             ${FONT_EXTRUDE_ANIMATION_CONTROLS_HTML}
           </div>
 `;

@@ -6145,10 +6145,15 @@ input[type='range']:disabled::-moz-range-thumb {
 }
 
 /*
- * Font Extrude — flat control stack (match SVG Extrude): no in-block rules between rows.
+ * Font Extrude — flat control stack (match SVG Extrude): display:contents mounts,
+ * standard row margin-bottom, panel-block-divider between sections.
  */
-[data-subsection='font-extrude'] .extrude-bevel-group,
-[data-subsection='font-extrude'] .font-extrude-surface-group {
+[data-subsection='font-extrude'] .extrude-bevel-group {
+  display: contents;
+}
+
+[data-subsection='font-extrude'] .font-extrude-animation,
+[data-subsection='font-extrude'] .font-extrude-reveal-emissive {
   display: contents;
 }
 
@@ -6160,16 +6165,9 @@ input[type='range']:disabled::-moz-range-thumb {
   margin-bottom: var(--shelf-section-gap);
 }
 
-[data-subsection='font-extrude'] .font-extrude-post-gen:not([hidden]) > :is(.slider-line, .select-line):last-of-type {
-  margin-bottom: var(--shelf-section-gap);
-}
-
-[data-subsection='font-extrude'] .font-extrude-reveal-emissive > :first-child {
-  margin-top: var(--shelf-section-gap);
-}
-
-[data-subsection='font-extrude'] .font-extrude-reveal-preview.animation-controls {
-  margin-top: var(--shelf-section-gap);
+[data-subsection='font-extrude'] .font-extrude-post-gen:not([hidden]),
+[data-subsection='font-extrude'] .font-extrude-surface-post-gen:not([hidden]) {
+  display: contents;
 }
 
 #svgExtrudeColorDepths .slider-line {
@@ -8646,35 +8644,9 @@ body.ui-hidden .shelf {
   line-height: 1.3;
 }
 
-.font-extrude-post-gen:not([hidden]) {
-  margin-top: 0;
-  padding-top: var(--shelf-section-gap);
-  border-top: 1px solid var(--stroke);
-}
-
-.font-extrude-post-gen[hidden] {
+.font-extrude-post-gen[hidden],
+.font-extrude-surface-post-gen[hidden] {
   display: none !important;
-}
-
-.font-extrude-generate:has(+ .font-extrude-post-gen:not([hidden])) {
-  margin-bottom: var(--shelf-section-gap);
-}
-
-.font-extrude-animation {
-  margin-top: var(--shelf-section-gap);
-}
-
-.font-extrude-animation .font-extrude-reveal-emissive .color-line:last-child {
-  margin-bottom: 0;
-}
-
-.font-extrude-animation .font-extrude-reveal-preview.animation-controls {
-  margin-top: 0;
-  margin-bottom: 0;
-}
-
-.font-extrude-animation > .font-extrude-reveal-slide-direction {
-  margin-bottom: 0;
 }
 
 .font-extrude-reveal-loop-control {
