@@ -28,14 +28,8 @@ export {
  * @typedef {RoadmapTaskGridDef & { start: number, width: number, lane: number }} RoadmapTask
  * @property {number} start — computed % (for aria / export)
  * @property {number} width — computed span %
- * @property {number} lane — computed for todo/future; from data for done/active
+ * @property {number} lane — computed row index
  */
-
-/** Statuses whose lane is fixed in content data. Todo/future pack into the topmost free lane. */
-const ROADMAP_FIXED_LANE_STATUSES = new Set(['done', 'active']);
-
-/** Priority 1 tasks render in dedicated rows below all standard lanes. */
-const ROADMAP_PRIORITY1_STATUS = 'priority1';
 
 /**
  * @param {number} aStart
@@ -63,63 +57,45 @@ function roadmapLaneHasConflict(lane, task, placed) {
 /**
  * @param {Pick<RoadmapTaskGridDef, 'startGrid' | 'endGrid'>} task
  * @param {readonly Pick<RoadmapTaskGridDef, 'lane' | 'startGrid' | 'endGrid'>[]} placed
+ * @param {number} [minLane]
  */
-function roadmapFindLowestFreeLane(task, placed) {
-  let lane = 0;
+function roadmapFindLowestFreeLane(task, placed, minLane = 0) {
+  let lane = minLane;
   while (roadmapLaneHasConflict(lane, task, placed)) lane += 1;
   return lane;
 }
 
 /**
- * Done/active keep authored lanes; todo/future fill the topmost row with no overlap.
+ * @param {readonly RoadmapTaskGridDef[]} defs
+ * @param {RoadmapTaskStatus} status
+ */
+function roadmapTasksByStatus(defs, status) {
+  return defs
+    .filter((task) => task.status === status)
+    .sort(
+      (a, b) =>
+        a.startGrid - b.startGrid ||
+        b.endGrid - b.startGrid - (a.endGrid - a.startGrid),
+    );
+}
+
+/**
+ * Lanes are computed in status order (done → active → priority → todo → future).
+ * Position on the chart is time (left→right); rows reuse whenever spans do not overlap.
  * @param {readonly RoadmapTaskGridDef[]} defs
  * @returns {RoadmapTaskGridDef[]}
  */
 export function assignRoadmapTaskLanes(defs) {
-  const standard = defs.filter((task) => task.status !== ROADMAP_PRIORITY1_STATUS);
-  const priority1 = defs.filter((task) => task.status === ROADMAP_PRIORITY1_STATUS);
-
-  const fixed = standard.filter((task) => ROADMAP_FIXED_LANE_STATUSES.has(task.status));
-  const flexible = standard
-    .filter((task) => !ROADMAP_FIXED_LANE_STATUSES.has(task.status))
-    .sort(
-      (a, b) =>
-        a.startGrid - b.startGrid || b.endGrid - b.startGrid - (a.endGrid - a.startGrid),
-    );
-
   /** @type {RoadmapTaskGridDef[]} */
-  const placed = fixed.map((task) => ({ ...task }));
+  const placed = [];
 
-  for (const task of flexible) {
-    placed.push({
-      ...task,
-      lane: roadmapFindLowestFreeLane(task, placed),
-    });
-  }
-
-  const maxStandardLane = placed.reduce((max, task) => Math.max(max, task.lane ?? 0), 0);
-  const priorityBaseLane = maxStandardLane + 1;
-
-  /** @type {Pick<RoadmapTaskGridDef, 'lane' | 'startGrid' | 'endGrid'>[]} */
-  const priorityPlaced = [];
-  const sortedPriority = [...priority1].sort(
-    (a, b) =>
-      a.startGrid - b.startGrid || b.endGrid - b.startGrid - (a.endGrid - a.startGrid),
-  );
-
-  for (const task of sortedPriority) {
-    let lane = 0;
-    while (roadmapLaneHasConflict(lane, task, priorityPlaced)) lane += 1;
-    const absoluteLane = priorityBaseLane + lane;
-    priorityPlaced.push({
-      startGrid: task.startGrid,
-      endGrid: task.endGrid,
-      lane: absoluteLane,
-    });
-    placed.push({
-      ...task,
-      lane: absoluteLane,
-    });
+  for (const status of ['done', 'active', 'priority', 'todo', 'future']) {
+    for (const task of roadmapTasksByStatus(defs, status)) {
+      placed.push({
+        ...task,
+        lane: roadmapFindLowestFreeLane(task, placed),
+      });
+    }
   }
 
   return placed;

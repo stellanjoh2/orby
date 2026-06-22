@@ -3,14 +3,13 @@
  * Edit here when shipping features or adjusting the timeline.
  */
 
-/** @typedef {'done' | 'active' | 'todo' | 'future' | 'priority1'} RoadmapTaskStatus */
+/** @typedef {'done' | 'active' | 'todo' | 'future' | 'priority'} RoadmapTaskStatus */
 
 /**
  * @typedef {Object} RoadmapTaskGridDef
  * @property {string} label
  * @property {number} startGrid — inclusive month-line index (0–39)
  * @property {number} endGrid — exclusive month-line index (1–40)
- * @property {number} [lane] — required for done/active; todo/future/priority1 lanes are auto-packed
  * @property {RoadmapTaskStatus} status
  */
 
@@ -52,47 +51,47 @@ export const ROADMAP_LAUNCH_MILESTONE = {
 
 /**
  * Shipped work + what's next — aligned to the month grid.
- * Same-lane bars never overlap; different lanes may run in parallel.
- * Todo/future omit lane — they pack into the topmost free row.
+ * Lanes are computed automatically from status (see assignRoadmapTaskLanes).
  * Short tasks need at least 2 grid units so 54px pills stay inside quarter lines.
  * @type {readonly RoadmapTaskGridDef[]}
  */
 export const ROADMAP_TASK_GRID_DEFS = [
   /* Q2 2025 — Dev (grid 0–4) */
-  { label: 'Import & viewport', startGrid: 0, endGrid: 3, lane: 0, status: 'done' },
-  { label: 'Format loaders', startGrid: 1, endGrid: 4, lane: 1, status: 'done' },
+  { label: 'Import & viewport', startGrid: 0, endGrid: 3, status: 'done' },
+  { label: 'Format loaders', startGrid: 1, endGrid: 4, status: 'done' },
 
   /* Q3 2025 (grid 4–8) */
-  { label: 'HDR lighting', startGrid: 4, endGrid: 7, lane: 0, status: 'done' },
-  { label: 'Post FX stack', startGrid: 5, endGrid: 8, lane: 2, status: 'done' },
-  { label: 'Export stills', startGrid: 6, endGrid: 8, lane: 1, status: 'done' },
-  { label: 'Export MP4', startGrid: 6, endGrid: 8, lane: 3, status: 'done' },
+  { label: 'HDR lighting', startGrid: 4, endGrid: 7, status: 'done' },
+  { label: 'Post FX stack', startGrid: 5, endGrid: 8, status: 'done' },
+  { label: 'Export stills', startGrid: 6, endGrid: 8, status: 'done' },
+  { label: 'Export MP4', startGrid: 6, endGrid: 8, status: 'done' },
 
   /* Q4 2025 (grid 8–12) */
-  { label: 'Display modes', startGrid: 8, endGrid: 11, lane: 0, status: 'done' },
-  { label: 'Gamepad support', startGrid: 8, endGrid: 10, lane: 3, status: 'done' },
-  { label: 'Animation scrub', startGrid: 9, endGrid: 12, lane: 2, status: 'done' },
-  { label: 'Scene JSON', startGrid: 8, endGrid: 10, lane: 1, status: 'done' },
-  { label: 'Wireframe & UV', startGrid: 11, endGrid: 13, lane: 3, status: 'done' },
+  { label: 'Display modes', startGrid: 8, endGrid: 11, status: 'done' },
+  { label: 'Gamepad support', startGrid: 8, endGrid: 10, status: 'done' },
+  { label: 'Animation scrub', startGrid: 9, endGrid: 12, status: 'done' },
+  { label: 'Scene JSON', startGrid: 8, endGrid: 10, status: 'done' },
+  { label: 'Wireframe & UV', startGrid: 11, endGrid: 13, status: 'done' },
 
   /* Q1 2026 (grid 12–16) */
-  { label: 'Look filters', startGrid: 12, endGrid: 14, lane: 1, status: 'done' },
-  { label: 'Custom HDRI', startGrid: 12, endGrid: 14, lane: 0, status: 'done' },
-  { label: 'Landing page', startGrid: 13, endGrid: 20, lane: 4, status: 'active' },
-  { label: 'Isometric cam', startGrid: 13, endGrid: 16, lane: 3, status: 'active' },
-  { label: 'Spotlight gobos', startGrid: 14, endGrid: 16, lane: 2, status: 'active' },
-  { label: 'Histogram', startGrid: 12, endGrid: 14, lane: 2, status: 'done' },
-  { label: 'Lens effects', startGrid: 14, endGrid: 16, lane: 1, status: 'done' },
+  { label: 'Look filters', startGrid: 12, endGrid: 14, status: 'done' },
+  { label: 'Custom HDRI', startGrid: 12, endGrid: 14, status: 'done' },
+  { label: 'Histogram', startGrid: 12, endGrid: 14, status: 'done' },
+  { label: 'Landing page', startGrid: 13, endGrid: 20, status: 'active' },
+  { label: 'Isometric cam', startGrid: 13, endGrid: 16, status: 'active' },
+  { label: 'Spotlight gobos', startGrid: 14, endGrid: 16, status: 'active' },
+  { label: 'Lens effects', startGrid: 14, endGrid: 16, status: 'done' },
 
   /* Q2 2026 — pre-launch (grid 16–20) */
-  { label: 'Stability & QA', startGrid: 16, endGrid: 20, lane: 0, status: 'active' },
-  { label: 'ColorChecker', startGrid: 16, endGrid: 18, lane: 1, status: 'done' },
+  { label: 'Stability & QA', startGrid: 16, endGrid: 20, status: 'active' },
+  { label: 'Performance pass', startGrid: 16, endGrid: 28, status: 'active' },
+  { label: 'Mobile Version', startGrid: 16, endGrid: 24, status: 'active' },
+  { label: 'ColorChecker', startGrid: 16, endGrid: 18, status: 'done' },
+  { label: 'Rendering Quality', startGrid: 16, endGrid: 24, status: 'priority' },
   { label: 'Presskit', startGrid: 16, endGrid: 18, status: 'todo' },
-  { label: 'Mobile preview', startGrid: 16, endGrid: 24, lane: 3, status: 'active' },
-  { label: 'Performance pass', startGrid: 16, endGrid: 28, lane: 2, status: 'active' },
 
   /* Q3 2026 (grid 20–24) — launch milestone @ grid 20 */
-  { label: 'Bevels V2', startGrid: 21, endGrid: 24, status: 'priority1' },
+  { label: 'Bevels V2', startGrid: 21, endGrid: 24, status: 'priority' },
   { label: 'Scene sharing', startGrid: 20, endGrid: 23, status: 'todo' },
   { label: 'Batch export', startGrid: 21, endGrid: 24, status: 'todo' },
   { label: 'OUTLINER', startGrid: 20, endGrid: 24, status: 'future' },

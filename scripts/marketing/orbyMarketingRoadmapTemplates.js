@@ -36,8 +36,8 @@ function renderRoadmapTaskBar(task) {
         ? 'orby-marketing__roadmap-bar--done'
         : task.status === 'future'
           ? 'orby-marketing__roadmap-bar--future'
-          : task.status === 'priority1'
-            ? 'orby-marketing__roadmap-bar--priority1'
+          : task.status === 'priority'
+            ? 'orby-marketing__roadmap-bar--priority'
             : 'orby-marketing__roadmap-bar--todo';
   return `<div class="orby-marketing__roadmap-bar ${statusClass}" data-orby-marketing-reveal="roadmap-bar" tabindex="0" aria-label="${escapeMarketingHtml(task.label)}" style="--orby-roadmap-start-grid: ${task.startGrid}; --orby-roadmap-end-grid: ${task.endGrid}; --orby-roadmap-lane: ${task.lane};">
       <span class="orby-marketing__roadmap-bar-label">${escapeMarketingHtml(task.label)}</span>
@@ -50,7 +50,7 @@ function renderRoadmapLegend() {
     { label: 'Active', modifier: 'active' },
     { label: 'Upcoming', modifier: 'upcoming' },
     { label: 'Future', modifier: 'future' },
-    { label: 'Priority 1', modifier: 'priority1' },
+    { label: 'Priority', modifier: 'priority' },
   ];
 
   return `<ul class="orby-marketing__roadmap-legend" aria-label="Roadmap task status">
