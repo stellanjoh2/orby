@@ -256,11 +256,15 @@ export class EnvironmentController {
   }
 
   _clearLiveRotation() {
+    // Three.js r167+ reads scene.backgroundRotation every frame — must stay an Euler, not null.
+    if (!this._identityRotationEuler) {
+      this._identityRotationEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+    }
     if ('environmentRotation' in this.scene) {
-      this.scene.environmentRotation = null;
+      this.scene.environmentRotation = this._identityRotationEuler;
     }
     if ('backgroundRotation' in this.scene) {
-      this.scene.backgroundRotation = null;
+      this.scene.backgroundRotation = this._identityRotationEuler;
     }
   }
 

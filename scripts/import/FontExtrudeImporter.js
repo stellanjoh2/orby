@@ -26,6 +26,7 @@ import {
 } from './extrudeDetail.js';
 import { geometryHasNaNPositions } from './extrudeShapeSanitize.js';
 import {
+  flattenFontExtrudeSimpleBevelFrontNormals,
   withFontCdtCapTriangulation,
 } from './fontExtrudeCapTriangulation.js';
 import { fontExtrudeHoleCapLooksFilled } from './fontExtrudeValidate.js';
@@ -267,7 +268,6 @@ export class FontExtrudeImporter {
       roughness: DEFAULT_MATERIAL_ROUGHNESS,
       metalness: 0.0,
       side: THREE.FrontSide,
-      flatShading: simpleBevel,
     });
 
     const xyNormalizeScale = FONT_EXTRUDE_TARGET_CAP_HEIGHT / this._layoutFontSize;
@@ -328,8 +328,7 @@ export class FontExtrudeImporter {
           continue;
         }
 
-        geometry.computeVertexNormals();
-
+        // mergeVertices + crease-aware smoothing (slider): curves smooth, sharp corners + bevel edges hard.
         const smoothedGeometry = toCreasedNormals(geometry, creaseAngleRad);
         geometry.dispose();
         const mesh = new THREE.Mesh(smoothedGeometry, material.clone());
@@ -369,6 +368,12 @@ export class FontExtrudeImporter {
     this._normalizeFontGeometrySpace(group, this._layoutFontSize);
     applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
     finalizeExtrudeGroupGeometry(group, creaseAngleRad);
+    if (simpleBevel) {
+      group.traverse((child) => {
+        if (!child.isMesh || !child.geometry) return;
+        flattenFontExtrudeSimpleBevelFrontNormals(child.geometry);
+      });
+    }
     this._centerGlyphGroupPivots(group);
 
     return group;

@@ -65,16 +65,15 @@ export function resolveFontExtrudeBevelSettingsForType(type, params = {}) {
 }
 
 /**
- * Simple bevel uses hard face groups (0° crease). Smooth respects the smoothing-angle slider.
+ * Crease angle for side/bevel smoothing (degrees). Simple bevel also uses the slider so curved
+ * walls interpolate smoothly; front caps are flattened separately in FontExtrudeImporter.
  *
  * @param {FontExtrudeBevelType} bevelType
  * @param {unknown} normalAngleDeg
  * @returns {number}
  */
 export function resolveFontExtrudeCreaseAngleDeg(bevelType, normalAngleDeg) {
-  if (normalizeFontBevelType(bevelType) === 'simple') {
-    return 0;
-  }
+  void bevelType;
   return clampExtrudeNormalAngleDeg(normalAngleDeg);
 }
 

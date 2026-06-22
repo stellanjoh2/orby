@@ -231,6 +231,79 @@ export function subdivideFontExtrudeCapFaces(geometry, options = {}) {
 }
 
 /**
+ * Hard normals on the flat front cap only (simple bevel).
+ * Must run after {@link FontExtrudeImporter#_normalizeFontGeometrySpace} and
+ * {@link finalizeExtrudeGroupGeometry}. Side/bevel creases come from toCreasedNormals + smoothing slider.
+ * Do not call computeVertexNormals here; it flat-shades non-indexed side walls.
+ *
+ * @param {import('three').BufferGeometry} geometry
+ * @returns {import('three').BufferGeometry}
+ */
+export function flattenFontExtrudeSimpleBevelFrontNormals(geometry) {
+  if (!geometry?.attributes?.position || !geometry.attributes.normal) {
+    return geometry;
+  }
+
+  const pos = geometry.attributes.position;
+  const norm = geometry.attributes.normal;
+  const SIDE_Z_MAX = 0.12;
+  const CAP_Z_MIN = 0.92;
+
+  const flattenCaps = () => {
+    const processTri = (ia, ib, ic) => {
+      const ax = pos.getX(ia);
+      const ay = pos.getY(ia);
+      const az = pos.getZ(ia);
+      const bx = pos.getX(ib);
+      const by = pos.getY(ib);
+      const bz = pos.getZ(ib);
+      const cx = pos.getX(ic);
+      const cy = pos.getY(ic);
+      const cz = pos.getZ(ic);
+
+      const ux = bx - ax;
+      const uy = by - ay;
+      const uz = bz - az;
+      const vx = cx - ax;
+      const vy = cy - ay;
+      const vz = cz - az;
+      let fnx = uy * vz - uz * vy;
+      let fny = uz * vx - ux * vz;
+      let fnz = ux * vy - uy * vx;
+      const len = Math.hypot(fnx, fny, fnz);
+      if (len < 1e-10) return;
+      fnz /= len;
+
+      if (Math.abs(fnz) < SIDE_Z_MAX || fnz < CAP_Z_MIN) return;
+
+      norm.setXYZ(ia, 0, 0, 1);
+      norm.setXYZ(ib, 0, 0, 1);
+      norm.setXYZ(ic, 0, 0, 1);
+    };
+
+    if (geometry.index) {
+      const idx = geometry.index.array;
+      for (let i = 0; i < idx.length; i += 3) {
+        processTri(idx[i], idx[i + 1], idx[i + 2]);
+      }
+    } else {
+      for (let t = 0; t < pos.count; t += 3) {
+        processTri(t, t + 1, t + 2);
+      }
+    }
+  };
+
+  flattenCaps();
+  norm.needsUpdate = true;
+  return geometry;
+}
+
+/** @deprecated Use {@link flattenFontExtrudeSimpleBevelFrontNormals} after geometry normalize. */
+export function flattenFontExtrudeCapNormals(geometry, options = {}) {
+  return flattenFontExtrudeSimpleBevelFrontNormals(geometry);
+}
+
+/**
  * @param {() => T} buildGeometry
  * @template T
  * @returns {T}

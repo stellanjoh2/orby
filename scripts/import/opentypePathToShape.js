@@ -585,6 +585,86 @@ function buildNativeCurveShapes(subpaths, divisions) {
   return shapes;
 }
 
+function shapeSampleDivisions(divisions) {
+  return Math.max(16, Math.round(Number(divisions) || FONT_EXTRUDE_CURVE_DIVISIONS));
+}
+
+/**
+ * Even-odd {@link THREE.ShapePath#toShapes} sometimes assigns the counter as outer and the
+ * letter outline as a hole (Neue Haas A/b, …). Outer ring area must exceed every hole.
+ *
+ * @param {THREE.Shape} shape
+ * @param {number} [divisions]
+ * @returns {boolean}
+ */
+export function fontExtrudeShapeRingAreasValid(shape, divisions = FONT_EXTRUDE_CURVE_DIVISIONS) {
+  if (!shape?.curves?.length) return false;
+  const extracted = shape.extractPoints(shapeSampleDivisions(divisions));
+  const outer = extracted?.shape;
+  if (!outer?.length || outer.length < 3) return false;
+  const outerArea = Math.abs(signedArea2D(outer));
+  if (outerArea <= 1e-6) return false;
+  for (const hole of extracted?.holes || []) {
+    if (!hole?.length || hole.length < 3) continue;
+    if (Math.abs(signedArea2D(hole)) >= outerArea * 0.999) return false;
+  }
+  return true;
+}
+
+/**
+ * @param {THREE.Shape[]} shapes
+ * @param {number} [divisions]
+ * @returns {boolean}
+ */
+function fontExtrudeEvenOddShapesValid(shapes, divisions = FONT_EXTRUDE_CURVE_DIVISIONS) {
+  if (!shapes?.length) return false;
+
+  if (shapes.length >= 2) {
+    const sampleDivisions = shapeSampleDivisions(divisions);
+    const entries = shapes
+      .map((shape) => {
+        const pts = shape.extractPoints(sampleDivisions)?.shape || [];
+        return { pts, area: Math.abs(signedArea2D(pts)) };
+      })
+      .filter((entry) => entry.pts.length >= 3);
+    entries.sort((a, b) => b.area - a.area);
+
+    for (let o = 0; o < entries.length; o += 1) {
+      const outer = entries[o];
+      for (let h = o + 1; h < entries.length; h += 1) {
+        const inner = entries[h];
+        const centroid = ringCentroid(inner.pts);
+        if (!pointInRing(centroid, outer.pts)) continue;
+        if (inner.area / Math.max(outer.area, 1e-6) > 0.92) continue;
+        return false;
+      }
+    }
+  }
+
+  return shapes.every((shape) => fontExtrudeShapeRingAreasValid(shape, divisions));
+}
+
+/**
+ * Merge separate moveto subpaths by area (preserves native Bézier curves).
+ *
+ * @param {Array<Array<{ type: string }>>} subpaths
+ * @param {number} divisions
+ * @returns {THREE.Shape[]}
+ */
+function buildFontExtrudeNativeCurveShapes(subpaths, divisions) {
+  if (subpaths.length === 1) {
+    const implicitCounters = buildShapeWithImplicitCounters(subpaths[0], divisions);
+    if (implicitCounters) {
+      const prepared = prepareFontExtrudeShape(implicitCounters, divisions);
+      if (prepared) return [prepared];
+    }
+  }
+
+  return buildNativeCurveShapes(subpaths, divisions)
+    .map((shape) => prepareFontExtrudeShape(shape, divisions))
+    .filter(Boolean);
+}
+
 /**
  * Convert an opentype.js glyph path to one or more THREE.Shape instances (outer + holes merged).
  * Uses {@link THREE.ShapePath#toShapes} with even-odd fill (TextGeometry path) — not SVGLoader nonzero.
@@ -601,11 +681,7 @@ export function opentypePathToShapes(opentypePath, divisions = FONT_EXTRUDE_CURV
   if (!subpaths.length) return [];
 
   if (options.nativeCurves) {
-    if (subpaths.length === 1) {
-      const implicitCounters = buildShapeWithImplicitCounters(subpaths[0], divisions);
-      if (implicitCounters) return [implicitCounters];
-    }
-    return buildNativeCurveShapes(subpaths, divisions);
+    return buildFontExtrudeNativeCurveShapes(subpaths, divisions);
   }
 
   // Primary: even-odd native Bézier shapes (TextGeometry) — do not resample to polylines;
@@ -614,7 +690,14 @@ export function opentypePathToShapes(opentypePath, divisions = FONT_EXTRUDE_CURV
     .toShapes(true)
     .map((shape) => prepareFontExtrudeShape(shape, divisions))
     .filter(Boolean);
-  if (evenOddShapes.length) return evenOddShapes;
+  if (evenOddShapes.length && fontExtrudeEvenOddShapesValid(evenOddShapes, divisions)) {
+    return evenOddShapes;
+  }
+
+  const nativeCurveShapes = buildFontExtrudeNativeCurveShapes(subpaths, divisions).filter((shape) =>
+    fontExtrudeShapeRingAreasValid(shape, divisions),
+  );
+  if (nativeCurveShapes.length) return nativeCurveShapes;
 
   const sampleDivisions = windingSampleDivisions(divisions);
 
