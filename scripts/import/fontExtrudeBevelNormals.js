@@ -1,5 +1,9 @@
-/** Post-normalize cap fixes for font straight bevel (flat caps + hard chamfer shoulders). */
+/** Font extrude normal fixes — straight chamfer caps/shoulders + convex bevel smooth. */
 
+import {
+  mergeVertices,
+  toCreasedNormals,
+} from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   applyImportCreasedNormals,
   resolveExtrudeCreaseAngleRad,
@@ -156,6 +160,106 @@ export function applyFontExtrudeCreasedNormalsToGroup(group, normalAngleDeg, har
       child.geometry.dispose();
       child.geometry = geom;
     }
+  });
+}
+
+/** Match {@link mergeVertices} welding so position keys align with merged reference normals. */
+function fontExtrudePositionKey(x, y, z) {
+  const s = 1e4;
+  return `${Math.round(x * s) / s},${Math.round(y * s) / s},${Math.round(z * s) / s}`;
+}
+
+/**
+ * Fully-smooth normals on a merged copy — lookup only, never written back to side walls.
+ *
+ * @param {import('three').BufferGeometry} geometry
+ * @returns {Map<string, [number, number, number]>}
+ */
+function buildFontExtrudeMergedSmoothNormalLookup(geometry) {
+  let ref = geometry.clone();
+  const merged = mergeVertices(ref);
+  if (merged !== ref) {
+    ref.dispose();
+    ref = merged;
+  }
+  const smoothed = toCreasedNormals(ref, Math.PI);
+  if (smoothed !== ref) {
+    ref.dispose();
+    ref = smoothed;
+  }
+
+  const pos = ref.attributes.position;
+  const norm = ref.attributes.normal;
+  const lookup = new Map();
+  for (let i = 0; i < pos.count; i++) {
+    const key = fontExtrudePositionKey(pos.getX(i), pos.getY(i), pos.getZ(i));
+    lookup.set(key, [norm.getX(i), norm.getY(i), norm.getZ(i)]);
+  }
+  ref.dispose();
+  return lookup;
+}
+
+/**
+ * Soften convex bevel collar only. Side walls + caps are untouched so they match Straight
+ * (pre-normalize crease → box UVs duplicate identical normals, no post merge).
+ *
+ * @param {import('three').BufferGeometry} geometry
+ * @returns {import('three').BufferGeometry}
+ */
+export function softenFontConvexBevelCollarNormals(geometry) {
+  if (!geometry?.attributes?.position || !geometry.attributes.normal) return geometry;
+
+  const lookup = buildFontExtrudeMergedSmoothNormalLookup(geometry);
+  const pos = geometry.attributes.position;
+  const norm = geometry.attributes.normal;
+
+  forEachExtrudeTriangle(geometry, (ia, ib, ic) => {
+    const face = fontExtrudeTriangleFaceNormal(pos, ia, ib, ic);
+    if (!face) return;
+    if (
+      face.absNz <= FONT_EXTRUDE_SIDE_Z_MAX ||
+      face.absNz >= FONT_EXTRUDE_CAP_Z_MIN
+    ) {
+      return;
+    }
+
+    for (const index of [ia, ib, ic]) {
+      const key = fontExtrudePositionKey(
+        pos.getX(index),
+        pos.getY(index),
+        pos.getZ(index),
+      );
+      const smooth = lookup.get(key);
+      if (smooth) {
+        norm.setXYZ(index, smooth[0], smooth[1], smooth[2]);
+      }
+    }
+  });
+
+  norm.needsUpdate = true;
+  return geometry;
+}
+
+/**
+ * Post-normalize convex — flat caps + soft rounded collar. Side walls use the same path as
+ * Straight (pre-normalize crease only; no merge/crease after box UVs).
+ *
+ * @param {import('three').BufferGeometry} geometry
+ * @returns {import('three').BufferGeometry}
+ */
+export function applyFontConvexBevelNormals(geometry) {
+  if (!geometry) return geometry;
+  softenFontConvexBevelCollarNormals(geometry);
+  flattenFontStraightBevelCapNormals(geometry);
+  return geometry;
+}
+
+/** @param {THREE.Group} group */
+export function applyFontConvexBevelNormalsToGroup(group) {
+  group.traverse((child) => {
+    if (!child.isMesh || !child.geometry || !child.userData?.orbyFontExtrude) return;
+    if (child.userData.orbyFontBevelType !== 'convex') return;
+    applyFontConvexBevelNormals(child.geometry);
   });
 }
 

@@ -30,6 +30,7 @@ import { softenFontExtrudeShapeForBevel } from './extrudeBevelCorner.js';
 import { geometryHasNaNPositions } from './extrudeShapeSanitize.js';
 import { withFontCdtCapTriangulation } from './fontExtrudeCapTriangulation.js';
 import {
+  applyFontConvexBevelNormalsToGroup,
   applyFontExtrudeCreasedNormalsToGroup,
   applyFontStraightBevelCapNormalsToGroup,
 } from './fontExtrudeBevelNormals.js';
@@ -389,6 +390,8 @@ export class FontExtrudeImporter {
         normalAngleDeg,
         this.currentHardEdgeAngleDeg,
       );
+    } else if (bevelEnabled && this.currentBevelType === 'convex') {
+      applyFontConvexBevelNormalsToGroup(group);
     }
     this._centerGlyphGroupPivots(group);
 
