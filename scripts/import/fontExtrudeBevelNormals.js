@@ -1,4 +1,4 @@
-/** Post-normalize cap fixes for font straight bevel (flat front + hard chamfer shoulders). */
+/** Post-normalize cap fixes for font straight bevel (flat caps + hard chamfer shoulders). */
 
 import {
   applyImportCreasedNormals,
@@ -7,7 +7,7 @@ import {
 
 /** |normal.z| below this → vertical side wall in normalized studio space. */
 const FONT_EXTRUDE_SIDE_Z_MAX = 0.12;
-/** Face normal z component above this → front cap triangle (straight bevel). */
+/** |faceNormal.z| at or above this → flat cap (front or back). */
 const FONT_EXTRUDE_CAP_Z_MIN = 0.92;
 
 /**
@@ -107,12 +107,13 @@ export function hardenFontStraightBevelShoulderNormals(geometry, creaseAngleRad)
 }
 
 /**
- * Hard +Z normals on the flat front cap (straight bevel only).
+ * Uniform ±Z cap normals — flat front and back caps (straight bevel only).
+ * Face-normal based so bevel rims are never flattened (same rule as SVG extrude).
  *
  * @param {import('three').BufferGeometry} geometry
  * @returns {import('three').BufferGeometry}
  */
-export function flattenFontStraightBevelFrontNormals(geometry) {
+export function flattenFontStraightBevelCapNormals(geometry) {
   if (!geometry?.attributes?.position || !geometry.attributes.normal) {
     return geometry;
   }
@@ -120,15 +121,20 @@ export function flattenFontStraightBevelFrontNormals(geometry) {
   const pos = geometry.attributes.position;
   const norm = geometry.attributes.normal;
 
+  const flattenCapTriangle = (ia, ib, ic, nx, ny, nz) => {
+    norm.setXYZ(ia, nx, ny, nz);
+    norm.setXYZ(ib, nx, ny, nz);
+    norm.setXYZ(ic, nx, ny, nz);
+  };
+
   forEachExtrudeTriangle(geometry, (ia, ib, ic) => {
     const face = fontExtrudeTriangleFaceNormal(pos, ia, ib, ic);
-    if (!face || face.absNz < FONT_EXTRUDE_SIDE_Z_MAX || face.nz < FONT_EXTRUDE_CAP_Z_MIN) {
-      return;
+    if (!face || face.absNz < FONT_EXTRUDE_CAP_Z_MIN) return;
+    if (face.nz > FONT_EXTRUDE_SIDE_Z_MAX) {
+      flattenCapTriangle(ia, ib, ic, 0, 0, 1);
+    } else if (face.nz < -FONT_EXTRUDE_SIDE_Z_MAX) {
+      flattenCapTriangle(ia, ib, ic, 0, 0, -1);
     }
-
-    norm.setXYZ(ia, 0, 0, 1);
-    norm.setXYZ(ib, 0, 0, 1);
-    norm.setXYZ(ic, 0, 0, 1);
   });
 
   norm.needsUpdate = true;
@@ -163,7 +169,7 @@ export function applyFontStraightBevelCapNormals(geometry, normalAngleDeg, hardE
   if (!geometry) return geometry;
   const creaseAngleRad = resolveExtrudeCreaseAngleRad(normalAngleDeg, hardEdgeAngleDeg);
   hardenFontStraightBevelShoulderNormals(geometry, creaseAngleRad);
-  flattenFontStraightBevelFrontNormals(geometry);
+  flattenFontStraightBevelCapNormals(geometry);
   return geometry;
 }
 
