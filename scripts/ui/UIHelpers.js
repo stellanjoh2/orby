@@ -319,12 +319,53 @@ export class UIHelpers {
           });
         });
       }
+
+      this._reconcileOrphanedDeferredNotify();
     };
 
     document.addEventListener('pointerdown', onPointerDown, true);
     document.addEventListener('pointermove', onPointerMove, true);
     document.addEventListener('pointerup', onPointerEnd, true);
     document.addEventListener('pointercancel', onPointerEnd, true);
+
+    window.addEventListener('blur', () => {
+      this.flushRangeSliderInteractionState();
+    });
+  }
+
+  /** Drop stale scrub / defer state when pointer sessions end without a balanced pointerup. */
+  _reconcileOrphanedDeferredNotify() {
+    if (this._rangePointerDrags.size > 0 || this._deferNotifyPointerIds.size > 0) return;
+    if (this.stateStore?.isNotifyDeferred?.()) {
+      this.stateStore.flushDeferredNotify();
+    }
+  }
+
+  /**
+   * Clear in-progress range scrub state — e.g. shelf tab switch while a slider is held/focused.
+   * Ensures deferred notify depth returns to zero so syncControls / applyBlockStates resume.
+   */
+  flushRangeSliderInteractionState() {
+    this._rangePointerDrags?.clear();
+    this._draggingRangeSliders?.clear();
+    for (const slider of [...(this._scrubProtectedSliders ?? [])]) {
+      this.releaseScrubProtection(slider);
+    }
+    this._deferNotifyPointerIds?.clear();
+
+    const mc = this.ui?.meshControls;
+    if (mc?.fresnelInteracting) {
+      mc.fresnelInteracting.color = false;
+      mc.fresnelInteracting.radius = false;
+      mc.fresnelInteracting.strength = false;
+    }
+
+    const active = document.activeElement;
+    if (active instanceof HTMLInputElement && active.type === 'range') {
+      active.blur();
+    }
+
+    this.stateStore?.flushDeferredNotify?.();
   }
 
   protectScrubSlider(slider) {

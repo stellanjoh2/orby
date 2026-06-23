@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isTextureImageReady } from '../utils/textureReady.js';
 
 export const SVG_EXTRUDE_SURFACE_PRESETS = [
   { id: 'none', label: 'Default (smooth)', kind: 'none' },
@@ -853,4 +854,230 @@ export function applyOrbySurfaceUniformState(refs, state) {
   refs.uOrbyNormalStrength.value = state.normalStrength;
   refs.uOrbyNormalMap.value = state.normalMap;
   setNormalBoundsUniforms(refs, state.normalBounds ?? null);
+}
+
+/** Shader Lab presets that read Appearance → Material / Surface (svgExtrude.surfacePreset). */
+export function creativeLookPresetSupportsSurfaceDetail(preset) {
+  let p = typeof preset === 'string' ? preset.trim() : '';
+  if (p === 'glass-holo') p = 'holographic';
+  return (
+    p === 'holographic' ||
+    p === 'scanline-hologram' ||
+    p === 'spectral-storm' ||
+    p === 'plasma' ||
+    p === 'chrome' ||
+    p === 'glass'
+  );
+}
+
+/**
+ * GLSL helpers for Shader Lab materials — procedural + triplanar normal maps on world/view normals.
+ * Requires WORLD_SURFACE_VERTEX or SCANLINE_HOLOGRAM surface varyings.
+ */
+export const ORBY_CREATIVE_SURFACE_FRAG_HELPERS = /* glsl */ `
+varying vec3 vOrbyLocalPos;
+varying vec3 vOrbyLocalNormal;
+varying vec3 vOrbyNm0;
+varying vec3 vOrbyNm1;
+varying vec3 vOrbyNm2;
+varying vec3 vOrbyWm0;
+varying vec3 vOrbyWm1;
+varying vec3 vOrbyWm2;
+uniform float uOrbySurfaceMode;
+uniform float uOrbyScale;
+uniform float uOrbyNormalStrength;
+uniform sampler2D uOrbyNormalMap;
+uniform vec3 uOrbyNormalOrigin;
+uniform vec3 uOrbyNormalInvSize;
+float orbyCreativeQ(vec3 p) {
+  return fract(sin(dot(p, vec3(12.9898, 78.233, 37.199))) * 43758.5453);
+}
+float orbyCreativeFbm3(vec3 p) {
+  float t = 0.0; float a = 0.5;
+  t += a * orbyCreativeQ(p); p = p * 2.1 + 1.0; a *= 0.5;
+  t += a * orbyCreativeQ(p); p = p * 2.0 + 0.2; a *= 0.5;
+  t += a * orbyCreativeQ(p); p = p * 1.8 + 0.1; a *= 0.5;
+  t += a * orbyCreativeQ(p);
+  return t;
+}
+float orbyCreativeSurfaceHeight(vec3 worldPos) {
+  if (uOrbySurfaceMode < 0.5) return 0.5;
+  vec3 p = worldPos * uOrbyScale;
+  if (uOrbySurfaceMode < 1.5) {
+    return 0.55 * orbyCreativeFbm3(p * 2.4) + 0.45 * orbyCreativeFbm3(p * 15.0);
+  }
+  if (uOrbySurfaceMode < 2.5) {
+    vec3 ax = p * vec3(0.2, 18.0, 18.0);
+    float streak = orbyCreativeFbm3(ax * vec3(0.2, 1.0, 1.0));
+    return 0.5 + 0.5 * sin(p.x * 55.0 + streak * 3.0);
+  }
+  if (uOrbySurfaceMode < 3.5) {
+    float coarse = orbyCreativeFbm3(p * 2.2);
+    float fine = orbyCreativeFbm3(p * 14.0);
+    return 0.5 * coarse + 0.5 * fine;
+  }
+  return 0.5;
+}
+vec3 orbyCreativeTriplanarAxisNormal(vec3 n, vec3 tn, vec3 ref, vec3 refAlt) {
+  vec3 t = cross(ref, n);
+  if (dot(t, t) < 1e-8) t = cross(refAlt, n);
+  if (dot(t, t) < 1e-8) return n;
+  t = normalize(t);
+  vec3 b = normalize(cross(n, t));
+  return normalize(tn.x * t + tn.y * b + tn.z * n);
+}
+vec3 orbyCreativeTriplanarNormalObject(vec3 localPos, vec3 localNormal, float scale) {
+  vec3 n = normalize(localNormal);
+  vec3 p = (localPos - uOrbyNormalOrigin) * uOrbyNormalInvSize;
+  vec3 blend = abs(n);
+  blend = pow(max(blend, vec3(0.00001)), vec3(4.0));
+  blend /= (blend.x + blend.y + blend.z);
+  vec3 tX = texture2D(uOrbyNormalMap, p.zy * scale).xyz * 2.0 - 1.0;
+  vec3 tY = texture2D(uOrbyNormalMap, p.xz * scale).xyz * 2.0 - 1.0;
+  vec3 tZ = texture2D(uOrbyNormalMap, p.xy * scale).xyz * 2.0 - 1.0;
+  vec3 nx = orbyCreativeTriplanarAxisNormal(n, tX, vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0));
+  vec3 ny = orbyCreativeTriplanarAxisNormal(n, tY, vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0));
+  vec3 nz = orbyCreativeTriplanarAxisNormal(n, tZ, vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0));
+  return normalize(nx * blend.x + ny * blend.y + nz * blend.z);
+}
+vec3 orbyCreativeSurfaceNormal(
+  vec3 worldN,
+  vec3 worldPos,
+  vec3 localPos,
+  vec3 localN,
+  mat3 worldNormalMatrix3
+) {
+  bool procActive = uOrbySurfaceMode >= 0.5;
+  bool mapActive = uOrbyNormalStrength > 0.0001;
+  if (!procActive && !mapActive) return worldN;
+  vec3 N = worldN;
+  if (procActive) {
+    float amp = clamp(uOrbyNormalStrength, 0.0, 2.0);
+    if (amp < 0.001) amp = 1.0;
+    float eps = 0.045 / max(uOrbyScale, 0.12);
+    float h = orbyCreativeSurfaceHeight(worldPos);
+    float hx = orbyCreativeSurfaceHeight(worldPos + vec3(eps, 0.0, 0.0)) - h;
+    float hy = orbyCreativeSurfaceHeight(worldPos + vec3(0.0, eps, 0.0)) - h;
+    vec3 up = abs(worldN.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    vec3 T = normalize(cross(up, worldN));
+    vec3 B = cross(worldN, T);
+    N = normalize(worldN - (T * hx + B * hy) * (0.55 + 0.95 * amp));
+  }
+  if (mapActive) {
+    vec3 tn = orbyCreativeTriplanarNormalObject(localPos, localN, uOrbyScale);
+    vec3 worldTn = normalize(worldNormalMatrix3 * tn);
+    float mixAmt = clamp(uOrbyNormalStrength * 1.35, 0.0, 1.0);
+    N = normalize(mix(N, worldTn, mixAmt));
+  }
+  return N;
+}
+float orbyCreativeSurfaceFilmMod(vec3 worldPos, vec3 localPos, vec3 localN) {
+  if (uOrbySurfaceMode >= 0.5) {
+    float amp = clamp(uOrbyNormalStrength, 0.0, 2.0);
+    if (amp < 0.001) amp = 1.0;
+    float h = orbyCreativeSurfaceHeight(worldPos);
+    return mix(0.78, 1.24, h) * (0.86 + 0.14 * amp);
+  }
+  if (uOrbyNormalStrength > 0.0001) {
+    vec3 tn = orbyCreativeTriplanarNormalObject(localPos, localN, uOrbyScale);
+    float bump = length(tn - normalize(localN));
+    return 0.84 + bump * uOrbyNormalStrength * 3.2;
+  }
+  return 1.0;
+}
+float orbyCreativeSurfaceMix(vec3 worldPos) {
+  return orbyCreativeSurfaceFilmMod(worldPos, vOrbyLocalPos, vOrbyLocalNormal);
+}
+`;
+
+function scheduleCreativeLookSurfaceResyncWhenTextureReady(model, storeLike, texture) {
+  if (!texture?.isTexture || isTextureImageReady(texture)) return;
+  if (texture.userData?.orbyCreativeSurfaceResyncHooked) return;
+  texture.userData.orbyCreativeSurfaceResyncHooked = true;
+  const resync = () => {
+    syncCreativeLookSurfaceToModel(model, storeLike);
+  };
+  const prev = texture.onUpdate;
+  texture.onUpdate = () => {
+    if (typeof prev === 'function') prev();
+    if (isTextureImageReady(texture)) {
+      texture.onUpdate = prev;
+      resync();
+    }
+  };
+}
+
+/**
+ * Push svgExtrude surface state onto compatible Shader Lab materials (and chrome/glass PBR).
+ * @param {THREE.Object3D} model
+ * @param {{ getState: () => object } | { stateStore: { getState: () => object } }} storeLike
+ */
+export function syncCreativeLookSurfaceToModel(model, storeLike) {
+  if (!model || !storeLike) return;
+  const st =
+    typeof storeLike.getState === 'function'
+      ? storeLike.getState()
+      : storeLike.stateStore?.getState?.();
+  if (!st?.creativeLook?.enabled) return;
+  if (!creativeLookPresetSupportsSurfaceDetail(st.creativeLook.preset)) return;
+
+  const presetId = st.svgExtrude?.surfacePreset ?? 'none';
+  const scale = clampSurfaceUiScale(st.svgExtrude?.surfaceScale ?? 1);
+  const strength = clampSurfaceStrength(st.svgExtrude?.surfaceStrength ?? 1);
+  const config = getSvgExtrudeSurfacePresetConfig(presetId);
+  if (config.kind === 'none') {
+    model.traverse((child) => {
+      if (!child.isMesh || !child.material) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach((m) => {
+        if (!m?.userData?.orbyCreativeLook) return;
+        const tag = m.userData.orbyCreativeLook;
+        if ((tag === 'chrome' || tag === 'glass') && m.isMeshPhysicalMaterial) {
+          removeSvgExtrudeProceduralFromMaterial(m);
+          return;
+        }
+        const refs = m.userData.orbyCreativeSurfaceUniformRefs;
+        if (refs) applyOrbySurfaceUniformState(refs, null);
+      });
+    });
+    return;
+  }
+
+  model.traverse((child) => {
+    if (!child.isMesh || !child.material) return;
+    const mappingBounds =
+      config.kind === 'normalMap' ? computeExtrudeSurfaceMappingBounds(child) : null;
+    const surfaceState = resolveOrbySurfaceUniformState(
+      presetId,
+      scale,
+      strength,
+      mappingBounds,
+    );
+    const mats = Array.isArray(child.material) ? child.material : [child.material];
+    mats.forEach((m) => {
+      if (!m?.userData?.orbyCreativeLook) return;
+      const tag = m.userData.orbyCreativeLook;
+      if (tag === 'glass') {
+        // onBeforeCompile surface patches break MeshPhysicalMaterial transmission refraction.
+        removeSvgExtrudeProceduralFromMaterial(m);
+        return;
+      }
+      if (tag === 'chrome') {
+        if (m.isMeshPhysicalMaterial) {
+          applySvgExtrudeSurfaceToMaterial(m, {
+            preset: presetId,
+            scale,
+            strength,
+            normalBounds: mappingBounds,
+          });
+        }
+        return;
+      }
+      const refs = m.userData.orbyCreativeSurfaceUniformRefs;
+      if (refs) {
+        applyOrbySurfaceUniformState(refs, surfaceState);
+        scheduleCreativeLookSurfaceResyncWhenTextureReady(model, storeLike, surfaceState?.normalMap);
+      }
+    });
+  });
 }

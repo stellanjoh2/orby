@@ -4,12 +4,17 @@ import {
   DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
   DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
 } from './extrudeImporterShared.js';
+import {
+  DEFAULT_SVG_EXTRUDE_HARD_EDGE_ANGLE_DEG,
+  DEFAULT_SVG_EXTRUDE_NORMAL_ANGLE_DEG,
+} from './svgExtrudeNormals.js';
 
 export {
   DEFAULT_EXTRUDE_DEPTH,
   DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
   DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
 } from './extrudeImporterShared.js';
+export { DEFAULT_SVG_EXTRUDE_NORMAL_ANGLE_DEG, DEFAULT_SVG_EXTRUDE_HARD_EDGE_ANGLE_DEG } from './svgExtrudeNormals.js';
 export { DEFAULT_EXTRUDE_BEVEL_AMOUNT } from './extrudeBevel.js';
 export {
   MIN_EXTRUDE_DEPTH,
@@ -27,9 +32,9 @@ export const DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH = 1.0;
 export const DEFAULT_SVG_EXTRUDE_STATE = {
   enabled: false,
   depth: DEFAULT_EXTRUDE_DEPTH,
-  normalAngle: DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
+  normalAngle: DEFAULT_SVG_EXTRUDE_NORMAL_ANGLE_DEG,
   /** Minimum crease angle for cap/side edge splits — higher = sharper shading terminators. */
-  hardEdgeAngle: DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
+  hardEdgeAngle: DEFAULT_SVG_EXTRUDE_HARD_EDGE_ANGLE_DEG,
   availableColors: [],
   colorDepths: {},
   colorOffsets: {},
@@ -55,8 +60,8 @@ export function resolveSvgExtrudeDefaults(source = {}) {
   return {
     ...DEFAULT_SVG_EXTRUDE_STATE,
     depth: svg.depth ?? DEFAULT_EXTRUDE_DEPTH,
-    normalAngle: svg.normalAngle ?? DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
-    hardEdgeAngle: svg.hardEdgeAngle ?? DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
+    normalAngle: svg.normalAngle ?? DEFAULT_SVG_EXTRUDE_NORMAL_ANGLE_DEG,
+    hardEdgeAngle: svg.hardEdgeAngle ?? DEFAULT_SVG_EXTRUDE_HARD_EDGE_ANGLE_DEG,
     availableColors: Array.isArray(svg.availableColors) ? [...svg.availableColors] : [],
     colorDepths: { ...(svg.colorDepths || {}) },
     colorOffsets: { ...(svg.colorOffsets || {}) },
@@ -116,5 +121,43 @@ export function resetSvgExtrudeState(stateStore, eventBus, storeDefaults = {}) {
     preset: svg.surfacePreset,
     scale: svg.surfaceScale,
     strength: svg.surfaceStrength,
+  });
+}
+
+/**
+ * Clean `svgExtrude` slice when replacing an SVG file import with generated text.
+ * Drops multi-color maps, color override, surface presets, and other SVG-only cruft.
+ *
+ * @param {Record<string, unknown>} [overrides]
+ */
+export function buildFontExtrudeSvgExtrudeBaseline(overrides = {}) {
+  return {
+    enabled: true,
+    depth: DEFAULT_EXTRUDE_DEPTH,
+    normalAngle: DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
+    hardEdgeAngle: DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
+    availableColors: [],
+    colorDepths: {},
+    colorOffsets: {},
+    flipDirection: true,
+    colorOverride: false,
+    overrideColor: DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
+    surfacePreset: DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
+    surfaceScale: DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
+    surfaceStrength: DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
+    bevelAmount: DEFAULT_EXTRUDE_BEVEL_AMOUNT,
+    detail: 'high',
+    ...overrides,
+  };
+}
+
+/**
+ * @param {import('../StateStore.js').StateStore} stateStore
+ * @param {import('../EventBus.js').EventBus} eventBus
+ * @param {Record<string, unknown>} [overrides]
+ */
+export function resetSvgExtrudeStateForFontExtrude(stateStore, eventBus, overrides = {}) {
+  resetSvgExtrudeState(stateStore, eventBus, {
+    svgExtrude: buildFontExtrudeSvgExtrudeBaseline(overrides),
   });
 }

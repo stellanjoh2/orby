@@ -15,6 +15,10 @@ import {
   DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
 } from '../import/extrudeDefaults.js';
 import { DEFAULT_FONT_BEVEL_TYPE } from '../import/extrudeBevel.js';
+import {
+  clearSvgExtrudeLegacyForFontGeneration,
+  shouldClearSvgExtrudeLegacyForFontGeneration,
+} from './SvgExtrudeSceneOps.js';
 
 const DEFAULT_FONT_SIZE = 72;
 const PREVIEW_LAYOUT_WIDTH = 520;
@@ -317,26 +321,34 @@ export class FontExtrudeController {
     if (!this.font) {
       throw new Error('No font loaded');
     }
+    const scene = this.getScene?.();
+    if (scene && shouldClearSvgExtrudeLegacyForFontGeneration(scene)) {
+      clearSvgExtrudeLegacyForFontGeneration(this.stateStore, this.eventBus);
+      this.fontExtrudeImporter = new FontExtrudeImporter();
+    }
+
     const layout = await this.layoutTextAsync(text, options);
     if (!layout.lines.length) {
       throw new Error('Text has no drawable paths');
     }
-    const svgState = this.stateStore.getState()?.svgExtrude || {};
+    const extrudeState = this.stateStore.getState()?.svgExtrude || {};
     const fontState = this.stateStore.getState()?.fontExtrude || {};
     const fillColor = normalizeGlyphFillHex(
       options.fillColor ?? fontState.fillColor ?? DEFAULT_PREVIEW_FILL,
     );
     const group = this.fontExtrudeImporter.buildFromLayout(layout, {
       sourceName: this.fontLabel || 'Text',
-      depth: options.depth ?? svgState.depth ?? DEFAULT_EXTRUDE_DEPTH,
-      normalAngleDeg: options.normalAngleDeg ?? svgState.normalAngle ?? DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
-      hardEdgeAngleDeg: options.hardEdgeAngleDeg ?? svgState.hardEdgeAngle ?? DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
-      colorDepths: options.colorDepths ?? svgState.colorDepths ?? {},
-      colorOffsets: options.colorOffsets ?? svgState.colorOffsets ?? {},
+      depth: options.depth ?? extrudeState.depth ?? DEFAULT_EXTRUDE_DEPTH,
+      normalAngleDeg:
+        options.normalAngleDeg ?? extrudeState.normalAngle ?? DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
+      hardEdgeAngleDeg:
+        options.hardEdgeAngleDeg ?? extrudeState.hardEdgeAngle ?? DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
+      colorDepths: options.colorDepths ?? extrudeState.colorDepths ?? {},
+      colorOffsets: options.colorOffsets ?? extrudeState.colorOffsets ?? {},
       flipDirection: FONT_EXTRUDE_FLIP_DIRECTION,
-      detail: options.detail ?? fontState.detail ?? 'high',
+      detail: options.detail ?? fontState.detail ?? extrudeState.detail ?? 'high',
       fillColor,
-      bevelAmount: options.bevelAmount ?? svgState.bevelAmount ?? DEFAULT_EXTRUDE_BEVEL_AMOUNT,
+      bevelAmount: options.bevelAmount ?? extrudeState.bevelAmount ?? DEFAULT_EXTRUDE_BEVEL_AMOUNT,
       bevelType: options.bevelType ?? fontState.bevelType ?? DEFAULT_FONT_BEVEL_TYPE,
     });
     group.userData.orbyFontGenerated = true;

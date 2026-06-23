@@ -42,6 +42,7 @@ import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
 import { GroundController } from './render/GroundController.js';
 import { EnvironmentController } from './render/EnvironmentController.js';
+import { syncTransmissionBackdropForCreativeLook, needsTransmissionBackdropForCreativeLook } from './render/backgroundFallback.js';
 import { HdriMoodController } from './render/HdriMoodController.js';
 import { CameraController } from './render/CameraController.js';
 import { ModelLoader } from './render/ModelLoader.js';
@@ -64,6 +65,7 @@ import {
   computeCreativeLookToonLightScalars,
   creativeLookFlatPostVariant,
   creativeLookMasterHueRadians,
+  creativeLookPresetNeedsHdriBackdrop,
   formatCreativeLookPresetLabel,
   isFlatPostCreativeLookPreset,
   isScreenPixelCreativeLookPreset,
@@ -631,7 +633,16 @@ export class SceneManager {
       getCreativeLookKeyLightDir: (out) => this._getCreativeLookKeyLightDir(out),
       getCreativeLookToonLightScalars: () =>
         this._getCreativeLookToonLightScalars(),
+      onNeedsTransmissionBackdrop: () => {
+        this.syncCreativeLookTransmissionBackdrop();
+      },
       afterCreativeLookMaterialRebuild: () => {
+        const preset = normalizeCreativeLookPreset(
+          this.materialController?.creativeLookSettings?.preset,
+        );
+        if (creativeLookPresetNeedsHdriBackdrop(preset)) {
+          this.syncCreativeLookTransmissionBackdrop();
+        }
         this._syncCreativeLookAsciiPass();
         if (this.scene?.environment) {
           this.updateMaterialsEnvironment(
@@ -2053,6 +2064,26 @@ export class SceneManager {
     this.applyHdriMood(this.currentHdri);
     this.ui?.updateHdriReceiveShadowsAoDisabled?.();
     this.ui?.updateHdriBackgroundFallbackVisibility?.();
+  }
+
+  /**
+   * MeshPhysicalMaterial transmission refracts `scene.background`, not the clear color.
+   * Glass / Chrome auto-enable Render Backdrop when HDRI lighting is on.
+   */
+  syncCreativeLookTransmissionBackdrop() {
+    if (!this.stateStore) return false;
+    const state = this.stateStore.getState();
+    if (!needsTransmissionBackdropForCreativeLook(state)) return false;
+    if (!state.hdriBackground) {
+      this.stateStore.set('hdriBackground', true);
+    }
+    // Always push to the GPU — state may already be true while scene.background was released
+    // (e.g. Shader Lab entry, font regen, or creative-look pass toggling the environment).
+    this.setHdriBackground(true);
+    if (this.ui?.inputs?.hdriBackground) {
+      this.ui.inputs.hdriBackground.checked = true;
+    }
+    return true;
   }
 
   setHdriReceiveShadowsAo(enabled) {
@@ -4313,7 +4344,7 @@ export class SceneManager {
         this.stateStore.set('svgExtrude.surfaceStrength', settings.strength);
       }
     }
-    if (!this.currentModel || !this.isSvgExtrudeModel) return;
+    if (!this.currentModel) return;
     this.materialController?.reapplySvgExtrudeSurfaceShaders();
   }
 
@@ -5088,6 +5119,16 @@ export class SceneManager {
     try {
       mc.setCreativeLookSettings(creativeLookState, options);
       this._syncCreativeLookAsciiPass();
+      const preset = normalizeCreativeLookPreset(creativeLookState?.preset);
+      // Glass / Chrome need scene.background for transmission — only when materials rebuild,
+      // not on live tweaks (bloom, sketch sliders, etc.) that reuse mesh:creative-look.
+      if (
+        heavy &&
+        creativeLookState?.enabled === true &&
+        creativeLookPresetNeedsHdriBackdrop(preset)
+      ) {
+        this.syncCreativeLookTransmissionBackdrop();
+      }
       if (heavy && creativeLookState?.enabled) {
         const label = formatCreativeLookPresetLabel(creativeLookState.preset);
         this.ui?.showToast?.(`${label} loaded`, 2800, {

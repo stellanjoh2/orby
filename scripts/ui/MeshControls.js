@@ -27,7 +27,6 @@ import {
   shouldResetDitherPresetTuning,
   normalizeCreativeLookPreset,
   resolveCreativeLookPresetChoice,
-  creativeLookPresetNeedsHdriBackdrop,
 } from '../render/CreativeLookMaterials.js';
 import { isVoxelCreativeLookPreset } from '../render/creativeLookVoxelArt.js';
 import { isFontExtrudeRevealModel } from '../scene/FontTextRevealController.js';
@@ -65,13 +64,6 @@ export class MeshControls {
       radius: false,
       strength: false,
       color: false,
-    };
-    // Track which material inputs are currently being interacted with
-    this.materialInteracting = {
-      metalness: false,
-      roughness: false,
-      brightness: false,
-      emissive: false,
     };
     this.svgExtrudeTimers = {
       depth: null,
@@ -179,15 +171,6 @@ export class MeshControls {
     });
     if (this.ui.inputs.materialBrightness) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.materialBrightness);
 
-    // Global mouseup handler to reset interaction flags (in case mouse is released outside input)
-    // Note: This will be combined with the Fresnel handler below
-    
-    this.ui.inputs.materialMetalness?.addEventListener('mousedown', () => {
-      this.materialInteracting.metalness = true;
-    });
-    this.ui.inputs.materialMetalness?.addEventListener('mouseup', () => {
-      this.materialInteracting.metalness = false;
-    });
     this.ui.inputs.materialMetalness?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       const clampedValue = isNaN(value) ? 0.0 : Math.max(0, Math.min(1, value));
@@ -197,12 +180,6 @@ export class MeshControls {
     });
     if (this.ui.inputs.materialMetalness) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.materialMetalness);
 
-    this.ui.inputs.materialRoughness?.addEventListener('mousedown', () => {
-      this.materialInteracting.roughness = true;
-    });
-    this.ui.inputs.materialRoughness?.addEventListener('mouseup', () => {
-      this.materialInteracting.roughness = false;
-    });
     this.ui.inputs.materialRoughness?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       const clampedValue = isNaN(value) ? 0.5 : Math.max(0, Math.min(1, value));
@@ -212,12 +189,6 @@ export class MeshControls {
     });
     if (this.ui.inputs.materialRoughness) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.materialRoughness);
 
-    this.ui.inputs.materialEmissive?.addEventListener('mousedown', () => {
-      this.materialInteracting.emissive = true;
-    });
-    this.ui.inputs.materialEmissive?.addEventListener('mouseup', () => {
-      this.materialInteracting.emissive = false;
-    });
     this.ui.inputs.materialEmissive?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       const clampedValue = isNaN(value)
@@ -521,16 +492,8 @@ export class MeshControls {
       container.classList.toggle('creative-look-foldout--collapsed', !open);
       container.classList.toggle('creative-look-foldout--expanded', open);
     };
-    const syncRenderBackdropForShaderLab = (preset) => {
-      const state = this.stateStore.getState();
-      const hdriOn = state.hdriEnabled !== false;
-      const nextBackdrop = creativeLookPresetNeedsHdriBackdrop(preset) && hdriOn;
-      if (!!state.hdriBackground === nextBackdrop) return;
-      this.stateStore.set('hdriBackground', nextBackdrop);
-      this.eventBus.emit('studio:hdri-background', nextBackdrop);
-      if (this.ui.inputs.hdriBackground) {
-        this.ui.inputs.hdriBackground.checked = nextBackdrop;
-      }
+    const syncRenderBackdropForShaderLab = () => {
+      window.orby?.scene?.syncCreativeLookTransmissionBackdrop?.();
     };
     const isShaderLabSectionOpen = (state) =>
       !!state.creativeLookSectionOpen || !!state.creativeLook?.enabled;
@@ -555,7 +518,7 @@ export class MeshControls {
         this.ui.toggleCreativeLookGrid(true);
         this.ui.setCreativeLookActive(chosen);
         if (chosen) {
-          syncRenderBackdropForShaderLab(chosen);
+          syncRenderBackdropForShaderLab();
           this.eventBus.emit('mesh:creative-look');
         }
         return;
@@ -655,8 +618,14 @@ export class MeshControls {
       this.stateStore.set('creativeLook.pauseShaderAnimations', next);
     });
     this.ui.inputs.creativeLookBloomEnabled?.addEventListener('change', (event) => {
-      this.stateStore.set('creativeLook.viewportBloom', event.target.checked);
-      this.eventBus.emit('mesh:creative-look');
+      const enabled = event.target.checked;
+      this.stateStore.set('creativeLook.viewportBloom', enabled);
+      // Viewport bloom is read from state each frame — do not emit mesh:creative-look here;
+      // that re-runs syncCreativeLookTransmissionBackdrop and turns HDRI Render Backdrop back on.
+      const mc = window.orby?.scene?.materialController;
+      if (mc?.creativeLookSettings) {
+        mc.creativeLookSettings.viewportBloom = enabled;
+      }
     });
     this.ui.inputs.creativeLookButtons?.forEach?.((button) => {
       button.addEventListener('click', () => {
@@ -741,7 +710,7 @@ export class MeshControls {
           }
         });
         updateCreativeLookFoldout(true);
-        syncRenderBackdropForShaderLab(preset);
+        syncRenderBackdropForShaderLab();
         if (this.ui.inputs.creativeLookEnabled) {
           this.ui.inputs.creativeLookEnabled.checked = true;
         }
@@ -792,11 +761,6 @@ export class MeshControls {
     
     // Global mouseup handler to reset interaction flags (in case mouse is released outside input)
     const handleGlobalMouseUp = () => {
-      // Reset material interaction flags
-      this.materialInteracting.metalness = false;
-      this.materialInteracting.roughness = false;
-      this.materialInteracting.brightness = false;
-      this.materialInteracting.emissive = false;
       // Reset Fresnel interaction flags
       this.fresnelInteracting.color = false;
       this.fresnelInteracting.radius = false;
@@ -1294,6 +1258,15 @@ export class MeshControls {
     }
   }
 
+  _syncMaterialRangeSlider(input, outputKey, value) {
+    if (!input) return;
+    if (this.helpers.syncRangeFromState(input, value)) {
+      this.helpers.updateValueLabel(outputKey, value, 'decimal');
+    } else if (!this.helpers.shouldSkipRangeSyncWrite(input)) {
+      this.helpers.updateValueLabel(outputKey, value, 'decimal');
+    }
+  }
+
   sync(state) {
     this.syncTransformSliders({
       scale: state.scale,
@@ -1307,40 +1280,37 @@ export class MeshControls {
     if (this.ui.inputs.materialBrightness) {
       const mrDefaults = getMaterialMrResetDefaults(!!state.material?.importUsesAuthoredPbr);
       const brightness = state.material?.brightness ?? mrDefaults.brightness;
-      this.ui.inputs.materialBrightness.value = brightness;
-      this.helpers.updateValueLabel('materialBrightness', brightness, 'decimal');
+      this._syncMaterialRangeSlider(
+        this.ui.inputs.materialBrightness,
+        'materialBrightness',
+        brightness,
+      );
     }
     if (this.ui.inputs.materialMetalness) {
-      // Only update if user is not actively interacting
-      const isInteracting = this.materialInteracting?.metalness || 
-                           document.activeElement === this.ui.inputs.materialMetalness;
-      if (!isInteracting) {
-        const mrDefaults = getMaterialMrResetDefaults(!!state.material?.importUsesAuthoredPbr);
-        const metalness = state.material?.metalness ?? mrDefaults.metalness;
-        this.ui.inputs.materialMetalness.value = metalness;
-        this.helpers.updateValueLabel('materialMetalness', metalness, 'decimal');
-      }
+      const mrDefaults = getMaterialMrResetDefaults(!!state.material?.importUsesAuthoredPbr);
+      const metalness = state.material?.metalness ?? mrDefaults.metalness;
+      this._syncMaterialRangeSlider(
+        this.ui.inputs.materialMetalness,
+        'materialMetalness',
+        metalness,
+      );
     }
     if (this.ui.inputs.materialRoughness) {
-      // Only update if user is not actively interacting
-      const isInteracting = this.materialInteracting?.roughness || 
-                           document.activeElement === this.ui.inputs.materialRoughness;
-      if (!isInteracting) {
-        const mrDefaults = getMaterialMrResetDefaults(!!state.material?.importUsesAuthoredPbr);
-        const roughness = state.material?.roughness ?? mrDefaults.roughness;
-        this.ui.inputs.materialRoughness.value = roughness;
-        this.helpers.updateValueLabel('materialRoughness', roughness, 'decimal');
-      }
+      const mrDefaults = getMaterialMrResetDefaults(!!state.material?.importUsesAuthoredPbr);
+      const roughness = state.material?.roughness ?? mrDefaults.roughness;
+      this._syncMaterialRangeSlider(
+        this.ui.inputs.materialRoughness,
+        'materialRoughness',
+        roughness,
+      );
     }
     if (this.ui.inputs.materialEmissive) {
-      const isInteracting =
-        this.materialInteracting?.emissive ||
-        document.activeElement === this.ui.inputs.materialEmissive;
-      if (!isInteracting) {
-        const emissive = state.material?.emissive ?? 0.0;
-        this.ui.inputs.materialEmissive.value = emissive;
-        this.helpers.updateValueLabel('materialEmissive', emissive, 'decimal');
-      }
+      const emissive = state.material?.emissive ?? 0.0;
+      this._syncMaterialRangeSlider(
+        this.ui.inputs.materialEmissive,
+        'materialEmissive',
+        emissive,
+      );
     }
     this.ui.syncMaterialMrMapTooltips?.(
       !!state.material?.importUsesAuthoredPbr,

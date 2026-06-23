@@ -3,29 +3,26 @@ import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
 import {
   clampExtrudeBevelAmount,
   DEFAULT_EXTRUDE_BEVEL_AMOUNT,
-  resolveFontExtrudeBevelSettingsForType,
-  resolveFontExtrudePathSofteningSize,
+  resolveExtrudeBevelSettings,
 } from './extrudeBevel.js';
-import { softenFontExtrudeShapeForBevel } from './extrudeBevelCorner.js';
 import {
   normalizeExtrudeDetail,
-  resolveBevelSideCurveSegments,
   resolveExtrudeDetailSettings,
 } from './extrudeDetail.js';
 import {
   applyExtrudeDirectionOffset,
   clampExtrudeColorOffset,
   clampExtrudeDepth,
-  clampExtrudeNormalAngleDeg,
-  clampExtrudeHardEdgeAngleDeg,
   DEFAULT_EXTRUDE_DEPTH,
-  DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
-  DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
   preserveExtrudeGroupOnRebuild,
 } from './extrudeImporterShared.js';
 import { densifyShapeForExtrudeCaps } from './extrudeDensify.js';
 import {
   applySvgExtrudeCreasedNormalsToGroup,
+  clampSvgExtrudeHardEdgeAngleDeg,
+  clampSvgExtrudeNormalAngleDeg,
+  DEFAULT_SVG_EXTRUDE_HARD_EDGE_ANGLE_DEG,
+  DEFAULT_SVG_EXTRUDE_NORMAL_ANGLE_DEG,
   finalizeSvgExtrudeGroupGeometry,
 } from './svgExtrudeNormals.js';
 import { geometryHasNaNPositions, sanitizeShapeForExtrudeGeometry } from './extrudeShapeSanitize.js';
@@ -50,8 +47,8 @@ export class SvgExtrudeImporter {
     this.sourceName = 'SVG';
     this.group = null;
     this.currentDepth = DEFAULT_EXTRUDE_DEPTH;
-    this.currentNormalAngleDeg = DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
-    this.currentHardEdgeAngleDeg = DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG;
+    this.currentNormalAngleDeg = DEFAULT_SVG_EXTRUDE_NORMAL_ANGLE_DEG;
+    this.currentHardEdgeAngleDeg = DEFAULT_SVG_EXTRUDE_HARD_EDGE_ANGLE_DEG;
     this.currentColorDepths = {};
     this.currentColorOffsets = {};
     this.currentColorPalette = [];
@@ -73,10 +70,10 @@ export class SvgExtrudeImporter {
     this.svgText = svgText;
     this.sourceName = sourceName;
     this.currentDepth = clampExtrudeDepth(options.depth ?? this.currentDepth);
-    this.currentNormalAngleDeg = clampExtrudeNormalAngleDeg(
+    this.currentNormalAngleDeg = clampSvgExtrudeNormalAngleDeg(
       options.normalAngleDeg ?? this.currentNormalAngleDeg,
     );
-    this.currentHardEdgeAngleDeg = clampExtrudeHardEdgeAngleDeg(
+    this.currentHardEdgeAngleDeg = clampSvgExtrudeHardEdgeAngleDeg(
       options.hardEdgeAngleDeg ?? this.currentHardEdgeAngleDeg,
     );
     this.currentColorDepths = { ...(options.colorDepths || this.currentColorDepths || {}) };
@@ -161,7 +158,7 @@ export class SvgExtrudeImporter {
     if (!this.svgText) {
       throw new Error('No SVG source available for normal angle update');
     }
-    this.currentNormalAngleDeg = clampExtrudeNormalAngleDeg(nextNormalAngleDeg);
+    this.currentNormalAngleDeg = clampSvgExtrudeNormalAngleDeg(nextNormalAngleDeg);
     return this._rebuildPreserveGroup(this.currentDepth, this.currentNormalAngleDeg);
   }
 
@@ -169,7 +166,7 @@ export class SvgExtrudeImporter {
     if (!this.svgText) {
       throw new Error('No SVG source available for hard edge angle update');
     }
-    this.currentHardEdgeAngleDeg = clampExtrudeHardEdgeAngleDeg(nextHardEdgeAngleDeg);
+    this.currentHardEdgeAngleDeg = clampSvgExtrudeHardEdgeAngleDeg(nextHardEdgeAngleDeg);
     return this._rebuildPreserveGroup(this.currentDepth, this.currentNormalAngleDeg);
   }
 
@@ -309,7 +306,7 @@ export class SvgExtrudeImporter {
       });
 
       for (const shape of shapes) {
-        const bevelSettings = resolveFontExtrudeBevelSettingsForType('straight', {
+        const bevelSettings = resolveExtrudeBevelSettings({
           amount: this.currentBevelAmount,
           depth: effectiveDepth,
           xyNormalizeScale,
@@ -319,7 +316,7 @@ export class SvgExtrudeImporter {
           bevelEnabled,
         });
         const curveSegments = bevelEnabled
-          ? resolveBevelSideCurveSegments(this.currentDetail, detailSettings.curveSegments)
+          ? Math.max(4, Math.round(Number(detailSettings.extractDivisions) || 24))
           : detailSettings.curveSegments;
         const extrudeOptions = {
           depth: effectiveDepth,
@@ -327,14 +324,7 @@ export class SvgExtrudeImporter {
           curveSegments,
           ...bevelSettings,
         };
-        const outline = bevelEnabled
-          ? softenFontExtrudeShapeForBevel(
-            shape,
-            resolveFontExtrudePathSofteningSize(extrudeOptions),
-            curveSegments,
-          )
-          : shape;
-        const geometry = this._extrudeShapeWithBevel(outline, extrudeOptions, detailSettings);
+        const geometry = this._extrudeShapeWithBevel(shape, extrudeOptions, detailSettings);
         const mesh = new THREE.Mesh(geometry, material.clone());
         mesh.castShadow = true;
         mesh.receiveShadow = true;
@@ -361,11 +351,7 @@ export class SvgExtrudeImporter {
     }
     this.currentColorPalette = [...colorPaletteSet].sort();
 
-    applySvgExtrudeCreasedNormalsToGroup(
-      group,
-      normalAngleDeg,
-      this.currentHardEdgeAngleDeg,
-    );
+    applySvgExtrudeCreasedNormalsToGroup(group, normalAngleDeg);
     this._normalizeGeometrySpace(group);
     applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
     finalizeSvgExtrudeGroupGeometry(

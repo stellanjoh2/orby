@@ -21,7 +21,8 @@ import {
   updateDustFieldParticlePositions,
   DUST_FIELD_PARTICLE_COUNT,
   creativeChromeRoughness,
-  creativeGlassParams,
+  CREATIVE_GLASS_ENV_MAP_MUL,
+  creativeGlassParamsForMesh,
   creativeLookMasterHueRadians,
   creativePs2CrushMergeFactor,
   creativePsxMergeFactor,
@@ -34,6 +35,7 @@ import {
   creativeLookPatternScaleBounds,
   normalizeCreativeLookPatternScale,
   creativeLookPresetUsesShaderAnimation,
+  creativeLookPresetNeedsHdriBackdrop,
   isFlatPostCreativeLookPreset,
   isDitherPixelCreativeLookPreset,
   shouldResetDitherPresetTuning,
@@ -84,7 +86,10 @@ import { normalizeCreativeLookPresetParams } from './creativeLookPresetSliders.j
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 import {
   applySvgExtrudeSurfaceToMaterial,
+  computeExtrudeSurfaceMappingBounds,
   ensureSvgExtrudeFresnelChain,
+  resolveOrbySurfaceUniformState,
+  syncCreativeLookSurfaceToModel,
   syncSvgExtrudeSurfaceProgramCacheKey,
   getSvgExtrudeSurfacePresetConfig,
   isFresnelLinkedInSvgSurfaceChain,
@@ -276,6 +281,8 @@ export class MaterialController {
     getCreativeLookToonLightScalars = null,
     /** Called after creative ShaderMaterials are (re)built — e.g. `renderer.compile(scene, camera)` to avoid first-draw hitches. */
     afterCreativeLookMaterialRebuild = null,
+    /** Glass / Chrome — ensure HDRI Render Backdrop is on `scene.background` before materials build. */
+    onNeedsTransmissionBackdrop = null,
     /** Called when ASCII Art live uniforms change — sync screen-space glyph pass. */
     onCreativeLookAsciiSync = null,
     /** Pause animations at clip 0 / frame 0 before skinned voxel baking. */
@@ -290,6 +297,7 @@ export class MaterialController {
     this.getCreativeLookKeyLightDir = getCreativeLookKeyLightDir;
     this.getCreativeLookToonLightScalars = getCreativeLookToonLightScalars;
     this.afterCreativeLookMaterialRebuild = afterCreativeLookMaterialRebuild;
+    this.onNeedsTransmissionBackdrop = onNeedsTransmissionBackdrop;
     this.onCreativeLookAsciiSync = onCreativeLookAsciiSync;
     this.prepareStaticVoxelPose = prepareStaticVoxelPose;
     this.restoreStaticVoxelPose = restoreStaticVoxelPose;
@@ -444,7 +452,14 @@ export class MaterialController {
       if (child.isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
-        if (!this.originalMaterials.has(child)) {
+        // Extrude rebuilds swap mesh nodes — refresh import snapshots, never Shader Lab clones.
+        if (
+          child.userData?.orbySvgExtrude ||
+          child.userData?.orbyFontExtrude
+        ) {
+          const importMat = this._resolveExtrudeImportMaterialForMesh(child);
+          if (importMat) this.originalMaterials.set(child, importMat);
+        } else if (!this.originalMaterials.has(child)) {
           this.originalMaterials.set(child, child.material);
         }
         const stored = this.originalMaterials.get(child);
@@ -2320,6 +2335,92 @@ export class MaterialController {
     }
   }
 
+  /** @param {THREE.Material | null | undefined} m */
+  _isImportBaselineMaterial(m) {
+    return (
+      !!m &&
+      !m.userData?.orbyCreativeLook &&
+      (m.isMeshStandardMaterial || m.isMeshPhysicalMaterial || m.isMeshBasicMaterial)
+    );
+  }
+
+  /** Rebuild a shaded import material when snapshots were lost or polluted by Shader Lab. */
+  _synthesizeExtrudeImportMaterial(mesh) {
+    const linear = mesh.userData?.orbySvgBaseColorLinear;
+    const hex = mesh.userData?.orbySvgBaseColor;
+    let color;
+    if (linear && Number.isFinite(linear.r)) {
+      color = new THREE.Color(linear.r, linear.g, linear.b);
+    } else if (hex) {
+      color = new THREE.Color(hex);
+    } else {
+      color = new THREE.Color('#ffffff');
+    }
+    return new THREE.MeshStandardMaterial({
+      color: this._diffuseColorWithBrightness(color),
+      metalness: this.materialSettings.metalness ?? DEFAULT_MATERIAL_METALNESS,
+      roughness: this.materialSettings.roughness ?? DEFAULT_MATERIAL_ROUGHNESS,
+      side: THREE.FrontSide,
+    });
+  }
+
+  /**
+   * Resolve the import baseline for an extrude mesh — never a Shader Lab material.
+   * @param {THREE.Mesh} mesh
+   */
+  _resolveExtrudeImportMaterialForMesh(mesh) {
+    const stored = this.originalMaterials.get(mesh);
+    if (stored) {
+      const items = Array.isArray(stored) ? stored : [stored];
+      if (items.every((m) => this._isImportBaselineMaterial(m))) return stored;
+    }
+    const live = mesh.material;
+    const liveItems = Array.isArray(live) ? live : live ? [live] : [];
+    if (liveItems.length > 0 && liveItems.every((m) => this._isImportBaselineMaterial(m))) {
+      return live;
+    }
+    if (mesh.userData?.orbySvgExtrude || mesh.userData?.orbyFontExtrude) {
+      return this._synthesizeExtrudeImportMaterial(mesh);
+    }
+    return this._isImportBaselineMaterial(stored) ? stored : null;
+  }
+
+  /** Dispose active Shader Lab materials and restore import baselines on every mesh. */
+  _stripCreativeLookMaterialsBeforeApply() {
+    if (!this.currentModel) return;
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh || child.userData.isWireframeOverlay) return;
+
+      if (child.userData?.orbySvgExtrude || child.userData?.orbyFontExtrude) {
+        const importMat = this._resolveExtrudeImportMaterialForMesh(child);
+        if (importMat) this.originalMaterials.set(child, importMat);
+      }
+
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      if (!mats.some((m) => m?.userData?.orbyCreativeLook)) return;
+
+      for (const m of mats) {
+        if (m?.userData?.orbyCreativeLook) m.dispose?.();
+      }
+
+      const importOriginal = this.originalMaterials.get(child);
+      if (importOriginal) {
+        child.material = importOriginal;
+      }
+    });
+  }
+
+  /** Register import materials for SVG / font extrude meshes (glyph rebuilds add new mesh nodes). */
+  _ensureExtrudeImportMaterialSnapshots(object) {
+    if (!object) return;
+    object.traverse((child) => {
+      if (!child.isMesh || child.userData.isWireframeOverlay) return;
+      if (!child.userData?.orbySvgExtrude && !child.userData?.orbyFontExtrude) return;
+      const resolved = this._resolveExtrudeImportMaterialForMesh(child);
+      if (resolved) this.originalMaterials.set(child, resolved);
+    });
+  }
+
   _disposeTransientMeshMaterials(mesh) {
     const original = this.originalMaterials.get(mesh);
     const material = mesh.material;
@@ -2381,6 +2482,12 @@ export class MaterialController {
       preset,
       this.creativeLookSettings.patternScale,
     );
+    if (
+      creativeLookPresetNeedsHdriBackdrop(preset) &&
+      typeof this.onNeedsTransmissionBackdrop === 'function'
+    ) {
+      this.onNeedsTransmissionBackdrop();
+    }
     const sketchParams = isSketchFamilyCreativeLookPreset(preset)
       ? this._resolveSketchParams()
       : null;
@@ -2406,6 +2513,10 @@ export class MaterialController {
 
     // Shader Lab replaces mesh materials even in textures/wireframe display modes so imports
     // with missing maps (common FBX drops) still render as stylized geometry.
+
+    // Insta-kill any active Shader Lab materials before rebuilding (font extrude = many glyphs).
+    this._stripCreativeLookMaterialsBeforeApply();
+    this._ensureExtrudeImportMaterialSnapshots(this.currentModel);
 
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
@@ -2481,6 +2592,12 @@ export class MaterialController {
           materialRoughness: this.materialSettings.roughness ?? DEFAULT_MATERIAL_ROUGHNESS,
           skinning,
           morphTargets,
+          surfaceState: resolveOrbySurfaceUniformState(
+            this.stateStore?.getState()?.svgExtrude?.surfacePreset ?? 'none',
+            this.stateStore?.getState()?.svgExtrude?.surfaceScale ?? 1,
+            this.stateStore?.getState()?.svgExtrude?.surfaceStrength ?? 1,
+            computeExtrudeSurfaceMappingBounds(child),
+          ),
         });
       };
 
@@ -2489,6 +2606,25 @@ export class MaterialController {
       } else {
         child.material = mk(importOriginal, 0);
       }
+      if (preset === 'glass') {
+        const blur = Number(this.stateStore?.getState()?.hdriBlurriness ?? 0);
+        const hdriBlurVal = Number.isFinite(blur) ? blur : 0;
+        const patchGlassThickness = (m) => {
+          if (m?.userData?.orbyCreativeLook !== 'glass' || !m.isMeshPhysicalMaterial) return;
+          const { thickness, roughness } = creativeGlassParamsForMesh(
+            patternScale,
+            hdriBlurVal,
+            child,
+          );
+          m.thickness = thickness;
+          m.roughness = roughness;
+        };
+        if (Array.isArray(child.material)) {
+          child.material.forEach(patchGlassThickness);
+        } else {
+          patchGlassThickness(child.material);
+        }
+      }
       // Shader Lab uses dedicated depth materials for shadow-map casting; receiveShadow uses
       // custom shadow-map chunks in the creative look shaders (see CreativeLookMaterials).
       child.castShadow = true;
@@ -2496,6 +2632,9 @@ export class MaterialController {
     });
 
     this._syncCreativeLookShadowTint();
+    if (preset === 'glass') {
+      this._stabilizeFontExtrudeGlassPresentation();
+    }
     this._appliedCreativeLookPreset = preset;
 
     if (this.onMaterialUpdate) {
@@ -2504,6 +2643,9 @@ export class MaterialController {
     if (typeof this.afterCreativeLookMaterialRebuild === 'function') {
       this.afterCreativeLookMaterialRebuild();
     }
+    requestAnimationFrame(() => {
+      if (this.currentModel) this.reapplyCreativeLookSurfaceShaders();
+    });
   }
 
   /** Push current shadow-tint settings onto Shader Lab materials. */
@@ -3480,6 +3622,14 @@ export class MaterialController {
       return;
     }
 
+    if (
+      prevEnabled &&
+      this.creativeLookSettings.enabled &&
+      prevPreset !== nextPreset
+    ) {
+      this._appliedCreativeLookPreset = null;
+    }
+
     this._applyCreativeLookOverride();
   }
 
@@ -3586,15 +3736,17 @@ export class MaterialController {
 
     if (preset === 'glass') {
       const blur = Number(this.stateStore?.getState()?.hdriBlurriness ?? 0);
-      const { thickness, roughness } = creativeGlassParams(
-        patternScale,
-        Number.isFinite(blur) ? blur : 0,
-      );
+      const hdriBlur = Number.isFinite(blur) ? blur : 0;
       this.currentModel.traverse((child) => {
         if (!child.isMesh) return;
         const mats = Array.isArray(child.material) ? child.material : [child.material];
         for (const m of mats) {
           if (m?.userData?.orbyCreativeLook === 'glass' && m.isMeshPhysicalMaterial) {
+            const { thickness, roughness } = creativeGlassParamsForMesh(
+              patternScale,
+              hdriBlur,
+              child,
+            );
             m.thickness = thickness;
             m.roughness = roughness;
           }
@@ -4584,6 +4736,13 @@ export class MaterialController {
     if (this.shadowTintStrength > 0) {
       this.applyShadowTintToObject(this.currentModel);
     }
+    this.reapplyCreativeLookSurfaceShaders();
+  }
+
+  /** Appearance → Material surface onto compatible Shader Lab presets (holographic, chrome, etc.). */
+  reapplyCreativeLookSurfaceShaders() {
+    if (!this.currentModel) return;
+    syncCreativeLookSurfaceToModel(this.currentModel, this.stateStore);
   }
 
   applyFresnelToModel(root) {
@@ -4992,6 +5151,35 @@ export class MaterialController {
             patternScale,
             hdriBlurriness,
           );
+          material.needsUpdate = true;
+          return;
+        }
+
+        if (material.userData?.orbyCreativeLook === 'glass') {
+          if (!material.isMeshPhysicalMaterial) return;
+          material.envMap = envTexture;
+          material.transmission = 1;
+          if (material.envMapIntensity !== undefined) {
+            material.envMapIntensity =
+              intensity * litEnvMul * CREATIVE_GLASS_ENV_MAP_MUL;
+          }
+          const ps = Number(state?.creativeLook?.patternScale);
+          const patternScale = Number.isFinite(ps)
+            ? THREE.MathUtils.clamp(ps, 0.02, 5)
+            : 1;
+          const { thickness, roughness } = creativeGlassParamsForMesh(
+            patternScale,
+            hdriBlurriness,
+            child,
+          );
+          material.thickness = thickness;
+          material.roughness = roughness;
+          material.transparent = true;
+          material.opacity = 1;
+          material.depthWrite = false;
+          if (this._isFontExtrudeModel()) {
+            material.side = THREE.DoubleSide;
+          }
           material.needsUpdate = true;
           return;
         }
@@ -5823,6 +6011,29 @@ export class MaterialController {
       if (child.userData?.orbyFontExtrude) found = true;
     });
     return found;
+  }
+
+  /**
+   * Font glyphs (especially e/g/o) are often several extrude shells in one group. Align with the
+   * official transmission example (DoubleSide + stable renderOrder) to reduce angle-dependent sort
+   * glitches. Does not fix the engine limit: transmission still won't refract other glass meshes.
+   */
+  _stabilizeFontExtrudeGlassPresentation() {
+    if (!this.currentModel || !this._isFontExtrudeModel()) return;
+
+    this.currentModel.traverse((child) => {
+      if (child.userData?.orbyFontGlyphGroup) {
+        child.renderOrder = Number(child.userData.orbyFontGlyphIndex) || 0;
+      }
+      if (!child.isMesh || !child.userData?.orbyFontExtrude) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      for (const m of mats) {
+        if (m?.userData?.orbyCreativeLook !== 'glass' || !m.isMeshPhysicalMaterial) continue;
+        // https://threejs.org/examples/webgl_materials_physical_transmission.html uses DoubleSide.
+        m.side = THREE.DoubleSide;
+        m.needsUpdate = true;
+      }
+    });
   }
 
   /**

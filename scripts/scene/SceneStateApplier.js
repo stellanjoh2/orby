@@ -246,6 +246,13 @@ function createStateApplySteps() {
           await s.applyCreativeLookFromState(state.creativeLook, {
             skipStateStore: true,
           });
+          if (
+            state.creativeLook.enabled &&
+            state.svgExtrude?.surfacePreset &&
+            state.svgExtrude.surfacePreset !== 'none'
+          ) {
+            s.materialController?.reapplyCreativeLookSurfaceShaders?.();
+          }
         }
       },
     },
@@ -357,6 +364,7 @@ function createStateApplySteps() {
         s.lensFlareController?.applyStateSnapshot(state);
         s.godRaysController?.applyStateSnapshot(state);
         await s.setHdriPreset(state.hdri);
+        s.syncCreativeLookTransmissionBackdrop?.();
       },
     },
     {

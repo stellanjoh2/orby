@@ -8,7 +8,7 @@ import { applyExtrudeBoxUvs } from './extrudeBoxUvs.js';
 export const DEFAULT_EXTRUDE_DEPTH = 0.2;
 export const MIN_EXTRUDE_DEPTH = 0.01;
 export const MAX_EXTRUDE_DEPTH = 2.0;
-export const DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG = 30;
+export const DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG = 40;
 /** Default floor for toCreasedNormals — keeps 90° cap/side/back edges split for shading terminators. */
 export const DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG = 45;
 export const MIN_EXTRUDE_HARD_EDGE_ANGLE_DEG = 0;

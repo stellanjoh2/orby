@@ -1,0 +1,113 @@
+---
+description: Font extrude and SVG extrude are separate engines — never mix pipelines, defaults, or normal passes
+alwaysApply: true
+---
+
+# Font extrude ≠ SVG extrude
+
+**Official user policy.** These are two import engines that share UI chrome and some low-level helpers — not one unified extrude system. Changing font behavior must not change SVG behavior (and vice versa). Regressions here waste real user time.
+
+## Mental model
+
+| | **Font extrude** | **SVG extrude** |
+|---|---|---|
+| Source | OpenType glyph paths | SVGLoader filled paths |
+| Importer | `FontExtrudeImporter.js` | `SvgExtrudeImporter.js` |
+| Mesh tag | `userData.orbyFontExtrude` | `userData.orbySvgExtrude` |
+| Normals | `fontExtrudeBevelNormals.js`, `applyImportCreasedNormals` | `svgExtrudeNormals.js`, `svgExtrudeCapNormals.js` |
+| Bevel | Outset TextGeometry-style — `resolveFontExtrudeBevelSettingsForType`, `softenFontExtrudeShapeForBevel` | Inset chamfer — `resolveExtrudeBevelSettings` (no font path softening) |
+| Default smoothing | `DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG` in `extrudeImporterShared.js` | `DEFAULT_SVG_EXTRUDE_NORMAL_ANGLE_DEG` (**30°**) in `svgExtrudeNormals.js` |
+| Cap triangulation | `fontExtrudeCapTriangulation.js`, CDT | Stock Earcut + `densifyShapeForExtrudeCaps` |
+
+They look similar in the viewport. They are not interchangeable.
+
+## Never do
+
+- Call `resolveFontExtrudeBevelSettingsForType`, `softenFontExtrudeShapeForBevel`, or `applyFontExtrude*Normals*` from SVG import code.
+- Call `applySvgExtrude*Normals*` or SVG cap fixes from font import code.
+- Route SVG meshes through `applyImportCreasedNormals` — that is the font/STL crease path.
+- Harden **all** SVG side walls to flat face normals — rounded SVG curves need ~30° crease smoothing on side walls, not font-style full smooth and not fully faceted.
+- “Unify”, “align”, or “share” font and SVG normal/bevel pipelines in one pass — split commits if both need work.
+- Change `DEFAULT_EXTRUDE_*` in `extrudeImporterShared.js` expecting it to only affect font — check SVG defaults in `svgExtrudeNormals.js` / `extrudeDefaults.js`.
+- Assume shared UI (`svgExtrudeControlsShared.js`, `svgExtrude` state slice) means shared geometry logic — UI is shared; engines are not.
+
+## OK to share (geometry-agnostic only)
+
+- Depth, color offset, flip, group rebuild: `extrudeImporterShared.js` (`clampExtrudeDepth`, `preserveExtrudeGroupOnRebuild`, `applyExtrudeDirectionOffset`)
+- Box UV projection: `extrudeBoxUvs.js`
+- STL mesh smoothing: `stlNormalSmoothing.js` (neither font nor SVG extrude)
+
+Do **not** add font- or SVG-specific behavior to these shared files. Add a dedicated `font*` or `svg*` module instead.
+
+## SVG side-face normals (easy to break)
+
+Correct SVG behavior:
+
+1. **Flat extrude** — pre-normalize: `applySvgExtrudeCreasedNormalsToGroup` at the **SVG smoothing angle** (~30° default).
+2. **Bevel** — post-normalize: `applySvgExtrudeBevelNormals` (smooth curves + collar at smoothing angle; harden shoulders at hard-edge angle).
+3. **Always** — cap winding fix + flatten caps + box UVs in `finalizeSvgExtrudeGroupGeometry`.
+4. **Cap/side 90° edges** stay hard; **curve segments on side walls** smooth at the slider angle.
+
+Wrong fixes we have shipped before: font crease on SVG sides (too smooth), or full side hardening (visible facet steps on curves).
+
+## Before merging extrude changes
+
+1. Identify which engine(s) the diff touches.
+2. If both — justify in the PR; default is **two separate changes**.
+3. Manually verify **SVG file import** (curved paths, holed paths like “O”) and **font text extrude** after rebuild.
+4. Grep for cross-contamination: `FontExtrude` in `SvgExtrudeImporter.js`, `applyImportCreasedNormals` in `svgExtrudeNormals.js`, `softenFont` in SVG paths.
+
+## When adding features
+
+- New font behavior → `fontExtrude*.js` / `FontExtrudeImporter.js` only.
+- New SVG behavior → `svgExtrude*.js` / `SvgExtrudeImporter.js` only.
+- If both need the same *idea*, duplicate the small amount of code or extract a truly generic helper with **no** engine-specific branches.
+
+## SVG file import → font generate (state reset)
+
+**Official user policy.** Shared UI (`svgExtrude` state slice, extrude sliders) does **not** mean SVG tweaks should carry over when the user switches to 3D text. After importing/tweaking an SVG (color override, per-color depth, surface preset, etc.), hitting **Generate** on font must start clean — not inherit SVG session cruft.
+
+### When reset runs
+
+Triggered in `FontExtrudeController.generateMesh` when `shouldClearSvgExtrudeLegacyForFontGeneration(scene)` is true:
+
+- Scene has a model that is **not** `userData.orbyFontGenerated`, **or** `svgExtrude.enabled` is still set from the SVG session
+- Active importer is **not** already `FontExtrudeImporter` (`isFontExtrudeImporter`)
+
+**Does not run** when regenerating text on an existing font model — tuned depth/bevel/override from the current font session is preserved.
+
+### What gets cleared
+
+Call `clearSvgExtrudeLegacyForFontGeneration` → `resetSvgExtrudeStateForFontExtrude` in `extrudeDefaults.js` (`buildFontExtrudeSvgExtrudeBaseline`):
+
+| Field | After reset |
+|-------|-------------|
+| `colorOverride` | `false` |
+| `overrideColor` | default lime |
+| `surfacePreset` / `surfaceScale` / `surfaceStrength` | `none` / defaults |
+| `availableColors` | `[]` (then set to font fill on add-to-scene) |
+| `colorDepths` / `colorOffsets` | `{}` |
+| `depth`, angles, bevel, detail | **font** extrude defaults (`DEFAULT_EXTRUDE_*`) |
+| `flipDirection` | `true` (font faces camera) |
+
+Also creates a **fresh** `FontExtrudeImporter` instance so no stale SVG importer state leaks in.
+
+### Implementation map
+
+| Role | Location |
+|------|----------|
+| Detect transition | `shouldClearSvgExtrudeLegacyForFontGeneration` — `SvgExtrudeSceneOps.js` |
+| Reset + emit UI events | `resetSvgExtrudeStateForFontExtrude` — `extrudeDefaults.js` |
+| Hook on Generate | `FontExtrudeController.generateMesh` |
+
+### Never do
+
+- Read legacy `svgExtrude` fields in `generateMesh` **before** the reset check (color override, multi-color maps, SVG surface preset).
+- Apply SVG file-import metadata paths when adding font to scene without going through the reset on first font generate.
+- Reset on every font regen — that wipes intentional font-session tweaks.
+
+### Manual verify
+
+1. Import SVG → enable color override, tweak per-color depth, set a surface preset.
+2. Generate 3D text → override off, single fill color, no surface shader, default extrude sliders.
+3. Regenerate text → depth/bevel changes from step 2 session should **stick**.

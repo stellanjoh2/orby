@@ -126,6 +126,13 @@ import {
   creativeLookVoxelFixedScale,
   isVoxelCreativeLookPreset,
 } from './creativeLookVoxelArt.js';
+import {
+  ORBY_CREATIVE_SURFACE_FRAG_HELPERS,
+  createOrbySurfaceUniformRefs,
+  creativeLookPresetSupportsSurfaceDetail,
+} from './SvgExtrudeSurfaceShader.js';
+
+export { creativeLookPresetSupportsSurfaceDetail } from './SvgExtrudeSurfaceShader.js';
 
 export { creativeLookUsesVoxelGeometry, isVoxelCreativeLookPreset } from './creativeLookVoxelArt.js';
 
@@ -136,6 +143,9 @@ export { creativeLookUsesVoxelGeometry, isVoxelCreativeLookPreset } from './crea
  *
  * The chrome preset uses MeshPhysicalMaterial so PMREM / CubeUV environment maps match the rest of the viewer.
  * The glass preset uses MeshPhysicalMaterial.transmission for real refraction (Three.js transmission pipeline).
+ * Spec: https://threejs.org/docs/#api/en/materials/MeshPhysicalMaterial.transmission
+ * When transmission > 0, opacity must stay 1. Refraction samples scene.background + opaque geometry
+ * in the transmission prepass — not other transmissive/transparent meshes (Three.js renderer design).
  */
 
 /** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome' | 'glass'} CreativeLookPreset */
@@ -505,6 +515,21 @@ export function isFlatPostCreativeLookPreset(preset) {
     isDitherCrosshatchCreativeLookPreset(preset) ||
     isDitherRasterCreativeLookPreset(preset)
   );
+}
+
+/**
+ * Default Shader Lab stack (neon-edge, glass, voxel-hd, …) — N8AO stays in the composer,
+ * including the viewport-bloom slim stack. Artistic / flat-post presets replace the stack.
+ * @param {CreativeLookPreset | string | undefined} preset
+ */
+export function creativeLookPresetAllowsAmbientOcclusion(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  if (isFlatPostCreativeLookPreset(id)) return false;
+  if (isWatercolourCreativeLookPreset(id)) return false;
+  if (isGouacheCreativeLookPreset(id)) return false;
+  if (isSketchFamilyCreativeLookPreset(id)) return false;
+  if (isVectrexCreativeLookPreset(id)) return false;
+  return true;
 }
 
 /** @param {CreativeLookPreset | string | undefined} preset */
@@ -1365,6 +1390,9 @@ export function creativeVgaDos3dTexRes(patternScale) {
   return Math.round(THREE.MathUtils.lerp(112, 28, t));
 }
 
+/** Shader Lab glass — HDRI reflection scale (transmission already carries the backdrop). */
+export const CREATIVE_GLASS_ENV_MAP_MUL = 0.58;
+
 /**
  * Physical transmission glass/water: thickness + roughness from creative Scale; HDRI blur adds frost.
  * @returns {{ thickness: number, roughness: number }}
@@ -1373,15 +1401,40 @@ export function creativeGlassParams(patternScale, hdriBlurriness = 0) {
   const ps = THREE.MathUtils.clamp(patternScale, 0.1, 5);
   const thickness = THREE.MathUtils.clamp(0.18 + ps * 0.42, 0.12, 2.6);
   let roughness = THREE.MathUtils.clamp(
-    0.028 + Math.abs(ps - 1) * 0.065,
-    0.015,
-    0.45,
+    0.052 + Math.abs(ps - 1) * 0.072,
+    0.032,
+    0.48,
   );
   const blur = THREE.MathUtils.clamp(Number(hdriBlurriness) || 0, 0, 1);
   if (blur > 0) {
     roughness = Math.min(1, roughness + blur * 0.42);
   }
   return { thickness, roughness };
+}
+
+/**
+ * Scale glass slab thickness to mesh size — extruded type (~0.36 cap height) needs thinner
+ * slabs than vehicle-scale defaults or refraction reads as flat alpha.
+ *
+ * @param {number} patternScale
+ * @param {number} hdriBlurriness
+ * @param {THREE.Mesh | null | undefined} mesh
+ * @returns {{ thickness: number, roughness: number }}
+ */
+export function creativeGlassParamsForMesh(patternScale, hdriBlurriness, mesh) {
+  const base = creativeGlassParams(patternScale, hdriBlurriness);
+  if (!mesh?.geometry) return base;
+  if (!mesh.geometry.boundingSphere) {
+    mesh.geometry.computeBoundingSphere();
+  }
+  const radius = mesh.geometry.boundingSphere?.radius;
+  if (!Number.isFinite(radius) || radius <= 1e-6) return base;
+  const meshThickness = THREE.MathUtils.clamp(
+    radius * THREE.MathUtils.lerp(0.22, 0.42, THREE.MathUtils.clamp(base.thickness / 2.6, 0, 1)),
+    0.012,
+    base.thickness,
+  );
+  return { ...base, thickness: meshThickness };
 }
 
 /**
@@ -1505,6 +1558,7 @@ void main() {
   vec3 col = 0.5 + 0.5 * cos(v * vec3(2.15, 2.45, 2.75) + t * 0.55 + vec3(0.0, 2.15, 4.35));
   col = clamp(col, vec3(0.0), vec3(1.0));
   col = pow(col, vec3(0.88));
+  col *= orbyCreativeSurfaceMix(vWorldPosition);
   gl_FragColor = vec4(col, uOpacity);
 }
 `;
@@ -1526,6 +1580,47 @@ void main() {
   #include <begin_vertex>
   #include <morphtarget_vertex>
   #include <skinning_vertex>
+  ${CREATIVE_LOOK_WORLD_POSITION_VS}
+  #include <shadowmap_vertex>
+  vWorldPosition = worldPosition.xyz;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+}
+`;
+
+const WORLD_SURFACE_VERTEX = /* glsl */ `
+#include <common>
+#include <morphtarget_pars_vertex>
+#include <skinning_pars_vertex>
+#include <shadowmap_pars_vertex>
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+varying vec3 vOrbyLocalPos;
+varying vec3 vOrbyLocalNormal;
+varying vec3 vOrbyNm0;
+varying vec3 vOrbyNm1;
+varying vec3 vOrbyNm2;
+varying vec3 vOrbyWm0;
+varying vec3 vOrbyWm1;
+varying vec3 vOrbyWm2;
+void main() {
+  #include <beginnormal_vertex>
+  #include <morphnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
+  #include <defaultnormal_vertex>
+  vWorldNormal = normalize((modelMatrix * vec4(objectNormal, 0.0)).xyz);
+  #include <begin_vertex>
+  #include <morphtarget_vertex>
+  #include <skinning_vertex>
+  vOrbyLocalPos = transformed;
+  vOrbyLocalNormal = normalize(objectNormal);
+  vOrbyNm0 = normalMatrix[0];
+  vOrbyNm1 = normalMatrix[1];
+  vOrbyNm2 = normalMatrix[2];
+  mat3 worldNm = mat3(transpose(inverse(modelMatrix)));
+  vOrbyWm0 = worldNm[0];
+  vOrbyWm1 = worldNm[1];
+  vOrbyWm2 = worldNm[2];
   ${CREATIVE_LOOK_WORLD_POSITION_VS}
   #include <shadowmap_vertex>
   vWorldPosition = worldPosition.xyz;
@@ -1662,7 +1757,14 @@ uniform float uIntensity;
 uniform float uOpacity;
 
 void main() {
-  vec3 N = normalize(vWorldNormal);
+  vec3 N = orbyCreativeSurfaceNormal(
+    normalize(vWorldNormal),
+    vWorldPosition,
+    vOrbyLocalPos,
+    vOrbyLocalNormal,
+    mat3(vOrbyWm0, vOrbyWm1, vOrbyWm2)
+  );
+  float surfMod = orbyCreativeSurfaceFilmMod(vWorldPosition, vOrbyLocalPos, vOrbyLocalNormal);
   vec3 V = normalize(cameraPosition - vWorldPosition);
   float ndv = max(dot(N, V), 1e-4);
   float F = 1.0 - ndv;
@@ -1690,6 +1792,7 @@ void main() {
     sin(pw.z * 0.68 + t * 0.42) * 0.45 +
     sin(dot(pw, vec3(0.72, 1.02, 0.58)) * 1.05 + t * 0.85) * 0.35;
   oil *= 1.0 - down * 0.45 + up * 0.72;
+  oil *= surfMod;
 
   float film =
     fresnel * (6.2 + up * 2.2 - down * 2.0) +
@@ -1723,6 +1826,8 @@ void main() {
   col += fresnel * vec3(0.1, 0.48, 1.05) * (0.48 + up * 0.24 - down * 0.26);
   col += oil * (fresnel + 0.15) * vec3(0.2, 0.88, 1.0) * (0.14 + up * 0.1 - down * 0.08);
 
+  col *= orbyCreativeSurfaceMix(vWorldPosition);
+
   gl_FragColor = vec4(col, uOpacity);
 }
 `;
@@ -1737,7 +1842,13 @@ uniform float uIntensity;
 uniform float uOpacity;
 
 void main() {
-  vec3 N = normalize(vWorldNormal);
+  vec3 N = orbyCreativeSurfaceNormal(
+    normalize(vWorldNormal),
+    vWorldPosition,
+    vOrbyLocalPos,
+    vOrbyLocalNormal,
+    mat3(vOrbyWm0, vOrbyWm1, vOrbyWm2)
+  );
   vec3 p = vWorldPosition * (2.6 / max(uPatternScale, 0.001));
   float t = uTime;
   float inten = clamp(uIntensity, 0.0, 2.0);
@@ -2549,6 +2660,14 @@ const SCANLINE_HOLOGRAM_VERTEX = /* glsl */ `
 #include <shadowmap_pars_vertex>
 varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
+varying vec3 vOrbyLocalPos;
+varying vec3 vOrbyLocalNormal;
+varying vec3 vOrbyNm0;
+varying vec3 vOrbyNm1;
+varying vec3 vOrbyNm2;
+varying vec3 vOrbyWm0;
+varying vec3 vOrbyWm1;
+varying vec3 vOrbyWm2;
 varying float vGlitchBoost;
 uniform float uTime;
 uniform float uIntensity;
@@ -2567,6 +2686,15 @@ void main() {
   #include <begin_vertex>
   #include <morphtarget_vertex>
   #include <skinning_vertex>
+  vOrbyLocalPos = transformed;
+  vOrbyLocalNormal = normalize(objectNormal);
+  vOrbyNm0 = normalMatrix[0];
+  vOrbyNm1 = normalMatrix[1];
+  vOrbyNm2 = normalMatrix[2];
+  mat3 worldNm = mat3(transpose(inverse(modelMatrix)));
+  vOrbyWm0 = worldNm[0];
+  vOrbyWm1 = worldNm[1];
+  vOrbyWm2 = worldNm[2];
   ${CREATIVE_LOOK_WORLD_POSITION_VS}
   #include <shadowmap_vertex>
   vWorldPosition = worldPosition.xyz;
@@ -2690,7 +2818,13 @@ vec3 applyPushedToneCurve(vec3 c) {
 }
 
 void main() {
-  vec3 N = normalize(vWorldNormal);
+  vec3 N = orbyCreativeSurfaceNormal(
+    normalize(vWorldNormal),
+    vWorldPosition,
+    vOrbyLocalPos,
+    vOrbyLocalNormal,
+    mat3(vOrbyWm0, vOrbyWm1, vOrbyWm2)
+  );
   vec3 V = normalize(cameraPosition - vWorldPosition);
   float ndv = max(dot(N, V), 0.0);
   float F = 1.0 - ndv;
@@ -2803,6 +2937,7 @@ void main() {
  * @param {number} [opts.materialRoughness] — matches Object → Material roughness (live)
  * @param {boolean} [opts.skinning] — enable skeletal animation (SkinnedMesh / GLB rigs)
  * @param {boolean} [opts.morphTargets] — enable morph-target animation
+ * @param {ReturnType<typeof createOrbySurfaceUniformRefs> | null} [opts.surfaceState] — Appearance surface preset uniforms
  * @returns {THREE.ShaderMaterial | THREE.MeshPhysicalMaterial}
  */
 export function createCreativeLookMaterial(preset, opts = {}) {
@@ -2868,6 +3003,16 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     lookFragNoShadow(withCreativeLookPrepPbrModulation(fragmentShader, { mode }));
   const retroLitPrepFrag = (fragmentShader, mode) =>
     lookFrag(withCreativeLookPrepPbrModulation(fragmentShader, { mode }));
+  const surfaceUniformRefs = creativeLookPresetSupportsSurfaceDetail(id)
+    ? createOrbySurfaceUniformRefs(opts.surfaceState ?? null)
+    : null;
+  const surfaceUniformSpread = surfaceUniformRefs ?? {};
+  const lookFragWithSurface = (fragmentShader) =>
+    lookFrag(
+      surfaceUniformRefs
+        ? `${ORBY_CREATIVE_SURFACE_FRAG_HELPERS}\n${fragmentShader}`
+        : fragmentShader,
+    );
 
   /** Align with post half-float + linear workflow; `toneMapped: false` mismatched encoding on some GPUs (random black frames). Bloom still reads scene RT before exposure/tone passes. */
   const commonMatOpts = {
@@ -2892,6 +3037,9 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     }
     if (mat.isShaderMaterial && shadows) {
       ensureCreativeLookLightingUniforms(mat);
+    }
+    if (surfaceUniformRefs && mat.isShaderMaterial) {
+      mat.userData.orbyCreativeSurfaceUniformRefs = surfaceUniformRefs;
     }
     return mat;
   };
@@ -2936,10 +3084,11 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uTime: { value: time },
         uPatternScale: { value: patternScale },
         uOpacity: { value: shaderAlpha },
+        ...surfaceUniformSpread,
         ...gradeUniforms,
       },
-      vertexShader: FLOW_VERTEX,
-      fragmentShader: lookFrag(PLASMA_FRAGMENT),
+      vertexShader: WORLD_SURFACE_VERTEX,
+      fragmentShader: lookFragWithSurface(PLASMA_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'plasma';
@@ -3452,11 +3601,12 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uTime: { value: time },
         uPatternScale: { value: patternScale },
         uOpacity: { value: shaderAlpha },
+        ...surfaceUniformSpread,
         ...gradeUniforms,
         ...intensityUniform,
       },
-      vertexShader: WORLD_VERTEX,
-      fragmentShader: lookFrag(HOLOGRAPHIC_FRAGMENT),
+      vertexShader: WORLD_SURFACE_VERTEX,
+      fragmentShader: lookFragWithSurface(HOLOGRAPHIC_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'holographic';
@@ -3469,11 +3619,12 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uTime: { value: time },
         uPatternScale: { value: patternScale },
         uOpacity: { value: shaderAlpha },
+        ...surfaceUniformSpread,
         ...gradeUniforms,
         ...intensityUniform,
       },
-      vertexShader: WORLD_VERTEX,
-      fragmentShader: lookFrag(SPECTRAL_STORM_FRAGMENT),
+      vertexShader: WORLD_SURFACE_VERTEX,
+      fragmentShader: lookFragWithSurface(SPECTRAL_STORM_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'spectral-storm';
@@ -3504,11 +3655,12 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uTime: { value: time },
         uPatternScale: { value: patternScale },
         uOpacity: { value: shaderAlpha },
+        ...surfaceUniformSpread,
         ...gradeUniforms,
         ...intensityUniform,
       },
       vertexShader: SCANLINE_HOLOGRAM_VERTEX,
-      fragmentShader: lookFrag(SCANLINE_HOLOGRAM_FRAGMENT),
+      fragmentShader: lookFragWithSurface(SCANLINE_HOLOGRAM_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'scanline-hologram';
@@ -3594,18 +3746,18 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       roughness,
       transmission: 1,
       thickness,
-      ior: 1.45,
-      specularIntensity: 1,
-      specularColor: new THREE.Color(0xececec),
+      ior: 1.5,
+      specularIntensity: 0.72,
+      specularColor: new THREE.Color(0xd8d8d8),
       /** Grazing-angle lobe — subtler than chrome. */
-      sheen: 0.34,
-      sheenRoughness: 0.78,
-      sheenColor: new THREE.Color(0xdcdcdc),
-      envMapIntensity: 1,
+      sheen: 0.18,
+      sheenRoughness: 0.84,
+      sheenColor: new THREE.Color(0xc8c8c8),
+      envMapIntensity: CREATIVE_GLASS_ENV_MAP_MUL,
       transparent: true,
       opacity: 1,
-      attenuationColor: new THREE.Color(0xe8e8e8),
-      attenuationDistance: 1.35,
+      attenuationColor: new THREE.Color(0xd4d4d4),
+      attenuationDistance: 1.05,
       side,
       toneMapped: true,
       depthWrite: false,

@@ -79,6 +79,7 @@ export class GlobalControls {
       tab.addEventListener('click', () => {
         const target = tab.dataset.tab;
         if (target === this.ui.activeTab) return;
+        this.helpers.flushRangeSliderInteractionState?.();
         const previousTab = this.ui.activeTab;
         if (previousTab === 'export' && target !== 'export') {
           this.eventBus.emit('export:movement-preview-stop');
@@ -461,6 +462,7 @@ export class GlobalControls {
       // Tab - Cycle through tabs
       if (key === 'tab' && !isCtrl) {
         event.preventDefault();
+        this.helpers.flushRangeSliderInteractionState?.();
         const tabs = ['mesh', 'studio', 'render', 'export', 'info'];
         const currentIndex = tabs.indexOf(this.ui.activeTab);
         const nextIndex = isShift

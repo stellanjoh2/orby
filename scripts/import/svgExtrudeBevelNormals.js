@@ -1,14 +1,4 @@
-/** SVG bevel chamfer normal fixes — separate from font extrude. */
-
-import * as THREE from 'three';
-import {
-  mergeVertices,
-  toCreasedNormals,
-} from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
-import {
-  clampExtrudeHardEdgeAngleDeg,
-  clampExtrudeNormalAngleDeg,
-} from './extrudeImporterShared.js';
+/** SVG bevel shoulder helpers — shared triangle utilities only (normals live in svgExtrudeNormals.js). */
 
 /** |faceNormal.z| below this → vertical side wall in normalized studio space. */
 export const SVG_EXTRUDE_SIDE_Z_MAX = 0.12;
@@ -109,40 +99,4 @@ export function hardenSvgExtrudeBevelShoulderNormals(geometry, creaseAngleRad) {
 
   norm.needsUpdate = true;
   return geometry;
-}
-
-/**
- * Smooth curved bevel + side normals in studio space after normalize.
- * Uses the smoothing slider angle only (not the hard-edge floor) so curve segments
- * stay soft; shoulders are hardened separately.
- *
- * @param {import('three').BufferGeometry} geometry
- * @param {unknown} normalAngleDeg
- * @param {unknown} [hardEdgeAngleDeg]
- * @returns {import('three').BufferGeometry}
- */
-export function smoothSvgExtrudeBevelNormals(geometry, normalAngleDeg, hardEdgeAngleDeg) {
-  if (!geometry?.attributes?.position) return geometry;
-
-  let geom = geometry;
-  const merged = mergeVertices(geom);
-  if (merged !== geom) {
-    geom.dispose();
-    geom = merged;
-  }
-
-  const smoothAngleRad = THREE.MathUtils.degToRad(
-    clampExtrudeNormalAngleDeg(normalAngleDeg),
-  );
-  const smoothed = toCreasedNormals(geom, smoothAngleRad);
-  if (smoothed !== geom) {
-    geom.dispose();
-    geom = smoothed;
-  }
-
-  const hardAngleRad = THREE.MathUtils.degToRad(
-    clampExtrudeHardEdgeAngleDeg(hardEdgeAngleDeg),
-  );
-  hardenSvgExtrudeBevelShoulderNormals(geom, hardAngleRad);
-  return geom;
 }

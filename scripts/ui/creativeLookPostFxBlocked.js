@@ -11,8 +11,8 @@ import {
   isGouacheCreativeLookPreset,
   isSketchFamilyCreativeLookPreset,
   normalizeCreativeLookPreset,
+  creativeLookPresetAllowsAmbientOcclusion,
 } from '../render/CreativeLookMaterials.js';
-import { creativeLookPresetAllowsAmbientOcclusion } from '../render/creativeLookVoxelArt.js';
 
 /** @typedef {'default' | 'viewport-bloom' | 'flat-post' | 'watercolour' | 'gouache' | 'sketch' | 'vectrex'} CreativeLookPostFxMode */
 
@@ -376,9 +376,19 @@ export function applyCreativeLookPostFxUiBlocks(state, api) {
   for (const key of blocks.clickBlockedSubsections) {
     markShaderLabBlocked(api.getSubsection?.(key));
   }
-  api.setControlsDisabled([...blocks.disabledInputs], true);
-  for (const id of blocks.disabledInputs) {
+
+  const blocked = blocks.disabledInputs;
+  api.setControlsDisabled([...blocked], true);
+  for (const id of blocked) {
     markShaderLabBlocked(api.getInput?.(id));
+  }
+
+  // Shader Lab only disables inputs — re-enable master toggles when the stack allows them
+  // again (e.g. flat-post → neon-edge). Slider disabled state comes from renderControls.sync.
+  for (const id of SHADER_LAB_MASTER_TOGGLES) {
+    if (!blocked.has(id)) {
+      api.setControlsDisabled([id], false);
+    }
   }
 
   const bloomTuningActive = isBloomTuningActive(state);
@@ -388,6 +398,18 @@ export function applyCreativeLookPostFxUiBlocks(state, api) {
   api.setControlsDisabled(EXPOSURE_INPUTS, false);
   api.setControlsDisabled(['toggleGrain'], false);
   api.setControlsDisabled(['grainIntensity'], !state?.grain?.enabled);
+
+  if (creativeLookPresetAllowsAmbientOcclusion(state.creativeLook?.preset)) {
+    const aoOn = !!state?.ambientOcclusion?.enabled;
+    api.setMuted('ambient-occlusion', !aoOn);
+    api.setControlsDisabled(['toggleAmbientOcclusion'], false);
+    if (!blocked.has('toggleAmbientOcclusion')) {
+      for (const id of AO_INPUTS) {
+        if (id === 'toggleAmbientOcclusion') continue;
+        api.setControlsDisabled([id], !aoOn);
+      }
+    }
+  }
 }
 
 let _shaderLabBlockedClickBound = false;

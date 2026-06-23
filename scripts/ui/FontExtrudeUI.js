@@ -153,8 +153,8 @@ export class FontExtrudeUI {
             <div id="fontExtrudeFamilyPicker" class="font-extrude-family-picker" aria-label="Font family"></div>
           </label>
           <label class="select-line font-extrude-style-line">
-            <span data-tooltip="Choose weight/style available for the selected typeface">Style</span>
-            <select id="fontExtrudeVariant" aria-label="Typeface style">
+            <span data-tooltip="Choose weight available for the selected typeface">Weight</span>
+            <select id="fontExtrudeVariant" aria-label="Typeface weight">
               <option value="">Regular</option>
             </select>
           </label>

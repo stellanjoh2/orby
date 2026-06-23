@@ -553,6 +553,16 @@ export class StateStore {
   }
 
   /**
+   * Recover when a deferred-notify scope is orphaned (tab switch mid-scrub, lost pointerup).
+   * Resets depth to zero and runs one notify so applyBlockStates / syncControls catch up.
+   */
+  flushDeferredNotify() {
+    if (this._deferNotifyDepth <= 0) return;
+    this._deferNotifyDepth = 0;
+    this._notifyIfIdle();
+  }
+
+  /**
    * @param {string} path - Dot path, same as `set`
    * @param {unknown} value
    */

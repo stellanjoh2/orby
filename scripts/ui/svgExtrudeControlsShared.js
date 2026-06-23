@@ -8,8 +8,8 @@ import { normalizeExtrudeDetail } from '../import/extrudeDetail.js';
 import {
   DEFAULT_EXTRUDE_BEVEL_AMOUNT,
   DEFAULT_EXTRUDE_DEPTH,
-  DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
-  DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
+  DEFAULT_SVG_EXTRUDE_NORMAL_ANGLE_DEG,
+  DEFAULT_SVG_EXTRUDE_HARD_EDGE_ANGLE_DEG,
   DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
   MAX_EXTRUDE_DEPTH,
   MIN_EXTRUDE_DEPTH,
@@ -30,10 +30,21 @@ import {
 import {
   clampSurfaceStrength,
   clampSurfaceUiScale,
+  creativeLookPresetSupportsSurfaceDetail,
   getSvgExtrudeSurfacePresetConfig,
   surfaceUiScaleToShaderScale,
   SVG_EXTRUDE_SURFACE_PRESETS,
 } from '../render/SvgExtrudeSurfaceShader.js';
+
+function surfaceControlsBlockedByCreativeLook(state) {
+  const cl = state?.creativeLook;
+  return !!(cl?.enabled && !creativeLookPresetSupportsSurfaceDetail(cl.preset));
+}
+
+function surfaceControlsCreativeLookActive(state) {
+  const cl = state?.creativeLook;
+  return !!(cl?.enabled && creativeLookPresetSupportsSurfaceDetail(cl.preset));
+}
 
 /** Readout: higher = finer detail (matches shader frequency). */
 function formatSurfaceDetailLabel(storedScale) {
@@ -83,7 +94,7 @@ export function buildSvgExtrudeSurfaceControlsHtml(ids = {}) {
   ).join('');
   return `
             <label class="select-line">
-              <span data-tooltip="Procedural PBR surface detail (roughness and metalness variation)">${presetLabel}</span>
+              <span data-tooltip="Procedural PBR surface detail — also modulates compatible Shader Lab presets (Holographic, Scanline, Plasma, Chrome, Glass)">${presetLabel}</span>
               <select id="${presetId}" aria-label="${presetAriaLabel}">
                 ${options}
               </select>
@@ -186,8 +197,8 @@ export function buildExtrudeAngleSliderHtml(options = {}) {
     'Controls surface smoothing (0 = faceted edges, higher = smoother highlights)';
   const ariaLabel = options.ariaLabel ? ` aria-label="${options.ariaLabel}"` : '';
   const value =
-    Number(options.value ?? DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG) ||
-    DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
+    Number(options.value ?? DEFAULT_SVG_EXTRUDE_NORMAL_ANGLE_DEG) ||
+    DEFAULT_SVG_EXTRUDE_NORMAL_ANGLE_DEG;
   return `
             <label class="slider-line">
               <span data-tooltip="${tooltip}">${label}</span>
@@ -222,8 +233,8 @@ export function buildExtrudeHardEdgeAngleSliderHtml(options = {}) {
     'Minimum crease for cap/side edge splits — fixes bright shading leaks on side faces (direct light, not cast shadows). Higher = sharper terminators.';
   const ariaLabel = options.ariaLabel ? ` aria-label="${options.ariaLabel}"` : '';
   const value =
-    Number(options.value ?? DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG) ||
-    DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG;
+    Number(options.value ?? DEFAULT_SVG_EXTRUDE_HARD_EDGE_ANGLE_DEG) ||
+    DEFAULT_SVG_EXTRUDE_HARD_EDGE_ANGLE_DEG;
   return `
             <label class="slider-line">
               <span data-tooltip="${tooltip}">${label}</span>
@@ -653,17 +664,21 @@ function emitSvgExtrudeSurface(eventBus, stateStore) {
   });
 }
 
-function syncSurfaceStrengthControl(ctx, svg, canEdit) {
+function syncSurfaceStrengthControl(ctx, svg, canEdit, state = null) {
   const { inputs, helpers, ui } = ctx;
   if (!inputs.surfaceStrength) return;
+  const fullState = state ?? ctx.stateStore?.getState?.() ?? {};
+  const blocked = surfaceControlsBlockedByCreativeLook(fullState);
+  const clActive = surfaceControlsCreativeLookActive(fullState);
   const config = getSvgExtrudeSurfacePresetConfig(svg.surfacePreset ?? 'none');
   const isNormalMap = config.kind === 'normalMap';
+  const strengthRelevant = isNormalMap || clActive;
   const strength = clampSurfaceStrength(svg.surfaceStrength ?? 1);
   if (document.activeElement !== inputs.surfaceStrength) {
     inputs.surfaceStrength.value = strength;
     helpers.updateValueLabel(inputs.surfaceStrengthOutputKey, strength, 'decimal');
   }
-  ui.setControlDisabled(inputs.surfaceStrength, !canEdit || !isNormalMap);
+  ui.setControlDisabled(inputs.surfaceStrength, !canEdit || blocked || !strengthRelevant);
 }
 
 function readClampedExtrudeDepth(input) {
@@ -677,14 +692,14 @@ function readClampedExtrudeNormalAngle(input) {
   const value = parseFloat(input?.value);
   return Number.isFinite(value)
     ? Math.max(MIN_EXTRUDE_NORMAL_ANGLE_DEG, Math.min(MAX_EXTRUDE_NORMAL_ANGLE_DEG, value))
-    : DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
+    : DEFAULT_SVG_EXTRUDE_NORMAL_ANGLE_DEG;
 }
 
 function readClampedExtrudeHardEdgeAngle(input) {
   const value = parseFloat(input?.value);
   return Number.isFinite(value)
     ? clampExtrudeHardEdgeAngleDeg(value)
-    : DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG;
+    : DEFAULT_SVG_EXTRUDE_HARD_EDGE_ANGLE_DEG;
 }
 
 function writeRangeValue(input, value) {
@@ -1037,7 +1052,7 @@ export function syncSvgExtrudeControls(ctx, state, options = {}) {
     }
   }
   if (inputs.normalAngle) {
-    const normalAngle = svg.normalAngle ?? DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
+    const normalAngle = svg.normalAngle ?? DEFAULT_SVG_EXTRUDE_NORMAL_ANGLE_DEG;
     if (helpers.syncRangeFromState(inputs.normalAngle, normalAngle)) {
       helpers.updateValueLabel(inputs.normalAngleOutputKey, normalAngle, 'angle');
     } else if (!helpers.shouldSkipRangeSyncWrite(inputs.normalAngle)) {
@@ -1046,7 +1061,7 @@ export function syncSvgExtrudeControls(ctx, state, options = {}) {
     ui.setControlDisabled(inputs.normalAngle, !canEdit);
   }
   if (inputs.hardEdgeAngle) {
-    const hardEdgeAngle = svg.hardEdgeAngle ?? DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG;
+    const hardEdgeAngle = svg.hardEdgeAngle ?? DEFAULT_SVG_EXTRUDE_HARD_EDGE_ANGLE_DEG;
     if (helpers.syncRangeFromState(inputs.hardEdgeAngle, hardEdgeAngle)) {
       helpers.updateValueLabel(inputs.hardEdgeAngleOutputKey, hardEdgeAngle, 'angle');
     } else if (!helpers.shouldSkipRangeSyncWrite(inputs.hardEdgeAngle)) {
@@ -1063,7 +1078,10 @@ export function syncSvgExtrudeControls(ctx, state, options = {}) {
   }
   if (inputs.surfacePreset) {
     inputs.surfacePreset.value = svg.surfacePreset ?? 'none';
-    ui.setControlDisabled(inputs.surfacePreset, !canEdit);
+    ui.setControlDisabled(
+      inputs.surfacePreset,
+      !canEdit || surfaceControlsBlockedByCreativeLook(state),
+    );
   }
   if (inputs.surfaceScale) {
     const scale = clampSurfaceUiScale(Number(svg.surfaceScale ?? 1) || 1.0);
@@ -1071,9 +1089,12 @@ export function syncSvgExtrudeControls(ctx, state, options = {}) {
       inputs.surfaceScale.value = scale;
       helpers.updateValueLabel(inputs.surfaceScaleOutputKey, formatSurfaceDetailLabel(scale), 'decimal');
     }
-    ui.setControlDisabled(inputs.surfaceScale, !canEdit);
+    ui.setControlDisabled(
+      inputs.surfaceScale,
+      !canEdit || surfaceControlsBlockedByCreativeLook(state),
+    );
   }
-  syncSurfaceStrengthControl(ctx, svg, canEdit);
+  syncSurfaceStrengthControl(ctx, svg, canEdit, state);
   if (inputs.flipDirection) {
     inputs.flipDirection.checked = !!svg.flipDirection;
     ui.setControlDisabled(inputs.flipDirection, !canEdit);

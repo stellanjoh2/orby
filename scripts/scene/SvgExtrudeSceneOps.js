@@ -2,11 +2,32 @@
  * Shared rebuild path after {@link SvgExtrudeImporter} mutates geometry.
  */
 
+import { resetSvgExtrudeStateForFontExtrude } from '../import/extrudeDefaults.js';
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 
 /** @param {unknown} importer */
 export function isFontExtrudeImporter(importer) {
   return !!importer && typeof importer.getFillColor === 'function';
+}
+
+/**
+ * True when generating text should wipe SVG file-import state (override, surfaces, per-color maps).
+ * @param {import('../SceneManager.js').SceneManager | null | undefined} scene
+ */
+export function shouldClearSvgExtrudeLegacyForFontGeneration(scene) {
+  if (!scene) return false;
+  if (scene.currentModel?.userData?.orbyFontGenerated) return false;
+  if (isFontExtrudeImporter(scene.svgExtrudeImporter)) return false;
+  const svg = scene.stateStore?.getState()?.svgExtrude;
+  return !!(scene.currentModel || svg?.enabled);
+}
+
+/**
+ * @param {import('../StateStore.js').StateStore} stateStore
+ * @param {import('../EventBus.js').EventBus} eventBus
+ */
+export function clearSvgExtrudeLegacyForFontGeneration(stateStore, eventBus) {
+  resetSvgExtrudeStateForFontExtrude(stateStore, eventBus);
 }
 
 /** @param {unknown} importer */
@@ -77,6 +98,7 @@ export function rebuildSvgExtrudeMeshesAfterImporterChange(scene) {
   scene.originalGeometryAttributes = new WeakMap();
   purgeSvgExtrudeMeshGeometrySnapshots(scene);
 
+  scene.materialController._appliedCreativeLookPreset = null;
   scene.materialController.prepareMesh(scene.currentModel);
   scene.setShading(scene.currentShading);
   const svgState = scene.stateStore.getState().svgExtrude || {};
