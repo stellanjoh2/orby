@@ -82,7 +82,7 @@ export class StateStore {
         /** @type {'low' | 'medium' | 'high' | 'ultra'} — cap/side curve sampling for 3D extrude. */
         detail: 'high',
         /** @type {'convex' | 'straight'} — convex = rounded outset; straight = flat chamfer. */
-        bevelType: 'convex',
+        bevelType: 'straight',
         /** 0.15–3 — preview-only zoom (1× fills the box; higher may crop). */
         previewScale: 0.65,
         /** Letter fill for 2D preview and 3D extrude. */

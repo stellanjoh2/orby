@@ -1,6 +1,7 @@
 import {
   clampExtrudeBevelAmount,
   maxExtrudeBevelAmount,
+  FONT_BEVEL_CONVEX_ENABLED,
   normalizeFontBevelType,
 } from '../import/extrudeBevel.js';
 import { normalizeExtrudeDetail } from '../import/extrudeDetail.js';
@@ -111,7 +112,7 @@ export function buildSvgExtrudeSurfaceControlsHtml(ids = {}) {
  */
 export function buildFontExtrudeOutlineQualitySelectHtml(options = {}) {
   const id = options.id ?? 'fontExtrudeDetail';
-  const label = options.label ?? 'Outline Quality';
+  const label = options.label ?? 'Polygon Count';
   const tooltip =
     options.tooltip ??
     'Curve smoothness along letter outlines — higher is smoother but denser';
@@ -119,7 +120,7 @@ export function buildFontExtrudeOutlineQualitySelectHtml(options = {}) {
   return `
             <label class="select-line font-extrude-outline-quality-line">
               <span data-tooltip="${tooltip}">${label}</span>
-              <select id="${id}" aria-label="Outline quality">
+              <select id="${id}" aria-label="Polygon count">
                 <option value="low"${value === 'low' ? ' selected' : ''}>Low</option>
                 <option value="medium"${value === 'medium' ? ' selected' : ''}>Medium</option>
                 <option value="high"${value === 'high' ? ' selected' : ''}>High</option>
@@ -291,11 +292,12 @@ export function buildFontBevelTypeSelectHtml(options = {}) {
     options.tooltip ??
     'Convex = rounded outward bevel. Straight = flat chamfer cut.';
   const value = normalizeFontBevelType(options.value);
+  const convexDisabled = !FONT_BEVEL_CONVEX_ENABLED;
   return `
             <label class="select-line font-extrude-bevel-type-line">
               ${buildControlLabelWithDevBadge(label, tooltip)}
               <select id="${id}" aria-label="Bevel type">
-                <option value="convex"${value === 'convex' ? ' selected' : ''}>Convex</option>
+                <option value="convex"${value === 'convex' ? ' selected' : ''}${convexDisabled ? ' disabled' : ''}>Convex</option>
                 <option value="straight"${value === 'straight' ? ' selected' : ''}>Straight</option>
               </select>
             </label>`;
@@ -336,7 +338,7 @@ export function buildExtrudeBevelGroupHtml(options = {}) {
  */
 export function buildExtrudeDetailSelectHtml(options = {}) {
   const id = options.id ?? 'svgExtrudeDetail';
-  const label = options.label ?? 'Detail';
+  const label = options.label ?? 'Polygon Count';
   const tooltip =
     options.tooltip ??
     'Cap and side tessellation — Ultra is very dense; best for hero exports or simple shapes';
@@ -344,7 +346,7 @@ export function buildExtrudeDetailSelectHtml(options = {}) {
   return `
             <label class="select-line">
               <span data-tooltip="${tooltip}">${label}</span>
-              <select id="${id}" aria-label="Extrusion detail">
+              <select id="${id}" aria-label="Polygon count">
                 <option value="low"${value === 'low' ? ' selected' : ''}>Low</option>
                 <option value="medium"${value === 'medium' ? ' selected' : ''}>Medium</option>
                 <option value="high"${value === 'high' ? ' selected' : ''}>High</option>

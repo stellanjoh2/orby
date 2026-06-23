@@ -40,8 +40,11 @@ export const FONT_SIMPLE_EXTRUDE_BEVEL_SEGMENTS = 1;
 
 /** @typedef {'convex' | 'straight'} FontExtrudeBevelType */
 
-/** Rounded TextGeometry-style bevel (default). */
-export const DEFAULT_FONT_BEVEL_TYPE = 'convex';
+/** Rounded TextGeometry-style bevel — disabled in UI until shading is shippable. */
+export const FONT_BEVEL_CONVEX_ENABLED = false;
+
+/** Flat chamfer (default for text extrude). */
+export const DEFAULT_FONT_BEVEL_TYPE = 'straight';
 
 /** bevelSize / bevelThickness ratio in the Three.js text demo (1.5 / 2). */
 const FONT_BEVEL_SIZE_RATIO = 0.75;
@@ -52,8 +55,8 @@ const FONT_BEVEL_SIZE_RATIO = 0.75;
  */
 export function normalizeFontBevelType(value) {
   if (value === 'straight' || value === 'simple') return 'straight';
-  // 'convex', legacy 'smooth', and unknown → convex
-  return 'convex';
+  if ((value === 'convex' || value === 'smooth') && FONT_BEVEL_CONVEX_ENABLED) return 'convex';
+  return 'straight';
 }
 
 /**

@@ -8516,6 +8516,10 @@ body.ui-hidden .shelf {
   cursor: not-allowed;
 }
 
+.font-extrude-bevel-type-line select option:disabled {
+  color: color-mix(in srgb, var(--text) 42%, transparent);
+}
+
 @media (max-width: 520px) {
   .font-extrude-typo-row--pair {
     grid-template-columns: 1fr;
