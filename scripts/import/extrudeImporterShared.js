@@ -1,7 +1,9 @@
 import * as THREE from 'three';
+import {
+  mergeVertices,
+  toCreasedNormals,
+} from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 import { applyExtrudeBoxUvs } from './extrudeBoxUvs.js';
-import { hardenExtrudeSideFaceNormals } from './extrudeNormalHardening.js';
-import { fixExtrudedSvgCapFaceOrientations } from './svgExtrudeCapNormals.js';
 
 export const DEFAULT_EXTRUDE_DEPTH = 0.2;
 export const MIN_EXTRUDE_DEPTH = 0.01;
@@ -126,6 +128,32 @@ export function preserveExtrudeGroupOnRebuild(existingGroup, rebuiltGroup) {
   return existingGroup;
 }
 
+/**
+ * Standard import smoothing — merge coincident verts, then crease at the given angle (STL pattern).
+ *
+ * @param {THREE.BufferGeometry} geometry
+ * @param {unknown} normalAngleDeg
+ * @returns {THREE.BufferGeometry}
+ */
+export function applyImportCreasedNormals(geometry, normalAngleDeg) {
+  if (!geometry?.attributes?.position) return geometry;
+
+  let geom = geometry;
+  const merged = mergeVertices(geom);
+  if (merged !== geom) {
+    geom.dispose();
+    geom = merged;
+  }
+
+  const creaseAngleRad = THREE.MathUtils.degToRad(clampExtrudeNormalAngleDeg(normalAngleDeg));
+  const smoothed = toCreasedNormals(geom, creaseAngleRad);
+  if (smoothed !== geom) {
+    geom.dispose();
+    geom = smoothed;
+  }
+  return geom;
+}
+
 export function applyExtrudeDirectionOffset(group, flipDirection, defaultDepth) {
   group.traverse((child) => {
     if (!child.isMesh || !child.geometry) return;
@@ -139,23 +167,17 @@ export function applyExtrudeDirectionOffset(group, flipDirection, defaultDepth) 
 }
 
 /**
- * Cap normal fix + box UVs on extruded meshes tagged with `orbySvgExtrude`.
- * Font meshes skip cap flipping — asymmetric counters (A, e, R) break under the
- * SVG z-plane heuristic; stock Earcut caps are correct after shape winding fix.
+ * Standard creased normals + box UVs on SVG and font extrude meshes.
  *
  * @param {THREE.Group} group
- * @param {number} creaseAngleRad
+ * @param {unknown} [normalAngleDeg]
  */
-export function finalizeExtrudeGroupGeometry(group, creaseAngleRad) {
+export function finalizeExtrudeGroupGeometry(group, normalAngleDeg) {
   group.traverse((child) => {
     if (!child.isMesh || !child.geometry || !child.userData?.orbySvgExtrude) return;
-    let geom = child.geometry;
-    if (!child.userData?.orbyFontExtrude) {
-      geom = fixExtrudedSvgCapFaceOrientations(child.geometry, creaseAngleRad);
-      if (geom !== child.geometry) {
-        child.geometry.dispose();
-      }
-      geom = hardenExtrudeSideFaceNormals(geom);
+    let geom = applyImportCreasedNormals(child.geometry, normalAngleDeg);
+    if (geom !== child.geometry) {
+      child.geometry.dispose();
     }
     child.geometry = applyExtrudeBoxUvs(geom);
   });

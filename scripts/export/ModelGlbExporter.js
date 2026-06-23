@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { GLTFExporter } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/exporters/GLTFExporter.js';
-import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
-import { fixExtrudedSvgCapFaceOrientations } from '../import/svgExtrudeCapNormals.js';
+import { applyImportCreasedNormals } from '../import/extrudeImporterShared.js';
 import { isVoxelCreativeLookPreset } from '../render/CreativeLookMaterials.js';
 
 const sanitizeBaseName = (name) => {
@@ -149,16 +148,10 @@ const cloneSvgExportNode = (object3d) => {
 
     if (sourceMesh.userData?.orbySvgExtrude) {
       const angleDeg = resolveSvgNormalAngleDeg(sourceMesh);
-      const angleRad = THREE.MathUtils.degToRad(angleDeg);
-      const creased = toCreasedNormals(clonedMesh.geometry, angleRad);
-      if (creased !== clonedMesh.geometry) {
+      const smoothed = applyImportCreasedNormals(clonedMesh.geometry, angleDeg);
+      if (smoothed !== clonedMesh.geometry) {
         clonedMesh.geometry?.dispose?.();
-        clonedMesh.geometry = creased;
-      }
-      const capped = fixExtrudedSvgCapFaceOrientations(clonedMesh.geometry, angleRad);
-      if (capped !== clonedMesh.geometry) {
-        clonedMesh.geometry?.dispose?.();
-        clonedMesh.geometry = capped;
+        clonedMesh.geometry = smoothed;
       }
       const applyDoubleSided = (mat) => {
         if (!mat) return;

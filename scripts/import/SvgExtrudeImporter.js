@@ -14,19 +14,14 @@ import {
   clampExtrudeColorOffset,
   clampExtrudeDepth,
   clampExtrudeNormalAngleDeg,
-  clampExtrudeHardEdgeAngleDeg,
   DEFAULT_EXTRUDE_DEPTH,
-  DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
   DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
   finalizeExtrudeGroupGeometry,
   preserveExtrudeGroupOnRebuild,
-  resolveExtrudeCreaseAngleRad,
 } from './extrudeImporterShared.js';
-import { withPatchedCapTriangulation, withStockCapTriangulation } from './extrudeCapTriangulation.js';
 import { densifyShapeForExtrudeCaps } from './extrudeDensify.js';
-import { geometryHasNaNPositions, geometryHasSpikeEdges, sanitizeShapeForExtrudeGeometry } from './extrudeShapeSanitize.js';
+import { geometryHasNaNPositions, sanitizeShapeForExtrudeGeometry } from './extrudeShapeSanitize.js';
 import { SVGLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/SVGLoader.js';
-import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 
 const COLOR_GROUP_QUANTIZE_STEP = 24;
 
@@ -48,7 +43,6 @@ export class SvgExtrudeImporter {
     this.group = null;
     this.currentDepth = DEFAULT_EXTRUDE_DEPTH;
     this.currentNormalAngleDeg = DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
-    this.currentHardEdgeAngleDeg = DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG;
     this.currentColorDepths = {};
     this.currentColorOffsets = {};
     this.currentColorPalette = [];
@@ -72,9 +66,6 @@ export class SvgExtrudeImporter {
     this.currentDepth = clampExtrudeDepth(options.depth ?? this.currentDepth);
     this.currentNormalAngleDeg = clampExtrudeNormalAngleDeg(
       options.normalAngleDeg ?? this.currentNormalAngleDeg,
-    );
-    this.currentHardEdgeAngleDeg = clampExtrudeHardEdgeAngleDeg(
-      options.hardEdgeAngleDeg ?? this.currentHardEdgeAngleDeg,
     );
     this.currentColorDepths = { ...(options.colorDepths || this.currentColorDepths || {}) };
     this.currentColorOffsets = { ...(options.colorOffsets || this.currentColorOffsets || {}) };
@@ -162,14 +153,6 @@ export class SvgExtrudeImporter {
     return this._rebuildPreserveGroup(this.currentDepth, this.currentNormalAngleDeg);
   }
 
-  setHardEdgeAngleDeg(nextHardEdgeAngleDeg) {
-    if (!this.svgText) {
-      throw new Error('No SVG source available for hard edge angle update');
-    }
-    this.currentHardEdgeAngleDeg = clampExtrudeHardEdgeAngleDeg(nextHardEdgeAngleDeg);
-    return this._rebuildPreserveGroup(this.currentDepth, this.currentNormalAngleDeg);
-  }
-
   setColorDepths(nextColorDepths = {}) {
     if (!this.svgText) {
       throw new Error('No SVG source available for color depth update');
@@ -206,10 +189,6 @@ export class SvgExtrudeImporter {
 
   getNormalAngleDeg() {
     return this.currentNormalAngleDeg;
-  }
-
-  getHardEdgeAngleDeg() {
-    return this.currentHardEdgeAngleDeg;
   }
 
   getColorDepths() {
@@ -268,10 +247,6 @@ export class SvgExtrudeImporter {
     group.userData.orbySvgNormalAngleDeg = normalAngleDeg;
     group.userData.orbySvgFlipDirection = this.currentFlipDirection;
 
-    const creaseAngleRad = resolveExtrudeCreaseAngleRad(
-      normalAngleDeg,
-      this.currentHardEdgeAngleDeg,
-    );
     const xyNormalizeScale = this._computeSvgXyNormalizeScale(data);
 
     const extrudeSettings = {
@@ -324,14 +299,13 @@ export class SvgExtrudeImporter {
         const detailSettings = resolveExtrudeDetailSettings(this.currentDetail, {
           bevelEnabled: !!bevelSettings.bevelEnabled,
         });
-        const smoothedGeometry = this._extrudeShapeWithBevel(
+        const geometry = this._extrudeShapeWithBevel(
           shape,
           { ...extrudeSettings, depth: effectiveDepth },
           bevelSettings,
           detailSettings,
-          creaseAngleRad,
         );
-        const mesh = new THREE.Mesh(smoothedGeometry, material.clone());
+        const mesh = new THREE.Mesh(geometry, material.clone());
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         mesh.userData.orbySvgExtrude = true;
@@ -358,7 +332,7 @@ export class SvgExtrudeImporter {
 
     this._normalizeGeometrySpace(group);
     applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
-    finalizeExtrudeGroupGeometry(group, creaseAngleRad);
+    finalizeExtrudeGroupGeometry(group, normalAngleDeg);
 
     return group;
   }
@@ -367,15 +341,15 @@ export class SvgExtrudeImporter {
    * @param {THREE.Shape} shape
    * @param {Object} extrudeSettings
    * @param {Object} bevelSettings
-   * @param {number} creaseAngleRad
+   * @param {Object} detailSettings
    * @returns {THREE.BufferGeometry}
    */
-  _extrudeShapeWithBevel(shape, extrudeSettings, bevelSettings, detailSettings, creaseAngleRad) {
+  _extrudeShapeWithBevel(shape, extrudeSettings, bevelSettings, detailSettings) {
     const bevelEnabled = !!bevelSettings?.bevelEnabled;
 
-    // Bevel: native outline + high curveSegments — cap densify / annulus Earcut patch both
-    // break ExtrudeGeometry bevel slices (fan spikes on caps). Flat extrude keeps densify.
-    let sourceShape = bevelEnabled
+    // Bevel: stock outline + curveSegments (densify breaks bevel side walls).
+    // Flat extrude: cap densify, then stock Earcut caps.
+    const sourceShape = bevelEnabled
       ? shape
       : densifyShapeForExtrudeCaps(shape, detailSettings);
     const curveSegments = bevelEnabled
@@ -391,14 +365,7 @@ export class SvgExtrudeImporter {
     const buildGeometry = (outline = sourceShape, options = extrudeOptions) =>
       new THREE.ExtrudeGeometry(outline, options);
 
-    let geometry = bevelEnabled
-      ? buildGeometry()
-      : withPatchedCapTriangulation(() => buildGeometry());
-
-    if (!bevelEnabled && geometryHasSpikeEdges(geometry)) {
-      geometry.dispose();
-      geometry = withStockCapTriangulation(() => buildGeometry());
-    }
+    let geometry = buildGeometry();
 
     if (geometryHasNaNPositions(geometry) && bevelEnabled) {
       geometry.dispose();
@@ -413,9 +380,7 @@ export class SvgExtrudeImporter {
       geometry = buildGeometry(sourceShape, { ...extrudeOptions, bevelEnabled: false });
     }
 
-    const smoothedGeometry = toCreasedNormals(geometry, creaseAngleRad);
-    geometry.dispose();
-    return smoothedGeometry;
+    return geometry;
   }
 
   _normalizeGeometrySpace(group) {

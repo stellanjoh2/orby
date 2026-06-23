@@ -6,7 +6,6 @@ import {
   DEFAULT_FONT_BEVEL_TYPE,
   normalizeFontBevelType,
   resolveFontExtrudeBevelSettingsForType,
-  resolveFontExtrudeCreaseAngleDeg,
   resolveFontExtrudePathSofteningSize,
 } from './extrudeBevel.js';
 import {
@@ -20,7 +19,6 @@ import {
   clampExtrudeHardEdgeAngleDeg,
   finalizeExtrudeGroupGeometry,
   preserveExtrudeGroupOnRebuild,
-  resolveExtrudeCreaseAngleRad,
 } from './extrudeImporterShared.js';
 import {
   FONT_EXTRUDE_TARGET_CAP_HEIGHT,
@@ -30,11 +28,7 @@ import {
 } from './extrudeDetail.js';
 import { softenFontExtrudeShapeForBevel } from './extrudeBevelCorner.js';
 import { geometryHasNaNPositions } from './extrudeShapeSanitize.js';
-import {
-  applyFontExtrudeSimpleBevelNormals,
-  applyFontExtrudeSmoothBevelNormals,
-  withFontCdtCapTriangulation,
-} from './fontExtrudeCapTriangulation.js';
+import { withFontCdtCapTriangulation } from './fontExtrudeCapTriangulation.js';
 import { fontExtrudeHoleCapLooksFilled } from './fontExtrudeValidate.js';
 import { flipFontShapeHoles, opentypePathHasArea, opentypePathToShapes } from './opentypePathToShape.js';
 
@@ -271,10 +265,6 @@ export class FontExtrudeImporter {
     group.userData.orbySvgNormalAngleDeg = normalAngleDeg;
     group.userData.orbySvgFlipDirection = this.currentFlipDirection;
 
-    const creaseAngleRad = resolveExtrudeCreaseAngleRad(
-      resolveFontExtrudeCreaseAngleDeg(this.currentBevelType, normalAngleDeg),
-      this.currentHardEdgeAngleDeg,
-    );
     const fillHex = this.currentFillColor.toLowerCase();
     const effectiveDepth = Number.isFinite(this.currentColorDepths?.[fillHex])
       ? clampExtrudeDepth(this.currentColorDepths[fillHex])
@@ -282,7 +272,6 @@ export class FontExtrudeImporter {
     const effectiveOffset = clampExtrudeColorOffset(this.currentColorOffsets?.[fillHex]);
 
     const baseColor = new THREE.Color(this.currentFillColor);
-    const straightBevel = this.currentBevelType === 'straight';
     const material = new THREE.MeshStandardMaterial({
       color: baseColor,
       roughness: DEFAULT_MATERIAL_ROUGHNESS,
@@ -384,13 +373,7 @@ export class FontExtrudeImporter {
 
     this._normalizeFontGeometrySpace(group, this._layoutFontSize);
     applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
-    finalizeExtrudeGroupGeometry(group, creaseAngleRad);
-    group.traverse((child) => {
-      if (!child.isMesh || !child.geometry) return;
-      child.geometry = straightBevel
-        ? applyFontExtrudeSimpleBevelNormals(child.geometry, creaseAngleRad)
-        : applyFontExtrudeSmoothBevelNormals(child.geometry, creaseAngleRad);
-    });
+    finalizeExtrudeGroupGeometry(group, normalAngleDeg);
     this._centerGlyphGroupPivots(group);
 
     return group;

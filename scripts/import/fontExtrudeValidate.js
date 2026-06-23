@@ -2,7 +2,6 @@ import {
   geometryHasNaNPositions,
   geometryHasSpikeEdges,
 } from './extrudeShapeSanitize.js';
-import { fixExtrudedSvgCapFaceOrientations } from './svgExtrudeCapNormals.js';
 
 /** Only used to rank strategies — never hard-reject on spikes alone. */
 const FONT_EXTRUDE_SPIKE_RATIO = 12;
@@ -202,7 +201,7 @@ export function scoreFontExtrudeStrategy(geometries, shapes, curveSegments, crea
     let ownedGeometry = null;
     if (shape?.holes?.length) {
       ownedGeometry = geometry.clone();
-      scoredGeometry = fixExtrudedSvgCapFaceOrientations(ownedGeometry, creaseAngleRad);
+      scoredGeometry = ownedGeometry;
     }
 
     if (fontExtrudeHoleCapLooksFilled(scoredGeometry, shape, curveSegments)) {

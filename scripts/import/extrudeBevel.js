@@ -1,7 +1,6 @@
 /** Shared ExtrudeGeometry bevel helpers (font + SVG extrude). */
 
 import {
-  clampExtrudeNormalAngleDeg,
   DEFAULT_EXTRUDE_DEPTH,
 } from './extrudeImporterShared.js';
 
@@ -63,7 +62,7 @@ export function normalizeFontBevelType(value) {
  */
 export function resolveFontExtrudeBevelSettingsForType(type, params = {}) {
   // Straight and Convex share the same TextGeometry-style outset extrude; Straight uses one
-  // bevel segment (flat chamfer). Shading differs — see applyFontExtrudeSimpleBevelNormals.
+  // bevel segment (flat chamfer) instead of rounded layers.
   return resolveFontExtrudeBevelSettings({
     ...params,
     bevelSegments:
@@ -71,20 +70,6 @@ export function resolveFontExtrudeBevelSettingsForType(type, params = {}) {
         ? FONT_SIMPLE_EXTRUDE_BEVEL_SEGMENTS
         : FONT_EXTRUDE_BEVEL_SEGMENTS,
   });
-}
-
-/**
- * Crease angle for side/bevel smoothing (degrees). Straight bevel uses the same slider for
- * toCreasedNormals and for bevel shoulder hardening — lower angles stay sharper on tight
- * corners; higher angles soften chamfer transitions on expressive display faces.
- *
- * @param {FontExtrudeBevelType} bevelType
- * @param {unknown} normalAngleDeg
- * @returns {number}
- */
-export function resolveFontExtrudeCreaseAngleDeg(bevelType, normalAngleDeg) {
-  void bevelType;
-  return clampExtrudeNormalAngleDeg(normalAngleDeg);
 }
 
 /**
