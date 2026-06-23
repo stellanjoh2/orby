@@ -568,6 +568,18 @@ function createOnBefore(args) {
  * @param {THREE.MeshStandardMaterial} material
  * @param {{ proceduralIndex: number, scale: number, normalStrength: number, normalMap: THREE.Texture | null, presetId: string }} opts
  */
+/** Keep WebGL program cache in sync when Fresnel and SVG surface share a material. */
+export function syncSvgExtrudeSurfaceProgramCacheKey(material) {
+  if (!material?.userData?.svgExtrudeProceduralPatched) return;
+  const presetId = material.userData.svgExtrudeSurfacePresetId ?? 'none';
+  const scale = material.userData.svgExtrudeProceduralScale ?? 1;
+  const normalStrength =
+    material.userData?.svgExtrudeProceduralUniforms?.uOrbyNormalStrength?.value ?? 0;
+  const fresnelSuffix = material.userData?.fresnelPatched ? ':f' : '';
+  material.customProgramCacheKey = () =>
+    `orbySvgSurf:v11:${presetId}:${Number(scale).toFixed(3)}:${Number(normalStrength).toFixed(3)}${fresnelSuffix}`;
+}
+
 function getOrUpdateUniformRefs(material, opts) {
   let uniformRefs = material.userData?.svgExtrudeProceduralUniforms;
   if (!uniformRefs) {
@@ -655,16 +667,14 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
     material.userData.svgExtrudeProceduralUniforms = uniformRefs;
     material.userData.svgExtrudeProceduralPatched = true;
     material.userData.svgExtrudeProceduralOnBeforeCompile = hook;
-    material.customProgramCacheKey = () =>
-      `orbySvgSurf:v10:${presetId}:${scale.toFixed(3)}:${normalStrength.toFixed(3)}`;
+    syncSvgExtrudeSurfaceProgramCacheKey(material);
     material.needsUpdate = true;
     ensureSvgExtrudeFresnelChain(material);
     return true;
   }
 
   material.userData.svgExtrudeProceduralUniforms = uniformRefs;
-  material.customProgramCacheKey = () =>
-    `orbySvgSurf:v10:${presetId}:${scale.toFixed(3)}:${normalStrength.toFixed(3)}`;
+  syncSvgExtrudeSurfaceProgramCacheKey(material);
   if (presetOrScaleChanged) {
     material.needsUpdate = true;
   } else if (strengthChanged) {

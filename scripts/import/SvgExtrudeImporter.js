@@ -3,10 +3,13 @@ import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
 import {
   clampExtrudeBevelAmount,
   DEFAULT_EXTRUDE_BEVEL_AMOUNT,
-  resolveExtrudeBevelSettings,
+  resolveFontExtrudeBevelSettingsForType,
+  resolveFontExtrudePathSofteningSize,
 } from './extrudeBevel.js';
+import { softenFontExtrudeShapeForBevel } from './extrudeBevelCorner.js';
 import {
   normalizeExtrudeDetail,
+  resolveBevelSideCurveSegments,
   resolveExtrudeDetailSettings,
 } from './extrudeDetail.js';
 import {
@@ -270,12 +273,6 @@ export class SvgExtrudeImporter {
 
     const xyNormalizeScale = this._computeSvgXyNormalizeScale(data);
 
-    const extrudeSettings = {
-      depth,
-      steps: 1,
-      curveSegments: 1,
-    };
-
     let meshCount = 0;
 
     const colorPaletteSet = new Set();
@@ -312,25 +309,37 @@ export class SvgExtrudeImporter {
       });
 
       for (const shape of shapes) {
-        const bevelSettings = resolveExtrudeBevelSettings({
+        const bevelSettings = resolveFontExtrudeBevelSettingsForType('straight', {
           amount: this.currentBevelAmount,
           depth: effectiveDepth,
           xyNormalizeScale,
         });
+        const bevelEnabled = !!bevelSettings.bevelEnabled;
         const detailSettings = resolveExtrudeDetailSettings(this.currentDetail, {
-          bevelEnabled: !!bevelSettings.bevelEnabled,
+          bevelEnabled,
         });
-        const geometry = this._extrudeShapeWithBevel(
-          shape,
-          { ...extrudeSettings, depth: effectiveDepth },
-          bevelSettings,
-          detailSettings,
-        );
+        const curveSegments = bevelEnabled
+          ? resolveBevelSideCurveSegments(this.currentDetail, detailSettings.curveSegments)
+          : detailSettings.curveSegments;
+        const extrudeOptions = {
+          depth: effectiveDepth,
+          steps: 1,
+          curveSegments,
+          ...bevelSettings,
+        };
+        const outline = bevelEnabled
+          ? softenFontExtrudeShapeForBevel(
+            shape,
+            resolveFontExtrudePathSofteningSize(extrudeOptions),
+            detailSettings.curveDivisions,
+          )
+          : shape;
+        const geometry = this._extrudeShapeWithBevel(outline, extrudeOptions, detailSettings);
         const mesh = new THREE.Mesh(geometry, material.clone());
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         mesh.userData.orbySvgExtrude = true;
-        mesh.userData.orbySvgBevelEnabled = !!bevelSettings.bevelEnabled;
+        mesh.userData.orbySvgBevelEnabled = bevelEnabled;
         mesh.userData.orbySvgEffectiveDepth = effectiveDepth;
         mesh.userData.orbySvgColorOffset = effectiveOffset;
         mesh.userData.orbySvgBaseColor = `#${baseColor.getHexString()}`;
@@ -370,28 +379,18 @@ export class SvgExtrudeImporter {
 
   /**
    * @param {THREE.Shape} shape
-   * @param {Object} extrudeSettings
-   * @param {Object} bevelSettings
+   * @param {Object} extrudeOptions
    * @param {Object} detailSettings
    * @returns {THREE.BufferGeometry}
    */
-  _extrudeShapeWithBevel(shape, extrudeSettings, bevelSettings, detailSettings) {
-    const bevelEnabled = !!bevelSettings?.bevelEnabled;
+  _extrudeShapeWithBevel(shape, extrudeOptions, detailSettings) {
+    const bevelEnabled = !!extrudeOptions?.bevelEnabled;
 
-    // Bevel: stock outline + curveSegments (densify breaks bevel side walls).
+    // Bevel: stock outline (densify breaks bevel side walls).
     // Flat extrude: cap densify, then stock Earcut caps.
     const sourceShape = bevelEnabled
       ? shape
       : densifyShapeForExtrudeCaps(shape, detailSettings);
-    const curveSegments = bevelEnabled
-      ? Math.max(4, Math.round(Number(detailSettings.extractDivisions) || 24))
-      : 1;
-
-    const extrudeOptions = {
-      ...extrudeSettings,
-      curveSegments,
-      ...bevelSettings,
-    };
 
     const buildGeometry = (outline = sourceShape, options = extrudeOptions) =>
       new THREE.ExtrudeGeometry(outline, options);

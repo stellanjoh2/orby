@@ -85,6 +85,7 @@ import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 import {
   applySvgExtrudeSurfaceToMaterial,
   ensureSvgExtrudeFresnelChain,
+  syncSvgExtrudeSurfaceProgramCacheKey,
   getSvgExtrudeSurfacePresetConfig,
   isFresnelLinkedInSvgSurfaceChain,
   reapplySvgExtrudeSurfaceFromState,
@@ -4571,6 +4572,10 @@ export class MaterialController {
    */
   reapplySvgExtrudeSurfaceShaders() {
     if (!this.currentModel) return;
+    // SVG surface wraps Fresnel in onBeforeCompile — patch Fresnel before re-applying surface.
+    if (this.fresnelSettings?.enabled) {
+      this.applyFresnelToModel(this.currentModel);
+    }
     reapplySvgExtrudeSurfaceFromState(
       this.currentModel,
       this.stateStore,
@@ -4800,6 +4805,10 @@ export class MaterialController {
                 });
               }
             }
+            if (needsFresnelShaderRecompile(material)) {
+              markFresnelShaderInjectCurrent(material);
+              material.needsUpdate = true;
+            }
             return;
           }
           material.onBeforeCompile = material.userData.fresnelOnBeforeCompile;
@@ -4892,6 +4901,9 @@ export class MaterialController {
       material.onBeforeCompile = fresnelOnBeforeCompile;
     }
     markFresnelShaderInjectCurrent(material);
+    if (material.userData?.svgExtrudeProceduralPatched) {
+      syncSvgExtrudeSurfaceProgramCacheKey(material);
+    }
     material.needsUpdate = true;
   }
 

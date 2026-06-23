@@ -391,7 +391,11 @@ export class FontExtrudeImporter {
         this.currentHardEdgeAngleDeg,
       );
     } else if (bevelEnabled && this.currentBevelType === 'convex') {
-      applyFontConvexBevelNormalsToGroup(group);
+      applyFontConvexBevelNormalsToGroup(
+        group,
+        normalAngleDeg,
+        this.currentHardEdgeAngleDeg,
+      );
     }
     this._centerGlyphGroupPivots(group);
 

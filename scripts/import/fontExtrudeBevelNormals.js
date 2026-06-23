@@ -1,11 +1,14 @@
 /** Font extrude normal fixes — straight chamfer caps/shoulders + convex bevel smooth. */
 
+import * as THREE from 'three';
 import {
   mergeVertices,
   toCreasedNormals,
 } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   applyImportCreasedNormals,
+  clampExtrudeHardEdgeAngleDeg,
+  clampExtrudeNormalAngleDeg,
   resolveExtrudeCreaseAngleRad,
 } from './extrudeImporterShared.js';
 
@@ -170,19 +173,24 @@ function fontExtrudePositionKey(x, y, z) {
 }
 
 /**
- * Fully-smooth normals on a merged copy — lookup only, never written back to side walls.
+ * Creased-smooth normals on a merged copy — lookup only, never written back to side walls.
+ * Uses the smoothing slider angle (not the hard-edge floor) so curve segments stay soft.
  *
  * @param {import('three').BufferGeometry} geometry
+ * @param {unknown} normalAngleDeg
  * @returns {Map<string, [number, number, number]>}
  */
-function buildFontExtrudeMergedSmoothNormalLookup(geometry) {
+function buildFontExtrudeMergedSmoothNormalLookup(geometry, normalAngleDeg) {
   let ref = geometry.clone();
   const merged = mergeVertices(ref);
   if (merged !== ref) {
     ref.dispose();
     ref = merged;
   }
-  const smoothed = toCreasedNormals(ref, Math.PI);
+  const smoothAngleRad = THREE.MathUtils.degToRad(
+    clampExtrudeNormalAngleDeg(normalAngleDeg),
+  );
+  const smoothed = toCreasedNormals(ref, smoothAngleRad);
   if (smoothed !== ref) {
     ref.dispose();
     ref = smoothed;
@@ -204,12 +212,13 @@ function buildFontExtrudeMergedSmoothNormalLookup(geometry) {
  * (pre-normalize crease → box UVs duplicate identical normals, no post merge).
  *
  * @param {import('three').BufferGeometry} geometry
+ * @param {unknown} normalAngleDeg
  * @returns {import('three').BufferGeometry}
  */
-export function softenFontConvexBevelCollarNormals(geometry) {
+export function softenFontConvexBevelCollarNormals(geometry, normalAngleDeg) {
   if (!geometry?.attributes?.position || !geometry.attributes.normal) return geometry;
 
-  const lookup = buildFontExtrudeMergedSmoothNormalLookup(geometry);
+  const lookup = buildFontExtrudeMergedSmoothNormalLookup(geometry, normalAngleDeg);
   const pos = geometry.attributes.position;
   const norm = geometry.attributes.normal;
 
@@ -245,21 +254,31 @@ export function softenFontConvexBevelCollarNormals(geometry) {
  * Straight (pre-normalize crease only; no merge/crease after box UVs).
  *
  * @param {import('three').BufferGeometry} geometry
+ * @param {unknown} normalAngleDeg
+ * @param {unknown} [hardEdgeAngleDeg]
  * @returns {import('three').BufferGeometry}
  */
-export function applyFontConvexBevelNormals(geometry) {
+export function applyFontConvexBevelNormals(geometry, normalAngleDeg, hardEdgeAngleDeg) {
   if (!geometry) return geometry;
-  softenFontConvexBevelCollarNormals(geometry);
+  softenFontConvexBevelCollarNormals(geometry, normalAngleDeg);
+  const hardAngleRad = THREE.MathUtils.degToRad(
+    clampExtrudeHardEdgeAngleDeg(hardEdgeAngleDeg),
+  );
+  hardenFontStraightBevelShoulderNormals(geometry, hardAngleRad);
   flattenFontStraightBevelCapNormals(geometry);
   return geometry;
 }
 
-/** @param {THREE.Group} group */
-export function applyFontConvexBevelNormalsToGroup(group) {
+/**
+ * @param {THREE.Group} group
+ * @param {unknown} normalAngleDeg
+ * @param {unknown} [hardEdgeAngleDeg]
+ */
+export function applyFontConvexBevelNormalsToGroup(group, normalAngleDeg, hardEdgeAngleDeg) {
   group.traverse((child) => {
     if (!child.isMesh || !child.geometry || !child.userData?.orbyFontExtrude) return;
     if (child.userData.orbyFontBevelType !== 'convex') return;
-    applyFontConvexBevelNormals(child.geometry);
+    applyFontConvexBevelNormals(child.geometry, normalAngleDeg, hardEdgeAngleDeg);
   });
 }
 
