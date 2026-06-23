@@ -3870,8 +3870,18 @@ export class SceneManager {
     );
   }
 
-  setSvgExtrudeHardEdgeAngle(_hardEdgeAngle) {
-    // SVG extrude uses standard creased normals from Normal Angle only.
+  setSvgExtrudeHardEdgeAngle(hardEdgeAngle) {
+    if (typeof this.svgExtrudeImporter?.setHardEdgeAngleDeg !== 'function') {
+      return;
+    }
+    runSvgExtrudeImporterMutation(
+      this,
+      () => this.svgExtrudeImporter.setHardEdgeAngleDeg(hardEdgeAngle),
+      {
+        logLabel: 'update extrude hard edge angle',
+        toastOnError: 'Could not update hard edge angle',
+      },
+    );
   }
 
   setSvgExtrudeBevel(settings = {}, options = {}) {

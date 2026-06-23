@@ -50,7 +50,33 @@ export function canMutateSvgExtrudeImporter(scene) {
  * Re-register meshes, resync shading, color override, normals, bones, and stats.
  * @param {import('../SceneManager.js').SceneManager} scene
  */
+const SVG_EXTRUDE_GEOMETRY_SNAPSHOT_KEYS = [
+  'orbyPs2OriginalGeometry',
+  'orbyWirePulseOriginalGeometry',
+  'orbyWirePulsePreparedGeometry',
+  'orbyVoxelOriginalGeometry',
+  'orbyVoxelPreparedGeometry',
+  'orbyVoxelBakedStaticGeometry',
+  'orbyScanlineOriginalGeometry',
+  'orbyScanlinePreparedGeometry',
+];
+
+/** Drop creative-look / overlay geometry snapshots after SVG extrude rebuild. */
+function purgeSvgExtrudeMeshGeometrySnapshots(scene) {
+  scene.currentModel?.traverse((child) => {
+    if (!child.isMesh) return;
+    for (const key of SVG_EXTRUDE_GEOMETRY_SNAPSHOT_KEYS) {
+      delete child.userData[key];
+    }
+  });
+}
+
 export function rebuildSvgExtrudeMeshesAfterImporterChange(scene) {
+  // Rebuild swaps mesh geometry; drop reverse-normals caches tied to disposed buffers.
+  scene.originalGeometryIndices = new WeakMap();
+  scene.originalGeometryAttributes = new WeakMap();
+  purgeSvgExtrudeMeshGeometrySnapshots(scene);
+
   scene.materialController.prepareMesh(scene.currentModel);
   scene.setShading(scene.currentShading);
   const svgState = scene.stateStore.getState().svgExtrude || {};

@@ -8,7 +8,6 @@ import { USDZLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/
 import { SvgExtrudeImporter } from '../import/SvgExtrudeImporter.js';
 import { BvhImporter } from '../import/BvhImporter.js';
 import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
-import { DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG } from '../import/extrudeImporterShared.js';
 import { normalizeImportScale } from '../import/normalizeImportScale.js';
 import { registerKHRMaterialsPbrSpecularGlossiness } from './gltfKHRSpecularGlossinessPlugin.js';
 /** Mixamo / FBX Phong shininess is usually 0–100; map to PBR roughness. */
@@ -289,9 +288,11 @@ export class ModelLoader {
     const flipDirection = !!options.svgExtrudeFlipDirection;
     const bevelAmount = options.svgExtrudeBevelAmount;
     const detail = options.svgExtrudeDetail;
+    const hardEdgeAngleDeg = options.svgExtrudeHardEdgeAngle;
     const object = await this.svgExtrudeImporter.loadFromFile(file, {
       depth,
       normalAngleDeg,
+      hardEdgeAngleDeg,
       colorDepths,
       colorOffsets,
       flipDirection,
@@ -313,7 +314,7 @@ export class ModelLoader {
         enabled: true,
         depth: this.svgExtrudeImporter.getDepth(),
         normalAngle: this.svgExtrudeImporter.getNormalAngleDeg(),
-        hardEdgeAngle: DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
+        hardEdgeAngle: this.svgExtrudeImporter.getHardEdgeAngleDeg(),
         colorDepths: this.svgExtrudeImporter.getColorDepths(),
         colorOffsets: this.svgExtrudeImporter.getColorOffsets(),
         colors: this.svgExtrudeImporter.getAvailableColors(),

@@ -14,12 +14,17 @@ import {
   clampExtrudeColorOffset,
   clampExtrudeDepth,
   clampExtrudeNormalAngleDeg,
+  clampExtrudeHardEdgeAngleDeg,
   DEFAULT_EXTRUDE_DEPTH,
+  DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
   DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
-  finalizeExtrudeGroupGeometry,
   preserveExtrudeGroupOnRebuild,
 } from './extrudeImporterShared.js';
 import { densifyShapeForExtrudeCaps } from './extrudeDensify.js';
+import {
+  applySvgExtrudeCreasedNormalsToGroup,
+  finalizeSvgExtrudeGroupGeometry,
+} from './svgExtrudeNormals.js';
 import { geometryHasNaNPositions, sanitizeShapeForExtrudeGeometry } from './extrudeShapeSanitize.js';
 import { SVGLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/SVGLoader.js';
 
@@ -43,6 +48,7 @@ export class SvgExtrudeImporter {
     this.group = null;
     this.currentDepth = DEFAULT_EXTRUDE_DEPTH;
     this.currentNormalAngleDeg = DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
+    this.currentHardEdgeAngleDeg = DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG;
     this.currentColorDepths = {};
     this.currentColorOffsets = {};
     this.currentColorPalette = [];
@@ -66,6 +72,9 @@ export class SvgExtrudeImporter {
     this.currentDepth = clampExtrudeDepth(options.depth ?? this.currentDepth);
     this.currentNormalAngleDeg = clampExtrudeNormalAngleDeg(
       options.normalAngleDeg ?? this.currentNormalAngleDeg,
+    );
+    this.currentHardEdgeAngleDeg = clampExtrudeHardEdgeAngleDeg(
+      options.hardEdgeAngleDeg ?? this.currentHardEdgeAngleDeg,
     );
     this.currentColorDepths = { ...(options.colorDepths || this.currentColorDepths || {}) };
     this.currentColorOffsets = { ...(options.colorOffsets || this.currentColorOffsets || {}) };
@@ -153,6 +162,14 @@ export class SvgExtrudeImporter {
     return this._rebuildPreserveGroup(this.currentDepth, this.currentNormalAngleDeg);
   }
 
+  setHardEdgeAngleDeg(nextHardEdgeAngleDeg) {
+    if (!this.svgText) {
+      throw new Error('No SVG source available for hard edge angle update');
+    }
+    this.currentHardEdgeAngleDeg = clampExtrudeHardEdgeAngleDeg(nextHardEdgeAngleDeg);
+    return this._rebuildPreserveGroup(this.currentDepth, this.currentNormalAngleDeg);
+  }
+
   setColorDepths(nextColorDepths = {}) {
     if (!this.svgText) {
       throw new Error('No SVG source available for color depth update');
@@ -189,6 +206,10 @@ export class SvgExtrudeImporter {
 
   getNormalAngleDeg() {
     return this.currentNormalAngleDeg;
+  }
+
+  getHardEdgeAngleDeg() {
+    return this.currentHardEdgeAngleDeg;
   }
 
   getColorDepths() {
@@ -330,9 +351,14 @@ export class SvgExtrudeImporter {
     }
     this.currentColorPalette = [...colorPaletteSet].sort();
 
+    applySvgExtrudeCreasedNormalsToGroup(
+      group,
+      normalAngleDeg,
+      this.currentHardEdgeAngleDeg,
+    );
     this._normalizeGeometrySpace(group);
     applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
-    finalizeExtrudeGroupGeometry(group, normalAngleDeg);
+    finalizeSvgExtrudeGroupGeometry(group);
 
     return group;
   }

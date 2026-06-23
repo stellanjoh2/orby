@@ -17,7 +17,7 @@ import {
   DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
   DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
   clampExtrudeHardEdgeAngleDeg,
-  finalizeExtrudeGroupGeometry,
+  applyExtrudeBoxUvsToGroup,
   preserveExtrudeGroupOnRebuild,
 } from './extrudeImporterShared.js';
 import {
@@ -29,6 +29,10 @@ import {
 import { softenFontExtrudeShapeForBevel } from './extrudeBevelCorner.js';
 import { geometryHasNaNPositions } from './extrudeShapeSanitize.js';
 import { withFontCdtCapTriangulation } from './fontExtrudeCapTriangulation.js';
+import {
+  applyFontExtrudeCreasedNormalsToGroup,
+  applyFontStraightBevelCapNormalsToGroup,
+} from './fontExtrudeBevelNormals.js';
 import { fontExtrudeHoleCapLooksFilled } from './fontExtrudeValidate.js';
 import { flipFontShapeHoles, opentypePathHasArea, opentypePathToShapes } from './opentypePathToShape.js';
 
@@ -371,9 +375,21 @@ export class FontExtrudeImporter {
       throw new Error('Text has no filled paths to extrude');
     }
 
+    applyFontExtrudeCreasedNormalsToGroup(
+      group,
+      normalAngleDeg,
+      this.currentHardEdgeAngleDeg,
+    );
     this._normalizeFontGeometrySpace(group, this._layoutFontSize);
     applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
-    finalizeExtrudeGroupGeometry(group, normalAngleDeg);
+    applyExtrudeBoxUvsToGroup(group);
+    if (bevelEnabled && this.currentBevelType === 'straight') {
+      applyFontStraightBevelCapNormalsToGroup(
+        group,
+        normalAngleDeg,
+        this.currentHardEdgeAngleDeg,
+      );
+    }
     this._centerGlyphGroupPivots(group);
 
     return group;

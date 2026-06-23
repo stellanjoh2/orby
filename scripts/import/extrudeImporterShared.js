@@ -133,9 +133,10 @@ export function preserveExtrudeGroupOnRebuild(existingGroup, rebuiltGroup) {
  *
  * @param {THREE.BufferGeometry} geometry
  * @param {unknown} normalAngleDeg
+ * @param {unknown} [hardEdgeAngleDeg]
  * @returns {THREE.BufferGeometry}
  */
-export function applyImportCreasedNormals(geometry, normalAngleDeg) {
+export function applyImportCreasedNormals(geometry, normalAngleDeg, hardEdgeAngleDeg) {
   if (!geometry?.attributes?.position) return geometry;
 
   let geom = geometry;
@@ -145,7 +146,7 @@ export function applyImportCreasedNormals(geometry, normalAngleDeg) {
     geom = merged;
   }
 
-  const creaseAngleRad = THREE.MathUtils.degToRad(clampExtrudeNormalAngleDeg(normalAngleDeg));
+  const creaseAngleRad = resolveExtrudeCreaseAngleRad(normalAngleDeg, hardEdgeAngleDeg);
   const smoothed = toCreasedNormals(geom, creaseAngleRad);
   if (smoothed !== geom) {
     geom.dispose();
@@ -166,19 +167,10 @@ export function applyExtrudeDirectionOffset(group, flipDirection, defaultDepth) 
   });
 }
 
-/**
- * Standard creased normals + box UVs on SVG and font extrude meshes.
- *
- * @param {THREE.Group} group
- * @param {unknown} [normalAngleDeg]
- */
-export function finalizeExtrudeGroupGeometry(group, normalAngleDeg) {
+/** @param {THREE.Group} group */
+export function applyExtrudeBoxUvsToGroup(group) {
   group.traverse((child) => {
     if (!child.isMesh || !child.geometry || !child.userData?.orbySvgExtrude) return;
-    let geom = applyImportCreasedNormals(child.geometry, normalAngleDeg);
-    if (geom !== child.geometry) {
-      child.geometry.dispose();
-    }
-    child.geometry = applyExtrudeBoxUvs(geom);
+    child.geometry = applyExtrudeBoxUvs(child.geometry);
   });
 }
