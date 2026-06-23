@@ -1433,15 +1433,15 @@
                   </div>
                   <div id="stlSmoothingControls" hidden>
                     <div class="slider-line">
-                      <span data-tooltip="Average STL face normals at corners. STL files only store triangle facets — smoothing is computed on import and can be adjusted here.">Smooth Shading</span>
+                      <span data-tooltip="Recompute vertex normals from triangle facets. STL imports enable this automatically; turn on for GLB/OBJ when you want to adjust crease smoothing.">Smooth Shading</span>
                       <label class="effect-toggle">
-                        <input type="checkbox" id="stlSmoothShading" checked />
+                        <input type="checkbox" id="stlSmoothShading" />
                         <span class="effect-indicator" aria-hidden="true"></span>
-                        <span class="sr-only">Toggle STL smooth shading</span>
+                        <span class="sr-only">Toggle imported mesh smooth shading</span>
                       </label>
                     </div>
                     <label class="slider-line">
-                      <span data-tooltip="Controls how sharply creases stay faceted (0 = all facets, higher = smoother curved areas). Only applies when Smooth Shading is on.">Smoothing Angle</span>
+                      <span data-tooltip="Crease angle in degrees — lower keeps hard edges faceted, higher blends curved areas (0 = all facets, 180 = fully smooth). Only applies when Smooth Shading is on.">Smoothing Angle</span>
                       <input
                         id="stlSmoothingAngle"
                         type="range"

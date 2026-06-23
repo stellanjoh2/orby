@@ -181,8 +181,9 @@ import {
 import { applyLookFilterPreset } from './ui/lookFilterApply.js';
 import {
   applyStlNormalSmoothing,
-  cloneStlSourceGeometry,
+  IMPORT_MESH_SMOOTHING_ENABLED,
   modelHasStlImport,
+  populateImportRawCache,
 } from './import/stlNormalSmoothing.js';
 import {
   captureAndApplyCenterPivot,
@@ -273,8 +274,8 @@ export class SceneManager {
     this.currentAssetMetadata = null;
     this.svgExtrudeImporter = null;
     this.isSvgExtrudeModel = false;
-    this.isStlModel = false;
-    this.stlRawByMesh = new Map();
+    this.isImportSmoothingModel = false;
+    this.importRawByMesh = new Map();
     this._pivotCenterDelta = null;
     this.reverseNormalsEnabled = initialState.advanced?.reverseNormals ?? false;
     this.originalGeometryIndices = new WeakMap();
@@ -4019,13 +4020,25 @@ export class SceneManager {
     );
   }
 
-  _disposeStlRawCaches() {
-    this.stlRawByMesh.forEach((geometry) => geometry.dispose());
-    this.stlRawByMesh.clear();
+  _disposeImportRawCaches() {
+    this.importRawByMesh.forEach((geometry) => geometry.dispose());
+    this.importRawByMesh.clear();
   }
 
-  _emitStlSmoothingControlsVisibility() {
-    this.eventBus.emit('ui:stl-smoothing-visible', { visible: !!this.isStlModel });
+  _emitImportSmoothingControlsVisibility() {
+    const visible = !!this.isImportSmoothingModel;
+    this.eventBus.emit('ui:stl-smoothing-visible', { visible });
+  }
+
+  _refreshImportSmoothingUi() {
+    if (!IMPORT_MESH_SMOOTHING_ENABLED) {
+      this.isImportSmoothingModel = false;
+      this._emitImportSmoothingControlsVisibility();
+      return;
+    }
+    // Any imported file mesh — SVG/font extrudes use their own normal-angle controls.
+    this.isImportSmoothingModel = !!this.currentModel && !this.isSvgExtrudeModel;
+    this._emitImportSmoothingControlsVisibility();
   }
 
   _currentFileIsStl() {
@@ -4033,22 +4046,28 @@ export class SceneManager {
     return typeof name === 'string' && name.toLowerCase().endsWith('.stl');
   }
 
-  _setupStlSmoothingForModel(object) {
-    this._disposeStlRawCaches();
-    this.isStlModel = modelHasStlImport(object) || this._currentFileIsStl();
-    this._emitStlSmoothingControlsVisibility();
-    if (!this.isStlModel || !object) return;
+  _setupImportSmoothingForModel(object) {
+    this._disposeImportRawCaches();
+    this._refreshImportSmoothingUi();
+    if (!IMPORT_MESH_SMOOTHING_ENABLED) return;
 
-    object.traverse((child) => {
-      if (!child.isMesh || !child.geometry) return;
-      if (!child.userData?.orbyStlImport && !this._currentFileIsStl()) return;
-      if (!this.stlRawByMesh.has(child.uuid)) {
-        child.userData.orbyStlImport = true;
-        this.stlRawByMesh.set(child.uuid, cloneStlSourceGeometry(child.geometry));
-      }
-    });
+    const isStl = modelHasStlImport(object) || this._currentFileIsStl();
 
-    this.applyStlSmoothingFromState();
+    if (isStl && !this.isSvgExtrudeModel) {
+      this.stateStore.set('advanced.stlSmoothShading', true);
+    }
+
+    if (!this.isImportSmoothingModel || !object) return;
+
+    populateImportRawCache(object, this.importRawByMesh, { tagStl: isStl });
+
+    this.applyImportSmoothingFromState();
+  }
+
+  _ensureImportRawCaches() {
+    if (!this.currentModel) return;
+    const isStl = modelHasStlImport(this.currentModel) || this._currentFileIsStl();
+    populateImportRawCache(this.currentModel, this.importRawByMesh, { tagStl: isStl });
   }
 
   _applyCenterPivotFromState() {
@@ -4117,25 +4136,31 @@ export class SceneManager {
     this.transformControlsScale?.updateMatrixWorld?.();
   }
 
-  applyStlSmoothingFromState() {
-    if (!this.isStlModel || !this.currentModel) return;
+  applyImportSmoothingFromState() {
+    if (!IMPORT_MESH_SMOOTHING_ENABLED || !this.isImportSmoothingModel || !this.currentModel) return;
+
+    this._ensureImportRawCaches();
 
     const advanced = this.stateStore.getState()?.advanced ?? {};
-    const options = {
-      smoothShading: advanced.stlSmoothShading !== false,
-      angleDeg: advanced.stlSmoothingAngle,
-    };
+    const angleDeg = advanced.stlSmoothingAngle;
 
     this.currentModel.traverse((child) => {
       if (!child.isMesh || !child.geometry) return;
-      const raw = this.stlRawByMesh.get(child.uuid);
+      if (child.userData?.orbySvgExtrude || child.userData?.orbyFontExtrude) return;
+      const raw = this.importRawByMesh.get(child.uuid);
       if (!raw) return;
-      applyStlNormalSmoothing(child, raw, options);
+      const smoothShading = !!advanced.stlSmoothShading;
+      applyStlNormalSmoothing(child, raw, { smoothShading, angleDeg });
     });
 
     this.originalGeometryIndices = new WeakMap();
     this.originalGeometryAttributes = new WeakMap();
     this.setReverseNormals(this.reverseNormalsEnabled);
+  }
+
+  /** @deprecated Use {@link applyImportSmoothingFromState} */
+  applyStlSmoothingFromState() {
+    this.applyImportSmoothingFromState();
   }
 
   setReverseNormals(enabled) {

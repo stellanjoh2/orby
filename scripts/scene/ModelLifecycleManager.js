@@ -92,15 +92,15 @@ export class ModelLifecycleManager {
     s.currentAssetMetadata = null;
     s.svgExtrudeImporter = null;
     s.isSvgExtrudeModel = false;
-    s.isStlModel = false;
+    s.isImportSmoothingModel = false;
     s._pivotCenterDelta = null;
-    s._disposeStlRawCaches();
+    s._disposeImportRawCaches();
     s.originalGeometryIndices = new WeakMap();
     s.originalGeometryAttributes = new WeakMap();
     s.originalMaterialSides = new WeakMap();
     s.eventBus.emit('ui:advanced-alpha-visible', { visible: false });
     s.eventBus.emit('ui:advanced-glass-visible', { visible: false });
-    s._emitStlSmoothingControlsVisibility();
+    s._emitImportSmoothingControlsVisibility();
     s.eventBus.emit('ui:center-pivot-enabled', { enabled: false });
     s.eventBus.emit('scene:model-cleared');
   }
@@ -113,6 +113,7 @@ export class ModelLifecycleManager {
     s.svgExtrudeImporter = isSvgExtrude ? svgExtrude.importer : null;
     s.isSvgExtrudeModel = isSvgExtrude;
     s.stateStore.set('svgExtrude.enabled', isSvgExtrude);
+    s._refreshImportSmoothingUi();
     if (!isSvgExtrude) {
       s.stateStore.set('svgExtrude.availableColors', []);
       s.stateStore.set('svgExtrude.colorDepths', {});
@@ -202,7 +203,7 @@ export class ModelLifecycleManager {
     s.godRaysController?.setModelRoot(s.modelRoot);
 
     s.materialController.prepareMesh(object);
-    s._setupStlSmoothingForModel(object);
+    s._setupImportSmoothingForModel(object);
     s.setCenterPivot(true, { updateState: true, showToast: false });
 
     const wasFirstLoad = s.isFirstModelLoad;
@@ -247,6 +248,7 @@ export class ModelLifecycleManager {
     });
     s.setShading(state.shading);
     s.ui.syncMeshControls(s.stateStore.getState());
+    s._refreshImportSmoothingUi();
     s.repairRenderSurfacesAfterModelLoad?.();
     if (state.gobo?.texture) {
       void s.setGoboTexture(state.gobo.texture, { updateState: false });

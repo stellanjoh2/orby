@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { GLTFExporter } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/exporters/GLTFExporter.js';
-import { applyImportCreasedNormals } from '../import/extrudeImporterShared.js';
 import { isVoxelCreativeLookPreset } from '../render/CreativeLookMaterials.js';
 
 const sanitizeBaseName = (name) => {
@@ -37,18 +36,6 @@ const buildExportBaseName = (sourceName, modelRoot) => {
   const textPart = sanitizeBaseName(fontText);
   if (!textPart || textPart === fontPart) return fontPart;
   return `${fontPart}-${textPart}`;
-};
-
-const resolveSvgNormalAngleDeg = (node, fallback = 45) => {
-  let current = node;
-  while (current) {
-    if (current.userData?.orbySvgNormalAngleDeg !== undefined) {
-      const value = Number(current.userData.orbySvgNormalAngleDeg);
-      if (Number.isFinite(value)) return value;
-    }
-    current = current.parent || null;
-  }
-  return fallback;
 };
 
 const forceOpaqueMaterialForExport = (material) => {
@@ -123,6 +110,18 @@ const prepareShaderLabExportGeometry = (geometry, family) => {
   return geo;
 };
 
+/** Preserve import-time creased/bevel/cap normals — only fill in if missing. */
+const prepareSvgExportGeometry = (geometry) => {
+  const geo = geometry?.clone?.();
+  if (!geo) return null;
+
+  if (!geo.attributes?.normal) {
+    geo.computeVertexNormals();
+  }
+  geo.computeBoundingSphere();
+  return geo;
+};
+
 const cloneSvgExportNode = (object3d) => {
   const clone = object3d.clone(true);
 
@@ -139,7 +138,9 @@ const cloneSvgExportNode = (object3d) => {
     const sourceMesh = sourceMeshes[i];
     const clonedMesh = clonedMeshes[i];
     if (!sourceMesh || !clonedMesh) continue;
-    clonedMesh.geometry = sourceMesh.geometry?.clone?.() ?? sourceMesh.geometry;
+    const prepared = prepareSvgExportGeometry(sourceMesh.geometry);
+    if (!prepared) continue;
+    clonedMesh.geometry = prepared;
     if (Array.isArray(sourceMesh.material)) {
       clonedMesh.material = sourceMesh.material.map((mat) => mat?.clone?.() ?? mat);
     } else {
@@ -147,12 +148,6 @@ const cloneSvgExportNode = (object3d) => {
     }
 
     if (sourceMesh.userData?.orbySvgExtrude) {
-      const angleDeg = resolveSvgNormalAngleDeg(sourceMesh);
-      const smoothed = applyImportCreasedNormals(clonedMesh.geometry, angleDeg);
-      if (smoothed !== clonedMesh.geometry) {
-        clonedMesh.geometry?.dispose?.();
-        clonedMesh.geometry = smoothed;
-      }
       const applyDoubleSided = (mat) => {
         if (!mat) return;
         mat.side = THREE.DoubleSide;

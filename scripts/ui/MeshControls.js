@@ -53,6 +53,7 @@ import {
   renderSvgColorDepthControls,
 } from './svgExtrudeControlsShared.js';
 import { normalizeExportSubtleSpinDegrees, normalizeExportHdriRotationDegrees } from '../render/exportVideoMovements.js';
+import { IMPORT_MESH_SMOOTHING_ENABLED } from '../import/stlNormalSmoothing.js';
 export class MeshControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
     this.eventBus = eventBus;
@@ -80,6 +81,17 @@ export class MeshControls {
       meshPending: {},
     };
     this.stlSmoothingDebounceTimer = null;
+  }
+
+  resolveImportSmoothingControlsVisible() {
+    if (!IMPORT_MESH_SMOOTHING_ENABLED) return false;
+    const scene = window.orby?.scene;
+    return !!(scene?.currentModel && !scene?.isSvgExtrudeModel);
+  }
+
+  syncImportSmoothingControlsVisible(visible) {
+    const wrap = this.ui.inputs.stlSmoothingControls;
+    if (wrap) wrap.hidden = !visible;
   }
 
   _svgExtrudeCtx() {
@@ -125,10 +137,8 @@ export class MeshControls {
       if (wrap) wrap.hidden = !visible;
       this.refreshAdvancedGlassControls(this.stateStore.getState());
     });
-    this.eventBus.on('ui:stl-smoothing-visible', (payload) => {
-      const visible = !!(payload?.visible ?? payload);
-      const wrap = this.ui.inputs.stlSmoothingControls;
-      if (wrap) wrap.hidden = !visible;
+    this.eventBus.on('ui:stl-smoothing-visible', () => {
+      this.syncImportSmoothingControlsVisible(this.resolveImportSmoothingControlsVisible());
       this.ui.syncUIFromState();
     });
     this.eventBus.on('ui:center-pivot-enabled', (payload) => {
@@ -1343,18 +1353,17 @@ export class MeshControls {
     if (this.ui.inputs.centerPivot) {
       this.ui.inputs.centerPivot.checked = !!state.advanced?.centerPivot;
     }
-    const stlControlsVisible = this.ui.inputs.stlSmoothingControls
-      ? !this.ui.inputs.stlSmoothingControls.hidden
-      : false;
+    const stlControlsVisible = this.resolveImportSmoothingControlsVisible();
+    this.syncImportSmoothingControlsVisible(stlControlsVisible);
     if (this.ui.inputs.stlSmoothShading) {
-      const smoothOn = state.advanced?.stlSmoothShading !== false;
+      const smoothOn = !!state.advanced?.stlSmoothShading;
       this.ui.inputs.stlSmoothShading.checked = smoothOn;
       this.ui.setControlDisabled('stlSmoothShading', !stlControlsVisible);
     }
     if (this.ui.inputs.stlSmoothingAngle) {
       const rawAngle = Number(state.advanced?.stlSmoothingAngle ?? 40);
       const angle = Number.isFinite(rawAngle) ? Math.max(0, Math.min(180, rawAngle)) : 40;
-      const smoothOn = state.advanced?.stlSmoothShading !== false;
+      const smoothOn = !!state.advanced?.stlSmoothShading;
       const angleActive = document.activeElement === this.ui.inputs.stlSmoothingAngle;
       if (!angleActive) {
         this.ui.inputs.stlSmoothingAngle.value = angle;

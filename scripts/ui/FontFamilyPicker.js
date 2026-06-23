@@ -95,7 +95,7 @@ export class FontFamilyPicker {
       const family =
         this._fonts.find((f) => f.postscriptName === this._value)?.family || label;
       if (this._value && family && family !== '— Select font —') {
-        this._applyPreviewStyles(this.triggerLabel, family);
+        this._applyPreviewStyles(this.triggerLabel, family, { includePreviewSize: false });
       } else {
         this.triggerLabel.style.fontFamily = 'inherit';
         this.triggerLabel.style.fontSize = '';
@@ -301,11 +301,12 @@ export class FontFamilyPicker {
   /**
    * @param {HTMLElement | null} el
    * @param {string} familyName
+   * @param {{ includePreviewSize?: boolean }} [options]
    */
-  _applyPreviewStyles(el, familyName) {
+  _applyPreviewStyles(el, familyName, { includePreviewSize = true } = {}) {
     if (!el || !familyName) return;
     el.style.fontFamily = cssFontFamilyFromName(familyName);
-    el.style.fontSize = PREVIEW_FONT_SIZE;
+    el.style.fontSize = includePreviewSize ? PREVIEW_FONT_SIZE : '';
   }
 
   /**
@@ -331,7 +332,11 @@ export class FontFamilyPicker {
       if (el.dataset.previewPs !== postscriptName) return;
       if (fontFamily && fontFamily !== 'inherit') {
         el.style.fontFamily = fontFamily;
-        el.style.fontSize = PREVIEW_FONT_SIZE;
+        if (!el.classList.contains('font-extrude-family-trigger-label')) {
+          el.style.fontSize = PREVIEW_FONT_SIZE;
+        } else {
+          el.style.fontSize = '';
+        }
       }
       el.dataset.previewReady = '1';
     } catch {

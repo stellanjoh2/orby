@@ -333,7 +333,7 @@ export class FontExtrudeImporter {
           ? softenFontExtrudeShapeForBevel(
             shapeToExtrude,
             resolveFontExtrudePathSofteningSize(extrudeOptions),
-            detailSettings.curveDivisions,
+            curveSegments,
           )
           : shapeToExtrude;
         let geometry = this._extrudeFontShape(outline, extrudeOptions, bevelEnabled);

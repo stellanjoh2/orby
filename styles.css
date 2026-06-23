@@ -8571,6 +8571,7 @@ body.ui-hidden .shelf {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: inherit;
 }
 
 .font-extrude-family-listbox {

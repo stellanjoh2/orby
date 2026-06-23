@@ -7,6 +7,8 @@ const BEVEL_CORNER_SAFETY = 0.88;
 const BEVEL_SUPPORT_MARGIN = 1.06;
 const MAX_EDGE_CHAMFER_FRACTION = 0.62;
 const MAX_CHAMFER_PASSES = 5;
+/** Match ExtrudeGeometry `curveSegments` floor — do not clamp to 12 or Low/Med/High collapse. */
+const BEVEL_SOFTEN_MIN_DIVISIONS = 4;
 
 /**
  * @param {{ x: number, y: number }} p0
@@ -260,7 +262,10 @@ export function softenFontExtrudeShapeForBevel(shape, bevelSize, sampleDivisions
     return shape;
   }
 
-  const divisions = Math.max(12, Math.round(Number(sampleDivisions) || 12));
+  const divisions = Math.max(
+    BEVEL_SOFTEN_MIN_DIVISIONS,
+    Math.round(Number(sampleDivisions) || BEVEL_SOFTEN_MIN_DIVISIONS),
+  );
   const extracted = shape.extractPoints(divisions);
   const outer = extracted?.shape || [];
   if (outer.length < 3) return shape;

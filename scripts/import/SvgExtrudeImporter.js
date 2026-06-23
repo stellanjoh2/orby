@@ -331,7 +331,7 @@ export class SvgExtrudeImporter {
           ? softenFontExtrudeShapeForBevel(
             shape,
             resolveFontExtrudePathSofteningSize(extrudeOptions),
-            detailSettings.curveDivisions,
+            curveSegments,
           )
           : shape;
         const geometry = this._extrudeShapeWithBevel(outline, extrudeOptions, detailSettings);

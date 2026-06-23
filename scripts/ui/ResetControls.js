@@ -513,7 +513,7 @@ export class ResetControls {
       );
       this.stateStore.set(
         'advanced.stlSmoothShading',
-        defaults.advanced?.stlSmoothShading !== false,
+        !!defaults.advanced?.stlSmoothShading,
       );
       this.stateStore.set(
         'advanced.stlSmoothingAngle',
@@ -1552,7 +1552,7 @@ export class ResetControls {
             );
             this.stateStore.set(
               'advanced.stlSmoothShading',
-              defaults.advanced?.stlSmoothShading !== false,
+              !!defaults.advanced?.stlSmoothShading,
             );
             this.stateStore.set(
               'advanced.stlSmoothingAngle',

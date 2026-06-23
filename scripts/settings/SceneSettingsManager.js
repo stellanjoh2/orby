@@ -56,6 +56,7 @@ export class SceneSettingsManager {
     const activeMoodBaseColor = HDRI_MOODS[state.hdri]?.baseColor;
 
     const payload = deepClone(state);
+    delete payload.ui;
     payload.baseColor = activeMoodBaseColor ?? state.groundSolidColor;
     payload.camera = {
       ...payload.camera,
@@ -259,6 +260,7 @@ export class SceneSettingsManager {
     try {
       const payload = JSON.parse(text);
       migrateLegacyGroundKeys(payload);
+      delete payload.ui;
 
       // Validate that it looks like scene settings
       const expectedKeys = [

@@ -349,9 +349,8 @@ export class FontExtrudeUI {
       this.ui.uiSounds?.playSelect();
       const value = normalizeFontExtrudeDetail(els.detail.value);
       this.stateStore.set('fontExtrude.detail', value);
-      if (this._hasFontMesh()) {
-        this.getScene()?.setSvgExtrudeDetail?.(value);
-      }
+      this.stateStore.set('svgExtrude.detail', value);
+      this.eventBus.emit('mesh:svg-extrude-detail', value);
     });
     els.bevelType?.addEventListener('change', () => {
       this.ui.uiSounds?.playSelect();

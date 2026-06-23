@@ -57,7 +57,6 @@ export class StateStore {
         /** True when import carries per-material PBR factors (sliders scale authored values; 1.0 = file). */
         importUsesAuthoredPbr: false,
       },
-      /** Shown when the loaded source file is `.fbx` — manual texture slot assignment. */
       fbxMapSlots: {
         enabled: false,
         /** Material name group key for Map Slots (FBX often clones one material per mesh). */
@@ -157,8 +156,8 @@ export class StateStore {
         normalView: false,
         /** @type {'geometry' | 'tangent'} */
         normalViewMode: 'geometry',
-        /** STL imports: smooth vertex normals with a crease angle (see Object → Advanced). */
-        stlSmoothShading: true,
+        /** Imported meshes: recompute vertex normals with a crease angle (see Object → Advanced). */
+        stlSmoothShading: false,
         stlSmoothingAngle: 40,
         /** Move mesh pivot to bounding-box center (see centerModelPivot.js). */
         centerPivot: true,
