@@ -330,6 +330,7 @@ export class SvgExtrudeImporter {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         mesh.userData.orbySvgExtrude = true;
+        mesh.userData.orbySvgBevelEnabled = !!bevelSettings.bevelEnabled;
         mesh.userData.orbySvgEffectiveDepth = effectiveDepth;
         mesh.userData.orbySvgColorOffset = effectiveOffset;
         mesh.userData.orbySvgBaseColor = `#${baseColor.getHexString()}`;
@@ -358,7 +359,11 @@ export class SvgExtrudeImporter {
     );
     this._normalizeGeometrySpace(group);
     applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
-    finalizeSvgExtrudeGroupGeometry(group);
+    finalizeSvgExtrudeGroupGeometry(
+      group,
+      normalAngleDeg,
+      this.currentHardEdgeAngleDeg,
+    );
 
     return group;
   }
