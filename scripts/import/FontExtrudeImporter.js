@@ -36,6 +36,7 @@ import {
 } from './fontExtrudeBevelNormals.js';
 import { fontExtrudeHoleCapLooksFilled } from './fontExtrudeValidate.js';
 import { flipFontShapeHoles, opentypePathHasArea, opentypePathToShapes } from './opentypePathToShape.js';
+import { applyFontCircularRingTransforms } from '../scene/fontCircularLayout.js';
 
 const DEFAULT_GLYPH_FILL = '#808080';
 
@@ -70,6 +71,8 @@ export class FontExtrudeImporter {
     this._layoutFontSize = 72;
     /** @type {'low' | 'medium' | 'high' | 'ultra'} */
     this._detailLevel = 'high';
+    /** @type {import('../scene/fontCircularLayout.js').FontCircularLayoutResult['circular'] | null} */
+    this._circularLayout = null;
   }
 
   /**
@@ -78,12 +81,14 @@ export class FontExtrudeImporter {
    */
   buildFromLayout(layout, options = {}) {
     this._glyphEntries = [];
+    this._circularLayout = layout?.circular?.enabled ? layout.circular : null;
     for (const line of layout?.lines || []) {
       for (const entry of line.paths || []) {
         if (entry?.glyphPath && opentypePathHasArea(entry.glyphPath)) {
           this._glyphEntries.push({
             glyphPath: entry.glyphPath,
             wordIndex: Number.isFinite(entry.wordIndex) ? entry.wordIndex : undefined,
+            circularTransform: entry.circularTransform || null,
           });
         }
       }
@@ -310,11 +315,14 @@ export class FontExtrudeImporter {
     let meshCount = 0;
     let glyphIndex = 0;
     for (let entryIndex = 0; entryIndex < this._glyphEntries.length; entryIndex += 1) {
-      const { wordIndex } = this._glyphEntries[entryIndex];
+      const { wordIndex, circularTransform } = this._glyphEntries[entryIndex];
       const shapes = glyphShapeSets[entryIndex];
       const glyphGroup = new THREE.Group();
       glyphGroup.userData.orbyFontGlyphGroup = true;
       glyphGroup.userData.orbyFontGlyphIndex = glyphIndex;
+      if (circularTransform) {
+        glyphGroup.userData.orbyFontCircularTransform = circularTransform;
+      }
       if (Number.isFinite(wordIndex)) {
         glyphGroup.userData.orbyFontRevealWordIndex = wordIndex;
       }
@@ -381,8 +389,19 @@ export class FontExtrudeImporter {
       normalAngleDeg,
       this.currentHardEdgeAngleDeg,
     );
-    this._normalizeFontGeometrySpace(group, this._layoutFontSize);
-    applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
+    if (this._circularLayout) {
+      this._normalizeFontCircularGeometrySpace(group, this._layoutFontSize);
+      applyFontCircularRingTransforms(
+        group,
+        this._layoutFontSize,
+        this._circularLayout,
+        FONT_EXTRUDE_TARGET_CAP_HEIGHT,
+      );
+      applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
+    } else {
+      this._normalizeFontGeometrySpace(group, this._layoutFontSize);
+      applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
+    }
     applyExtrudeBoxUvsToGroup(group);
     if (bevelEnabled && this.currentBevelType === 'straight') {
       applyFontStraightBevelCapNormalsToGroup(
@@ -397,7 +416,19 @@ export class FontExtrudeImporter {
         this.currentHardEdgeAngleDeg,
       );
     }
-    this._centerGlyphGroupPivots(group);
+    if (!this._circularLayout) {
+      this._centerGlyphGroupPivots(group);
+    } else {
+      group.children.forEach((glyphGroup) => {
+        if (glyphGroup.userData?.orbyFontGlyphGroup) {
+          glyphGroup.userData.orbyFontGlyphPivotFixed = true;
+        }
+      });
+    }
+
+    if (this._circularLayout) {
+      group.userData.orbyFontCircularWrap = true;
+    }
 
     return group;
   }
@@ -479,6 +510,38 @@ export class FontExtrudeImporter {
       }
       glyphGroup.updateMatrixWorld(true);
       glyphGroup.userData.orbyFontGlyphPivotFixed = true;
+    });
+  }
+
+  /**
+   * Per-glyph normalize for circular wrap — pivot on the 2D cap baseline only (never 3D bbox).
+   * Keeps every letter upright on the same XZ ring plane.
+   * @param {THREE.Group} group
+   * @param {number} layoutFontSize
+   */
+  _normalizeFontCircularGeometrySpace(group, layoutFontSize) {
+    const em = Number(layoutFontSize) > 0 ? Number(layoutFontSize) : 72;
+    const uniformScale = FONT_EXTRUDE_TARGET_CAP_HEIGHT / em;
+
+    group.children.forEach((glyphGroup) => {
+      if (!glyphGroup.userData?.orbyFontGlyphGroup) return;
+
+      glyphGroup.children.forEach((child) => {
+        if (!child.isMesh || !child.geometry) return;
+        child.geometry.scale(uniformScale, uniformScale, 1);
+        child.geometry.rotateX(Math.PI);
+        child.geometry.computeBoundingBox();
+        const bb = child.geometry.boundingBox;
+        if (bb) {
+          const pivotX = (bb.min.x + bb.max.x) * 0.5;
+          const pivotY = bb.min.y;
+          child.geometry.translate(-pivotX, -pivotY, 0);
+        }
+        child.geometry.computeBoundingBox();
+        child.geometry.computeBoundingSphere();
+      });
+
+      glyphGroup.rotation.set(0, 0, 0);
     });
   }
 

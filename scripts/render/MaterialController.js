@@ -90,6 +90,7 @@ import {
   ensureSvgExtrudeFresnelChain,
   resolveOrbySurfaceUniformState,
   syncCreativeLookSurfaceToModel,
+  deferCreativeLookSurfaceResync,
   syncSvgExtrudeSurfaceProgramCacheKey,
   getSvgExtrudeSurfacePresetConfig,
   isFresnelLinkedInSvgSurfaceChain,
@@ -2643,8 +2644,12 @@ export class MaterialController {
     if (typeof this.afterCreativeLookMaterialRebuild === 'function') {
       this.afterCreativeLookMaterialRebuild();
     }
+    this.reapplyCreativeLookSurfaceShaders();
     requestAnimationFrame(() => {
-      if (this.currentModel) this.reapplyCreativeLookSurfaceShaders();
+      if (this.currentModel) {
+        this.reapplyCreativeLookSurfaceShaders();
+        this.deferCreativeLookSurfaceResync();
+      }
     });
   }
 
@@ -3590,6 +3595,7 @@ export class MaterialController {
       prevAppliesMaterials;
     if (redundant) {
       this._syncCreativeLookLiveUniforms(this.creativeLookSettings);
+      this.reapplyCreativeLookSurfaceShaders();
       if (isVoxelCreativeLookPreset(nextPreset) && this._meshesNeedVoxelGeometry(nextPreset)) {
         this._syncRetroConsoleGeometryForPreset(
           nextPreset,
@@ -4743,6 +4749,12 @@ export class MaterialController {
   reapplyCreativeLookSurfaceShaders() {
     if (!this.currentModel) return;
     syncCreativeLookSurfaceToModel(this.currentModel, this.stateStore);
+  }
+
+  /** Retry surface uniform bind after Shader Lab async material builds. */
+  deferCreativeLookSurfaceResync() {
+    if (!this.currentModel) return;
+    deferCreativeLookSurfaceResync(this.currentModel, this.stateStore);
   }
 
   applyFresnelToModel(root) {

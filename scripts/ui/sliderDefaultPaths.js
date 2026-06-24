@@ -110,6 +110,7 @@ export const SLIDER_DEFAULT_PATHS = {
   fontExtrudePreviewScale: 'fontExtrude.previewScale',
   fontExtrudeTracking: 'fontExtrude.tracking',
   fontExtrudeLineHeight: 'fontExtrude.lineHeight',
+  fontExtrudeCircularWrapArc: 'fontExtrude.circularWrapArcDeg',
   fontExtrudeRevealDuration: 'fontExtrude.revealDurationSec',
   fontExtrudeRevealSlideDepth: 'fontExtrude.revealSlideDepth',
   fontExtrudeRevealSlideTime: 'fontExtrude.revealSlideTime',

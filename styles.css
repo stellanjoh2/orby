@@ -6942,6 +6942,11 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   content-visibility: visible;
 }
 
+/* Font extrude card — tall when circular wrap + reveal are open; 400px intrinsic clips bottom controls */
+#fontExtrudePanel.panel-block:has(.effect-foldout--expanded) {
+  content-visibility: visible;
+}
+
 /* Video export is the tallest shelf block — default --xl cap (120rem) clips FPS / Resolution */
 .panel-block[data-export-section='video'] .effect-foldout--expanded {
   max-height: 240rem;
@@ -8458,6 +8463,27 @@ body.ui-hidden .shelf {
   -webkit-text-fill-color: transparent;
 }
 
+.font-extrude-live-editor.font-extrude-live-editor--circular-active textarea {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  padding: 0.65rem 0.75rem;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: normal;
+  text-align: center;
+}
+
+.font-extrude-live-editor.font-extrude-live-editor--circular-active textarea::selection {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.font-extrude-circular-wrap-controls {
+  display: grid;
+  gap: var(--shelf-section-gap);
+}
+
 .font-extrude-live-editor textarea:focus {
   outline: none;
   box-shadow: none !important;
@@ -8652,6 +8678,16 @@ body.ui-hidden .shelf {
 .font-extrude-post-gen[hidden],
 .font-extrude-surface-post-gen[hidden] {
   display: none !important;
+}
+
+[data-subsection='font-extrude'] .font-extrude-reveal-preview {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--shelf-section-gap);
+  margin-bottom: var(--shelf-section-gap);
+  min-height: 2.6rem;
+  width: 100%;
 }
 
 .font-extrude-reveal-loop-control {

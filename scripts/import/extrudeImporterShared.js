@@ -155,12 +155,13 @@ export function applyImportCreasedNormals(geometry, normalAngleDeg, hardEdgeAngl
   return geom;
 }
 
-export function applyExtrudeDirectionOffset(group, flipDirection, defaultDepth) {
+export function applyExtrudeDirectionOffset(group, flipDirection, defaultDepth, directionSign = 1) {
+  const sign = Number.isFinite(directionSign) && directionSign !== 0 ? Math.sign(directionSign) : 1;
   group.traverse((child) => {
     if (!child.isMesh || !child.geometry) return;
     const depth = clampExtrudeDepth(child.userData?.orbySvgEffectiveDepth ?? defaultDepth);
     const colorOffset = clampExtrudeColorOffset(child.userData?.orbySvgColorOffset ?? 0);
-    const directionOffset = (flipDirection ? 1 : -1) * depth * 0.5;
+    const directionOffset = sign * (flipDirection ? 1 : -1) * depth * 0.5;
     child.geometry.translate(0, 0, directionOffset + colorOffset);
     child.geometry.computeBoundingBox();
     child.geometry.computeBoundingSphere();

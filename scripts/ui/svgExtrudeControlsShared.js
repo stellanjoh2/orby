@@ -1282,17 +1282,17 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                     <span class="sr-only">Emissive slam on reveal</span>
                   </label>
                 </label>
-                <label class="slider-line font-extrude-reveal-emissive-strength">
+                <label class="slider-line font-extrude-reveal-emissive-strength font-extrude-reveal-emissive-detail" hidden>
                   <span data-tooltip="Emissive intensity while each letter is revealing and during fade-out">Emissive Strength</span>
                   <input id="fontExtrudeRevealEmissiveStrength" type="range" min="0" max="2" step="0.05" value="1" />
                   <span class="value" data-output="fontExtrudeRevealEmissiveStrength">1.00</span>
                 </label>
-                <label class="slider-line font-extrude-reveal-emissive-decay">
+                <label class="slider-line font-extrude-reveal-emissive-decay font-extrude-reveal-emissive-detail" hidden>
                   <span data-tooltip="How long emissive fades to rest after each letter lands">Emissive Time</span>
                   <input id="fontExtrudeRevealEmissiveDecay" type="range" min="0.05" max="0.8" step="0.01" value="0.35" />
                   <span class="value" data-output="fontExtrudeRevealEmissiveDecay">0.35s</span>
                 </label>
-                <label class="color-line font-extrude-reveal-emissive-color">
+                <label class="color-line font-extrude-reveal-emissive-color font-extrude-reveal-emissive-detail" hidden>
                   <span data-tooltip="Emissive color mixed in at peak flash">Emissive Color</span>
                   <input type="color" id="fontExtrudeRevealEmissiveColor" class="color-chip" value="#c4ff00" />
                 </label>

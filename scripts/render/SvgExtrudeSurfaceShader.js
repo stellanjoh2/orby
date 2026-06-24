@@ -127,8 +127,7 @@ function getNormalMapTexture(url) {
 }
 
 /**
- * Object-space triplanar anchor + inverse bbox size (isotropic tiling on caps/sides/bevels).
- * Font extrude normalizes XY without Z — uncorrected triplanar stretches oblique faces.
+ * Mesh bbox center for triplanar anchoring (local units, no inverse-size stretch).
  * @param {THREE.Mesh} mesh
  * @returns {{ origin: THREE.Vector3, invSize: THREE.Vector3 } | null}
  */
@@ -284,7 +283,6 @@ uniform float uOrbyScale;
 uniform float uOrbyNormalStrength;
 uniform sampler2D uOrbyNormalMap;
 uniform vec3 uOrbyNormalOrigin;
-uniform vec3 uOrbyNormalInvSize;
 float orbyQ(vec3 p) {
   return fract(sin(dot(p, vec3(12.9898, 78.233, 37.199))) * 43758.5453);
 }
@@ -313,17 +311,29 @@ vec3 orbyTriplanarAxisNormal( vec3 n, vec3 tn, vec3 ref, vec3 refAlt ) {
 }
 vec3 orbyTriplanarNormalObject( vec3 localPos, vec3 localNormal, float scale ) {
   vec3 n = normalize( localNormal );
-  vec3 p = ( localPos - uOrbyNormalOrigin ) * uOrbyNormalInvSize;
+  vec3 p = ( localPos - uOrbyNormalOrigin ) * scale;
   vec3 blend = abs( n );
   blend = pow( max( blend, vec3( 0.00001 ) ), vec3( 4.0 ) );
   blend /= ( blend.x + blend.y + blend.z );
-  vec3 tX = texture2D( uOrbyNormalMap, p.zy * scale ).xyz * 2.0 - 1.0;
-  vec3 tY = texture2D( uOrbyNormalMap, p.xz * scale ).xyz * 2.0 - 1.0;
-  vec3 tZ = texture2D( uOrbyNormalMap, p.xy * scale ).xyz * 2.0 - 1.0;
+  vec3 tX = texture2D( uOrbyNormalMap, p.zy ).xyz * 2.0 - 1.0;
+  vec3 tY = texture2D( uOrbyNormalMap, p.xz ).xyz * 2.0 - 1.0;
+  vec3 tZ = texture2D( uOrbyNormalMap, p.xy ).xyz * 2.0 - 1.0;
   vec3 nx = orbyTriplanarAxisNormal( n, tX, vec3( 0.0, 1.0, 0.0 ), vec3( 0.0, 0.0, 1.0 ) );
   vec3 ny = orbyTriplanarAxisNormal( n, tY, vec3( 0.0, 0.0, 1.0 ), vec3( 1.0, 0.0, 0.0 ) );
   vec3 nz = orbyTriplanarAxisNormal( n, tZ, vec3( 1.0, 0.0, 0.0 ), vec3( 0.0, 1.0, 0.0 ) );
   return normalize( nx * blend.x + ny * blend.y + nz * blend.z );
+}
+float orbyTriplanarNormalDetail( vec3 localPos, vec3 localNormal, float scale ) {
+  vec3 n = normalize( localNormal );
+  vec3 p = ( localPos - uOrbyNormalOrigin ) * scale;
+  vec3 blend = abs( n );
+  blend = pow( max( blend, vec3( 0.00001 ) ), vec3( 4.0 ) );
+  blend /= ( blend.x + blend.y + blend.z );
+  vec2 sX = texture2D( uOrbyNormalMap, p.zy ).xy;
+  vec2 sY = texture2D( uOrbyNormalMap, p.xz ).xy;
+  vec2 sZ = texture2D( uOrbyNormalMap, p.xy ).xy;
+  vec2 s = sX * blend.x + sY * blend.y + sZ * blend.z;
+  return length( s - vec2( 0.5 ) ) * 2.828427;
 }
 `;
 
@@ -337,7 +347,6 @@ uniform float uOrbyScale;
 uniform float uOrbyNormalStrength;
 uniform sampler2D uOrbyNormalMap;
 uniform vec3 uOrbyNormalOrigin;
-uniform vec3 uOrbyNormalInvSize;
 float orbyQ(vec3 p) {
   return fract(sin(dot(p, vec3(12.9898, 78.233, 37.199))) * 43758.5453);
 }
@@ -363,13 +372,13 @@ vec3 orbyTriplanarAxisNormal( vec3 n, vec3 tn, vec3 ref, vec3 refAlt ) {
 }
 vec3 orbyTriplanarNormalObject( vec3 localPos, vec3 localNormal, float scale ) {
   vec3 n = normalize( localNormal );
-  vec3 p = ( localPos - uOrbyNormalOrigin ) * uOrbyNormalInvSize;
+  vec3 p = ( localPos - uOrbyNormalOrigin ) * scale;
   vec3 blend = abs( n );
   blend = pow( max( blend, vec3( 0.00001 ) ), vec3( 4.0 ) );
   blend /= ( blend.x + blend.y + blend.z );
-  vec3 tX = texture2D( uOrbyNormalMap, p.zy * scale ).xyz * 2.0 - 1.0;
-  vec3 tY = texture2D( uOrbyNormalMap, p.xz * scale ).xyz * 2.0 - 1.0;
-  vec3 tZ = texture2D( uOrbyNormalMap, p.xy * scale ).xyz * 2.0 - 1.0;
+  vec3 tX = texture2D( uOrbyNormalMap, p.zy ).xyz * 2.0 - 1.0;
+  vec3 tY = texture2D( uOrbyNormalMap, p.xz ).xyz * 2.0 - 1.0;
+  vec3 tZ = texture2D( uOrbyNormalMap, p.xy ).xyz * 2.0 - 1.0;
   vec3 nx = orbyTriplanarAxisNormal( n, tX, vec3( 0.0, 1.0, 0.0 ), vec3( 0.0, 0.0, 1.0 ) );
   vec3 ny = orbyTriplanarAxisNormal( n, tY, vec3( 0.0, 0.0, 1.0 ), vec3( 1.0, 0.0, 0.0 ) );
   vec3 nz = orbyTriplanarAxisNormal( n, tZ, vec3( 1.0, 0.0, 0.0 ), vec3( 0.0, 1.0, 0.0 ) );
@@ -411,6 +420,16 @@ const METALNESS_INJECT = /* glsl */ `	#include <metalnessmap_fragment>
 				roughnessFactor = clamp( roughnessFactor * ( 0.72 + 0.48 * g ), 0.04, 1.0 );
 				roughnessFactor = clamp( roughnessFactor + 0.12 * ( orbyFbm3( p * 26.0 ) - 0.5 ), 0.04, 1.0 );
 			}
+		}
+		if ( uOrbyNormalStrength > 0.0001 && mode < 0.5 ) {
+			vec3 localN = normalize( vOrbyLocalNormal );
+			vec3 tn = orbyTriplanarNormalObject( vOrbyLocalPos, localN, uOrbyScale );
+			float bump = length( tn - localN );
+			float texDetail = orbyTriplanarNormalDetail( vOrbyLocalPos, localN, uOrbyScale );
+			float detail = max( bump, texDetail );
+			#ifdef ORBY_GLASS_TRANSMISSION
+				roughnessFactor = clamp( roughnessFactor + detail * uOrbyNormalStrength * 0.55, 0.04, 1.0 );
+			#endif
 		}
 	}
 `;
@@ -504,17 +523,20 @@ varying vec3 vOrbyNm2;
   return vs;
 }
 
-function applyShaderPatches(shader, uniformRefs) {
+function applyShaderPatches(shader, uniformRefs, { transmissionSafe = false } = {}) {
   let vs = shader.vertexShader;
   vs = injectOrbyVertex(vs);
   shader.vertexShader = vs;
 
   let fs = shader.fragmentShader;
   if (fs.indexOf('uOrbySurfaceMode') === -1) {
+    const glassDefine = transmissionSafe ? '#define ORBY_GLASS_TRANSMISSION\n' : '';
     fs = fs.replace(
       '#include <common>',
-      `#include <common>\n${FRAG_HELPERS}\n`,
+      `#include <common>\n${glassDefine}${FRAG_HELPERS}\n`,
     );
+  } else if (transmissionSafe && fs.indexOf('ORBY_GLASS_TRANSMISSION') === -1) {
+    fs = fs.replace('#include <common>', '#include <common>\n#define ORBY_GLASS_TRANSMISSION');
   }
   if (fs.indexOf('orby_svg_surf') === -1) {
     const mLine = '	#include <metalnessmap_fragment>';
@@ -524,7 +546,7 @@ function applyShaderPatches(shader, uniformRefs) {
       fs = fs.replace('#include <metalnessmap_fragment>', METALNESS_INJECT);
     }
   }
-  if (fs.indexOf('orby_svg_norm') === -1) {
+  if (!transmissionSafe && fs.indexOf('orby_svg_norm') === -1) {
     const mapsLine = '	#include <normal_fragment_maps>';
     if (fs.indexOf(mapsLine) !== -1) {
       fs = fs.replace(mapsLine, NORMAL_INJECT_AFTER_MAPS);
@@ -559,7 +581,9 @@ function createOnBefore(args) {
     if (typeof args.previous === 'function') {
       args.previous(shader);
     }
-    applyShaderPatches(shader, args.uniformRefs);
+    applyShaderPatches(shader, args.uniformRefs, {
+      transmissionSafe: !!args.transmissionSafe,
+    });
   };
   hook.__orbySvgSurfPatch = true;
   return hook;
@@ -577,8 +601,9 @@ export function syncSvgExtrudeSurfaceProgramCacheKey(material) {
   const normalStrength =
     material.userData?.svgExtrudeProceduralUniforms?.uOrbyNormalStrength?.value ?? 0;
   const fresnelSuffix = material.userData?.fresnelPatched ? ':f' : '';
+  const glassSuffix = material.userData?.orbySurfaceTransmissionSafe ? ':tg' : '';
   material.customProgramCacheKey = () =>
-    `orbySvgSurf:v11:${presetId}:${Number(scale).toFixed(3)}:${Number(normalStrength).toFixed(3)}${fresnelSuffix}`;
+    `orbySvgSurf:v13:${presetId}:${Number(scale).toFixed(3)}:${Number(normalStrength).toFixed(3)}${fresnelSuffix}${glassSuffix}`;
 }
 
 function getOrUpdateUniformRefs(material, opts) {
@@ -613,6 +638,7 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
   ) {
     return false;
   }
+  const transmissionSafe = !!opts.transmissionSafe;
   const presetId = opts.preset ?? 'none';
   const config = getSvgExtrudeSurfacePresetConfig(presetId);
   const scale = surfaceUiScaleToShaderScale(opts.scale);
@@ -650,20 +676,23 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
   if (opts.normalBounds) {
     material.userData.svgExtrudeNormalBounds = opts.normalBounds;
   }
+  const prevTransmissionSafe = !!material.userData?.orbySurfaceTransmissionSafeWas;
+  material.userData.orbySurfaceTransmissionSafe = transmissionSafe;
+  material.userData.orbySurfaceTransmissionSafeWas = transmissionSafe;
 
   const hadPatch = !!material.userData?.svgExtrudeProceduralPatched;
   const storedHook = material.userData?.svgExtrudeProceduralOnBeforeCompile;
   const hookIsLive =
     hadPatch && typeof storedHook === 'function' && material.onBeforeCompile === storedHook;
 
-  if (hadPatch && !hookIsLive) {
+  if (hadPatch && (!hookIsLive || prevTransmissionSafe !== transmissionSafe)) {
     removeSvgExtrudeProceduralFromMaterial(material);
   }
 
   if (!material.userData?.svgExtrudeProceduralPatched) {
     const previous = resolveSvgSurfacePreviousHook(material);
     material.userData.svgExtrudeProceduralPrevious = previous;
-    const hook = createOnBefore({ previous, uniformRefs });
+    const hook = createOnBefore({ previous, uniformRefs, transmissionSafe });
     material.onBeforeCompile = hook;
     material.userData.svgExtrudeProceduralUniforms = uniformRefs;
     material.userData.svgExtrudeProceduralPatched = true;
@@ -738,6 +767,8 @@ export function removeSvgExtrudeProceduralFromMaterial(material) {
   delete material.userData.svgExtrudeSurfacePresetId;
   delete material.userData.svgExtrudeSurfaceStrength;
   delete material.userData.svgExtrudeNormalBounds;
+  delete material.userData.orbySurfaceTransmissionSafe;
+  delete material.userData.orbySurfaceTransmissionSafeWas;
   delete material.customProgramCacheKey;
   material.needsUpdate = true;
 }
@@ -774,6 +805,12 @@ export function reapplySvgExtrudeSurfaceFromState(model, storeLike, shadingOverr
       const mappingBounds =
         config.kind === 'normalMap' ? computeExtrudeSurfaceMappingBounds(child) : null;
       mats.forEach((m) => {
+        if (
+          st.creativeLook?.enabled &&
+          m?.userData?.orbyCreativeLook === 'glass'
+        ) {
+          return;
+        }
         if (m?.isMeshStandardMaterial || m?.isMeshPhysicalMaterial) {
           applySvgExtrudeSurfaceToMaterial(m, {
             preset: presetId,
@@ -856,6 +893,42 @@ export function applyOrbySurfaceUniformState(refs, state) {
   setNormalBoundsUniforms(refs, state.normalBounds ?? null);
 }
 
+const ORBY_SURFACE_UNIFORM_KEYS = [
+  'uOrbySurfaceMode',
+  'uOrbyScale',
+  'uOrbyNormalStrength',
+  'uOrbyNormalMap',
+  'uOrbyNormalOrigin',
+  'uOrbyNormalInvSize',
+];
+
+/**
+ * Push surface uniform state onto a Shader Lab ShaderMaterial and refresh the GL program.
+ * @param {THREE.ShaderMaterial} material
+ * @param {ReturnType<typeof resolveOrbySurfaceUniformState>} state
+ * @returns {boolean}
+ */
+export function applyOrbySurfaceUniformStateToMaterial(material, state) {
+  if (!material?.isShaderMaterial) return false;
+  const refs = material.userData?.orbyCreativeSurfaceUniformRefs;
+  if (!refs) return false;
+  applyOrbySurfaceUniformState(refs, state);
+  const uniforms = material.uniforms;
+  if (uniforms) {
+    for (const key of ORBY_SURFACE_UNIFORM_KEYS) {
+      if (refs[key]) {
+        uniforms[key] = refs[key];
+      }
+    }
+  }
+  const tex = state?.normalMap;
+  if (tex?.isTexture) {
+    tex.needsUpdate = true;
+  }
+  material.needsUpdate = true;
+  return true;
+}
+
 /** Shader Lab presets that read Appearance → Material / Surface (svgExtrude.surfacePreset). */
 export function creativeLookPresetSupportsSurfaceDetail(preset) {
   let p = typeof preset === 'string' ? preset.trim() : '';
@@ -888,7 +961,6 @@ uniform float uOrbyScale;
 uniform float uOrbyNormalStrength;
 uniform sampler2D uOrbyNormalMap;
 uniform vec3 uOrbyNormalOrigin;
-uniform vec3 uOrbyNormalInvSize;
 float orbyCreativeQ(vec3 p) {
   return fract(sin(dot(p, vec3(12.9898, 78.233, 37.199))) * 43758.5453);
 }
@@ -928,17 +1000,29 @@ vec3 orbyCreativeTriplanarAxisNormal(vec3 n, vec3 tn, vec3 ref, vec3 refAlt) {
 }
 vec3 orbyCreativeTriplanarNormalObject(vec3 localPos, vec3 localNormal, float scale) {
   vec3 n = normalize(localNormal);
-  vec3 p = (localPos - uOrbyNormalOrigin) * uOrbyNormalInvSize;
+  vec3 p = (localPos - uOrbyNormalOrigin) * scale;
   vec3 blend = abs(n);
   blend = pow(max(blend, vec3(0.00001)), vec3(4.0));
   blend /= (blend.x + blend.y + blend.z);
-  vec3 tX = texture2D(uOrbyNormalMap, p.zy * scale).xyz * 2.0 - 1.0;
-  vec3 tY = texture2D(uOrbyNormalMap, p.xz * scale).xyz * 2.0 - 1.0;
-  vec3 tZ = texture2D(uOrbyNormalMap, p.xy * scale).xyz * 2.0 - 1.0;
+  vec3 tX = texture2D(uOrbyNormalMap, p.zy).xyz * 2.0 - 1.0;
+  vec3 tY = texture2D(uOrbyNormalMap, p.xz).xyz * 2.0 - 1.0;
+  vec3 tZ = texture2D(uOrbyNormalMap, p.xy).xyz * 2.0 - 1.0;
   vec3 nx = orbyCreativeTriplanarAxisNormal(n, tX, vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0));
   vec3 ny = orbyCreativeTriplanarAxisNormal(n, tY, vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0));
   vec3 nz = orbyCreativeTriplanarAxisNormal(n, tZ, vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0));
   return normalize(nx * blend.x + ny * blend.y + nz * blend.z);
+}
+float orbyCreativeTriplanarNormalDetail(vec3 localPos, vec3 localNormal, float scale) {
+  vec3 n = normalize(localNormal);
+  vec3 p = (localPos - uOrbyNormalOrigin) * scale;
+  vec3 blend = abs(n);
+  blend = pow(max(blend, vec3(0.00001)), vec3(4.0));
+  blend /= (blend.x + blend.y + blend.z);
+  vec2 sX = texture2D(uOrbyNormalMap, p.zy).xy;
+  vec2 sY = texture2D(uOrbyNormalMap, p.xz).xy;
+  vec2 sZ = texture2D(uOrbyNormalMap, p.xy).xy;
+  vec2 s = sX * blend.x + sY * blend.y + sZ * blend.z;
+  return length(s - vec2(0.5)) * 2.828427;
 }
 vec3 orbyCreativeSurfaceNormal(
   vec3 worldN,
@@ -979,9 +1063,17 @@ float orbyCreativeSurfaceFilmMod(vec3 worldPos, vec3 localPos, vec3 localN) {
     return mix(0.78, 1.24, h) * (0.86 + 0.14 * amp);
   }
   if (uOrbyNormalStrength > 0.0001) {
-    vec3 tn = orbyCreativeTriplanarNormalObject(localPos, localN, uOrbyScale);
-    float bump = length(tn - normalize(localN));
-    return 0.84 + bump * uOrbyNormalStrength * 3.2;
+    vec3 n = normalize(localN);
+    vec3 tn = orbyCreativeTriplanarNormalObject(localPos, n, uOrbyScale);
+    mat3 worldNm = mat3(vOrbyWm0, vOrbyWm1, vOrbyWm2);
+    vec3 worldTn = normalize(worldNm * tn);
+    vec3 L = normalize(vec3(0.35, 0.92, 0.42));
+    float bump = length(tn - n);
+    float detailLit = max(dot(worldTn, L), 0.0);
+    float texDetail = orbyCreativeTriplanarNormalDetail(localPos, n, uOrbyScale);
+    float detail = max(bump, texDetail);
+    float str = clamp(uOrbyNormalStrength, 0.0, 2.0);
+    return clamp(0.58 + detail * str * 1.05 + detailLit * str * 0.42, 0.48, 1.55);
   }
   return 1.0;
 }
@@ -1037,7 +1129,7 @@ export function syncCreativeLookSurfaceToModel(model, storeLike) {
           return;
         }
         const refs = m.userData.orbyCreativeSurfaceUniformRefs;
-        if (refs) applyOrbySurfaceUniformState(refs, null);
+        if (refs) applyOrbySurfaceUniformStateToMaterial(m, null);
       });
     });
     return;
@@ -1058,8 +1150,16 @@ export function syncCreativeLookSurfaceToModel(model, storeLike) {
       if (!m?.userData?.orbyCreativeLook) return;
       const tag = m.userData.orbyCreativeLook;
       if (tag === 'glass') {
-        // onBeforeCompile surface patches break MeshPhysicalMaterial transmission refraction.
-        removeSvgExtrudeProceduralFromMaterial(m);
+        if (m.isMeshPhysicalMaterial) {
+          // Roughness-only triplanar detail — normal inject breaks transmission refraction.
+          applySvgExtrudeSurfaceToMaterial(m, {
+            preset: presetId,
+            scale,
+            strength,
+            normalBounds: mappingBounds,
+            transmissionSafe: true,
+          });
+        }
         return;
       }
       if (tag === 'chrome') {
@@ -1075,9 +1175,21 @@ export function syncCreativeLookSurfaceToModel(model, storeLike) {
       }
       const refs = m.userData.orbyCreativeSurfaceUniformRefs;
       if (refs) {
-        applyOrbySurfaceUniformState(refs, surfaceState);
+        applyOrbySurfaceUniformStateToMaterial(m, surfaceState);
         scheduleCreativeLookSurfaceResyncWhenTextureReady(model, storeLike, surfaceState?.normalMap);
       }
     });
   });
+}
+
+/**
+ * Microtask/rAF retries — Shader Lab materials may not exist yet when surface controls
+ * fire during an async preset apply.
+ * @param {THREE.Object3D} model
+ * @param {{ getState: () => object } | { stateStore: { getState: () => object } }} storeLike
+ */
+export function deferCreativeLookSurfaceResync(model, storeLike) {
+  if (!model || !storeLike) return;
+  queueMicrotask(() => syncCreativeLookSurfaceToModel(model, storeLike));
+  requestAnimationFrame(() => syncCreativeLookSurfaceToModel(model, storeLike));
 }

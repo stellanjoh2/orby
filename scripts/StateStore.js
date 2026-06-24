@@ -108,6 +108,14 @@ export class StateStore {
         revealEmissiveColor: ORBY_LIME,
         /** Live editor text (Generate from Font). */
         sourceText: '',
+        /** Wrap text on a circular arc before extruding (first line only). */
+        circularWrapEnabled: false,
+        /** @type {'auto' | 'manual'} — auto fits a full 360° ring; manual uses arc span slider. */
+        circularWrapMode: 'auto',
+        /** Manual arc span in degrees (30–360). */
+        circularWrapArcDeg: 360,
+        /** @type {'inward' | 'outward'} — which side of the ring letter caps face. */
+        circularWrapFacing: 'outward',
         /** Local Font Access postscript name, or `__file__` for embedded custom font. */
         postscriptName: '',
         /** Embedded .ttf/.otf when user loads a font file (not a system face). */

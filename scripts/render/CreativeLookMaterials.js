@@ -1558,7 +1558,7 @@ void main() {
   vec3 col = 0.5 + 0.5 * cos(v * vec3(2.15, 2.45, 2.75) + t * 0.55 + vec3(0.0, 2.15, 4.35));
   col = clamp(col, vec3(0.0), vec3(1.0));
   col = pow(col, vec3(0.88));
-  col *= orbyCreativeSurfaceMix(vWorldPosition);
+  col *= orbyCreativeSurfaceFilmMod(vWorldPosition, vOrbyLocalPos, vOrbyLocalNormal);
   gl_FragColor = vec4(col, uOpacity);
 }
 `;
@@ -1826,7 +1826,7 @@ void main() {
   col += fresnel * vec3(0.1, 0.48, 1.05) * (0.48 + up * 0.24 - down * 0.26);
   col += oil * (fresnel + 0.15) * vec3(0.2, 0.88, 1.0) * (0.14 + up * 0.1 - down * 0.08);
 
-  col *= orbyCreativeSurfaceMix(vWorldPosition);
+  col *= orbyCreativeSurfaceFilmMod(vWorldPosition, vOrbyLocalPos, vOrbyLocalNormal);
 
   gl_FragColor = vec4(col, uOpacity);
 }
@@ -1882,6 +1882,8 @@ void main() {
   float strobe = sin(t * (15.0 + up * 3.0 - down * 5.0) + dot(p, vec3(8.5, 5.3, 7.1))) * 0.5 + 0.5;
   float rimGate = rim * (0.42 + 0.58 * strobe + up * 0.16 - down * 0.2);
   col = mix(col, vec3(1.0), rimGate * (0.82 + up * 0.23 - down * 0.47));
+
+  col *= orbyCreativeSurfaceFilmMod(vWorldPosition, vOrbyLocalPos, vOrbyLocalNormal);
 
   gl_FragColor = vec4(col, uOpacity);
 }
@@ -2913,6 +2915,8 @@ void main() {
   col = applyPushedToneCurve(col);
   col = boostContrast(col, 1.34 * (1.0 + up * 0.38 - down * 0.22));
   col = min(col, vec3(1.55));
+
+  col *= orbyCreativeSurfaceFilmMod(vWorldPosition, vOrbyLocalPos, vOrbyLocalNormal);
 
   gl_FragColor = vec4(col, uOpacity);
 }

@@ -4346,6 +4346,7 @@ export class SceneManager {
     }
     if (!this.currentModel) return;
     this.materialController?.reapplySvgExtrudeSurfaceShaders();
+    this.materialController?.deferCreativeLookSurfaceResync?.();
   }
 
   /** Live update fill on font-generated meshes (no SVG “color override” toggle). */
@@ -5118,6 +5119,7 @@ export class SceneManager {
 
     try {
       mc.setCreativeLookSettings(creativeLookState, options);
+      mc.deferCreativeLookSurfaceResync?.();
       this._syncCreativeLookAsciiPass();
       const preset = normalizeCreativeLookPreset(creativeLookState?.preset);
       // Glass / Chrome need scene.background for transmission — only when materials rebuild,

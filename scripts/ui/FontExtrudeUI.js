@@ -40,6 +40,16 @@ import {
   DEFAULT_FONT_KERNING_MODE,
   normalizeFontKerningMode,
 } from '../scene/fontKerning.js';
+import {
+  clampFontCircularWrapArcDeg,
+  DEFAULT_FONT_CIRCULAR_WRAP_ARC_DEG,
+  DEFAULT_FONT_CIRCULAR_WRAP_ENABLED,
+  DEFAULT_FONT_CIRCULAR_WRAP_FACING,
+  DEFAULT_FONT_CIRCULAR_WRAP_MODE,
+  normalizeFontCircularWrapEnabled,
+  normalizeFontCircularWrapFacing,
+  normalizeFontCircularWrapMode,
+} from '../scene/fontCircularLayout.js';
 import { arrayBufferToBase64, fileFromEmbeddedAsset } from '../utils/binaryAsset.js';
 
 /**
@@ -176,7 +186,7 @@ export class FontExtrudeUI {
             <input id="fontExtrudeLineHeight" type="range" min="0.1" max="2.5" step="0.05" value="1" />
             <span class="value" data-output="fontExtrudeLineHeight">1.00×</span>
           </label>
-          <label class="select-line font-extrude-align-line">
+          <label class="select-line font-extrude-align-line" id="fontExtrudeAlignLine">
             <span data-tooltip="Horizontal alignment of each line">Align</span>
             <select id="fontExtrudeAlign" aria-label="Text alignment">
               <option value="left">Left</option>
@@ -184,6 +194,35 @@ export class FontExtrudeUI {
               <option value="right">Right</option>
             </select>
           </label>
+          <div class="panel-block-divider font-extrude-circular-divider" aria-hidden="true"></div>
+          <div class="block-title font-extrude-section-title font-extrude-circular-title">Circular wrap</div>
+          <label class="effect-toggle font-extrude-circular-wrap-line">
+            <span data-tooltip="Arrange letters on a circular arc (uses the first line only). Auto mode fits the full string into a 360° ring.">Wrap on circle</span>
+            <input type="checkbox" id="fontExtrudeCircularWrapEnabled" />
+            <span class="effect-indicator" aria-hidden="true"></span>
+            <span class="sr-only">Wrap text on a circle</span>
+          </label>
+          <div id="fontExtrudeCircularWrapControls" class="font-extrude-circular-wrap-controls" hidden>
+            <label class="select-line font-extrude-circular-mode-line">
+              <span data-tooltip="Auto sizes the ring so your text spans a full circle. Manual sets how much of the circle to use.">Wrap mode</span>
+              <select id="fontExtrudeCircularWrapMode" aria-label="Circular wrap mode">
+                <option value="auto" selected>Full circle (auto)</option>
+                <option value="manual">Manual arc</option>
+              </select>
+            </label>
+            <label class="select-line font-extrude-circular-facing-line">
+              <span data-tooltip="Inward faces the ring center (readable from inside). Outward faces away (readable from outside).">Letter facing</span>
+              <select id="fontExtrudeCircularWrapFacing" aria-label="Circular letter facing">
+                <option value="outward" selected>Outward (view from outside)</option>
+                <option value="inward">Inward (view from inside)</option>
+              </select>
+            </label>
+            <label class="slider-line font-extrude-circular-arc-line" id="fontExtrudeCircularArcLine" hidden>
+              <span data-tooltip="How much of the circle the text spans — smaller values tighten the bend">Arc span</span>
+              <input id="fontExtrudeCircularWrapArc" type="range" min="30" max="360" step="1" value="360" />
+              <span class="value" data-output="fontExtrudeCircularWrapArc">360°</span>
+            </label>
+          </div>
           <div id="fontExtrudeFileFallback" class="font-extrude-file-fallback" hidden>
             <input type="file" id="fontExtrudeFile" class="sr-only" accept=".ttf,.otf,.woff,.woff2,font/*" />
             <button type="button" id="fontExtrudeFileBtn" class="ghost-btn small">Load .ttf / .otf…</button>
@@ -228,6 +267,14 @@ export class FontExtrudeUI {
       bevelType: block.querySelector('#fontExtrudeBevelType'),
       previewScale: block.querySelector('#fontExtrudePreviewScale'),
       align: block.querySelector('#fontExtrudeAlign'),
+      alignLine: block.querySelector('#fontExtrudeAlignLine'),
+      lineHeightLine: block.querySelector('#fontExtrudeLineHeight')?.closest('.slider-line'),
+      circularWrapEnabled: block.querySelector('#fontExtrudeCircularWrapEnabled'),
+      circularWrapControls: block.querySelector('#fontExtrudeCircularWrapControls'),
+      circularWrapMode: block.querySelector('#fontExtrudeCircularWrapMode'),
+      circularWrapFacing: block.querySelector('#fontExtrudeCircularWrapFacing'),
+      circularWrapArc: block.querySelector('#fontExtrudeCircularWrapArc'),
+      circularArcLine: block.querySelector('#fontExtrudeCircularArcLine'),
       postGen: block.querySelector('#fontExtrudePostGen'),
       surfacePostGen: block.querySelector('#fontExtrudeSurfacePostGen'),
       meshDepth: block.querySelector('#fontExtrudeMeshDepth'),
@@ -371,6 +418,32 @@ export class FontExtrudeUI {
       const value =
         els.align.value === 'center' || els.align.value === 'right' ? els.align.value : 'left';
       this.stateStore.set('fontExtrude.align', value);
+      this.schedulePreview();
+    });
+    els.circularWrapEnabled?.addEventListener('change', () => {
+      this.ui.uiSounds?.playSelect();
+      const enabled = !!els.circularWrapEnabled.checked;
+      this.stateStore.set('fontExtrude.circularWrapEnabled', enabled);
+      this._syncCircularWrapControlsVisibility();
+      this.schedulePreview();
+    });
+    els.circularWrapMode?.addEventListener('change', () => {
+      this.ui.uiSounds?.playSelect();
+      const mode = normalizeFontCircularWrapMode(els.circularWrapMode.value);
+      this.stateStore.set('fontExtrude.circularWrapMode', mode);
+      this._syncCircularWrapControlsVisibility();
+      this.schedulePreview();
+    });
+    els.circularWrapFacing?.addEventListener('change', () => {
+      this.ui.uiSounds?.playSelect();
+      const facing = normalizeFontCircularWrapFacing(els.circularWrapFacing.value);
+      this.stateStore.set('fontExtrude.circularWrapFacing', facing);
+      this.schedulePreview();
+    });
+    els.circularWrapArc?.addEventListener('input', () => {
+      const value = clampFontCircularWrapArcDeg(els.circularWrapArc.value);
+      this.stateStore.set('fontExtrude.circularWrapArcDeg', value);
+      this.ui.updateValueLabel('fontExtrudeCircularWrapArc', `${value}°`);
       this.schedulePreview();
     });
     els.generate?.addEventListener('click', () => {
@@ -767,6 +840,7 @@ export class FontExtrudeUI {
     ]) {
       if (!el) continue;
       el.disabled = disable;
+      el.closest('.font-extrude-reveal-emissive-detail')?.toggleAttribute('hidden', disable);
     }
   }
 
@@ -838,6 +912,33 @@ export class FontExtrudeUI {
       this.els.previewScale.value = String(fontState.previewScale);
       this.ui.updateValueLabel('fontExtrudePreviewScale', fontState.previewScale, 'multiplier');
     }
+
+    const circularEnabled = normalizeFontCircularWrapEnabled(
+      fontState.circularWrapEnabled ?? DEFAULT_FONT_CIRCULAR_WRAP_ENABLED,
+    );
+    if (this.els.circularWrapEnabled) {
+      this.els.circularWrapEnabled.checked = circularEnabled;
+    }
+    const circularMode = normalizeFontCircularWrapMode(
+      fontState.circularWrapMode ?? DEFAULT_FONT_CIRCULAR_WRAP_MODE,
+    );
+    if (this.els.circularWrapMode && document.activeElement !== this.els.circularWrapMode) {
+      this.els.circularWrapMode.value = circularMode;
+    }
+    const circularFacing = normalizeFontCircularWrapFacing(
+      fontState.circularWrapFacing ?? DEFAULT_FONT_CIRCULAR_WRAP_FACING,
+    );
+    if (this.els.circularWrapFacing && document.activeElement !== this.els.circularWrapFacing) {
+      this.els.circularWrapFacing.value = circularFacing;
+    }
+    const circularArc = clampFontCircularWrapArcDeg(
+      fontState.circularWrapArcDeg ?? DEFAULT_FONT_CIRCULAR_WRAP_ARC_DEG,
+    );
+    if (this.els.circularWrapArc) {
+      this.els.circularWrapArc.value = String(circularArc);
+      this.ui.updateValueLabel('fontExtrudeCircularWrapArc', `${circularArc}°`);
+    }
+    this._syncCircularWrapControlsVisibility();
 
     this.syncExtrudeControls(state);
     this.syncPostGenControlsVisibility();
@@ -1129,12 +1230,32 @@ export class FontExtrudeUI {
     this._syncLiveEditorPreviewMode();
   }
 
+  _syncCircularWrapControlsVisibility() {
+    const enabled = normalizeFontCircularWrapEnabled(this.els.circularWrapEnabled?.checked);
+    if (this.els.circularWrapControls) {
+      this.els.circularWrapControls.hidden = !enabled;
+    }
+    if (this.els.alignLine) {
+      this.els.alignLine.hidden = enabled;
+    }
+    if (this.els.lineHeightLine) {
+      this.els.lineHeightLine.hidden = enabled;
+    }
+    const manual =
+      enabled && normalizeFontCircularWrapMode(this.els.circularWrapMode?.value) === 'manual';
+    if (this.els.circularArcLine) {
+      this.els.circularArcLine.hidden = !manual;
+    }
+  }
+
   /** Canvas preview drives glyph color; show plain textarea text until a font is loaded. */
   _syncLiveEditorPreviewMode() {
     const wrap = this.els.liveEditor;
     if (!wrap) return;
     const active = !!this.controller.font;
-    wrap.classList.toggle('font-extrude-live-editor--preview-active', active);
+    const circular = normalizeFontCircularWrapEnabled(this.els.circularWrapEnabled?.checked);
+    wrap.classList.toggle('font-extrude-live-editor--preview-active', active && !circular);
+    wrap.classList.toggle('font-extrude-live-editor--circular-active', active && circular);
     if (!active) this._resetTextareaEditorStyles();
   }
 
@@ -1285,6 +1406,20 @@ export class FontExtrudeUI {
         this.els.fillColor?.value ?? fontState.fillColor ?? '#808080',
       ),
       maxWidth: Math.max(120, previewWidth - pad * 2),
+      circularWrap: {
+        enabled: normalizeFontCircularWrapEnabled(
+          this.els.circularWrapEnabled?.checked ?? fontState.circularWrapEnabled,
+        ),
+        mode: normalizeFontCircularWrapMode(
+          this.els.circularWrapMode?.value ?? fontState.circularWrapMode,
+        ),
+        facing: normalizeFontCircularWrapFacing(
+          this.els.circularWrapFacing?.value ?? fontState.circularWrapFacing,
+        ),
+        arcDeg: clampFontCircularWrapArcDeg(
+          this.els.circularWrapArc?.value ?? fontState.circularWrapArcDeg,
+        ),
+      },
     };
   }
 
@@ -1353,7 +1488,11 @@ export class FontExtrudeUI {
     this.controller.drawPreview(ctx, layout);
     ctx.restore();
     this._syncLiveEditorPreviewMode();
-    await this._syncTextareaToPreview(layout, viewport);
+    if (!layout.circular?.enabled) {
+      await this._syncTextareaToPreview(layout, viewport);
+    } else {
+      this._resetTextareaEditorStyles();
+    }
     if (generation !== this._previewGeneration) return;
 
     if (this._previewPending) {

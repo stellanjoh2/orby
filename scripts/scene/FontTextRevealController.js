@@ -386,7 +386,10 @@ export class FontTextRevealController {
     this._buildWordRevealMeta();
     for (const glyphGroup of this._glyphGroups) {
       if (!glyphGroup.userData?.orbyFontGlyphPivotFixed) {
-        this._fixGlyphGroupPivot(glyphGroup);
+        const isCircularGlyph = !!glyphGroup.userData?.orbyFontCircularTransform;
+        if (!isCircularGlyph) {
+          this._fixGlyphGroupPivot(glyphGroup);
+        }
         glyphGroup.userData.orbyFontGlyphPivotFixed = true;
       }
     }
@@ -473,6 +476,7 @@ export class FontTextRevealController {
         restPosition: group.position.clone(),
         restRotationY: group.rotation.y,
         restRotationZ: group.rotation.z,
+        restScale: group.scale.clone(),
         slideDistance,
         meshMaterials,
       };

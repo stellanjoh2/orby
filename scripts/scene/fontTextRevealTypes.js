@@ -3,6 +3,7 @@
  * Easing names mirror common GSAP defaults (power1/2/3, back, elastic).
  */
 
+import * as THREE from 'three';
 import { restoreRevealGlyphEmissive } from './fontTextRevealEmissive.js';
 
 /**
@@ -11,6 +12,7 @@ import { restoreRevealGlyphEmissive } from './fontTextRevealEmissive.js';
  *   restPosition: import('three').Vector3,
  *   restRotationY: number,
  *   restRotationZ: number,
+ *   restScale: import('three').Vector3,
  *   slideDistance: number,
  *   meshMaterials: Array<{
  *     mat: import('three').Material,
@@ -423,6 +425,16 @@ function copyWordRotatedPosition(out, point, pivot, angleY) {
 }
 
 /**
+ * @param {import('three').Object3D} group
+ * @param {import('three').Vector3} restScale
+ * @param {number} multiplier
+ */
+function applyRevealScale(group, restScale, multiplier) {
+  const s = Math.max(0, multiplier);
+  group.scale.set(restScale.x * s, restScale.y * s, restScale.z * s);
+}
+
+/**
  * @param {FontRevealTypeId} type
  * @param {number} eased — eased progress (may exceed 1 for pop/elastic)
  * @param {{
@@ -448,7 +460,15 @@ function copyWordRotatedPosition(out, point, pivot, angleY) {
  * }} [options]
  */
 export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
-  const { group, restPosition, restRotationY, restRotationZ, slideDistance, meshMaterials } = state;
+  const {
+    group,
+    restPosition,
+    restRotationY,
+    restRotationZ,
+    restScale,
+    slideDistance,
+    meshMaterials,
+  } = state;
   const e = eased;
   const slideProgress = Math.max(0, Math.min(1, Number(options.slideProgress) || 0));
   const landLinear = Math.max(0, Math.min(1, Number(options.landLinear) || 0));
@@ -462,7 +482,7 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
   group.position.copy(restPosition);
   group.rotation.y = restRotationY;
   group.rotation.z = restRotationZ;
-  group.scale.set(1, 1, 1);
+  group.scale.copy(restScale);
 
   switch (type) {
     case 'fade':
@@ -492,10 +512,10 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
       const yOffset = activeSlideDistance * (1 - dropEased);
       group.position.y = restPosition.y + yOffset;
       if (useWordGroup) {
-        group.scale.set(1, 1, 1);
+        group.scale.copy(restScale);
       } else {
         const squashY = computeDropImpactSquashY(landLinear);
-        group.scale.set(1, squashY, 1);
+        group.scale.set(restScale.x, restScale.y * squashY, restScale.z);
       }
       group.visible = dropEased > 0.001;
       break;
@@ -506,9 +526,9 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
       const s = Math.max(0, e);
       if (useWordGroup && wordCenter) {
         copyWordScaledPosition(group.position, restPosition, wordCenter, s);
-        group.scale.set(s, s, s);
+        applyRevealScale(group, restScale, s);
       } else {
-        group.scale.set(s, s, s);
+        applyRevealScale(group, restScale, s);
       }
       group.visible = s > 0.001;
       break;
@@ -531,9 +551,9 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
       const s = Math.max(0, Math.min(1, e));
       if (useWordGroup && wordCenter) {
         copyWordScaledPosition(group.position, restPosition, wordCenter, s);
-        group.scale.set(s, s, s);
+        applyRevealScale(group, restScale, s);
       } else {
-        group.scale.set(s, s, s);
+        applyRevealScale(group, restScale, s);
       }
       group.visible = s > 0.001;
       break;
@@ -543,7 +563,10 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
   if (slideDepth > 0) {
     const travelEased = easeSlideSoftOut(slideProgress);
     const directionSign = slideDirection === 'front' ? 1 : -1;
-    group.position.z += directionSign * slideDepth * (1 - travelEased);
+    const offset = directionSign * slideDepth * (1 - travelEased);
+    const slideAxis = new THREE.Vector3(0, 0, 1);
+    slideAxis.applyAxisAngle(new THREE.Vector3(0, 1, 0), group.rotation.y);
+    group.position.addScaledVector(slideAxis, offset);
   }
 }
 
@@ -553,6 +576,7 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
  *   restPosition: import('three').Vector3,
  *   restRotationY: number,
  *   restRotationZ: number,
+ *   restScale: import('three').Vector3,
  *   meshMaterials: Array<{
  *     mat: import('three').Material,
  *     opacity: number,
@@ -563,11 +587,11 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
  * }} state
  */
 export function resetRevealGlyphPose(state) {
-  const { group, restPosition, restRotationY, restRotationZ, meshMaterials } = state;
+  const { group, restPosition, restRotationY, restRotationZ, restScale, meshMaterials } = state;
   group.position.copy(restPosition);
   group.rotation.y = restRotationY;
   group.rotation.z = restRotationZ;
-  group.scale.set(1, 1, 1);
+  group.scale.copy(restScale);
   group.visible = true;
   for (const { mat, opacity, transparent } of meshMaterials) {
     mat.opacity = opacity;
