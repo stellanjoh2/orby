@@ -1,11 +1,9 @@
 import { opentypePathHasArea } from '../import/opentypePathToShape.js';
 
 /** @typedef {'auto' | 'manual'} FontCircularWrapMode */
-/** @typedef {'inward' | 'outward'} FontCircularWrapFacing */
 
 export const DEFAULT_FONT_CIRCULAR_WRAP_ENABLED = false;
 export const DEFAULT_FONT_CIRCULAR_WRAP_MODE = 'auto';
-export const DEFAULT_FONT_CIRCULAR_WRAP_FACING = 'outward';
 export const DEFAULT_FONT_CIRCULAR_WRAP_ARC_DEG = 360;
 export const MIN_FONT_CIRCULAR_WRAP_ARC_DEG = 30;
 export const MAX_FONT_CIRCULAR_WRAP_ARC_DEG = 360;
@@ -21,11 +19,6 @@ export function normalizeFontCircularWrapEnabled(value) {
 /** @param {unknown} value @returns {FontCircularWrapMode} */
 export function normalizeFontCircularWrapMode(value) {
   return value === 'manual' ? 'manual' : 'auto';
-}
-
-/** @param {unknown} value @returns {FontCircularWrapFacing} */
-export function normalizeFontCircularWrapFacing(value) {
-  return value === 'outward' ? 'outward' : 'inward';
 }
 
 /** @param {unknown} value @returns {number} */
@@ -55,27 +48,17 @@ export function computeCircularWrapRadius(totalArcLength, mode, manualArcDeg) {
 }
 
 /**
- * @param {number} centerArcLength
- * @param {number} radius
- * @param {FontCircularWrapMode} mode
- * @param {number} arcSpanRad
+ * Angle on the ring for a glyph center (arc length reversed so string reads left-to-right outside).
  */
-/**
- * Map straight-line arc length to placement on the ring.
- * @param {number} centerArcLength
- */
-export function computeCircularGlyphPlacementArcLength(centerArcLength) {
-  return centerArcLength;
-}
-
 export function computeCircularGlyphAngleRad(
   centerArcLength,
   radius,
   mode,
   arcSpanRad,
+  totalArcLength,
 ) {
   const safeRadius = Math.max(Number(radius) || 0, 1);
-  const placementArcLength = computeCircularGlyphPlacementArcLength(centerArcLength);
+  const placementArcLength = Math.max(Number(totalArcLength) || 0, 0) - centerArcLength;
   const startAngle =
     mode === 'auto' || arcSpanRad >= FULL_CIRCLE_RAD - 1e-6
       ? TOP_ANGLE_RAD
@@ -161,6 +144,7 @@ export function getCircularTotalArcLength(measured) {
 
 /**
  * Build a circular layout from straight-line segment positions (first line only).
+ * Letters face outward — readable from outside the ring.
  *
  * @param {Object} params
  * @param {FontCircularSegmentInput[]} params.segments
@@ -170,7 +154,6 @@ export function getCircularTotalArcLength(measured) {
  * @param {number} params.baselineY
  * @param {string} params.fill
  * @param {FontCircularWrapMode} params.mode
- * @param {FontCircularWrapFacing} params.facing
  * @param {number} params.manualArcDeg
  * @param {number} params.tracking
  * @param {(glyph: import('../vendor/opentype.module.js').Glyph, font: import('../vendor/opentype.module.js').Font, fontSize: number, tracking: number) => number} params.glyphAdvance
@@ -184,12 +167,10 @@ export function buildFontCircularLayout({
   baselineY,
   fill,
   mode,
-  facing,
   manualArcDeg,
   tracking,
   glyphAdvance,
 }) {
-  const wrapFacing = normalizeFontCircularWrapFacing(facing);
   if (!segments?.length || !font) return null;
 
   const measured = measureCircularSegments(
@@ -220,6 +201,7 @@ export function buildFontCircularLayout({
       radius,
       mode,
       arcSpanRad,
+      totalArcLength,
     );
     const glyphPath = segment.glyph.getPath(-segment.advance * 0.5, baselineY, fontSize);
     if (!opentypePathHasArea(glyphPath)) continue;
@@ -251,7 +233,6 @@ export function buildFontCircularLayout({
     circular: {
       enabled: true,
       mode,
-      facing: wrapFacing,
       arcSpanDeg,
       radius,
       centerX,
@@ -262,54 +243,49 @@ export function buildFontCircularLayout({
 }
 
 /**
- * Conservative ink bounds for circular preview fit.
- * @param {{ circular?: { centerX: number, centerY: number, radius: number }, fontSize?: number, lines?: { paths?: object[] }[] }} layout
+ * Minimal straight-preview bracket marking where the circular arc starts and ends (first line).
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {{ lines?: { paths?: { glyphPath?: { getBoundingBox?: () => { x1: number, x2: number, y1: number, y2: number, isEmpty?: () => boolean } } }[], y?: number }[], fontSize?: number }} layout
  */
-export function getCircularLayoutPreviewBounds(layout) {
-  const circular = layout?.circular;
-  if (!circular?.enabled) return null;
+export function drawCircularArcSpanPreviewIndicator(ctx, layout) {
+  const paths = layout?.lines?.[0]?.paths;
+  if (!ctx || !paths?.length) return;
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let any = false;
+
+  for (const entry of paths) {
+    const bb = entry.glyphPath?.getBoundingBox?.();
+    if (!bb || bb.isEmpty?.()) continue;
+    any = true;
+    minX = Math.min(minX, bb.x1, bb.x2);
+    maxX = Math.max(maxX, bb.x1, bb.x2);
+    maxY = Math.max(maxY, bb.y1, bb.y2);
+  }
+  if (!any || !Number.isFinite(minX) || !Number.isFinite(maxX)) return;
 
   const fontSize = Number(layout?.fontSize) > 0 ? Number(layout.fontSize) : 72;
-  const pad = fontSize * 0.35;
-  const outer = circular.radius + fontSize * 0.6 + pad;
-  const minX = circular.centerX - outer;
-  const maxX = circular.centerX + outer;
-  const minY = circular.centerY - outer;
-  const maxY = circular.centerY + outer;
-  return { minX, minY, maxX, maxY };
-}
+  const strokeWidth = Math.max(fontSize * 0.025, 0.75);
+  const tickHeight = Math.max(fontSize * 0.1, 3);
+  const gap = fontSize * 0.06;
+  const yBase = maxY + gap;
+  const yTick = yBase + tickHeight;
 
-/**
- * @param {CanvasRenderingContext2D} ctx
- * @param {{ circular?: { centerX: number, centerY: number, radius: number }, lines?: { paths?: object[] }[] }} layout
- * @param {string} [defaultFill]
- */
-export function drawCircularLayoutPreview(ctx, layout, defaultFill = '#808080') {
-  const circular = layout?.circular;
-  if (!ctx || !circular?.enabled) return;
-
-  for (const line of layout?.lines || []) {
-    for (const pathEntry of line.paths || []) {
-      const glyphPath = pathEntry.glyphPath;
-      const transform = pathEntry.circularTransform;
-      if (!glyphPath?.draw || !transform) continue;
-
-      const cx = circular.centerX + transform.radius * Math.sin(transform.angleRad);
-      const cy = circular.centerY - transform.radius * Math.cos(transform.angleRad);
-
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(computeCircularGlyphRotationY(transform.angleRad, circular.facing));
-      ctx.scale(computeCircularGlyphScaleX(circular.facing), 1);
-      ctx.translate(0, -transform.baselineY);
-
-      const prevFill = glyphPath.fill;
-      glyphPath.fill = pathEntry.fill || defaultFill;
-      glyphPath.draw(ctx);
-      glyphPath.fill = prevFill;
-      ctx.restore();
-    }
-  }
+  ctx.save();
+  ctx.strokeStyle = 'rgba(196, 255, 0, 0.42)';
+  ctx.lineWidth = strokeWidth;
+  ctx.lineCap = 'square';
+  ctx.beginPath();
+  ctx.moveTo(minX, yBase);
+  ctx.lineTo(minX, yTick);
+  ctx.moveTo(maxX, yBase);
+  ctx.lineTo(maxX, yTick);
+  ctx.moveTo(minX, yTick);
+  ctx.lineTo(maxX, yTick);
+  ctx.stroke();
+  ctx.restore();
 }
 
 /**
@@ -325,32 +301,18 @@ export function computeCircularRingPosition(theta, radius) {
   };
 }
 
-/**
- * Y rotation so extruded caps face away from the ring center (outward) or toward it (inward).
- * @param {number} theta
- * @param {FontCircularWrapFacing} [facing]
- */
-export function computeCircularGlyphRotationY(theta, facing = DEFAULT_FONT_CIRCULAR_WRAP_FACING) {
-  const outwardRotation = -theta;
-  if (normalizeFontCircularWrapFacing(facing) === 'inward') {
-    return outwardRotation + Math.PI;
-  }
-  return outwardRotation;
-}
-
-/** @param {FontCircularWrapFacing} [facing] */
-export function computeCircularGlyphScaleX(_facing = DEFAULT_FONT_CIRCULAR_WRAP_FACING) {
-  return 1;
+/** Y rotation so each glyph faces outward from the ring (view from outside). */
+export function computeCircularGlyphRotationY(theta) {
+  return -theta + Math.PI;
 }
 
 /**
  * @param {THREE.Group} group
  * @param {number} layoutFontSize
- * @param {{ radius: number, facing?: FontCircularWrapFacing }} circularLayout
+ * @param {{ radius: number }} circularLayout
  * @param {number} targetCapHeight
  */
 export function applyFontCircularRingTransforms(group, layoutFontSize, circularLayout, targetCapHeight) {
-  const facing = normalizeFontCircularWrapFacing(circularLayout?.facing);
   const em = Number(layoutFontSize) > 0 ? Number(layoutFontSize) : 72;
   const uniformScale = targetCapHeight / em;
   const layoutRadius = Math.max(Number(circularLayout?.radius) || 0, 1);
@@ -364,7 +326,6 @@ export function applyFontCircularRingTransforms(group, layoutFontSize, circularL
     const theta = transform.angleRad;
     const pos = computeCircularRingPosition(theta, ringRadius);
     glyphGroup.position.set(pos.x, pos.y, pos.z);
-    glyphGroup.rotation.set(0, computeCircularGlyphRotationY(theta, facing), 0);
-    glyphGroup.scale.set(1, 1, 1);
+    glyphGroup.rotation.set(0, computeCircularGlyphRotationY(theta), 0);
   });
 }

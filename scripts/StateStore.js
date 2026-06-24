@@ -44,6 +44,8 @@ export class StateStore {
       rotationY: 0,
       rotationZ: 0,
       autoRotate: 0,
+      /** @type {'forward' | 'reverse'} */
+      autoRotateDirection: 'forward',
       moveWidgetEnabled: false,
       rotateWidgetEnabled: false,
       scaleWidgetEnabled: false,
@@ -88,7 +90,7 @@ export class StateStore {
         fillColor: '#808080',
         /** Total seconds until the last character finishes scale-in (0 = off). */
         revealDurationSec: 2,
-        /** @type {'scale' | 'fade' | 'slideUp' | 'slideDown' | 'drop' | 'pop' | 'rotate' | 'elastic'} */
+        /** @type {'none' | 'scale' | 'fade' | 'slideUp' | 'slideDown' | 'drop' | 'pop' | 'rotate' | 'elastic'} */
         revealType: 'scale',
         /** @type {'character' | 'word'} — stagger per letter or per word */
         revealUnit: 'character',
@@ -106,6 +108,14 @@ export class StateStore {
         /** Seconds for emissive to decay after each letter lands. */
         revealEmissiveDecaySec: 0.35,
         revealEmissiveColor: ORBY_LIME,
+        /** @type {'none' | 'float' | 'wave' | 'breathe' | 'sway'} */
+        constantType: 'none',
+        /** 0–1 amplitude for looping motion. */
+        constantIntensity: 0.5,
+        /** Seconds per full loop cycle. */
+        constantSpeedSec: 2,
+        /** 0–1 phase spread between adjacent glyphs (wave / sway). */
+        constantSpread: 1,
         /** Live editor text (Generate from Font). */
         sourceText: '',
         /** Wrap text on a circular arc before extruding (first line only). */
@@ -114,8 +124,6 @@ export class StateStore {
         circularWrapMode: 'auto',
         /** Manual arc span in degrees (30–360). */
         circularWrapArcDeg: 360,
-        /** @type {'inward' | 'outward'} — which side of the ring letter caps face. */
-        circularWrapFacing: 'outward',
         /** Local Font Access postscript name, or `__file__` for embedded custom font. */
         postscriptName: '',
         /** Embedded .ttf/.otf when user loads a font file (not a system face). */

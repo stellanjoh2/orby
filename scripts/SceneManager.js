@@ -104,6 +104,7 @@ import { TransformController } from './render/TransformController.js';
 import { LensDirtController } from './render/LensDirtController.js';
 import { BackgroundController } from './render/BackgroundController.js';
 import { BackgroundGradientController } from './render/backgroundGradient/BackgroundGradientController.js';
+import { getDrawingBufferPixels } from './render/drawingBufferSize.js';
 import { BackgroundImageController } from './render/backgroundImage/BackgroundImageController.js';
 import { loadBackgroundImageElement } from './render/backgroundImage/backgroundImageCanvas.js';
 import { normalizeBackgroundImage } from './render/backgroundImage/backgroundImageDefaults.js';
@@ -123,6 +124,7 @@ import { normalizeGlyphFillHex } from './import/FontExtrudeImporter.js';
 import { VideoExporter } from './render/VideoExporter.js';
 import { ExportMovementPreview } from './render/ExportMovementPreview.js';
 import { FontTextRevealController, isFontExtrudeRevealModel } from './scene/FontTextRevealController.js';
+import { FontTextConstantController } from './scene/FontTextConstantController.js';
 import { HistogramController } from './render/HistogramController.js';
 import { ModelGlbExporter } from './export/ModelGlbExporter.js';
 import {
@@ -260,6 +262,7 @@ export class SceneManager {
   _initStudioShell(initialState) {
     this.currentShading = initialState.shading;
     this.autoRotateSpeed = 0;
+    this.autoRotateDirection = initialState.autoRotateDirection === 'reverse' ? 'reverse' : 'forward';
     this.cameraAutoOrbit = initialState.camera?.autoOrbit ?? 'off';
     this.cameraHandheld = initialState.camera?.handheld ?? 'off';
     /** Suppress mode-change toasts during settings restore / batch apply. */
@@ -345,6 +348,12 @@ export class SceneManager {
         this.materialController.updateMaterials();
       },
     });
+    this.fontTextConstantController = new FontTextConstantController({
+      stateStore: this.stateStore,
+      revealController: this.fontTextRevealController,
+      onNeedRender: () => this.render(),
+    });
+    this.fontTextRevealController.setConstantController(this.fontTextConstantController);
 
     this._ccToggleCtx = createToggleScaleContext();
     this._baseToggleCtx = createToggleScaleContext();
@@ -1168,7 +1177,6 @@ export class SceneManager {
       syncPostProcessingForLogicalSize: (w, h) =>
         this.syncPostProcessingForLogicalSize(w, h),
       beforeComposerRender: () => {
-        this.backgroundGradientController?.syncToDrawingBuffer?.();
         this.materialController?.syncImportGltfGlassMaterials?.();
         this.lensFlareController?.prepareFrame(this.renderer);
         this.godRaysController?.prepareFrame(this.renderer);
@@ -1237,7 +1245,6 @@ export class SceneManager {
         this.composerLifecycle.resetRendererViewportToCanvas(),
       prepareComposerCapture: () => this.composerLifecycle.prepareComposerCapture(),
       beforeComposerRender: () => {
-        this.backgroundGradientController?.syncToDrawingBuffer?.();
         this.materialController?.syncImportGltfGlassMaterials?.();
         this.lensFlareController?.prepareFrame(this.renderer);
         this.godRaysController?.prepareFrame(this.renderer);
@@ -1306,14 +1313,25 @@ export class SceneManager {
       getFontTextRevealExportLabel: () => {
         const model = this.currentModel;
         const controller = this.fontTextRevealController;
-        if (!isFontExtrudeRevealModel(model) || !controller?.isEnabled?.()) return null;
-        const type = controller.getRevealType?.();
-        const unit = controller.getRevealUnit?.();
-        const duration = controller.getDurationSec?.();
-        const parts = ['On'];
-        if (type) parts.push(type);
-        if (unit) parts.push(unit);
-        if (Number.isFinite(duration) && duration > 0) parts.push(`${duration}s`);
+        const constant = this.fontTextConstantController;
+        if (!isFontExtrudeRevealModel(model)) return null;
+        const revealActive = controller?.isEnabled?.() ?? false;
+        const constantActive = constant?.isEnabled?.() ?? false;
+        if (!revealActive && !constantActive) return null;
+        const parts = [];
+        if (revealActive) {
+          const type = controller.getRevealType?.();
+          const unit = controller.getRevealUnit?.();
+          const duration = controller.getDurationSec?.();
+          parts.push('Reveal');
+          if (type) parts.push(type);
+          if (unit) parts.push(unit);
+          if (Number.isFinite(duration) && duration > 0) parts.push(`${duration}s`);
+        }
+        if (constantActive) {
+          const constantType = constant.getType?.();
+          if (constantType) parts.push(`Constant ${constantType}`);
+        }
         return parts.join(' · ');
       },
       handleResize: () => this.handleResize(),
@@ -1826,8 +1844,13 @@ export class SceneManager {
     if (this.composer && szNow.x > 0 && szNow.y > 0) {
       this.syncPostProcessingForLogicalSize(szNow.x, szNow.y);
     }
-    this.backgroundGradientController?.syncToDrawingBuffer?.();
-    this.handleResize();
+    this._applyViewportSizeFromLayout();
+    const db = getDrawingBufferPixels(this.renderer);
+    this.backgroundGradientController?.syncToDrawingBuffer?.(
+      db.width,
+      db.height,
+      { forceRedraw: true },
+    );
     this.updateDof(state.dof);
     this.updateBloom(state.bloom);
     this.updateAmbientOcclusion(state.ambientOcclusion);
@@ -2673,6 +2696,12 @@ export class SceneManager {
     if (!silent && this._suppressModeChangeToasts === 0) {
       this.ui?.showModeChangeToast?.('autoRotate', next);
     }
+  }
+
+  setAutoRotateDirection(direction) {
+    const next = direction === 'reverse' ? 'reverse' : 'forward';
+    if (next === this.autoRotateDirection) return;
+    this.autoRotateDirection = next;
   }
 
   setCameraAutoOrbit(mode, { silent = false } = {}) {
@@ -5270,22 +5299,8 @@ export class SceneManager {
     this.camera.aspect = finalWidth / Math.max(1, finalHeight);
     this.syncPerspectiveCameraFovAndLens();
     this.syncPostProcessingForLogicalSize(finalWidth, finalHeight);
-    const gl = this.renderer.getContext();
-    if (gl && gl.drawingBufferWidth > 0 && gl.drawingBufferHeight > 0) {
-      this.backgroundImageController?.handleResize?.(
-        gl.drawingBufferWidth,
-        gl.drawingBufferHeight,
-      );
-      this.backgroundGradientController?.handleResize?.(
-        gl.drawingBufferWidth,
-        gl.drawingBufferHeight,
-      );
-    } else {
-      const dbSize = new THREE.Vector2();
-      this.renderer.getDrawingBufferSize(dbSize);
-      this.backgroundImageController?.handleResize?.(dbSize.x, dbSize.y);
-      this.backgroundGradientController?.handleResize?.(dbSize.x, dbSize.y);
-    }
+    this.backgroundGradientController?.handleResize?.();
+    this.backgroundImageController?.handleResize?.();
   }
 
   async exportImage(settings = {}) {

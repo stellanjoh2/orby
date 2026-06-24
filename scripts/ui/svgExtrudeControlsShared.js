@@ -28,6 +28,10 @@ import {
   DEFAULT_FONT_REVEAL_UNIT,
 } from '../scene/fontTextRevealTypes.js';
 import {
+  FONT_CONSTANT_TYPE_OPTIONS,
+  DEFAULT_FONT_CONSTANT_TYPE,
+} from '../scene/fontTextConstantTypes.js';
+import {
   clampSurfaceStrength,
   clampSurfaceUiScale,
   creativeLookPresetSupportsSurfaceDetail,
@@ -1201,6 +1205,15 @@ function buildFontRevealUnitOptionsHtml() {
   ).join('');
 }
 
+function buildFontConstantTypeOptionsHtml() {
+  return FONT_CONSTANT_TYPE_OPTIONS.map(
+    (opt) =>
+      `<option value="${opt.id}"${
+        opt.id === DEFAULT_FONT_CONSTANT_TYPE ? ' selected' : ''
+      }>${opt.label}</option>`,
+  ).join('');
+}
+
 /** All 3D shape controls — visible before first generate (depth applies on generate). */
 export const FONT_EXTRUDE_SHAPE_CONTROLS_HTML = `
           ${PANEL_BLOCK_DIVIDER_HTML}
@@ -1272,6 +1285,39 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                   <option value="front">From front</option>
                 </select>
               </label>
+              <div class="font-extrude-reveal-preview animation-timeline">
+                <div class="animation-transport-btns">
+                  <button
+                    type="button"
+                    id="fontExtrudeRevealPlay"
+                    class="animation-play-btn"
+                    disabled
+                    aria-label="Play reveal animation"
+                    data-tooltip="Play reveal preview"
+                  >
+                    <i class="fa-solid fa-play" aria-hidden="true"></i>
+                    <span class="sr-only">Play or pause</span>
+                  </button>
+                  <div class="font-extrude-reveal-loop-control" data-tooltip="When off, preview plays once and stops">
+                    <span class="font-extrude-reveal-loop-label">Loop</span>
+                    <label class="effect-toggle font-extrude-reveal-loop-toggle">
+                      <input type="checkbox" id="fontExtrudeRevealLoop" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                    </label>
+                  </div>
+                </div>
+                <input
+                  type="range"
+                  id="fontExtrudeRevealScrub"
+                  min="0"
+                  max="1"
+                  step="0.001"
+                  value="1"
+                  disabled
+                  aria-label="Reveal animation progress"
+                />
+                <span class="font-extrude-reveal-time" id="fontExtrudeRevealTime">0.0s</span>
+              </div>
               ${PANEL_BLOCK_DIVIDER_HTML}
               <div class="font-extrude-reveal-emissive" role="group" aria-label="Emissive reveal">
                 <label class="slider-line slider-line--toggle-only font-extrude-reveal-emissive-slam">
@@ -1297,38 +1343,33 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                   <input type="color" id="fontExtrudeRevealEmissiveColor" class="color-chip" value="#c4ff00" />
                 </label>
               </div>
-              ${PANEL_BLOCK_DIVIDER_HTML}
-              <div class="font-extrude-reveal-preview animation-controls">
-                <button
-                  type="button"
-                  id="fontExtrudeRevealPlay"
-                  class="animation-play-btn"
-                  disabled
-                  aria-label="Play reveal animation"
-                  data-tooltip="Play reveal preview"
-                >
-                  <i class="fa-solid fa-play" aria-hidden="true"></i>
-                  <span class="sr-only">Play or pause</span>
-                </button>
-                <div class="font-extrude-reveal-loop-control" data-tooltip="When off, preview plays once and stops">
-                  <span class="font-extrude-reveal-loop-label">Loop</span>
-                  <label class="effect-toggle font-extrude-reveal-loop-toggle">
-                    <input type="checkbox" id="fontExtrudeRevealLoop" checked />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                  </label>
-                </div>
-                <input
-                  type="range"
-                  id="fontExtrudeRevealScrub"
-                  min="0"
-                  max="1"
-                  step="0.001"
-                  value="1"
-                  disabled
-                  aria-label="Reveal animation progress"
-                />
-                <span class="font-extrude-reveal-time" id="fontExtrudeRevealTime">0.0s</span>
-              </div>
+            </div>
+`;
+
+/** Looping motion — composes with reveal; only visible once 3D text exists. */
+export const FONT_EXTRUDE_CONSTANT_CONTROLS_HTML = `
+            <div class="font-extrude-constant" id="fontExtrudeConstant">
+              <label class="select-line font-extrude-constant-type">
+                <span data-tooltip="Continuous looping motion layered on reveal — runs live in viewport and export">Constant Type</span>
+                <select id="fontExtrudeConstantType" aria-label="Constant animation type">
+                  ${buildFontConstantTypeOptionsHtml()}
+                </select>
+              </label>
+              <label class="slider-line font-extrude-constant-intensity font-extrude-constant-detail" hidden>
+                <span data-tooltip="Motion strength — Float and Wave allow up to 3× vertical peak height (± from rest); Breathe and Sway use a subtler 0–100% range">Intensity</span>
+                <input id="fontExtrudeConstantIntensity" type="range" min="0" max="1" step="0.01" value="0.5" />
+                <span class="value" data-output="fontExtrudeConstantIntensity">50%</span>
+              </label>
+              <label class="slider-line font-extrude-constant-speed font-extrude-constant-detail" hidden>
+                <span data-tooltip="Seconds per full loop cycle">Speed</span>
+                <input id="fontExtrudeConstantSpeed" type="range" min="0.4" max="5" step="0.05" value="2" />
+                <span class="value" data-output="fontExtrudeConstantSpeed">2.0s</span>
+              </label>
+              <label class="slider-line font-extrude-constant-spread font-extrude-constant-spread-detail" hidden>
+                <span data-tooltip="Phase offset between adjacent letters — tighter spread = slower ripple along the string">Spread</span>
+                <input id="fontExtrudeConstantSpread" type="range" min="0" max="1" step="0.01" value="1" />
+                <span class="value" data-output="fontExtrudeConstantSpread">100%</span>
+              </label>
             </div>
 `;
 
@@ -1353,5 +1394,8 @@ export const FONT_EXTRUDE_POST_GEN_CONTROLS_HTML = `
             ${PANEL_BLOCK_DIVIDER_HTML}
             ${buildFontExtrudeSectionTitleHtml('Reveal')}
             ${FONT_EXTRUDE_ANIMATION_CONTROLS_HTML}
+            ${PANEL_BLOCK_DIVIDER_HTML}
+            ${buildFontExtrudeSectionTitleHtml('Constant')}
+            ${FONT_EXTRUDE_CONSTANT_CONTROLS_HTML}
           </div>
 `;

@@ -421,6 +421,7 @@ export class UIManager {
       rotationY: q('#rotationYControl'),
       rotationZ: q('#rotationZControl'),
       autoRotate: document.querySelectorAll('input[name="autorotate"]'),
+      autoRotateDirection: q('#autoRotateDirection'),
       cameraAutoOrbit: document.querySelectorAll('input[name="cameraAutoOrbit"]'),
       cameraHandheld: document.querySelectorAll('input[name="cameraHandheld"]'),
       hdriEnabled: q('#hdriEnabled'),
@@ -2812,6 +2813,10 @@ export class UIManager {
     this.inputs.autoRotate.forEach((input) => {
       input.checked = parseFloat(input.value) === state.autoRotate;
     });
+    if (this.inputs.autoRotateDirection) {
+      this.inputs.autoRotateDirection.value =
+        state.autoRotateDirection === 'reverse' ? 'reverse' : 'forward';
+    }
     // Sync camera auto-orbit
     if (this.inputs.cameraAutoOrbit) {
       const autoOrbitValue = state.camera?.autoOrbit ?? 'off';

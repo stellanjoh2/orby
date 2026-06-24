@@ -473,6 +473,7 @@ export class ResetControls {
       this.stateStore.set('rotationY', defaults.rotationY ?? 0);
       this.stateStore.set('rotationZ', defaults.rotationZ ?? 0);
       this.stateStore.set('autoRotate', defaults.autoRotate);
+      this.stateStore.set('autoRotateDirection', defaults.autoRotateDirection ?? 'forward');
       this.stateStore.set('clay', defaults.clay);
       this.stateStore.set('fresnel', defaults.fresnel);
       this.stateStore.set('subsurface', defaults.subsurface);
@@ -542,6 +543,7 @@ export class ResetControls {
       this.eventBus.emit('mesh:rotationY', defaults.rotationY ?? 0);
       this.eventBus.emit('mesh:rotationZ', defaults.rotationZ ?? 0);
       this.eventBus.emit('mesh:auto-rotate', defaults.autoRotate);
+      this.eventBus.emit('mesh:auto-rotate-direction', defaults.autoRotateDirection ?? 'forward');
       this.eventBus.emit('mesh:clay-color', defaults.clay.color);
       this.eventBus.emit('mesh:clay-normal-map', defaults.clay.normalMap);
       // Emit material reset events

@@ -344,6 +344,11 @@ export class SceneSettingsManager {
         this.stateStore.set('autoRotate', payload.autoRotate);
         this.eventBus.emit('mesh:auto-rotate', payload.autoRotate);
       }
+      if (payload.autoRotateDirection !== undefined) {
+        const direction = payload.autoRotateDirection === 'reverse' ? 'reverse' : 'forward';
+        this.stateStore.set('autoRotateDirection', direction);
+        this.eventBus.emit('mesh:auto-rotate-direction', direction);
+      }
       if (payload.clay) {
         this.stateStore.set('clay', payload.clay);
         this.eventBus.emit('mesh:clay-color', payload.clay.color);

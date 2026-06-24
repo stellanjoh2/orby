@@ -41,6 +41,7 @@ function createStateApplySteps() {
       id: 'mesh-auto-rotate',
       apply: (s, state) => {
         s.setAutoRotateSpeed(state.autoRotate, { silent: true });
+        s.setAutoRotateDirection(state.autoRotateDirection);
       },
     },
     {

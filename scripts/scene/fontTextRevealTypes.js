@@ -24,7 +24,7 @@ import { restoreRevealGlyphEmissive } from './fontTextRevealEmissive.js';
  * }} RevealGlyphState
  */
 
-/** @typedef {'scale' | 'fade' | 'slideUp' | 'slideDown' | 'drop' | 'pop' | 'rotate' | 'elastic'} FontRevealTypeId */
+/** @typedef {'none' | 'scale' | 'fade' | 'slideUp' | 'slideDown' | 'drop' | 'pop' | 'rotate' | 'elastic'} FontRevealTypeId */
 /** @typedef {'back' | 'front'} FontRevealSlideDirection */
 /** @typedef {'character' | 'word'} FontRevealUnitId */
 
@@ -56,6 +56,12 @@ export const MAX_FONT_REVEAL_SLIDE_TIME = 3;
 
 /** @type {ReadonlyArray<{ id: FontRevealTypeId, label: string, ease: string, tooltip: string }>} */
 export const FONT_REVEAL_TYPE_OPTIONS = [
+  {
+    id: 'none',
+    label: 'None',
+    ease: 'none',
+    tooltip: 'No per-letter reveal — static text in viewport and export preview',
+  },
   {
     id: 'scale',
     label: 'Scale',
@@ -114,6 +120,11 @@ const VALID_REVEAL_UNITS = new Set(FONT_REVEAL_UNIT_OPTIONS.map((o) => o.id));
 export function normalizeFontRevealType(value) {
   const id = typeof value === 'string' ? value : '';
   return VALID_IDS.has(id) ? /** @type {FontRevealTypeId} */ (id) : DEFAULT_FONT_REVEAL_TYPE;
+}
+
+/** @param {FontRevealTypeId | unknown} type */
+export function isFontRevealAnimationActive(type) {
+  return normalizeFontRevealType(type) !== 'none';
 }
 
 /** @param {unknown} value @returns {FontRevealUnitId} */
@@ -219,6 +230,7 @@ function computeDropImpactSquashY(landLinear) {
 
 /** @param {FontRevealTypeId} type @param {number} t @returns {number} */
 export function easeForRevealType(type, t) {
+  if (type === 'none') return 1;
   const clamped = Math.max(0, Math.min(1, t));
   switch (type) {
     case 'fade':
@@ -485,6 +497,9 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
   group.scale.copy(restScale);
 
   switch (type) {
+    case 'none':
+      break;
+
     case 'fade':
       for (const { mat } of meshMaterials) {
         const opacity = Math.max(0, Math.min(1, e));

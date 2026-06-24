@@ -21,11 +21,8 @@ import {
 } from './SvgExtrudeSceneOps.js';
 import {
   buildFontCircularLayout,
-  drawCircularLayoutPreview,
-  getCircularLayoutPreviewBounds,
   normalizeFontCircularWrapEnabled,
   normalizeFontCircularWrapMode,
-  normalizeFontCircularWrapFacing,
   clampFontCircularWrapArcDeg,
 } from './fontCircularLayout.js';
 
@@ -556,7 +553,6 @@ export class FontExtrudeController {
     const circularWrap = {
       enabled: normalizeFontCircularWrapEnabled(options.circularWrap?.enabled),
       mode: normalizeFontCircularWrapMode(options.circularWrap?.mode),
-      facing: normalizeFontCircularWrapFacing(options.circularWrap?.facing),
       arcDeg: clampFontCircularWrapArcDeg(options.circularWrap?.arcDeg),
     };
     if (circularWrap.enabled && lineDrafts.length) {
@@ -569,7 +565,6 @@ export class FontExtrudeController {
         baselineY: firstLine.y,
         fill: lineFill,
         mode: circularWrap.mode,
-        facing: circularWrap.facing,
         manualArcDeg: circularWrap.arcDeg,
         tracking,
         glyphAdvance: (glyph, fontRef, size, track) => this._glyphAdvance(glyph, fontRef, size, track),
@@ -623,9 +618,6 @@ export class FontExtrudeController {
    * @param {Awaited<ReturnType<FontExtrudeController['layoutTextAsync']>>} layout
    */
   getLayoutPreviewBounds(layout) {
-    const circularBounds = getCircularLayoutPreviewBounds(layout);
-    if (circularBounds) return circularBounds;
-
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -661,10 +653,6 @@ export class FontExtrudeController {
    */
   drawPreview(ctx, layout) {
     if (!ctx || !layout) return;
-    if (layout.circular?.enabled) {
-      drawCircularLayoutPreview(ctx, layout, DEFAULT_PREVIEW_FILL);
-      return;
-    }
     for (const line of layout.lines) {
       for (const p of line.paths) {
         const glyphPath = p.glyphPath;

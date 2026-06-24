@@ -116,6 +116,9 @@ export const SLIDER_DEFAULT_PATHS = {
   fontExtrudeRevealSlideTime: 'fontExtrude.revealSlideTime',
   fontExtrudeRevealEmissiveStrength: 'fontExtrude.revealEmissiveStrength',
   fontExtrudeRevealEmissiveDecay: 'fontExtrude.revealEmissiveDecaySec',
+  fontExtrudeConstantIntensity: 'fontExtrude.constantIntensity',
+  fontExtrudeConstantSpeed: 'fontExtrude.constantSpeedSec',
+  fontExtrudeConstantSpread: 'fontExtrude.constantSpread',
 };
 
 /** Export panel sliders — stored on `UIManager.exportSettings`, not StateStore. */

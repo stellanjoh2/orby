@@ -16,6 +16,7 @@ import {
   DEFAULT_FONT_REVEAL_SLIDE_DEPTH,
   DEFAULT_FONT_REVEAL_SLIDE_TIME,
   normalizeFontRevealSlideDirection,
+  isFontRevealAnimationActive,
   normalizeFontRevealType,
   normalizeFontRevealUnit,
   resetRevealGlyphPose,
@@ -50,6 +51,7 @@ export {
   clampFontRevealSlideDepth,
   clampFontRevealSlideTime,
   normalizeFontRevealSlideDirection,
+  isFontRevealAnimationActive,
   normalizeFontRevealType,
   normalizeFontRevealUnit,
 } from './fontTextRevealTypes.js';
@@ -122,6 +124,14 @@ export class FontTextRevealController {
     this._previewLastTs = 0;
     /** Reentrancy guard — {@link #onMaterialBaselineChanged} may call {@link #_reapplyMaterialEmissive} → updateMaterials → callback again. */
     this._materialBaselineSyncDepth = 0;
+    /** @type {import('./FontTextConstantController.js').FontTextConstantController | null} */
+    this._constantController = null;
+  }
+
+  /** @param {import('./FontTextConstantController.js').FontTextConstantController | null} controller */
+  setConstantController(controller) {
+    this._constantController = controller;
+    controller?.setRevealController?.(this);
   }
 
   getDurationSec() {
@@ -197,11 +207,19 @@ export class FontTextRevealController {
   }
 
   isEnabled() {
-    return this.getDurationSec() > 0 && this._glyphStates.length > 0;
+    return (
+      isFontRevealAnimationActive(this.getRevealType()) &&
+      this.getDurationSec() > 0 &&
+      this._glyphStates.length > 0
+    );
   }
 
   isPreviewPlaying() {
     return this._previewMode === 'playing';
+  }
+
+  isPreviewPaused() {
+    return this._previewMode === 'paused';
   }
 
   getPreviewElapsed() {
@@ -210,6 +228,10 @@ export class FontTextRevealController {
 
   getGlyphCount() {
     return this._glyphStates.length;
+  }
+
+  getSettledRevealElapsedSec() {
+    return this._revealFullySettledElapsedSec();
   }
 
   _revealTimingOptions() {
@@ -397,6 +419,7 @@ export class FontTextRevealController {
     this._buildWordGroupMeta();
     this.syncMaterialEmissiveBaseline();
 
+    this._constantController?.onModelBound?.();
     this._showIdlePose();
     this._notifyPreviewTime();
   }
@@ -583,6 +606,7 @@ export class FontTextRevealController {
     this._elapsed = 0;
     this._exportDriveActive = false;
     this._previewMode = 'idle';
+    this._constantController?.unbind?.();
     this._notifyPreviewTime();
   }
 
@@ -679,76 +703,85 @@ export class FontTextRevealController {
 
   /**
    * @param {number} elapsedSec
+   * @param {{ skipConstant?: boolean }} [options]
    */
-  applyAtTime(elapsedSec) {
+  applyAtTime(elapsedSec, options = {}) {
     const duration = this.getDurationSec();
     const count = this._glyphStates.length;
-    if (duration <= 0 || count === 0) {
-      this._resetGlyphs();
-      return;
-    }
+    if (count === 0) return;
 
     const type = this.getRevealType();
-    const slideDepth = this.getSlideDepth();
-    const slideTime = this.getSlideTime();
-    const slideDirection = this.getSlideDirection();
-    const emissiveEnabled = this.isEmissiveSlamEnabled();
-    const emissiveStrength = this.getEmissiveSlamStrength();
-    const emissiveDecaySec = this.getEmissiveSlamDecaySec();
-    const emissiveColor = this.getEmissiveSlamColor();
-    const timing = { slideDepth, slideTime };
-    const useWordGroup = this.getRevealUnit() === 'word' && this._wordGroupMeta.size > 0;
-    for (let i = 0; i < count; i += 1) {
-      const state = this._glyphStates[i];
-      const { slotIndex, slotCount } = this._resolveRevealSlot(i);
-      const landLinear = computeGlyphSlotProgress(
-        slotIndex,
-        slotCount,
-        elapsedSec,
-        duration,
-        timing,
-      );
-      const eased = computeGlyphRevealEase(
-        type,
-        slotIndex,
-        slotCount,
-        elapsedSec,
-        duration,
-        timing,
-      );
-      const slideProgress = computeGlyphSlideProgress(
-        slotIndex,
-        slotCount,
-        elapsedSec,
-        duration,
-        timing,
-      );
-      const wordIndex = this._glyphWordIndices?.[i];
-      const wordPivot =
-        useWordGroup && Number.isFinite(wordIndex)
-          ? this._wordGroupMeta.get(wordIndex)
-          : undefined;
-      applyRevealPoseToGlyph(type, eased, state, {
-        slideProgress,
-        landLinear,
-        slideDepth,
-        slideDirection,
-        wordPivot,
-      });
-      applyRevealEmissiveSlam(state, {
-        enabled: emissiveEnabled,
-        strength: emissiveStrength,
-        decaySec: emissiveDecaySec,
-        colorHex: emissiveColor,
-        glyphIndex: slotIndex,
-        glyphCount: slotCount,
-        elapsedSec,
-        totalDurationSec: duration,
-        slideDepth,
-        slideTime,
-      });
+    const revealActive = isFontRevealAnimationActive(type) && duration > 0;
+
+    if (!revealActive) {
+      for (const state of this._glyphStates) {
+        resetRevealGlyphPose(state);
+      }
+    } else {
+      const slideDepth = this.getSlideDepth();
+      const slideTime = this.getSlideTime();
+      const slideDirection = this.getSlideDirection();
+      const emissiveEnabled = this.isEmissiveSlamEnabled();
+      const emissiveStrength = this.getEmissiveSlamStrength();
+      const emissiveDecaySec = this.getEmissiveSlamDecaySec();
+      const emissiveColor = this.getEmissiveSlamColor();
+      const timing = { slideDepth, slideTime };
+      const useWordGroup = this.getRevealUnit() === 'word' && this._wordGroupMeta.size > 0;
+      for (let i = 0; i < count; i += 1) {
+        const state = this._glyphStates[i];
+        const { slotIndex, slotCount } = this._resolveRevealSlot(i);
+        const landLinear = computeGlyphSlotProgress(
+          slotIndex,
+          slotCount,
+          elapsedSec,
+          duration,
+          timing,
+        );
+        const eased = computeGlyphRevealEase(
+          type,
+          slotIndex,
+          slotCount,
+          elapsedSec,
+          duration,
+          timing,
+        );
+        const slideProgress = computeGlyphSlideProgress(
+          slotIndex,
+          slotCount,
+          elapsedSec,
+          duration,
+          timing,
+        );
+        const wordIndex = this._glyphWordIndices?.[i];
+        const wordPivot =
+          useWordGroup && Number.isFinite(wordIndex)
+            ? this._wordGroupMeta.get(wordIndex)
+            : undefined;
+        applyRevealPoseToGlyph(type, eased, state, {
+          slideProgress,
+          landLinear,
+          slideDepth,
+          slideDirection,
+          wordPivot,
+        });
+        applyRevealEmissiveSlam(state, {
+          enabled: emissiveEnabled,
+          strength: emissiveStrength,
+          decaySec: emissiveDecaySec,
+          colorHex: emissiveColor,
+          glyphIndex: slotIndex,
+          glyphCount: slotCount,
+          elapsedSec,
+          totalDurationSec: duration,
+          slideDepth,
+          slideTime,
+        });
+      }
     }
 
+    if (!options.skipConstant) {
+      this._constantController?.applyToGlyphStates(this._glyphStates);
+    }
     this._boundModel?.updateMatrixWorld?.(true);
   }
 
@@ -764,7 +797,7 @@ export class FontTextRevealController {
     if (!this._boundModel || !this._glyphStates.length) return;
     if (this.isEnabled()) {
       this._elapsed = this._revealFullySettledElapsedSec();
-      this.applyAtTime(this._elapsed);
+      this.applyAtTime(this._elapsed, { skipConstant: true });
     } else {
       this._resetGlyphs();
     }
@@ -777,8 +810,12 @@ export class FontTextRevealController {
       this.applyAtTime(this._elapsed);
       return;
     }
-    this._resetGlyphs();
     this._elapsed = 0;
+    if (this._constantController?.isEnabled?.()) {
+      this.applyAtTime(0);
+      return;
+    }
+    this._resetGlyphs();
   }
 
   _notifyPreviewTime() {
@@ -836,6 +873,7 @@ export class FontTextRevealController {
     const endTime = duration + decaySec;
     const d = typeof delta === 'number' && Number.isFinite(delta) ? delta : 0;
     this._elapsed += d;
+    this._constantController?.advance(d);
     if (this._elapsed >= duration) {
       if (this.isLoopEnabled()) {
         this._elapsed = 0;
@@ -902,8 +940,13 @@ export class FontTextRevealController {
     if (!this.isEnabled()) {
       this._previewMode = 'idle';
       this._stopPreviewLoop();
-      this._resetGlyphs();
-      this._elapsed = 0;
+      if (this._constantController?.isEnabled?.()) {
+        this._elapsed = 0;
+        this.applyAtTime(0);
+      } else {
+        this._resetGlyphs();
+        this._elapsed = 0;
+      }
       this._notifyPreviewTime();
       this._requestRender();
       return;
@@ -925,7 +968,10 @@ export class FontTextRevealController {
   beginExportDrive(model) {
     this._stopPreviewLoop();
     this.ensureBoundToModel(model ?? this._boundModel);
-    if (!this.isEnabled()) {
+    this._constantController?.beginExportDrive?.();
+    const revealActive = this.isEnabled();
+    const constantActive = this._constantController?.isEnabled?.() ?? false;
+    if (!revealActive && !constantActive) {
       this._exportDriveActive = false;
       return;
     }
@@ -952,9 +998,12 @@ export class FontTextRevealController {
    */
   applyExportTime(exportTimeSec, model) {
     this.ensureBoundToModel(model ?? this._boundModel);
-    if (!this.isEnabled()) return;
+    const revealActive = this.isEnabled();
+    const constantActive = this._constantController?.isEnabled?.() ?? false;
+    if (!revealActive && !constantActive) return;
     this._exportDriveActive = true;
     const elapsed = Math.max(0, exportTimeSec);
+    this._constantController?.setExportElapsed?.(elapsed);
     this._elapsed = elapsed;
     this.applyAtTime(elapsed);
     this._requestRender();
@@ -963,6 +1012,7 @@ export class FontTextRevealController {
   endExportDrive() {
     if (!this._exportDriveActive) return;
     this._exportDriveActive = false;
+    this._constantController?.endExportDrive?.();
     this._previewMode = 'idle';
     this._showIdlePose();
     this._notifyPreviewTime();

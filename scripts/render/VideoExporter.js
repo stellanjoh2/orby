@@ -16,6 +16,7 @@ import {
 } from './exportVideoMovements.js';
 import { lightsRotationForExportFrame } from '../config/lightsAutoRotate.js';
 import { buildOfflineExportOverlaySummary } from './offlineExportOverlaySummary.js';
+import { getDrawingBufferPixels } from './drawingBufferSize.js';
 
 export class VideoExporter {
   constructor({
@@ -430,10 +431,14 @@ export class VideoExporter {
    * @param {{ transparent?: boolean }} [opts]
    */
   _renderComposerFrameForCapture({ transparent = false } = {}) {
-    const db = new THREE.Vector2();
-    this.renderer.getDrawingBufferSize(db);
-    const targetWidth = Math.max(1, Math.round(db.x));
-    const targetHeight = Math.max(1, Math.round(db.y));
+    const db = getDrawingBufferPixels(this.renderer);
+    const targetWidth = Math.max(1, db.width);
+    const targetHeight = Math.max(1, db.height);
+    this.backgroundController?.gradientController?.syncToDrawingBuffer?.(
+      targetWidth,
+      targetHeight,
+      { forceRedraw: true },
+    );
     this.imageExporter?._ensureComposerMatchesDrawingBuffer?.({ strict: true });
     this.imageExporter?._setExportViewport?.(targetWidth, targetHeight);
 

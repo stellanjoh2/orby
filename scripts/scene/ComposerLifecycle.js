@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { APP_BACKGROUND } from '../constants.js';
-import { fullViewportLogicalSize } from '../render/fullViewportLogicalSize.js';
+import { getDrawingBufferPixels } from '../render/drawingBufferSize.js';
+import { resetRendererFullViewport } from '../render/resetRendererFullViewport.js';
 import { isSketchColourCreativeLookPreset } from '../render/CreativeLookMaterials.js';
 import {
   hideGroundGridForPass,
@@ -102,18 +103,13 @@ export class ComposerLifecycle {
     if (Math.abs(rt.width - bw) <= 2 && Math.abs(rt.height - bh) <= 2) {
       return;
     }
-    const logical = fullViewportLogicalSize(this.renderer);
-    this.syncPostProcessingForLogicalSize?.(logical.x, logical.y);
+    const pr = Math.max(1e-6, this.renderer.getPixelRatio());
+    this.syncPostProcessingForLogicalSize?.(bw / pr, bh / pr);
   }
 
   /** Reset logical viewport + scissor around the post stack (passes may leave partial viewport). */
   resetRendererViewportToCanvas() {
-    const r = this.renderer;
-    const v = fullViewportLogicalSize(r);
-    r.setViewport(0, 0, v.x, v.y);
-    if (typeof r.setScissorTest === 'function') {
-      r.setScissorTest(false);
-    }
+    resetRendererFullViewport(this.renderer);
   }
 
   /**
@@ -251,6 +247,12 @@ export class ComposerLifecycle {
     try {
       this.ensureComposerBuffersMatchRenderer();
       this.resetRendererViewportToCanvas();
+      const db = getDrawingBufferPixels(this.renderer);
+      this.backgroundController?.gradientController?.syncToDrawingBuffer?.(
+        db.width,
+        db.height,
+        { forceRedraw: true },
+      );
       if (!transparent) {
         this.syncRendererClearForSceneBackground();
       }

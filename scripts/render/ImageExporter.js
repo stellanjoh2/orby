@@ -9,6 +9,7 @@ import {
 import { isArtisticCreativeLookPreset } from './creativeLookPresetSliders.js';
 import { SKETCH_PAPER_RGB } from './creativeLookSketchArt.js';
 import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
+import { resetRendererFullViewport } from './resetRendererFullViewport.js';
 import { getComposerOutputRenderTarget } from './composerOutputBuffer.js';
 import {
   buildScreenPixelSvg,
@@ -211,11 +212,8 @@ export class ImageExporter {
   _ensureFullDrawingBufferViewport() {
     const r = this.renderer;
     r.setRenderTarget(null);
-    const v = fullViewportLogicalSize(r);
-    r.setViewport(0, 0, v.x, v.y);
-    if (typeof r.setScissorTest === 'function') {
-      r.setScissorTest(false);
-    }
+    resetRendererFullViewport(r);
+    this.backgroundController?.gradientController?.syncToDrawingBuffer?.();
   }
 
   /**
@@ -247,14 +245,15 @@ export class ImageExporter {
     if (strict && rt.width === bw && rt.height === bh) {
       return;
     }
-    const logical = fullViewportLogicalSize(this.renderer);
-    if (logical.x <= 0 || logical.y <= 0) return;
+    const pr = Math.max(1e-6, this.renderer.getPixelRatio());
+    const logicalW = bw / pr;
+    const logicalH = bh / pr;
+    if (logicalW <= 0 || logicalH <= 0) return;
     if (this.syncPostProcessingForLogicalSize) {
-      this.syncPostProcessingForLogicalSize(logical.x, logical.y);
+      this.syncPostProcessingForLogicalSize(logicalW, logicalH);
     } else {
-      const pr = this.renderer.getPixelRatio();
       composer.setPixelRatio(pr);
-      composer.setSize(logical.x, logical.y);
+      composer.setSize(logicalW, logicalH);
     }
   }
 
@@ -517,6 +516,11 @@ export class ImageExporter {
       this.composer.setSize(synced.width, synced.height);
     }
     this._ensureComposerMatchesDrawingBuffer({ strict: true });
+    this.backgroundController?.gradientController?.syncToDrawingBuffer?.(
+      synced.width,
+      synced.height,
+      { forceRedraw: true },
+    );
     return synced;
   }
 
@@ -648,6 +652,11 @@ export class ImageExporter {
     const { width: exportW, height: exportH } = this._setExportFramebufferSize(
       targetWidth,
       targetHeight,
+    );
+    this.backgroundController?.gradientController?.syncToDrawingBuffer?.(
+      exportW,
+      exportH,
+      { forceRedraw: true },
     );
     const exportFovScale = this.isLensDistortionActive?.() ? 1.06 : 1;
     if (this.syncPerspectiveProjection) {

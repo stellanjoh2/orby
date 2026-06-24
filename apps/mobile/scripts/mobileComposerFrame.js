@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { APP_BACKGROUND } from '../../../scripts/constants.js';
-import { fullViewportLogicalSize } from '../../../scripts/render/fullViewportLogicalSize.js';
+import { getDrawingBufferLogicalSize, getDrawingBufferPixels } from '../../../scripts/render/drawingBufferSize.js';
+import { resetRendererFullViewport } from '../../../scripts/render/resetRendererFullViewport.js';
 
 /**
  * Desktop ComposerLifecycle frame prep — mobile was skipping this, which let bloom passes
@@ -9,11 +10,7 @@ import { fullViewportLogicalSize } from '../../../scripts/render/fullViewportLog
 
 /** @param {THREE.WebGLRenderer} renderer */
 export function resetMobileRendererViewport(renderer) {
-  const v = fullViewportLogicalSize(renderer);
-  renderer.setViewport(0, 0, v.x, v.y);
-  if (typeof renderer.setScissorTest === 'function') {
-    renderer.setScissorTest(false);
-  }
+  resetRendererFullViewport(renderer);
 }
 
 /**
@@ -66,7 +63,7 @@ export function ensureMobileComposerBuffersMatchRenderer(renderer, composer, res
   if (Math.abs(rt.width - bw) <= 2 && Math.abs(rt.height - bh) <= 2) {
     return;
   }
-  const logical = fullViewportLogicalSize(renderer);
+  const logical = getDrawingBufferLogicalSize(renderer);
   resyncSize(logical.x, logical.y);
 }
 
@@ -80,5 +77,11 @@ export function ensureMobileComposerBuffersMatchRenderer(renderer, composer, res
 export function prepareMobileComposerFrame(renderer, scene, composer, resyncSize, backgroundController) {
   ensureMobileComposerBuffersMatchRenderer(renderer, composer, resyncSize);
   resetMobileRendererViewport(renderer);
+  const db = getDrawingBufferPixels(renderer);
+  backgroundController?.gradientController?.syncToDrawingBuffer?.(
+    db.width,
+    db.height,
+    { forceRedraw: true },
+  );
   syncMobileRendererClearForSceneBackground(renderer, scene, backgroundController);
 }

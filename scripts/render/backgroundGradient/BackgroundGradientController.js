@@ -5,6 +5,7 @@ import {
   getBackgroundGradientFallbackColor,
   normalizeBackgroundGradient,
 } from './backgroundGradientDefaults.js';
+import { getDrawingBufferPixels } from '../drawingBufferSize.js';
 
 /**
  * Screen-space viewport gradient when the HDRI backdrop is hidden.
@@ -33,6 +34,7 @@ export class BackgroundGradientController {
     this._texture.generateMipmaps = false;
     this._texture.wrapS = THREE.ClampToEdgeWrapping;
     this._texture.wrapT = THREE.ClampToEdgeWrapping;
+    this._texture.matrixAutoUpdate = false;
     this._lastWidth = 0;
     this._lastHeight = 0;
   }
@@ -77,9 +79,9 @@ export class BackgroundGradientController {
   }
 
   /**
-   * Resize and redraw the gradient canvas to match the real WebGL backing store.
-   * Prefer `gl.drawingBufferWidth/Height` — Three's cached `getDrawingBufferSize()` can lag
-   * after `setPixelRatio` (render quality toggle), leaving a mismatched texture that tiles.
+   * Resize and redraw the gradient canvas to match the viewport backing store.
+   * Uses Three's logical size × pixel ratio (same basis as `setViewport`) — not raw
+   * `gl.drawingBufferWidth`, which can lag after Ultra / render-quality toggles.
    * @param {number} [width]
    * @param {number} [height]
    * @param {{ forceRedraw?: boolean }} [options]
@@ -98,9 +100,9 @@ export class BackgroundGradientController {
     if (resized) {
       this._canvas.width = w;
       this._canvas.height = h;
-      this._lastWidth = w;
-      this._lastHeight = h;
     }
+    this._lastWidth = w;
+    this._lastHeight = h;
     if (!resized && !forceRedraw) return;
     drawBackgroundGradient(this._ctx, w, h, this.config);
     this._texture.repeat.set(1, 1);
@@ -111,26 +113,13 @@ export class BackgroundGradientController {
 
   handleResize(width, height) {
     if (!this.isActive()) return;
-    const w = Math.max(1, Math.floor(width));
-    const h = Math.max(1, Math.floor(height));
-    if (w === this._lastWidth && h === this._lastHeight) return;
-    this.syncToDrawingBuffer(w, h);
+    void width;
+    void height;
+    this.syncToDrawingBuffer();
   }
 
   _getDrawingBufferPixelSize() {
-    const gl = this.renderer?.getContext?.();
-    if (gl && gl.drawingBufferWidth > 0 && gl.drawingBufferHeight > 0) {
-      return {
-        width: gl.drawingBufferWidth,
-        height: gl.drawingBufferHeight,
-      };
-    }
-    const size = new THREE.Vector2();
-    this.renderer.getDrawingBufferSize(size);
-    return {
-      width: Math.max(1, Math.floor(size.x)),
-      height: Math.max(1, Math.floor(size.y)),
-    };
+    return getDrawingBufferPixels(this.renderer);
   }
 
   dispose() {

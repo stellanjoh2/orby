@@ -6152,9 +6152,25 @@ input[type='range']:disabled::-moz-range-thumb {
   display: contents;
 }
 
-[data-subsection='font-extrude'] .font-extrude-animation,
+[data-subsection='font-extrude'] .font-extrude-post-gen:not([hidden]) {
+  display: block;
+}
+
+[data-subsection='font-extrude'] .font-extrude-animation {
+  display: block;
+}
+
+[data-subsection='font-extrude'] .font-extrude-constant {
+  display: block;
+}
+
 [data-subsection='font-extrude'] .font-extrude-reveal-emissive {
-  display: contents;
+  display: block;
+}
+
+#fontExtrudePanel.panel-block:has(.effect-foldout--expanded) {
+  content-visibility: visible;
+  contain-intrinsic-size: auto 240rem;
 }
 
 [data-subsection='font-extrude'] :is(.slider-line, .select-line):has(+ .extrude-bevel-group) {
@@ -6165,7 +6181,6 @@ input[type='range']:disabled::-moz-range-thumb {
   margin-bottom: var(--shelf-section-gap);
 }
 
-[data-subsection='font-extrude'] .font-extrude-post-gen:not([hidden]),
 [data-subsection='font-extrude'] .font-extrude-surface-post-gen:not([hidden]) {
   display: contents;
 }
@@ -6558,7 +6573,8 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 }
 
 .animation-timeline #animationScrub,
-.animation-timeline #exportPreviewScrub {
+.animation-timeline #exportPreviewScrub,
+.animation-timeline #fontExtrudeRevealScrub {
   width: 100%;
   min-width: 0;
   flex: unset;
@@ -6575,7 +6591,8 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 }
 
 .animation-timeline #animationScrub::-webkit-slider-runnable-track,
-.animation-timeline #exportPreviewScrub::-webkit-slider-runnable-track {
+.animation-timeline #exportPreviewScrub::-webkit-slider-runnable-track,
+.animation-timeline #fontExtrudeRevealScrub::-webkit-slider-runnable-track {
   width: 100%;
   height: 2px;
   border-radius: 1px;
@@ -6592,7 +6609,8 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 }
 
 .animation-timeline #animationScrub:is(:active, :focus-visible, .is-scrub-playing)::-webkit-slider-runnable-track,
-.animation-timeline #exportPreviewScrub:is(:active, :focus-visible, .is-scrub-playing)::-webkit-slider-runnable-track {
+.animation-timeline #exportPreviewScrub:is(:active, :focus-visible, .is-scrub-playing)::-webkit-slider-runnable-track,
+.animation-timeline #fontExtrudeRevealScrub:is(:active, :focus-visible, .is-scrub-playing)::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
     rgba(255, 255, 255, 0.15) 0%,
@@ -6605,7 +6623,8 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 }
 
 .animation-timeline #animationScrub::-moz-range-track,
-.animation-timeline #exportPreviewScrub::-moz-range-track {
+.animation-timeline #exportPreviewScrub::-moz-range-track,
+.animation-timeline #fontExtrudeRevealScrub::-moz-range-track {
   width: 100%;
   height: 2px;
   border-radius: 1px;
@@ -6623,7 +6642,8 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 }
 
 .animation-timeline #animationScrub:is(:active, :focus-visible, .is-scrub-playing)::-moz-range-track,
-.animation-timeline #exportPreviewScrub:is(:active, :focus-visible, .is-scrub-playing)::-moz-range-track {
+.animation-timeline #exportPreviewScrub:is(:active, :focus-visible, .is-scrub-playing)::-moz-range-track,
+.animation-timeline #fontExtrudeRevealScrub:is(:active, :focus-visible, .is-scrub-playing)::-moz-range-track {
   background: linear-gradient(
     to right,
     rgba(255, 255, 255, 0.15) 0%,
@@ -6636,12 +6656,14 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 }
 
 .animation-timeline #animationScrub::-webkit-slider-thumb,
-.animation-timeline #exportPreviewScrub::-webkit-slider-thumb {
+.animation-timeline #exportPreviewScrub::-webkit-slider-thumb,
+.animation-timeline #fontExtrudeRevealScrub::-webkit-slider-thumb {
   margin-top: -5px;
 }
 
 .animation-timeline #animationScrub::-moz-range-thumb,
-.animation-timeline #exportPreviewScrub::-moz-range-thumb {
+.animation-timeline #exportPreviewScrub::-moz-range-thumb,
+.animation-timeline #fontExtrudeRevealScrub::-moz-range-thumb {
   transform: translateY(-1px);
 }
 
@@ -6664,7 +6686,8 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
 }
 
 #animationTime,
-#exportPreviewTime {
+#exportPreviewTime,
+#fontExtrudeRevealTime {
   grid-column: 3;
   font-size: var(--shelf-label-font-size);
   color: var(--text-dim);
@@ -6942,13 +6965,13 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   content-visibility: visible;
 }
 
-/* Font extrude card — tall when circular wrap + reveal are open; 400px intrinsic clips bottom controls */
-#fontExtrudePanel.panel-block:has(.effect-foldout--expanded) {
-  content-visibility: visible;
-}
-
 /* Video export is the tallest shelf block — default --xl cap (120rem) clips FPS / Resolution */
 .panel-block[data-export-section='video'] .effect-foldout--expanded {
+  max-height: 240rem;
+}
+
+/* Font extrude — --xl cap clips Reveal emissive at the bottom when post-gen is open */
+[data-effect-foldout='font-extrude'].effect-foldout--expanded.effect-foldout--xl {
   max-height: 240rem;
 }
 
@@ -8463,25 +8486,8 @@ body.ui-hidden .shelf {
   -webkit-text-fill-color: transparent;
 }
 
-.font-extrude-live-editor.font-extrude-live-editor--circular-active textarea {
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  padding: 0.65rem 0.75rem;
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
-  letter-spacing: normal;
-  text-align: center;
-}
-
-.font-extrude-live-editor.font-extrude-live-editor--circular-active textarea::selection {
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-}
-
-.font-extrude-circular-wrap-controls {
-  display: grid;
-  gap: var(--shelf-section-gap);
+.font-extrude-circular-wrap-controls > :last-child {
+  margin-bottom: 0;
 }
 
 .font-extrude-live-editor textarea:focus {
@@ -8680,21 +8686,18 @@ body.ui-hidden .shelf {
   display: none !important;
 }
 
-[data-subsection='font-extrude'] .font-extrude-reveal-preview {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--shelf-section-gap);
+[data-subsection='font-extrude'] .font-extrude-reveal-preview.animation-timeline {
   margin-bottom: var(--shelf-section-gap);
-  min-height: 2.6rem;
-  width: 100%;
+}
+
+[data-subsection='font-extrude'] .font-extrude-reveal-preview.animation-timeline .animation-transport-btns {
+  gap: 0.5rem;
 }
 
 .font-extrude-reveal-loop-control {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  margin-right: 0.1rem;
 }
 
 .font-extrude-reveal-loop-control .font-extrude-reveal-loop-label {
@@ -8705,44 +8708,6 @@ body.ui-hidden .shelf {
 
 .font-extrude-reveal-loop-control .effect-toggle {
   margin-left: 0;
-}
-
-.font-extrude-reveal-preview #fontExtrudeRevealScrub {
-  flex: 1;
-  align-self: center;
-  min-width: 0;
-  height: 2px;
-  -webkit-appearance: none;
-  appearance: none;
-  background: transparent;
-}
-
-.font-extrude-reveal-preview #fontExtrudeRevealScrub::-webkit-slider-runnable-track {
-  height: 2px;
-  border-radius: 1px;
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.font-extrude-reveal-preview #fontExtrudeRevealScrub::-moz-range-track {
-  height: 2px;
-  border-radius: 1px;
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.font-extrude-reveal-preview #fontExtrudeRevealScrub::-webkit-slider-thumb {
-  margin-top: -5px;
-}
-
-.font-extrude-reveal-preview #fontExtrudeRevealScrub::-moz-range-thumb {
-  transform: translateY(-1px);
-}
-
-.font-extrude-reveal-time {
-  font-size: var(--shelf-label-font-size);
-  color: var(--text-dim);
-  font-variant-numeric: tabular-nums;
-  min-width: 2.8ch;
-  text-align: right;
 }
 
 .font-extrude-generate {

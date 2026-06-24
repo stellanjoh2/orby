@@ -67,6 +67,9 @@ export class EventManager {
     eventBus.on('mesh:auto-rotate', (speed) => {
       s.setAutoRotateSpeed(speed);
     });
+    eventBus.on('mesh:auto-rotate-direction', (direction) => {
+      s.setAutoRotateDirection(direction);
+    });
     eventBus.on('mesh:clay-color', (value) => {
       s.setClaySettings({ color: value });
     });

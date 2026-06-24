@@ -407,6 +407,11 @@ export class MeshControls {
         }
       });
     });
+    this.ui.inputs.autoRotateDirection?.addEventListener('change', (event) => {
+      const direction = event.target.value === 'reverse' ? 'reverse' : 'forward';
+      this.stateStore.set('autoRotateDirection', direction);
+      this.eventBus.emit('mesh:auto-rotate-direction', direction);
+    });
 
     // Clay controls
     this.helpers.bindColorInput('clayColor', 'clay.color', 'mesh:clay-color');
@@ -1619,6 +1624,10 @@ export class MeshControls {
     this.ui.inputs.autoRotate.forEach((input) => {
       input.checked = parseFloat(input.value) === state.autoRotate;
     });
+    if (this.ui.inputs.autoRotateDirection) {
+      this.ui.inputs.autoRotateDirection.value =
+        state.autoRotateDirection === 'reverse' ? 'reverse' : 'forward';
+    }
     this.ui.inputs.shading.forEach((input) => {
       input.checked = input.value === state.shading;
     });

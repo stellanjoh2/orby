@@ -103,7 +103,8 @@ export class RenderLoopController {
         id: 'mesh-auto-rotate',
         run: (delta, s) => {
           if (s.autoRotateSpeed && s.currentModel) {
-            s.modelRoot.rotation.y += delta * s.autoRotateSpeed;
+            const sign = s.autoRotateDirection === 'reverse' ? -1 : 1;
+            s.modelRoot.rotation.y += delta * s.autoRotateSpeed * sign;
           }
         },
       },
@@ -181,6 +182,13 @@ export class RenderLoopController {
         when: (_ctx, s) => s.fontTextRevealController?.shouldRunLiveUpdate?.(s),
         run: (delta, s) => {
           s.fontTextRevealController.update(delta);
+        },
+      },
+      {
+        id: 'font-text-constant',
+        when: (_ctx, s) => s.fontTextConstantController?.shouldRunLiveUpdate?.(s),
+        run: (delta, s) => {
+          s.fontTextConstantController.update(delta);
         },
       },
       {

@@ -255,10 +255,7 @@ export class MobileScene {
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(w, h, false);
       this.post.setSize(w, h);
-      const gl = this.renderer.getContext();
-      const dbw = gl?.drawingBufferWidth ?? w;
-      const dbh = gl?.drawingBufferHeight ?? h;
-      this.backgroundGradientController?.handleResize?.(dbw, dbh);
+      this.backgroundGradientController?.handleResize?.();
       this.groundController?.resizeBaseReflector?.(w, h);
     };
     apply();

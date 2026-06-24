@@ -32,10 +32,27 @@ import {
 import {
   DEFAULT_FONT_REVEAL_TYPE,
   DEFAULT_FONT_REVEAL_UNIT,
+  isFontRevealAnimationActive,
   normalizeFontRevealSlideDirection,
   normalizeFontRevealType,
   normalizeFontRevealUnit,
 } from '../scene/fontTextRevealTypes.js';
+import {
+  clampFontConstantIntensityForType,
+  clampFontConstantSpeedSec,
+  clampFontConstantSpread,
+  DEFAULT_FONT_CONSTANT_INTENSITY,
+  DEFAULT_FONT_CONSTANT_SPEED_SEC,
+  DEFAULT_FONT_CONSTANT_SPREAD,
+  DEFAULT_FONT_CONSTANT_TYPE,
+  fontConstantTypeUsesSpread,
+  formatFontConstantIntensityLabel,
+  isFontConstantAnimationActive,
+  isFontConstantVerticalType,
+  MAX_FONT_CONSTANT_VERTICAL_INTENSITY,
+  MAX_FONT_CONSTANT_INTENSITY,
+  normalizeFontConstantType,
+} from '../scene/fontTextConstantTypes.js';
 import {
   DEFAULT_FONT_KERNING_MODE,
   normalizeFontKerningMode,
@@ -44,10 +61,9 @@ import {
   clampFontCircularWrapArcDeg,
   DEFAULT_FONT_CIRCULAR_WRAP_ARC_DEG,
   DEFAULT_FONT_CIRCULAR_WRAP_ENABLED,
-  DEFAULT_FONT_CIRCULAR_WRAP_FACING,
   DEFAULT_FONT_CIRCULAR_WRAP_MODE,
+  drawCircularArcSpanPreviewIndicator,
   normalizeFontCircularWrapEnabled,
-  normalizeFontCircularWrapFacing,
   normalizeFontCircularWrapMode,
 } from '../scene/fontCircularLayout.js';
 import { arrayBufferToBase64, fileFromEmbeddedAsset } from '../utils/binaryAsset.js';
@@ -196,11 +212,13 @@ export class FontExtrudeUI {
           </label>
           <div class="panel-block-divider font-extrude-circular-divider" aria-hidden="true"></div>
           <div class="block-title font-extrude-section-title font-extrude-circular-title">Circular wrap</div>
-          <label class="effect-toggle font-extrude-circular-wrap-line">
+          <label class="slider-line slider-line--toggle-only font-extrude-circular-wrap-line">
             <span data-tooltip="Arrange letters on a circular arc (uses the first line only). Auto mode fits the full string into a 360° ring.">Wrap on circle</span>
-            <input type="checkbox" id="fontExtrudeCircularWrapEnabled" />
-            <span class="effect-indicator" aria-hidden="true"></span>
-            <span class="sr-only">Wrap text on a circle</span>
+            <label class="effect-toggle">
+              <input type="checkbox" id="fontExtrudeCircularWrapEnabled" />
+              <span class="effect-indicator" aria-hidden="true"></span>
+              <span class="sr-only">Wrap text on a circle</span>
+            </label>
           </label>
           <div id="fontExtrudeCircularWrapControls" class="font-extrude-circular-wrap-controls" hidden>
             <label class="select-line font-extrude-circular-mode-line">
@@ -208,13 +226,6 @@ export class FontExtrudeUI {
               <select id="fontExtrudeCircularWrapMode" aria-label="Circular wrap mode">
                 <option value="auto" selected>Full circle (auto)</option>
                 <option value="manual">Manual arc</option>
-              </select>
-            </label>
-            <label class="select-line font-extrude-circular-facing-line">
-              <span data-tooltip="Inward faces the ring center (readable from inside). Outward faces away (readable from outside).">Letter facing</span>
-              <select id="fontExtrudeCircularWrapFacing" aria-label="Circular letter facing">
-                <option value="outward" selected>Outward (view from outside)</option>
-                <option value="inward">Inward (view from inside)</option>
               </select>
             </label>
             <label class="slider-line font-extrude-circular-arc-line" id="fontExtrudeCircularArcLine" hidden>
@@ -272,7 +283,6 @@ export class FontExtrudeUI {
       circularWrapEnabled: block.querySelector('#fontExtrudeCircularWrapEnabled'),
       circularWrapControls: block.querySelector('#fontExtrudeCircularWrapControls'),
       circularWrapMode: block.querySelector('#fontExtrudeCircularWrapMode'),
-      circularWrapFacing: block.querySelector('#fontExtrudeCircularWrapFacing'),
       circularWrapArc: block.querySelector('#fontExtrudeCircularWrapArc'),
       circularArcLine: block.querySelector('#fontExtrudeCircularArcLine'),
       postGen: block.querySelector('#fontExtrudePostGen'),
@@ -299,6 +309,10 @@ export class FontExtrudeUI {
       revealLoop: block.querySelector('#fontExtrudeRevealLoop'),
       revealScrub: block.querySelector('#fontExtrudeRevealScrub'),
       revealTime: block.querySelector('#fontExtrudeRevealTime'),
+      constantType: block.querySelector('#fontExtrudeConstantType'),
+      constantIntensity: block.querySelector('#fontExtrudeConstantIntensity'),
+      constantSpeed: block.querySelector('#fontExtrudeConstantSpeed'),
+      constantSpread: block.querySelector('#fontExtrudeConstantSpread'),
       generate: block.querySelector('#fontExtrudeGenerate'),
     };
 
@@ -434,12 +448,6 @@ export class FontExtrudeUI {
       this._syncCircularWrapControlsVisibility();
       this.schedulePreview();
     });
-    els.circularWrapFacing?.addEventListener('change', () => {
-      this.ui.uiSounds?.playSelect();
-      const facing = normalizeFontCircularWrapFacing(els.circularWrapFacing.value);
-      this.stateStore.set('fontExtrude.circularWrapFacing', facing);
-      this.schedulePreview();
-    });
     els.circularWrapArc?.addEventListener('input', () => {
       const value = clampFontCircularWrapArcDeg(els.circularWrapArc.value);
       this.stateStore.set('fontExtrude.circularWrapArcDeg', value);
@@ -565,8 +573,12 @@ export class FontExtrudeUI {
           this.ui.showToast('Reveal needs 3D text — click Generate 3D Text first');
           return;
         }
-        if (controller.getDurationSec() <= 0) {
-          this.ui.showToast('Set reveal duration above 0 to preview');
+        if (!controller.isEnabled()) {
+          if (!isFontRevealAnimationActive(controller.getRevealType?.())) {
+            this.ui.showToast('Pick a reveal type other than None to preview');
+          } else if (controller.getDurationSec() <= 0) {
+            this.ui.showToast('Set reveal duration above 0 to preview');
+          }
           return;
         }
         if (controller.getGlyphCount() <= 0) {
@@ -585,6 +597,47 @@ export class FontExtrudeUI {
       const value = parseFloat(event.target.value);
       this._withRevealController((controller, model) => {
         controller.scrubPreview?.(value, model);
+      });
+    });
+
+    els.constantType?.addEventListener('change', () => {
+      this.ui.uiSounds?.playSelect();
+      const value = normalizeFontConstantType(els.constantType.value);
+      this.stateStore.set('fontExtrude.constantType', value);
+      this._syncConstantControlsVisibility();
+      this._withConstantController((controller, model) => {
+        controller.onSettingsChange?.(model);
+      });
+    });
+
+    els.constantIntensity?.addEventListener('input', () => {
+      const type = normalizeFontConstantType(els.constantType?.value);
+      const value = clampFontConstantIntensityForType(type, els.constantIntensity.value);
+      this.stateStore.set('fontExtrude.constantIntensity', value);
+      this.ui.updateValueLabel(
+        'fontExtrudeConstantIntensity',
+        formatFontConstantIntensityLabel(type, value),
+      );
+      this._withConstantController((controller, model) => {
+        controller.onSettingsChange?.(model);
+      });
+    });
+
+    els.constantSpeed?.addEventListener('input', () => {
+      const value = clampFontConstantSpeedSec(els.constantSpeed.value);
+      this.stateStore.set('fontExtrude.constantSpeedSec', value);
+      this.ui.updateValueLabel('fontExtrudeConstantSpeed', `${value.toFixed(1)}s`);
+      this._withConstantController((controller, model) => {
+        controller.onSettingsChange?.(model);
+      });
+    });
+
+    els.constantSpread?.addEventListener('input', () => {
+      const value = clampFontConstantSpread(els.constantSpread.value);
+      this.stateStore.set('fontExtrude.constantSpread', value);
+      this.ui.updateValueLabel('fontExtrudeConstantSpread', `${Math.round(value * 100)}%`);
+      this._withConstantController((controller, model) => {
+        controller.onSettingsChange?.(model);
       });
     });
 
@@ -668,7 +721,8 @@ export class FontExtrudeUI {
    * @param {{ elapsed: number, duration: number, playing: boolean }} payload
    */
   syncRevealPreviewControls({ elapsed, duration, playing }) {
-    const enabled = duration > 0 && this._hasFontMesh();
+    const controller = this._revealController();
+    const enabled = controller?.isEnabled?.() ?? (duration > 0 && this._hasFontMesh());
     const { els } = this;
 
     if (els.revealPlay) {
@@ -700,6 +754,10 @@ export class FontExtrudeUI {
     return this.getScene()?.fontTextRevealController ?? null;
   }
 
+  _constantController() {
+    return this.getScene()?.fontTextConstantController ?? null;
+  }
+
   _revealModel() {
     return this.getScene()?.currentModel ?? null;
   }
@@ -710,6 +768,16 @@ export class FontExtrudeUI {
     const model = scene?.currentModel;
     if (!controller || !model) return;
     controller.ensureBoundToModel?.(model);
+    run(controller, model, scene);
+  }
+
+  _withConstantController(run) {
+    const scene = this.getScene();
+    const controller = scene?.fontTextConstantController;
+    const reveal = scene?.fontTextRevealController;
+    const model = scene?.currentModel;
+    if (!controller || !reveal || !model) return;
+    reveal.ensureBoundToModel?.(model);
     run(controller, model, scene);
   }
 
@@ -828,10 +896,90 @@ export class FontExtrudeUI {
       this.els.revealEmissiveColor.value = revealEmissiveColor;
     }
     this._syncRevealEmissiveControlsDisabled();
+    this._syncConstantControlsFromState(state);
+  }
+
+  _syncConstantControlsFromState(state) {
+    const constantType = normalizeFontConstantType(
+      state?.fontExtrude?.constantType ?? DEFAULT_FONT_CONSTANT_TYPE,
+    );
+    if (this.els.constantType && document.activeElement !== this.els.constantType) {
+      this.els.constantType.value = constantType;
+    }
+    const constantTypeForIntensity = normalizeFontConstantType(
+      state?.fontExtrude?.constantType ?? DEFAULT_FONT_CONSTANT_TYPE,
+    );
+    const constantIntensity = clampFontConstantIntensityForType(
+      constantTypeForIntensity,
+      state?.fontExtrude?.constantIntensity ?? DEFAULT_FONT_CONSTANT_INTENSITY,
+    );
+    if (this.els.constantIntensity && document.activeElement !== this.els.constantIntensity) {
+      this.els.constantIntensity.value = String(constantIntensity);
+      this.ui.updateValueLabel(
+        'fontExtrudeConstantIntensity',
+        formatFontConstantIntensityLabel(constantTypeForIntensity, constantIntensity),
+      );
+    }
+    const constantSpeedSec = clampFontConstantSpeedSec(
+      state?.fontExtrude?.constantSpeedSec ?? DEFAULT_FONT_CONSTANT_SPEED_SEC,
+    );
+    if (this.els.constantSpeed && document.activeElement !== this.els.constantSpeed) {
+      this.els.constantSpeed.value = String(constantSpeedSec);
+      this.ui.updateValueLabel('fontExtrudeConstantSpeed', `${constantSpeedSec.toFixed(1)}s`);
+    }
+    const constantSpread = clampFontConstantSpread(
+      state?.fontExtrude?.constantSpread ?? DEFAULT_FONT_CONSTANT_SPREAD,
+    );
+    if (this.els.constantSpread && document.activeElement !== this.els.constantSpread) {
+      this.els.constantSpread.value = String(constantSpread);
+      this.ui.updateValueLabel(
+        'fontExtrudeConstantSpread',
+        `${Math.round(constantSpread * 100)}%`,
+      );
+    }
+    this._syncConstantControlsVisibility();
+  }
+
+  _syncConstantControlsVisibility() {
+    const constantType = normalizeFontConstantType(this.stateStore.getState()?.fontExtrude?.constantType);
+    const active = isFontConstantAnimationActive(constantType);
+    const usesSpread = fontConstantTypeUsesSpread(constantType);
+    const vertical = isFontConstantVerticalType(constantType);
+    if (this.els.constantIntensity) {
+      const slider = this.els.constantIntensity;
+      slider.max = String(vertical ? MAX_FONT_CONSTANT_VERTICAL_INTENSITY : MAX_FONT_CONSTANT_INTENSITY);
+      slider.step = vertical ? '0.05' : '0.01';
+      const clamped = clampFontConstantIntensityForType(constantType, slider.value);
+      if (Number(slider.value) !== clamped) {
+        slider.value = String(clamped);
+        this.stateStore.set('fontExtrude.constantIntensity', clamped);
+      }
+      this.ui.updateValueLabel(
+        'fontExtrudeConstantIntensity',
+        formatFontConstantIntensityLabel(constantType, clamped),
+      );
+    }
+    for (const el of [this.els.constantIntensity, this.els.constantSpeed]) {
+      if (!el) continue;
+      el.disabled = !active;
+      el.closest('.font-extrude-constant-detail')?.toggleAttribute('hidden', !active);
+    }
+    if (this.els.constantSpread) {
+      const showSpread = active && usesSpread;
+      this.els.constantSpread.disabled = !showSpread;
+      this.els.constantSpread
+        .closest('.font-extrude-constant-spread-detail')
+        ?.toggleAttribute('hidden', !showSpread);
+    }
   }
 
   _syncRevealEmissiveControlsDisabled() {
-    const enabled = !!this.els.revealEmissiveSlam?.checked;
+    const revealType = normalizeFontRevealType(this.stateStore.getState()?.fontExtrude?.revealType);
+    const revealActive = isFontRevealAnimationActive(revealType);
+    if (this.els.revealEmissiveSlam) {
+      this.els.revealEmissiveSlam.disabled = !revealActive;
+    }
+    const enabled = revealActive && !!this.els.revealEmissiveSlam?.checked;
     const disable = !enabled;
     for (const el of [
       this.els.revealEmissiveStrength,
@@ -924,12 +1072,6 @@ export class FontExtrudeUI {
     );
     if (this.els.circularWrapMode && document.activeElement !== this.els.circularWrapMode) {
       this.els.circularWrapMode.value = circularMode;
-    }
-    const circularFacing = normalizeFontCircularWrapFacing(
-      fontState.circularWrapFacing ?? DEFAULT_FONT_CIRCULAR_WRAP_FACING,
-    );
-    if (this.els.circularWrapFacing && document.activeElement !== this.els.circularWrapFacing) {
-      this.els.circularWrapFacing.value = circularFacing;
     }
     const circularArc = clampFontCircularWrapArcDeg(
       fontState.circularWrapArcDeg ?? DEFAULT_FONT_CIRCULAR_WRAP_ARC_DEG,
@@ -1253,9 +1395,8 @@ export class FontExtrudeUI {
     const wrap = this.els.liveEditor;
     if (!wrap) return;
     const active = !!this.controller.font;
-    const circular = normalizeFontCircularWrapEnabled(this.els.circularWrapEnabled?.checked);
-    wrap.classList.toggle('font-extrude-live-editor--preview-active', active && !circular);
-    wrap.classList.toggle('font-extrude-live-editor--circular-active', active && circular);
+    wrap.classList.toggle('font-extrude-live-editor--preview-active', active);
+    wrap.classList.remove('font-extrude-live-editor--circular-active');
     if (!active) this._resetTextareaEditorStyles();
   }
 
@@ -1413,9 +1554,6 @@ export class FontExtrudeUI {
         mode: normalizeFontCircularWrapMode(
           this.els.circularWrapMode?.value ?? fontState.circularWrapMode,
         ),
-        facing: normalizeFontCircularWrapFacing(
-          this.els.circularWrapFacing?.value ?? fontState.circularWrapFacing,
-        ),
         arcDeg: clampFontCircularWrapArcDeg(
           this.els.circularWrapArc?.value ?? fontState.circularWrapArcDeg,
         ),
@@ -1462,8 +1600,12 @@ export class FontExtrudeUI {
 
     const text = this.els.text?.value ?? '';
     let layout;
+    const options = this.getOptions();
     try {
-      layout = await this.controller.layoutTextAsync(text, this.getOptions());
+      layout = await this.controller.layoutTextAsync(text, {
+        ...options,
+        circularWrap: { ...options.circularWrap, enabled: false },
+      });
     } catch (err) {
       console.warn('[Orby] Font preview layout failed', err);
       this.clearPreviewCanvas();
@@ -1486,13 +1628,12 @@ export class FontExtrudeUI {
     ctx.scale(scale, scale);
     ctx.translate(-bounds.minX, -bounds.minY);
     this.controller.drawPreview(ctx, layout);
+    if (normalizeFontCircularWrapEnabled(options.circularWrap?.enabled)) {
+      drawCircularArcSpanPreviewIndicator(ctx, layout);
+    }
     ctx.restore();
     this._syncLiveEditorPreviewMode();
-    if (!layout.circular?.enabled) {
-      await this._syncTextareaToPreview(layout, viewport);
-    } else {
-      this._resetTextareaEditorStyles();
-    }
+    await this._syncTextareaToPreview(layout, viewport);
     if (generation !== this._previewGeneration) return;
 
     if (this._previewPending) {
