@@ -21,8 +21,7 @@ import {
   updateDustFieldParticlePositions,
   DUST_FIELD_PARTICLE_COUNT,
   creativeChromeRoughness,
-  CREATIVE_GLASS_ENV_MAP_MUL,
-  creativeGlassParamsForMesh,
+  syncCreativeLookGlassPhysical,
   creativeLookMasterHueRadians,
   creativePs2CrushMergeFactor,
   creativePsxMergeFactor,
@@ -31,6 +30,7 @@ import {
   creativeLookUsesVoxelGeometry,
   creativeLookFixedPatternScale,
   creativeLookDefaultIntensity,
+  creativeLookDefaultLiftCrush,
   creativeLookDefaultPatternScale,
   creativeLookPatternScaleBounds,
   normalizeCreativeLookPatternScale,
@@ -2625,13 +2625,17 @@ export class MaterialController {
           const tag = m?.userData?.orbyCreativeLook;
           if (!m?.isMeshPhysicalMaterial) return;
           if (tag === 'glass') {
-            const { thickness, roughness } = creativeGlassParamsForMesh(
+            syncCreativeLookGlassPhysical(m, {
               patternScale,
-              hdriBlurVal,
-              child,
-            );
-            m.thickness = thickness;
-            m.roughness = roughness;
+              hdriBlurriness: hdriBlurVal,
+              mesh: child,
+              intensity: this._lastEnvIntensity ?? 1,
+              litEnvMul: materialBrightnessLitEnvMultiplier(
+                this.materialSettings.brightness,
+              ),
+              liftCrush: this.creativeLookSettings.liftCrush,
+              envTexture: this._lastEnvTexture ?? null,
+            });
             return;
           }
           if (tag === 'holo-glass') {
@@ -3619,6 +3623,19 @@ export class MaterialController {
     this.creativeLookSettings.intensity = normalizeCreativeLookIntensity(
       this.creativeLookSettings.intensity,
     );
+    if (
+      resetDitherTuning
+      || (
+        nextPreset !== prevPreset
+        && patch.liftCrush === undefined
+        && (isDitherPixelCreativeLookPreset(nextPreset) || nextPreset === 'glass')
+      )
+    ) {
+      this.creativeLookSettings.liftCrush = creativeLookDefaultLiftCrush(nextPreset);
+    }
+    this.creativeLookSettings.liftCrush = normalizeCreativeLookLiftCrush(
+      this.creativeLookSettings.liftCrush,
+    );
 
     if (!options.skipStateStore && this.stateStore) {
       this.stateStore.set('creativeLook', this.creativeLookSettings);
@@ -3822,13 +3839,17 @@ export class MaterialController {
         const mats = Array.isArray(child.material) ? child.material : [child.material];
         for (const m of mats) {
           if (m?.userData?.orbyCreativeLook === 'glass' && m.isMeshPhysicalMaterial) {
-            const { thickness, roughness } = creativeGlassParamsForMesh(
+            syncCreativeLookGlassPhysical(m, {
               patternScale,
-              hdriBlur,
-              child,
-            );
-            m.thickness = thickness;
-            m.roughness = roughness;
+              hdriBlurriness: hdriBlur,
+              mesh: child,
+              intensity: this._lastEnvIntensity ?? 1,
+              litEnvMul: materialBrightnessLitEnvMultiplier(
+                this.materialSettings.brightness,
+              ),
+              liftCrush: this.creativeLookSettings.liftCrush,
+              envTexture: this._lastEnvTexture ?? null,
+            });
             continue;
           }
           if (m?.userData?.orbyCreativeLook === 'holo-glass' && m.isMeshPhysicalMaterial) {
@@ -4022,6 +4043,23 @@ export class MaterialController {
           if (m.uniforms?.uWobbleScale) {
             m.uniforms.uWobbleScale.value = creativeSketchWobbleScale(strokeWidth);
           }
+        }
+        if (m.userData.orbyCreativeLook === 'glass' && m.isMeshPhysicalMaterial) {
+          const ps = normalizeCreativeLookPatternScale(
+            'glass',
+            source?.patternScale ?? this.creativeLookSettings.patternScale,
+          );
+          const blur = Number(this.stateStore?.getState()?.hdriBlurriness ?? 0);
+          const hdriBlur = Number.isFinite(blur) ? blur : 0;
+          syncCreativeLookGlassPhysical(m, {
+            patternScale: ps,
+            hdriBlurriness: hdriBlur,
+            mesh: child,
+            intensity: this._lastEnvIntensity ?? 1,
+            litEnvMul: materialBrightnessLitEnvMultiplier(brightness),
+            liftCrush,
+            envTexture: this._lastEnvTexture ?? null,
+          });
         }
         if (m.userData.orbyCreativeLook === 'holo-glass' && m.isMeshPhysicalMaterial) {
           const ps = normalizeCreativeLookPatternScale(
@@ -5328,26 +5366,19 @@ export class MaterialController {
 
         if (material.userData?.orbyCreativeLook === 'glass') {
           if (!material.isMeshPhysicalMaterial) return;
-          material.envMap = envTexture;
-          material.transmission = 1;
-          if (material.envMapIntensity !== undefined) {
-            material.envMapIntensity =
-              intensity * litEnvMul * CREATIVE_GLASS_ENV_MAP_MUL;
-          }
           const ps = Number(state?.creativeLook?.patternScale);
           const patternScale = Number.isFinite(ps)
             ? THREE.MathUtils.clamp(ps, 0.02, 5)
             : 1;
-          const { thickness, roughness } = creativeGlassParamsForMesh(
+          syncCreativeLookGlassPhysical(material, {
             patternScale,
             hdriBlurriness,
-            child,
-          );
-          material.thickness = thickness;
-          material.roughness = roughness;
-          material.transparent = true;
-          material.opacity = 1;
-          material.depthWrite = false;
+            mesh: child,
+            intensity,
+            litEnvMul,
+            liftCrush: state?.creativeLook?.liftCrush,
+            envTexture,
+          });
           if (this._isFontExtrudeModel()) {
             material.side = THREE.DoubleSide;
           }

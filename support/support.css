@@ -653,6 +653,11 @@ body.legal-doc--support p.legal-meta {
   color: #fca5a5;
 }
 
+.legal-doc--support .legal-callout--red p > strong:first-child {
+  font-weight: 700;
+  color: #fff;
+}
+
 .legal-doc--support .legal-callout--red a,
 .legal-doc--support .legal-callout--red a:visited {
   color: var(--warning);

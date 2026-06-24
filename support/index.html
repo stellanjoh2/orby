@@ -11,7 +11,7 @@
     <title>Support — Orby</title>
     <meta
       name="description"
-      content="Report issues, troubleshoot exports and HDRI lighting, and learn how Orby works in the browser."
+      content="Report issues, troubleshoot Shader Lab, exports and HDRI lighting, font and SVG extrude, and learn how Orby works in the browser."
     />
     <link rel="icon" type="image/svg+xml" href="../assets/images/favicon.svg" />
     <meta name="orby-bug-report-api" content="" />
@@ -58,7 +58,7 @@
 
     <main id="main" class="legal-wrap">
       <h1>Support</h1>
-      <p class="legal-meta">Last updated: 6 June 2026</p>
+      <p class="legal-meta">Last updated: 25 June 2026</p>
 
       <nav class="legal-support-quicknav" aria-label="On this page">
         <p class="legal-support-quicknav__label">On this page</p>
@@ -66,10 +66,14 @@
           <li><a href="#support-disclaimer">Disclaimer</a></li>
           <li><a href="#report-issue">Report issue</a></li>
           <li><a href="#file-formats">File formats</a></li>
+          <li><a href="#shader-lab">Shader Lab</a></li>
           <li><a href="#hdri">HDRI &amp; lighting</a></li>
           <li><a href="#exports">Exports</a></li>
+          <li><a href="#camera-fx">Camera &amp; FX</a></li>
           <li><a href="#transparency">Transparency &amp; glass</a></li>
           <li><a href="#svg-extrude">SVG extrude</a></li>
+          <li><a href="#font-extrude">Font extrude</a></li>
+          <li><a href="#mobile">Orby Mobile</a></li>
           <li><a href="#performance">Performance</a></li>
           <li><a href="#scene-settings">Scene settings</a></li>
           <li><a href="#glossary">Glossary</a></li>
@@ -123,6 +127,14 @@
           texture sets are common; we keep improving the loader, but we cannot cover every exporter and
           marketplace variant. When you have the choice, re-export as glTF 2.0 / GLB from the source app
           first.
+        </p>
+        <p>
+          <strong>Shader Lab stacks with post FX — expect surprises.</strong> Combining
+          <strong>Object → Shader Lab</strong> with other effects — depth of field, bloom, film grain,
+          tone mapping, and similar — can produce unexpected or broken-looking results. Shader Lab is
+          still under development; I deliberately keep these combinations available so you can experiment
+          and see how stylized shaders react to post-processing rather than forcing everything off. If a
+          combo looks wrong, try disabling effects one at a time to find the culprit.
         </p>
         <p class="legal-callout__secondary">
           Orby is a free passion project — no ads, no subscriptions, no revenue. I read every report
@@ -309,9 +321,10 @@
       <section id="file-formats" class="legal-support-section">
         <h2>File formats &amp; loading</h2>
         <p class="legal-support-section__intro">
-          Orby is optimized for <strong>glTF / GLB</strong> and <strong>SVG extrusion</strong>. You can
-          also drop a saved <strong>.orby</strong> scene (settings + embedded model). Other formats load
-          via Three.js loaders but may need extra care for materials and scale.
+          Orby is optimized for <strong>glTF / GLB</strong>, <strong>SVG extrusion</strong>, and live
+          <strong>font extrude</strong>. You can also drop a saved <strong>.orby</strong> scene (settings +
+          embedded model). Other formats load via Three.js loaders but may need extra care for materials
+          and scale.
         </p>
         <ul class="legal-support-faq">
           <li>
@@ -371,6 +384,61 @@
         </ul>
       </section>
 
+      <section id="shader-lab" class="legal-support-section">
+        <h2>Shader Lab</h2>
+        <p class="legal-support-section__intro">
+          <strong>Object → Shader Lab</strong> replaces imported mesh materials with stylized looks — physical
+          chrome and glass, animated procedural shaders, retro pixel filters, painterly screen-space passes,
+          and geometry FX. Turn it off or pick <strong>None</strong> to restore your original glTF materials.
+          Shader Lab is still under active development.
+        </p>
+        <ul class="legal-support-faq">
+          <li>
+            <h3>Preset families</h3>
+            <p>
+              <strong>Physical / env-driven:</strong> True Chrome, Glass, Holo Glass, Crystal Gem — follow HDRI
+              strength, rotation, and blur; keep <strong>Render Backdrop</strong> on for reflections and refraction.
+              <strong>Animated procedural:</strong> Flow Field, Plasma, Neon Edge, Thermal, Holographic, and similar
+              — tune <strong>Intensity</strong>, <strong>Scale</strong>, and <strong>Master Hue</strong>; use
+              <strong>Pause shader animations</strong> to freeze motion.
+              <strong>Retro / screen pixels:</strong> EGA, GBA, Mega Drive, NES, Game Boy, C64, Apple II,
+              Intellivision, and VGA-style presets.
+              <strong>Dither &amp; ASCII:</strong> neutral and tritone Bayer crush, crosshatch, raster, and ASCII
+              variants.
+              <strong>Artistic post:</strong> Watercolour, Sketch, Gouache, Vectrex.
+              <strong>Geometry FX:</strong> Voxel HD, Wire Pulse, Vertex Points, Dust Field — some rebuild or augment
+              mesh data when applied.
+            </p>
+          </li>
+          <li>
+            <h3>Post-processing interaction</h3>
+            <p>
+              Shader Lab runs through its own material and screen-space path — stacking it with
+              <strong>Camera</strong> effects (depth of field, bloom, film grain, tone mapping, lens flare, and
+              similar) can produce unexpected results. Combinations stay enabled on purpose so you can experiment;
+              see the <a href="#support-disclaimer">disclaimer</a> above. If a grade looks broken, disable Shader Lab
+              or turn off post FX one at a time to isolate the culprit.
+            </p>
+          </li>
+          <li>
+            <h3>Debugging materials</h3>
+            <p>
+              If a model looks wrong and you suspect Shader Lab: disable it or switch to <strong>None</strong>, then
+              check <strong>Object → Display</strong> (<strong>Shaded</strong> vs <strong>Unlit</strong>). Shader Lab
+              overrides PBR until you turn it off — it is not a permanent edit to the imported file.
+            </p>
+          </li>
+          <li>
+            <h3>HDRI and backdrop</h3>
+            <p>
+              True Chrome and Glass follow the current environment. Animated presets can be paused while HDRI
+              rotation and lighting still update. Physical glass presets need the backdrop visible — see
+              <a href="#hdri">HDRI &amp; lighting</a>.
+            </p>
+          </li>
+        </ul>
+      </section>
+
       <section id="hdri" class="legal-support-section">
         <h2>HDRI &amp; environment lighting</h2>
         <p class="legal-support-section__intro">
@@ -408,9 +476,8 @@
           <li>
             <h3>Shader Lab and HDRI</h3>
             <p>
-              <strong>Object → Shader Lab</strong> True Chrome and Glass follow the current HDRI (strength,
-              rotation, blur). Animated Shader Lab presets (Flow Field, Plasma, etc.) can be frozen so they
-              stop drifting while the rest of the scene still responds to the environment.
+              Physical Shader Lab presets (True Chrome, Glass, and similar) follow the current HDRI. See
+              <a href="#shader-lab">Shader Lab</a> for preset families, post-FX interaction, and debugging tips.
             </p>
           </li>
         </ul>
@@ -483,6 +550,60 @@
         </ul>
       </section>
 
+      <section id="camera-fx" class="legal-support-section">
+        <h2>Camera &amp; FX</h2>
+        <p class="legal-support-section__intro">
+          Framing, motion, and cinematic post live under the <strong>Camera</strong> tab. Look Filter thumbnails
+          under <strong>Camera → Look Filters</strong> apply bundled grade + FX combos; <strong>None</strong> resets
+          those defaults.
+        </p>
+        <ul class="legal-support-faq">
+          <li>
+            <h3>Auto Orbit &amp; turntable</h3>
+            <p>
+              Press <kbd>Space</kbd> to cycle camera Auto Orbit (Off → Slow → Fast). Turntable export uses the same
+              orbit path for MP4 and PNG sequences — see <a href="#exports">Exports</a>.
+            </p>
+          </li>
+          <li>
+            <h3>Isometric Camera</h3>
+            <p>
+              RTS-style locked view with presets; optional pan via Unlock. Orbit, tilt, and fisheye are disabled while
+              isometric mode is on.
+            </p>
+          </li>
+          <li>
+            <h3>Handheld shake</h3>
+            <p>
+              Procedural camera shake on top of orbit (Off / Subtle / Strong). Useful for live preview — not baked
+              into PNG still exports.
+            </p>
+          </li>
+          <li>
+            <h3>Fisheye lens</h3>
+            <p>
+              Barrel distortion post effect after the full grade stack. Included in opaque PNG and MP4 exports when
+              enabled — transparent PNG has known limitations; see <a href="#exports">Exports</a>.
+            </p>
+          </li>
+          <li>
+            <h3>Light Rays</h3>
+            <p>
+              Volumetric god rays under <strong>Camera</strong> — follow the virtual sun direction used by
+              <strong>Lens Flare</strong> rotation and height. Decorative; can add GPU cost on weak hardware.
+            </p>
+          </li>
+          <li>
+            <h3>Gobo (Studio lights)</h3>
+            <p>
+              The key light under <strong>Studio → Lights</strong> supports patterned shadow projection — palm, leaf,
+              tree, and other presets. Drag with <kbd>Alt</kbd> + right-click to rotate the light rig;
+              <kbd>Shift</kbd> + right-click rotates the HDRI dome.
+            </p>
+          </li>
+        </ul>
+      </section>
+
       <section id="transparency" class="legal-support-section">
         <h2>Transparency &amp; glass</h2>
         <ul class="legal-support-faq">
@@ -540,6 +661,77 @@
               SVG extrude settings are included when you <strong>Copy Scene Settings</strong> or save a
               <strong>.orby</strong> file. They are not stored on this support page — only in your local
               session.
+            </p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="font-extrude" class="legal-support-section">
+        <h2>Font extrude</h2>
+        <p class="legal-support-section__intro">
+          Type live text and extrude it into 3D — no SVG required. Open
+          <strong>Object → Generate from Font</strong> on the Object tab.
+        </p>
+        <ul class="legal-support-faq">
+          <li>
+            <h3>Editor &amp; fonts</h3>
+            <p>
+              Edit text in the live preview, pick family and weight, adjust tracking, kerning, line height, and
+              alignment. Load custom <strong>.ttf</strong> / <strong>.otf</strong> files or use built-in families.
+              Some browsers can access local system fonts when you allow it in the panel prompt.
+            </p>
+          </li>
+          <li>
+            <h3>Generate &amp; tune</h3>
+            <p>
+              Hit <strong>Generate</strong> to build the mesh, then tune <strong>Depth</strong>,
+              <strong>Bevel Amount</strong>, normal smoothing <strong>Angle</strong>, fill color, and
+              <strong>Detail</strong> — same spirit as SVG extrude, but font outlines use a different bevel path.
+              Bevels on type can blow out on tight curves; try lower bevel or turn bevel off — see the
+              <a href="#support-disclaimer">SVG / bevel note</a> in the disclaimer.
+            </p>
+          </li>
+          <li>
+            <h3>Reveal animations</h3>
+            <p>
+              After generation, play slide-in and other reveal types with scrub, loop, and duration controls on the
+              Object tab.
+            </p>
+          </li>
+          <li>
+            <h3>Scene JSON</h3>
+            <p>
+              Font extrude settings are included in <strong>Copy Scene Settings</strong> and
+              <strong>.orby</strong> saves. Switching from an SVG session to font generation resets SVG-specific
+              extrude state — by design, so old SVG tweaks do not leak into a fresh text mesh.
+            </p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="mobile" class="legal-support-section">
+        <h2>Orby Mobile</h2>
+        <p class="legal-support-section__intro">
+          <a href="../mobile/">Orby Mobile</a> is a phone-friendly preview — load a model, pick an environment,
+          apply style presets, and export a still. The full desktop studio adds every import format, custom HDRI
+          uploads, the complete Shader Lab catalog, font and SVG extrude, animation playback, turntable video,
+          scene JSON, and the full Camera &amp; FX stack.
+        </p>
+        <ul class="legal-support-faq">
+          <li>
+            <h3>What Mobile supports</h3>
+            <p>
+              <strong>GLB</strong> and <strong>GLTF</strong> import only. Bundled HDRI presets, a curated subset of
+              Shader Lab looks, Look Filter FX rails, material sliders, and PNG export. Touch-first UI with bottom
+              sheets instead of the desktop shelf.
+            </p>
+          </li>
+          <li>
+            <h3>What stays on desktop</h3>
+            <p>
+              FBX, OBJ, STL, USD, SVG, font extrude, custom HDRIs, turntable MP4, transparent PNG workflows at full
+              quality, transform gizmos, histogram/curve editing, and many Shader Lab presets (Flow Field, Vectrex,
+              ASCII, Dust Field, and others) are desktop-only for now.
             </p>
           </li>
         </ul>
@@ -631,7 +823,8 @@
             <p>
               If Orby feels slow: set <strong>Camera → Quality → Render Quality</strong> to Medium or Low;
               disable Cast Shadows or
-              drop shadow quality; turn off AO, lens flare, DOF, and bloom; shrink the browser window; avoid
+              drop shadow quality; turn off AO, lens flare, DOF, and bloom; disable Shader Lab on heavy geometry-FX
+              presets; shrink the browser window; avoid
               2× PNG export on a struggling GPU. Re-enable one cinematic layer at a time when you are close to final.
             </p>
           </li>
@@ -973,6 +1166,13 @@
                 </dd>
               </div>
               <div>
+                <dt>Gobo</dt>
+                <dd>
+                  Patterned shadow projection from the key light — palm, leaf, tree, and other presets under
+                  <strong>Studio → Lights</strong>. See <a href="#camera-fx">Camera &amp; FX</a>.
+                </dd>
+              </div>
+              <div>
                 <dt>Render Backdrop</dt>
                 <dd>
                   When on, the HDRI is visible behind the model. When off, you see a solid background
@@ -1080,6 +1280,27 @@
                   Orby simulates lens blur in the DOF pass.
                 </dd>
               </div>
+              <div>
+                <dt>Isometric Camera</dt>
+                <dd>
+                  RTS-style locked camera with presets under <strong>Camera</strong>. Orbit, tilt, and fisheye
+                  disable while isometric mode is on; optional pan via Unlock.
+                </dd>
+              </div>
+              <div>
+                <dt>Handheld shake</dt>
+                <dd>
+                  Procedural camera shake layered on orbit (Off / Subtle / Strong). Preview-only — not baked into
+                  PNG still exports.
+                </dd>
+              </div>
+              <div>
+                <dt>Fisheye lens</dt>
+                <dd>
+                  Barrel distortion post effect under <strong>Camera</strong>. Renders after the grade stack;
+                  included in opaque PNG and MP4 when enabled.
+                </dd>
+              </div>
             </dl>
           </div>
 
@@ -1160,6 +1381,13 @@
                   <a href="https://en.wikipedia.org/wiki/Lens_flare" target="_blank" rel="noopener noreferrer">lens flare</a>
                   under <strong>Camera</strong>. Quality runs Low → Ultra (default <strong>High</strong>);
                   decorative and can cost performance on low-end GPUs.
+                </dd>
+              </div>
+              <div>
+                <dt>Light Rays</dt>
+                <dd>
+                  Volumetric god-ray shafts under <strong>Camera</strong> — follow the virtual sun direction shared
+                  with <strong>Lens Flare</strong>. Decorative post effect; see <a href="#camera-fx">Camera &amp; FX</a>.
                 </dd>
               </div>
               <div>
@@ -1271,9 +1499,12 @@
               <div>
                 <dt>Shader Lab</dt>
                 <dd>
-                  Stylized material presets under <strong>Object</strong> (chrome, glass, animated FX)
-                  that temporarily replace your imported materials. Turn off to restore the original
-                  glTF look.
+                  Stylized material presets under <strong>Object → Shader Lab</strong> — physical chrome and glass,
+                  animated procedural looks, retro pixel filters, dither and ASCII, painterly passes (Watercolour,
+                  Sketch, Gouache), and geometry FX (Voxel HD, Wire Pulse, Dust Field, and more). Temporarily
+                  replaces imported materials; pick <strong>None</strong> or disable to restore the original glTF
+                  look. Still under development — stacking with Camera post FX can surprise; see
+                  <a href="#shader-lab">Shader Lab</a>.
                 </dd>
               </div>
               <div>
@@ -1307,6 +1538,14 @@
                 </dd>
               </div>
               <div>
+                <dt>Font extrude</dt>
+                <dd>
+                  Live 3D text from typed characters — <strong>Object → Generate from Font</strong>.
+                  Custom fonts, tracking, bevels, and reveal animations. Separate from SVG extrude; see
+                  <a href="#font-extrude">Font extrude</a>.
+                </dd>
+              </div>
+              <div>
                 <dt>Turntable export</dt>
                 <dd>
                   Renders the model spinning over time — MP4 video or numbered PNG sequence in a zip.
@@ -1334,6 +1573,14 @@
                 <dd>
                   Everything runs in your browser tab — models are not uploaded to Orby servers. Close
                   the tab and the session data is gone.
+                </dd>
+              </div>
+              <div>
+                <dt>Orby Mobile</dt>
+                <dd>
+                  Phone-friendly GLB preview at <a href="../mobile/">/mobile</a> — bundled HDRIs, a curated Shader
+                  Lab subset, Look Filters, and PNG export. Full studio features stay on desktop; see
+                  <a href="#mobile">Orby Mobile</a>.
                 </dd>
               </div>
             </dl>

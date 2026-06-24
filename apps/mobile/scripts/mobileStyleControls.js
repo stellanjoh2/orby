@@ -1,5 +1,6 @@
 import {
   creativeLookDefaultIntensity,
+  creativeLookDefaultLiftCrush,
   creativeLookDefaultPatternScale,
   creativeLookFixedIntensity,
   creativeLookFixedPatternScale,
@@ -148,7 +149,7 @@ export function buildMobileCreativeLookResetPatch(presetId) {
   return {
     shaderAnimationSpeed: 0.4,
     masterHue: 0,
-    liftCrush: 0,
+    liftCrush: creativeLookDefaultLiftCrush(preset),
     pauseShaderAnimations: false,
     viewportBloom: false,
     intensity: fixedIntensity ?? creativeLookDefaultIntensity(preset),

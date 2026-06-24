@@ -77,6 +77,7 @@ import {
   DITHER_TRITONE_DEFAULT_PATTERN_SCALE,
   DITHER_CROSSHATCH_DEFAULT_INTENSITY,
   DITHER_CROSSHATCH_DEFAULT_PATTERN_SCALE,
+  DITHER_CROSSHATCH_DEFAULT_LIFT_CRUSH,
   DITHER_RASTER_DEFAULT_INTENSITY,
   DITHER_RASTER_DEFAULT_PATTERN_SCALE,
   DITHER_PIXEL_CREATIVE_LOOK_PRESETS,
@@ -723,8 +724,16 @@ export function creativeLookDefaultPatternScale(preset) {
   return null;
 }
 
+/** Preset-specific lift/crush when switching presets (`creativeLookFixedLiftCrush` none yet). */
+export function creativeLookDefaultLiftCrush(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  if (id === 'dither-crosshatch') return DITHER_CROSSHATCH_DEFAULT_LIFT_CRUSH;
+  if (id === 'glass') return CREATIVE_GLASS_DEFAULT_LIFT_CRUSH;
+  return CREATIVE_LOOK_LIFT_CRUSH_DEFAULT;
+}
+
 /**
- * When switching between two dither pixel presets, always snap Scale + Intensity to the
+ * When switching between two dither pixel presets, always snap Scale + Intensity + Lift/Crush to the
  * destination preset's tuned defaults (each variant has its own optimal Scale / Intensity).
  */
 export function shouldResetDitherPresetTuning(prevPreset, nextPreset) {
@@ -1433,6 +1442,80 @@ export function creativeVgaDos3dTexRes(patternScale) {
 
 /** Shader Lab glass — HDRI reflection scale (transmission already carries the backdrop). */
 export const CREATIVE_GLASS_ENV_MAP_MUL = 0.58;
+
+/** Default Lift/Crush when selecting Glass — tames transmission / env blowout. */
+export const CREATIVE_GLASS_DEFAULT_LIFT_CRUSH = -0.75;
+
+export const CREATIVE_GLASS_BASE_SPECULAR_INTENSITY = 0.72;
+export const CREATIVE_GLASS_BASE_ATTENUATION_DISTANCE = 1.05;
+
+/**
+ * Env / specular exposure from Lift/Crush — physical glass skips the GLSL crush pass.
+ * @param {number | undefined} liftCrush
+ */
+export function creativeGlassLiftCrushExposureMul(liftCrush) {
+  const crush = Math.max(-normalizeCreativeLookLiftCrush(liftCrush), 0);
+  if (crush < 0.0001) return 1;
+  return 1 - crush * 0.57;
+}
+
+/**
+ * @param {number} intensity — Shader Lab intensity + HDRI env strength
+ * @param {number} litEnvMul — object material brightness env multiplier
+ * @param {number | undefined} liftCrush
+ */
+export function creativeGlassEnvMapIntensity(intensity, litEnvMul, liftCrush) {
+  return (
+    intensity
+    * litEnvMul
+    * CREATIVE_GLASS_ENV_MAP_MUL
+    * creativeGlassLiftCrushExposureMul(liftCrush)
+  );
+}
+
+/**
+ * Sync physical glass from Shader Lab Lift/Crush + scale (live slider path).
+ * @param {import('three').MeshPhysicalMaterial} material
+ * @param {{
+ *   patternScale?: number,
+ *   hdriBlurriness?: number,
+ *   mesh?: import('three').Mesh | null,
+ *   intensity?: number,
+ *   litEnvMul?: number,
+ *   liftCrush?: number,
+ *   envTexture?: import('three').Texture | null,
+ * }} opts
+ */
+export function syncCreativeLookGlassPhysical(material, opts = {}) {
+  if (!material?.isMeshPhysicalMaterial) return;
+  const patternScale = THREE.MathUtils.clamp(Number(opts.patternScale) || 1, 0.02, 5);
+  const hdriBlur = THREE.MathUtils.clamp(Number(opts.hdriBlurriness) || 0, 0, 1);
+  const crushMul = creativeGlassLiftCrushExposureMul(opts.liftCrush);
+  const { thickness, roughness } = creativeGlassParamsForMesh(
+    patternScale,
+    hdriBlur,
+    opts.mesh ?? null,
+  );
+  material.thickness = thickness;
+  material.roughness = roughness;
+  material.transmission = 1;
+  if (opts.envTexture) {
+    material.envMap = opts.envTexture;
+  }
+  if (material.envMapIntensity !== undefined) {
+    material.envMapIntensity = creativeGlassEnvMapIntensity(
+      Number(opts.intensity) || 0,
+      Number(opts.litEnvMul) || 1,
+      opts.liftCrush,
+    );
+  }
+  material.specularIntensity = CREATIVE_GLASS_BASE_SPECULAR_INTENSITY * crushMul;
+  material.attenuationDistance = CREATIVE_GLASS_BASE_ATTENUATION_DISTANCE
+    * Math.max(crushMul, 0.35);
+  material.transparent = true;
+  material.opacity = 1;
+  material.depthWrite = false;
+}
 
 /**
  * Physical transmission glass/water: thickness + roughness from creative Scale; HDRI blur adds frost.
@@ -3992,6 +4075,8 @@ export function createCreativeLookMaterial(preset, opts = {}) {
   }
 
   if (id === 'glass') {
+    const liftCrush = opts.liftCrush ?? CREATIVE_GLASS_DEFAULT_LIFT_CRUSH;
+    const crushMul = creativeGlassLiftCrushExposureMul(liftCrush);
     const { thickness, roughness } = creativeGlassParams(patternScale, hdriBlur);
     const mat = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(0xffffff),
@@ -4000,17 +4085,18 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       transmission: 1,
       thickness,
       ior: 1.5,
-      specularIntensity: 0.72,
+      specularIntensity: CREATIVE_GLASS_BASE_SPECULAR_INTENSITY * crushMul,
       specularColor: new THREE.Color(0xd8d8d8),
       /** Grazing-angle lobe — subtler than chrome. */
       sheen: 0.18,
       sheenRoughness: 0.84,
       sheenColor: new THREE.Color(0xc8c8c8),
-      envMapIntensity: CREATIVE_GLASS_ENV_MAP_MUL,
+      envMapIntensity: CREATIVE_GLASS_ENV_MAP_MUL * crushMul,
       transparent: true,
       opacity: 1,
       attenuationColor: new THREE.Color(0xd4d4d4),
-      attenuationDistance: 1.05,
+      attenuationDistance: CREATIVE_GLASS_BASE_ATTENUATION_DISTANCE
+        * Math.max(crushMul, 0.35),
       side,
       toneMapped: true,
       depthWrite: false,
