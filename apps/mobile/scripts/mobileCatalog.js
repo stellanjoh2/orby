@@ -86,6 +86,7 @@ const MOBILE_SHADER_PRESETS = [
   { id: 'sketch', label: 'Sketch', thumb: 'images/creative-look-sketch.png' },
   { id: 'sketch-colour', label: 'Sketch Colour', thumb: 'images/creative-look-sketch-colour.png' },
   { id: 'gouache', label: 'Gouache', thumb: 'images/creative-look-gouache.png' },
+  { id: 'chrome-plasma', label: 'Chrome Plasma', thumb: 'images/creative-look-chrome-plasma.png' },
   { id: 'chrome', label: 'Chrome', thumb: 'images/creative-look-chrome.png' },
 ];
 
@@ -95,11 +96,19 @@ export const MOBILE_STYLE_RAIL = [MOBILE_STYLE_NONE, ...MOBILE_SHADER_PRESETS];
 /** @type {{ id: string, label: string, items: typeof MOBILE_SHADER_PRESETS }[]} */
 export const MOBILE_CREATIVE_LOOK_SECTIONS = [
   {
-    id: 'effects',
-    label: 'Effects',
-    items: MOBILE_SHADER_PRESETS.filter((x) =>
-      ['neon-edge', 'holographic', 'plasma', 'scanline-hologram', 'toon'].includes(x.id),
-    ),
+    id: 'general',
+    label: 'General',
+    items: [
+      'neon-edge',
+      'holographic',
+      'plasma',
+      'chrome-plasma',
+      'scanline-hologram',
+      'toon',
+      'chrome',
+    ]
+      .map((id) => MOBILE_SHADER_PRESETS.find((x) => x.id === id))
+      .filter(Boolean),
   },
   {
     id: 'pixels',
@@ -121,11 +130,6 @@ export const MOBILE_CREATIVE_LOOK_SECTIONS = [
     items: MOBILE_SHADER_PRESETS.filter((x) =>
       ['watercolour', 'sketch', 'sketch-colour', 'gouache'].includes(x.id),
     ),
-  },
-  {
-    id: 'materials',
-    label: 'Materials',
-    items: MOBILE_SHADER_PRESETS.filter((x) => ['chrome'].includes(x.id)),
   },
 ];
 

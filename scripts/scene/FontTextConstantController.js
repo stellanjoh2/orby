@@ -41,6 +41,8 @@ export class FontTextConstantController {
     this.onNeedRender = onNeedRender;
     this._elapsed = 0;
     this._exportDriveActive = false;
+    /** @type {import('./fontTextConstantTypes.js').FontConstantTypeId | null} */
+    this._lastAppliedType = null;
   }
 
   /** @param {import('./FontTextRevealController.js').FontTextRevealController} controller */
@@ -99,11 +101,16 @@ export class FontTextConstantController {
     const count = glyphStates.length;
 
     for (let i = 0; i < count; i += 1) {
+      const motionSlot = this._revealController?.resolveConstantMotionSlot?.(i) ?? {};
       applyConstantOffsetToGlyph(glyphStates[i], i, count, elapsed, {
         type,
         intensity,
         speedSec,
         spread,
+        lineGlyphIndex: motionSlot.lineGlyphIndex,
+        lineGlyphCount: motionSlot.lineGlyphCount,
+        linePivot: motionSlot.linePivot,
+        useLinePivotMotion: motionSlot.useLinePivotMotion,
       });
     }
   }
@@ -121,6 +128,7 @@ export class FontTextConstantController {
 
   /** @param {number} delta */
   update(delta) {
+    this._syncConstantTypeChange();
     this.advance(delta);
     this._reapplyComposite();
   }
@@ -130,17 +138,20 @@ export class FontTextConstantController {
     const reveal = this._revealController;
     if (!reveal) return;
     reveal.ensureBoundToModel(model ?? reveal._boundModel);
+    this._syncConstantTypeChange();
     this._reapplyComposite();
     this.onNeedRender?.();
   }
 
   onModelBound() {
     this._elapsed = 0;
+    this._lastAppliedType = this.getType();
   }
 
   unbind() {
     this._elapsed = 0;
     this._exportDriveActive = false;
+    this._lastAppliedType = null;
   }
 
   beginExportDrive() {
@@ -155,6 +166,38 @@ export class FontTextConstantController {
 
   endExportDrive() {
     this._exportDriveActive = false;
+  }
+
+  _syncConstantTypeChange() {
+    const type = this.getType();
+    if (this._lastAppliedType === null) {
+      this._lastAppliedType = type;
+      return;
+    }
+    if (type === this._lastAppliedType) return;
+    this._resetForConstantTypeChange(type);
+  }
+
+  /**
+   * Snap glyphs back to their reveal/rest pose and restart constant phase at zero.
+   * @param {import('./fontTextConstantTypes.js').FontConstantTypeId} nextType
+   */
+  _resetForConstantTypeChange(nextType) {
+    this._lastAppliedType = nextType;
+    this._elapsed = 0;
+
+    const reveal = this._revealController;
+    if (!reveal) return;
+    if (reveal.isPreviewPlaying?.()) return;
+    if (!reveal.ensureBoundToModel(reveal._boundModel)) return;
+
+    let revealElapsed = 0;
+    if (reveal.isEnabled?.()) {
+      revealElapsed = reveal.isPreviewPaused?.()
+        ? reveal.getPreviewElapsed()
+        : reveal.getSettledRevealElapsedSec();
+    }
+    reveal.applyAtTime(revealElapsed, { skipConstant: true });
   }
 
   _reapplyComposite() {
