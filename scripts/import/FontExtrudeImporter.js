@@ -82,14 +82,27 @@ export class FontExtrudeImporter {
   buildFromLayout(layout, options = {}) {
     this._glyphEntries = [];
     this._circularLayout = layout?.circular?.enabled ? layout.circular : null;
-    for (const line of layout?.lines || []) {
+    const layoutLines = layout?.lines || [];
+    /** @type {number[]} */
+    const lineGlyphCounts = layoutLines.map((line) =>
+      (line.paths || []).filter(
+        (entry) => entry?.glyphPath && opentypePathHasArea(entry.glyphPath),
+      ).length,
+    );
+    for (let lineIndex = 0; lineIndex < layoutLines.length; lineIndex += 1) {
+      const line = layoutLines[lineIndex];
+      let lineGlyphIndex = 0;
       for (const entry of line.paths || []) {
         if (entry?.glyphPath && opentypePathHasArea(entry.glyphPath)) {
           this._glyphEntries.push({
             glyphPath: entry.glyphPath,
             wordIndex: Number.isFinite(entry.wordIndex) ? entry.wordIndex : undefined,
             circularTransform: entry.circularTransform || null,
+            lineIndex,
+            lineGlyphIndex,
+            lineGlyphCount: lineGlyphCounts[lineIndex] ?? 0,
           });
+          lineGlyphIndex += 1;
         }
       }
     }
@@ -315,11 +328,26 @@ export class FontExtrudeImporter {
     let meshCount = 0;
     let glyphIndex = 0;
     for (let entryIndex = 0; entryIndex < this._glyphEntries.length; entryIndex += 1) {
-      const { wordIndex, circularTransform } = this._glyphEntries[entryIndex];
+      const {
+        wordIndex,
+        circularTransform,
+        lineIndex,
+        lineGlyphIndex,
+        lineGlyphCount,
+      } = this._glyphEntries[entryIndex];
       const shapes = glyphShapeSets[entryIndex];
       const glyphGroup = new THREE.Group();
       glyphGroup.userData.orbyFontGlyphGroup = true;
       glyphGroup.userData.orbyFontGlyphIndex = glyphIndex;
+      if (Number.isFinite(lineIndex)) {
+        glyphGroup.userData.orbyFontLineIndex = lineIndex;
+      }
+      if (Number.isFinite(lineGlyphIndex)) {
+        glyphGroup.userData.orbyFontLineGlyphIndex = lineGlyphIndex;
+      }
+      if (Number.isFinite(lineGlyphCount) && lineGlyphCount > 0) {
+        glyphGroup.userData.orbyFontLineGlyphCount = lineGlyphCount;
+      }
       if (circularTransform) {
         glyphGroup.userData.orbyFontCircularTransform = circularTransform;
       }

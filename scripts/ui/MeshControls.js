@@ -632,6 +632,14 @@ export class MeshControls {
         mc.creativeLookSettings.viewportBloom = enabled;
       }
     });
+    this.ui.inputs.creativeLookRenderBackdrop?.addEventListener('change', (event) => {
+      const enabled = !!event.target.checked;
+      this.stateStore.set('hdriBackground', enabled);
+      this.eventBus.emit('studio:hdri-background', enabled);
+      this.ui.syncHdriBackgroundCheckboxes?.(enabled, { except: event.target });
+      this.ui.updateHdriBackgroundFallbackVisibility?.();
+      this.ui.updateHdriReceiveShadowsAoDisabled?.();
+    });
     this.ui.inputs.creativeLookButtons?.forEach?.((button) => {
       button.addEventListener('click', () => {
         const preset = button.dataset.creativeLook;
@@ -1519,6 +1527,16 @@ export class MeshControls {
       this.ui.setControlDisabled(
         'creativeLookBloomEnabled',
         !state.creativeLook?.enabled,
+      );
+    }
+    if (this.ui.inputs.creativeLookRenderBackdrop) {
+      const activeEl = document.activeElement;
+      if (activeEl !== this.ui.inputs.creativeLookRenderBackdrop) {
+        this.ui.inputs.creativeLookRenderBackdrop.checked = !!state.hdriBackground;
+      }
+      this.ui.setControlDisabled(
+        'creativeLookRenderBackdrop',
+        !state.hdriEnabled,
       );
     }
     if (this.ui.inputs.creativeLookShaderAnimationSpeed) {

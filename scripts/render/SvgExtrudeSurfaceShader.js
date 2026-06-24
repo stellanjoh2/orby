@@ -937,6 +937,7 @@ export function creativeLookPresetSupportsSurfaceDetail(preset) {
     p === 'holographic' ||
     p === 'scanline-hologram' ||
     p === 'spectral-storm' ||
+    p === 'chrome-plasma' ||
     p === 'plasma' ||
     p === 'chrome' ||
     p === 'glass'

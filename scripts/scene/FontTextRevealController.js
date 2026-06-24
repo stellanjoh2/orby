@@ -112,6 +112,17 @@ export class FontTextRevealController {
     /** @type {number[] | null} */
     this._glyphWordIndices = null;
     this._wordCount = 0;
+    /** @type {number[] | null} */
+    this._glyphLineIndices = null;
+    /** @type {number[] | null} */
+    this._glyphLineGlyphIndices = null;
+    /** @type {number[]} */
+    this._lineGlyphCounts = [];
+    /** @type {boolean[]} */
+    this._lineHasCircularGlyph = [];
+    this._lineCount = 0;
+    /** @type {Map<number, { center: THREE.Vector3, slideDistance: number }>} */
+    this._lineGroupMeta = new Map();
     /** @type {Map<number, { center: THREE.Vector3, slideDistance: number }>} */
     this._wordGroupMeta = new Map();
     /** @type {THREE.Object3D | null} */
@@ -389,6 +400,12 @@ export class FontTextRevealController {
     this._glyphStates = [];
     this._glyphWordIndices = null;
     this._wordCount = 0;
+    this._glyphLineIndices = null;
+    this._glyphLineGlyphIndices = null;
+    this._lineGlyphCounts = [];
+    this._lineHasCircularGlyph = [];
+    this._lineCount = 0;
+    this._lineGroupMeta = new Map();
     this._wordGroupMeta = new Map();
     this._previewMode = 'idle';
 
@@ -406,6 +423,7 @@ export class FontTextRevealController {
       this._collectGlyphGroups(model);
     }
     this._buildWordRevealMeta();
+    this._buildLineRevealMeta();
     for (const glyphGroup of this._glyphGroups) {
       if (!glyphGroup.userData?.orbyFontGlyphPivotFixed) {
         const isCircularGlyph = !!glyphGroup.userData?.orbyFontCircularTransform;
@@ -417,6 +435,7 @@ export class FontTextRevealController {
     }
     this._buildGlyphStates();
     this._buildWordGroupMeta();
+    this._buildLineGroupMeta();
     this.syncMaterialEmissiveBaseline();
 
     this._constantController?.onModelBound?.();
@@ -467,6 +486,101 @@ export class FontTextRevealController {
         slideDistance: Math.max(size.y * 0.75, 0.08),
       });
     }
+  }
+
+  _buildLineRevealMeta() {
+    const lineIndices = this._glyphGroups.map((group) => {
+      const idx = group.userData?.orbyFontLineIndex;
+      return Number.isFinite(idx) ? idx : 0;
+    });
+    const lineGlyphIndices = this._glyphGroups.map((group, glyphIndex) => {
+      const idx = group.userData?.orbyFontLineGlyphIndex;
+      return Number.isFinite(idx) ? idx : glyphIndex;
+    });
+    const hasLineData = this._glyphGroups.some((group) =>
+      Number.isFinite(group.userData?.orbyFontLineIndex)
+      || Number.isFinite(group.userData?.orbyFontLineGlyphIndex),
+    );
+
+    this._glyphLineIndices = hasLineData ? lineIndices : null;
+    this._glyphLineGlyphIndices = hasLineData ? lineGlyphIndices : null;
+    this._lineCount = hasLineData ? Math.max(...lineIndices) + 1 : 1;
+    this._lineGlyphCounts = [];
+    this._lineHasCircularGlyph = [];
+
+    if (!hasLineData) return;
+
+    for (let lineIndex = 0; lineIndex < this._lineCount; lineIndex += 1) {
+      const fromUserData = this._glyphGroups.find(
+        (group) => group.userData?.orbyFontLineIndex === lineIndex,
+      )?.userData?.orbyFontLineGlyphCount;
+      const counted = this._glyphGroups.filter(
+        (group) => group.userData?.orbyFontLineIndex === lineIndex,
+      ).length;
+      this._lineGlyphCounts[lineIndex] =
+        Number.isFinite(fromUserData) && fromUserData > 0 ? fromUserData : counted;
+      this._lineHasCircularGlyph[lineIndex] = this._glyphGroups.some(
+        (group) =>
+          group.userData?.orbyFontLineIndex === lineIndex
+          && !!group.userData?.orbyFontCircularTransform,
+      );
+    }
+  }
+
+  _buildLineGroupMeta() {
+    this._lineGroupMeta = new Map();
+    if (!this._glyphStates.length) return;
+
+    const lineCount = this._lineCount > 0 ? this._lineCount : 1;
+    for (let lineIndex = 0; lineIndex < lineCount; lineIndex += 1) {
+      const glyphIndices = [];
+      for (let i = 0; i < this._glyphGroups.length; i += 1) {
+        const groupLineIndex = this._glyphLineIndices?.[i] ?? 0;
+        if (groupLineIndex === lineIndex) glyphIndices.push(i);
+      }
+      if (!glyphIndices.length) continue;
+
+      const parent = this._glyphStates[glyphIndices[0]]?.group?.parent;
+      if (!parent) continue;
+
+      parent.updateMatrixWorld(true);
+      const box = new THREE.Box3();
+      for (const glyphIndex of glyphIndices) {
+        const { group } = this._glyphStates[glyphIndex];
+        group.updateMatrixWorld(true);
+        box.expandByObject(group);
+      }
+      if (box.isEmpty()) continue;
+
+      const centerWorld = box.getCenter(new THREE.Vector3());
+      const center = parent.worldToLocal(centerWorld.clone());
+      const size = box.getSize(new THREE.Vector3());
+      this._lineGroupMeta.set(lineIndex, {
+        center,
+        slideDistance: Math.max(size.y * 0.75, 0.08),
+      });
+    }
+  }
+
+  /**
+   * Per-line spread + pivot for constant animation (keeps multi-line text in sync).
+   * @param {number} glyphIndex
+   */
+  resolveConstantMotionSlot(glyphIndex) {
+    const glyphCount = this._glyphStates.length;
+    const lineIndex = this._glyphLineIndices?.[glyphIndex] ?? 0;
+    const lineGlyphIndex = this._glyphLineGlyphIndices?.[glyphIndex] ?? glyphIndex;
+    const lineGlyphCount = this._lineGlyphCounts[lineIndex] ?? glyphCount;
+    const linePivot = this._lineGroupMeta.get(lineIndex);
+    const useLinePivotMotion =
+      !!linePivot?.center
+      && (this._lineCount > 1 || this._lineHasCircularGlyph[lineIndex]);
+    return {
+      lineGlyphIndex,
+      lineGlyphCount,
+      linePivot,
+      useLinePivotMotion,
+    };
   }
 
   _buildGlyphStates() {
@@ -601,6 +715,12 @@ export class FontTextRevealController {
     this._glyphStates = [];
     this._glyphWordIndices = null;
     this._wordCount = 0;
+    this._glyphLineIndices = null;
+    this._glyphLineGlyphIndices = null;
+    this._lineGlyphCounts = [];
+    this._lineHasCircularGlyph = [];
+    this._lineCount = 0;
+    this._lineGroupMeta = new Map();
     this._wordGroupMeta = new Map();
     this._boundModel = null;
     this._elapsed = 0;

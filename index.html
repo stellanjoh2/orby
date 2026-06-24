@@ -1050,7 +1050,7 @@
                     <div class="creative-look-foldout-body">
                       <div class="creative-look-grid" id="creativeLookGrid">
                     <div class="creative-look-grid-section">
-                      <p class="creative-look-grid-section-label">Effects</p>
+                      <p class="creative-look-grid-section-label">General</p>
                       <div class="hdri-grid">
                     <button type="button" data-creative-look="dust-field" class="hdri-icon" data-tooltip="Dust Field — 8,000 surface-sampled particles follow your mesh (GLB skinning &amp; morph targets). Intensity = point size. Scale = wobble. Bloom recommended." title="Dust Field">
                       <img src="./assets/images/creative-look-dust-field.svg" alt="Dust Field" width="128" height="128" />
@@ -1066,6 +1066,9 @@
                     </button>
                     <button type="button" data-creative-look="holographic" class="hdri-icon" data-tooltip="Holographic — thin-film rainbow shifts with view angle">
                       <img src="./assets/images/creative-look-holographic.png" alt="Holographic" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="chrome-plasma" class="hdri-icon" data-tooltip="Chrome Plasma — hyper-abstract liquid chrome marbling; neon blue, cyan, and magenta on Orby black; slow diagonal flow; Intensity = contrast &amp; chrome punch">
+                      <img src="./assets/images/creative-look-chrome-plasma.png" alt="Chrome Plasma" width="128" height="128" />
                     </button>
                     <button type="button" data-creative-look="voronoi" class="hdri-icon" data-tooltip="Voronoi — stained-glass cells with dark grout; slow seed drift. Scale = cell size; mid-tone from mesh color">
                       <img src="./assets/images/creative-look-voronoi.png" alt="Voronoi" width="128" height="128" />
@@ -1084,6 +1087,12 @@
                     </button>
                     <button type="button" data-creative-look="toon" class="hdri-icon" data-tooltip="Toon — stepped cel shading with rim">
                       <img src="./assets/images/creative-look-toon.png" alt="Toon" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="chrome" class="hdri-icon" data-tooltip="True Chrome — PBR metal; reflections follow the current HDRI (strength, rotation, blur)">
+                      <img src="./assets/images/creative-look-chrome.png" alt="True Chrome" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="glass" class="hdri-icon" data-tooltip="Glass — physical transmission &amp; refraction (Three.js); HDRI + scene. Scale = slab thickness / frost">
+                      <img src="./assets/images/creative-look-glass.png" alt="Glass" width="128" height="128" />
                     </button>
                       </div>
                     </div>
@@ -1203,17 +1212,6 @@
                     </button>
                       </div>
                     </div>
-                    <div class="creative-look-grid-section">
-                      <p class="creative-look-grid-section-label">Materials</p>
-                      <div class="hdri-grid">
-                    <button type="button" data-creative-look="chrome" class="hdri-icon" data-tooltip="True Chrome — PBR metal; reflections follow the current HDRI (strength, rotation, blur)">
-                      <img src="./assets/images/creative-look-chrome.png" alt="True Chrome" width="128" height="128" />
-                    </button>
-                    <button type="button" data-creative-look="glass" class="hdri-icon" data-tooltip="Glass — physical transmission &amp; refraction (Three.js); HDRI + scene. Scale = slab thickness / frost">
-                      <img src="./assets/images/creative-look-glass.png" alt="Glass" width="128" height="128" />
-                    </button>
-                      </div>
-                    </div>
                   </div>
                   <label class="slider-line">
                     <span data-tooltip="Global hue shift for all Shader Lab presets (-180°…180°). Independent of Cam/FX color grading.">Object Hue</span>
@@ -1324,6 +1322,14 @@
                       <input type="checkbox" id="creativeLookBloomEnabled" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Enable bloom with Shader Lab</span>
+                    </label>
+                  </div>
+                  <div class="slider-line slider-line--toggle-only">
+                    <span data-tooltip="On: the HDRI is drawn behind the scene. Off: only the solid background color is shown; HDRI still lights the model. Same as Studio → HDRI → Render Backdrop (`B`).">Render Backdrop</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="creativeLookRenderBackdrop" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Render HDRI as viewport backdrop</span>
                     </label>
                   </div>
                   <button
@@ -2030,7 +2036,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.848 · 2026-06-24 13:00:40 UTC</div>
+              <div class="info-version-tag">v0.5.850 · 2026-06-24 15:32:36 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3142,7 +3148,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.848 · 2026-06-24 13:00:40 UTC</div>
+              <div class="info-version-tag">v0.5.850 · 2026-06-24 15:32:36 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -4910,7 +4916,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.848 · 2026-06-24 13:00:40 UTC</div>
+              <div class="info-version-tag">v0.5.850 · 2026-06-24 15:32:36 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -5290,7 +5296,7 @@
                 </div>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.848 · 2026-06-24 13:00:40 UTC</div>
+              <div class="info-version-tag">v0.5.850 · 2026-06-24 15:32:36 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -5355,7 +5361,7 @@
               ></div>
 
 
-              <div class="info-version-tag">v0.5.848 · 2026-06-24 13:00:40 UTC</div>
+              <div class="info-version-tag">v0.5.850 · 2026-06-24 15:32:36 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>

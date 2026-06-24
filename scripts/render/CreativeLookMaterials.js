@@ -139,7 +139,7 @@ export { creativeLookUsesVoxelGeometry, isVoxelCreativeLookPreset } from './crea
 /**
  * Animated presets read `uTime` as one shared timeline: MaterialController sets
  * `uTime = elapsedSeconds * creativeLook.shaderAnimationSpeed` (after pause freeze).
- * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, voronoi, scanline-hologram, wire-pulse, vertex-points, dust-field, vectrex, ps2-crush, psx). EGA Pixel uses a fixed 640×350 screen grid (no time scroll).
+ * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, chrome-plasma, voronoi, scanline-hologram, wire-pulse, vertex-points, dust-field, vectrex, ps2-crush, psx). EGA Pixel uses a fixed 640×350 screen grid (no time scroll).
  *
  * The chrome preset uses MeshPhysicalMaterial so PMREM / CubeUV environment maps match the rest of the viewer.
  * The glass preset uses MeshPhysicalMaterial.transmission for real refraction (Three.js transmission pipeline).
@@ -148,7 +148,7 @@ export { creativeLookUsesVoxelGeometry, isVoxelCreativeLookPreset } from './crea
  * in the transmission prepass — not other transmissive/transparent meshes (Three.js renderer design).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome' | 'glass'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome-plasma' | 'chrome' | 'glass'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
@@ -186,6 +186,7 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'sketch',
   'sketch-colour',
   'gouache',
+  'chrome-plasma',
   'chrome',
   'glass',
   'spectral-storm',
@@ -1072,6 +1073,7 @@ export function creativeLookPresetUsesShaderAnimation(preset) {
     id === 'plasma' ||
     id === 'holographic' ||
     id === 'spectral-storm' ||
+    id === 'chrome-plasma' ||
     id === 'voronoi' ||
     id === 'scanline-hologram' ||
     id === 'wire-pulse' ||
@@ -1141,6 +1143,7 @@ export function formatCreativeLookPresetLabel(preset) {
     'ascii-art-4': 'ASCII 4',
     holographic: 'Holographic',
     'spectral-storm': 'Spectral Storm',
+    'chrome-plasma': 'Chrome Plasma',
     voronoi: 'Voronoi',
     'scanline-hologram': 'Scanline Hologram',
     'wire-pulse': 'Wire Pulse',
@@ -1884,6 +1887,144 @@ void main() {
   col = mix(col, vec3(1.0), rimGate * (0.82 + up * 0.23 - down * 0.47));
 
   col *= orbyCreativeSurfaceFilmMod(vWorldPosition, vOrbyLocalPos, vOrbyLocalNormal);
+
+  gl_FragColor = vec4(col, uOpacity);
+}
+`;
+
+/** Liquid chrome plasma — domain-warped neon marbling on Orby black with mirror Fresnel streaks. */
+const CHROME_PLASMA_FRAGMENT = /* glsl */ `
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+uniform float uTime;
+uniform float uPatternScale;
+uniform float uIntensity;
+uniform float uOpacity;
+
+const vec3 CP_BASE = vec3(0.03137, 0.03137, 0.03137);
+
+float cpHash(vec3 p) {
+  return fract(sin(dot(p, vec3(12.9898, 78.233, 37.199))) * 43758.5453);
+}
+
+float cpNoise(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float n000 = cpHash(i);
+  float n100 = cpHash(i + vec3(1.0, 0.0, 0.0));
+  float n010 = cpHash(i + vec3(0.0, 1.0, 0.0));
+  float n110 = cpHash(i + vec3(1.0, 1.0, 0.0));
+  float n001 = cpHash(i + vec3(0.0, 0.0, 1.0));
+  float n101 = cpHash(i + vec3(1.0, 0.0, 1.0));
+  float n011 = cpHash(i + vec3(0.0, 1.0, 1.0));
+  float n111 = cpHash(i + vec3(1.0, 1.0, 1.0));
+  float nx00 = mix(n000, n100, f.x);
+  float nx10 = mix(n010, n110, f.x);
+  float nx01 = mix(n001, n101, f.x);
+  float nx11 = mix(n011, n111, f.x);
+  float nxy0 = mix(nx00, nx10, f.y);
+  float nxy1 = mix(nx01, nx11, f.y);
+  return mix(nxy0, nxy1, f.z);
+}
+
+float cpFbm(vec3 p) {
+  float v = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 5; i++) {
+    v += a * cpNoise(p);
+    p = p * 2.03 + 1.7;
+    a *= 0.5;
+  }
+  return v;
+}
+
+vec3 cpNeonRamp(float phase) {
+  vec3 electricBlue = vec3(0.0, 0.5, 1.0);
+  vec3 cyan = vec3(0.0, 1.0, 1.0);
+  vec3 magenta = vec3(1.0, 0.0, 1.0);
+  float t = fract(phase);
+  vec3 a = mix(electricBlue, cyan, smoothstep(0.0, 0.45, t));
+  vec3 b = mix(cyan, magenta, smoothstep(0.45, 0.88, t));
+  return mix(a, b, smoothstep(0.35, 0.92, t));
+}
+
+void main() {
+  vec3 N = orbyCreativeSurfaceNormal(
+    normalize(vWorldNormal),
+    vWorldPosition,
+    vOrbyLocalPos,
+    vOrbyLocalNormal,
+    mat3(vOrbyWm0, vOrbyWm1, vOrbyWm2)
+  );
+  float surfMod = orbyCreativeSurfaceFilmMod(vWorldPosition, vOrbyLocalPos, vOrbyLocalNormal);
+
+  float inten = clamp(uIntensity, 0.0, 2.0);
+  float d = inten - 1.0;
+  float up = max(d, 0.0);
+  float down = max(-d, 0.0);
+
+  float sc = clamp(uPatternScale, 0.1, 5.0);
+  float freq = mix(2.65, 0.52, (sc - 0.1) / 4.9);
+  vec3 flowDir = normalize(vec3(0.72, -0.62, 0.28));
+  float t = uTime * 0.34;
+  vec3 p = vWorldPosition * freq + flowDir * t;
+
+  vec3 q = vec3(
+    cpFbm(p + vec3(0.0, 0.0, t * 0.22)),
+    cpFbm(p + vec3(5.2, 1.3, t * 0.18)),
+    cpFbm(p + vec3(1.7, 4.8, t * 0.24))
+  );
+  vec3 r = vec3(
+    cpFbm(p + 4.0 * q + vec3(8.3, 2.8, t * 0.15)),
+    cpFbm(p + 4.0 * q + vec3(3.1, 6.7, t * 0.19)),
+    cpFbm(p + 4.0 * q + vec3(6.2, 1.4, t * 0.21))
+  );
+
+  float plasma = cpFbm(p + 3.5 * r);
+  plasma += cpFbm(p * 1.85 + q * 2.15 + t * 0.12) * 0.58;
+  float layer2 = cpFbm(p * 0.62 - flowDir * t * 0.42 + r * 1.75);
+  plasma = mix(plasma, layer2, 0.36);
+
+  float hair = cpFbm(p * 4.8 + r * 2.4 + t * 0.28);
+  hair = abs(hair - 0.5) * 2.0;
+  plasma += (0.5 - hair) * 0.14 * (0.65 + up * 0.35 - down * 0.25);
+
+  float field = plasma * 0.62 + 0.5;
+  field = pow(clamp(field, 0.0, 1.0), mix(2.15, 1.32, up) + down * 0.75);
+  field = clamp((field - 0.5) * (5.8 + up * 2.4 - down * 2.1) + 0.5, 0.0, 1.0);
+
+  float inkGate = smoothstep(
+    0.27 - up * 0.06 + down * 0.08,
+    0.44 - up * 0.04 + down * 0.06,
+    field
+  );
+
+  float phase = field * 4.35 + plasma * 2.65 + t * 0.38 + dot(r, vec3(1.2, 0.8, 1.5)) * 1.75;
+  vec3 plasmaCol = cpNeonRamp(phase);
+  plasmaCol = mix(CP_BASE, plasmaCol, inkGate);
+  plasmaCol = pow(max(plasmaCol, vec3(0.0)), vec3(0.92 - down * 0.06 + up * 0.05));
+
+  vec3 col = plasmaCol;
+
+  vec3 V = normalize(cameraPosition - vWorldPosition);
+  float ndv = max(dot(N, V), 1e-4);
+  float F = pow(1.0 - ndv, mix(2.9, 1.55, up));
+  float fresnelTight = pow(1.0 - ndv, 6.2);
+
+  vec3 L = normalize(vec3(0.38, 0.88, 0.42));
+  vec3 H = normalize(L + V);
+  float nh = max(dot(N, H), 0.0);
+  float specHi = pow(nh, 220.0 + up * 45.0);
+  float specLo = pow(nh, 68.0);
+  vec3 specTint = mix(vec3(0.68, 0.92, 1.05), vec3(1.0, 0.42, 0.95), F);
+  col += specTint * (specHi * 1.42 + specLo * 0.4) * (0.2 + F * 1.05) * inkGate;
+
+  col += fresnelTight * mix(vec3(0.12, 0.72, 1.0), vec3(1.0, 0.28, 0.88), field) * (0.34 + up * 0.24) * inkGate;
+  col += F * plasmaCol * (0.16 + up * 0.12) * inkGate;
+
+  col = max(col, CP_BASE * inkGate);
+  col *= surfMod;
 
   gl_FragColor = vec4(col, uOpacity);
 }
@@ -3740,6 +3881,24 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     });
     mat.userData.orbyCreativeLook = 'vectrex';
     return finish(mat, { shadows: false, castShadowDepth: false });
+  }
+
+  if (id === 'chrome-plasma') {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: time },
+        uPatternScale: { value: patternScale },
+        uOpacity: { value: shaderAlpha },
+        ...surfaceUniformSpread,
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: WORLD_SURFACE_VERTEX,
+      fragmentShader: lookFragWithSurface(CHROME_PLASMA_FRAGMENT),
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'chrome-plasma';
+    return finish(mat);
   }
 
   if (id === 'glass') {

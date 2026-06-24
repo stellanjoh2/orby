@@ -519,6 +519,7 @@ export class UIManager {
       animationBoneStrokeWidth: q('#animationBoneStrokeWidth'),
       creativeLookEnabled: q('#creativeLookEnabled'),
       creativeLookBloomEnabled: q('#creativeLookBloomEnabled'),
+      creativeLookRenderBackdrop: q('#creativeLookRenderBackdrop'),
       creativeLookPauseAnimations: q('#creativeLookPauseAnimations'),
       creativeLookShaderAnimationSpeed: q('#creativeLookShaderAnimationSpeed'),
       creativeLookPatternScale: q('#creativeLookPatternScale'),
@@ -1443,6 +1444,9 @@ export class UIManager {
     this.updateHdriBackgroundFallbackVisibility();
     // Block muting handled by applyBlockStates via syncControls
     this.inputs.hdriBackground.disabled = !enabled;
+    if (this.inputs.creativeLookRenderBackdrop) {
+      this.inputs.creativeLookRenderBackdrop.disabled = !enabled;
+    }
     this.updateHdriReceiveShadowsAoDisabled();
       this.inputs.hdriStrength.disabled = !enabled;
       this.inputs.hdriBlurriness.disabled = !enabled;
@@ -1470,6 +1474,19 @@ export class UIManager {
     const hdriOn = !!this.inputs.hdriEnabled?.checked;
     const backdropOn = hdriOn && !!this.inputs.hdriBackground?.checked;
     this.inputs.hdriReceiveShadowsAo.disabled = !backdropOn;
+  }
+
+  /** Keep Studio HDRI and Shader Lab Render Backdrop shortcuts in sync. */
+  syncHdriBackgroundCheckboxes(checked, { except = null } = {}) {
+    const inputs = [
+      this.inputs.hdriBackground,
+      this.inputs.creativeLookRenderBackdrop,
+    ].filter(Boolean);
+    for (const input of inputs) {
+      if (input !== except) {
+        input.checked = !!checked;
+      }
+    }
   }
 
   updateLensFlareControlsDisabled() {
@@ -2857,7 +2874,7 @@ export class UIManager {
       this.inputs.hdriRotation.value = rotation;
       this.updateValueLabel('hdriRotation', rotation, 'angle');
     }
-    this.inputs.hdriBackground.checked = state.hdriBackground;
+    this.syncHdriBackgroundCheckboxes(state.hdriBackground);
     if (this.inputs.hdriReceiveShadowsAo) {
       this.inputs.hdriReceiveShadowsAo.checked = !!state.hdriReceiveShadowsAo;
     }

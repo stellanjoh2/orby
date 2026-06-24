@@ -2103,9 +2103,7 @@ export class SceneManager {
     // Always push to the GPU — state may already be true while scene.background was released
     // (e.g. Shader Lab entry, font regen, or creative-look pass toggling the environment).
     this.setHdriBackground(true);
-    if (this.ui?.inputs?.hdriBackground) {
-      this.ui.inputs.hdriBackground.checked = true;
-    }
+    this.ui?.syncHdriBackgroundCheckboxes?.(true);
     return true;
   }
 

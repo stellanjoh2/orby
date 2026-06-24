@@ -145,6 +145,7 @@ export class StudioControls {
       const enabled = event.target.checked;
       this.stateStore.set('hdriBackground', enabled);
       this.eventBus.emit('studio:hdri-background', enabled);
+      this.ui.syncHdriBackgroundCheckboxes?.(enabled, { except: event.target });
       this.ui.updateHdriBackgroundFallbackVisibility?.();
       this.ui.updateHdriReceiveShadowsAoDisabled?.();
     });
@@ -736,7 +737,7 @@ export class StudioControls {
       this.ui.inputs.hdriRotation.value = rotation;
       this.helpers.updateValueLabel('hdriRotation', rotation, 'angle');
     }
-    this.ui.inputs.hdriBackground.checked = state.hdriBackground;
+    this.ui.syncHdriBackgroundCheckboxes?.(state.hdriBackground);
     if (this.ui.inputs.hdriReceiveShadowsAo) {
       this.ui.inputs.hdriReceiveShadowsAo.checked = !!state.hdriReceiveShadowsAo;
     }

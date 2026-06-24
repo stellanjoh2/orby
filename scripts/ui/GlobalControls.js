@@ -604,9 +604,7 @@ export class GlobalControls {
         const next = !current;
         this.stateStore.set('hdriBackground', next);
         this.eventBus.emit('studio:hdri-background', next);
-        if (this.ui.inputs.hdriBackground) {
-          this.ui.inputs.hdriBackground.checked = next;
-        }
+        this.ui.syncHdriBackgroundCheckboxes?.(next);
       }
 
       // X - Cycle through wireframe modes
@@ -697,9 +695,7 @@ export class GlobalControls {
     this.eventBus.emit('studio:hdri', 'beach');
     this.stateStore.set('hdriBackground', true);
     this.eventBus.emit('studio:hdri-background', true);
-    if (this.ui.inputs.hdriBackground) {
-      this.ui.inputs.hdriBackground.checked = true;
-    }
+    this.ui.syncHdriBackgroundCheckboxes?.(true);
     this.stateStore.set('exposure', 2);
     this.eventBus.emit('scene:exposure', 2);
     if (this.ui.inputs.exposure) {

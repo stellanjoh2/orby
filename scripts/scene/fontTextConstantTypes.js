@@ -16,6 +16,10 @@ export const MIN_FONT_CONSTANT_VERTICAL_INTENSITY = 0;
 export const MAX_FONT_CONSTANT_VERTICAL_INTENSITY = 3;
 /** Peak ±Y offset at vertical intensity 1 (× glyph slideDistance; sin handles sign). */
 export const FONT_CONSTANT_VERTICAL_TRAVEL_SCALE = 0.55;
+/** Float lateral drift as a fraction of peak vertical travel (cos couples to vertical sin). */
+export const FONT_CONSTANT_FLOAT_HORIZONTAL_TRAVEL_SCALE = 0.35;
+/** Float whole-line Z tilt at vertical intensity 1 — softer than per-glyph Sway. */
+export const FONT_CONSTANT_FLOAT_SWAY_ROTATION_SCALE = 0.04;
 export const MIN_FONT_CONSTANT_SPEED_SEC = 0.4;
 export const MAX_FONT_CONSTANT_SPEED_SEC = 5;
 export const MIN_FONT_CONSTANT_SPREAD = 0;
@@ -31,7 +35,7 @@ export const FONT_CONSTANT_TYPE_OPTIONS = [
   {
     id: 'float',
     label: 'Float',
-    tooltip: 'Gentle vertical bob — whole line moves together',
+    tooltip: 'Gentle bob with soft lateral drift and tilt — whole line moves together',
   },
   {
     id: 'wave',
@@ -129,6 +133,34 @@ export function fontConstantTypeUsesSpread(type) {
 }
 
 /**
+ * @param {import('three').Vector3} out
+ * @param {import('three').Vector3} point
+ * @param {import('three').Vector3} pivot
+ * @param {number} scale
+ */
+function copyLinePivotScaledPosition(out, point, pivot, scale) {
+  out.copy(point).sub(pivot).multiplyScalar(scale).add(pivot);
+}
+
+/**
+ * @param {import('three').Vector3} out
+ * @param {import('three').Vector3} point
+ * @param {import('three').Vector3} pivot
+ * @param {number} angleZ
+ */
+function copyLinePivotRotatedPositionZ(out, point, pivot, angleZ) {
+  const dx = point.x - pivot.x;
+  const dy = point.y - pivot.y;
+  const cos = Math.cos(angleZ);
+  const sin = Math.sin(angleZ);
+  out.set(
+    pivot.x + dx * cos - dy * sin,
+    pivot.y + dx * sin + dy * cos,
+    point.z,
+  );
+}
+
+/**
  * @param {import('./fontTextRevealTypes.js').RevealGlyphState} state
  * @param {number} glyphIndex
  * @param {number} glyphCount
@@ -138,28 +170,58 @@ export function fontConstantTypeUsesSpread(type) {
  *   intensity: number,
  *   speedSec: number,
  *   spread: number,
+ *   lineGlyphIndex?: number,
+ *   lineGlyphCount?: number,
+ *   linePivot?: { center: import('three').Vector3, slideDistance: number },
+ *   useLinePivotMotion?: boolean,
  * }} options
  */
 export function applyConstantOffsetToGlyph(state, glyphIndex, glyphCount, elapsedSec, options) {
-  const { group, slideDistance } = state;
+  const { group, slideDistance, restPosition, restScale } = state;
   const type = normalizeFontConstantType(options.type);
   const intensity = clampFontConstantIntensityForType(type, options.intensity);
   const speedSec = clampFontConstantSpeedSec(options.speedSec);
   const spread = clampFontConstantSpread(options.spread);
+  const lineGlyphIndex = Number.isFinite(options.lineGlyphIndex)
+    ? options.lineGlyphIndex
+    : glyphIndex;
+  const lineGlyphCount = Number.isFinite(options.lineGlyphCount) && options.lineGlyphCount > 0
+    ? options.lineGlyphCount
+    : glyphCount;
+  const linePivot = options.linePivot?.center;
+  const useLinePivotMotion = !!options.useLinePivotMotion && !!linePivot;
 
   if (!isFontConstantAnimationActive(type) || intensity <= 0) return;
 
   const period = Math.max(0.25, speedSec);
   const phase = (elapsedSec / period) * Math.PI * 2;
-  const spreadDenom = Math.max(1, glyphCount - 1);
-  const wavePhase = phase + glyphIndex * spread * (Math.PI * 2) / spreadDenom;
+  const spreadDenom = Math.max(1, lineGlyphCount - 1);
+  const wavePhase = phase + lineGlyphIndex * spread * (Math.PI * 2) / spreadDenom;
   const verticalTravel =
     slideDistance * FONT_CONSTANT_VERTICAL_TRAVEL_SCALE * intensity;
 
   switch (type) {
-    case 'float':
-      group.position.y += verticalTravel * Math.sin(phase);
+    case 'float': {
+      const floatIntensity = intensity / MAX_FONT_CONSTANT_VERTICAL_INTENSITY;
+      const horizontalTravel =
+        verticalTravel * FONT_CONSTANT_FLOAT_HORIZONTAL_TRAVEL_SCALE;
+      const bobY = verticalTravel * Math.sin(phase);
+      const bobX = horizontalTravel * Math.cos(phase);
+      const tiltAngle =
+        FONT_CONSTANT_FLOAT_SWAY_ROTATION_SCALE
+        * floatIntensity
+        * Math.sin(phase + Math.PI * 0.35);
+      if (useLinePivotMotion) {
+        copyLinePivotRotatedPositionZ(group.position, restPosition, linePivot, tiltAngle);
+        group.position.x += bobX;
+        group.position.y += bobY;
+      } else {
+        group.position.y += bobY;
+        group.position.x += bobX;
+        group.rotation.z += tiltAngle;
+      }
       break;
+    }
 
     case 'wave':
       group.position.y += verticalTravel * Math.sin(wavePhase);
@@ -167,15 +229,30 @@ export function applyConstantOffsetToGlyph(state, glyphIndex, glyphCount, elapse
 
     case 'breathe': {
       const scaleMul = 1 + 0.08 * intensity * Math.sin(phase);
-      group.scale.x *= scaleMul;
-      group.scale.y *= scaleMul;
-      group.scale.z *= scaleMul;
+      if (useLinePivotMotion) {
+        copyLinePivotScaledPosition(group.position, restPosition, linePivot, scaleMul);
+        group.scale.set(
+          restScale.x * scaleMul,
+          restScale.y * scaleMul,
+          restScale.z * scaleMul,
+        );
+      } else {
+        group.scale.x *= scaleMul;
+        group.scale.y *= scaleMul;
+        group.scale.z *= scaleMul;
+      }
       break;
     }
 
-    case 'sway':
-      group.rotation.z += 0.05 * intensity * Math.sin(wavePhase);
+    case 'sway': {
+      const swayAngle = 0.05 * intensity * Math.sin(wavePhase);
+      if (useLinePivotMotion) {
+        copyLinePivotRotatedPositionZ(group.position, restPosition, linePivot, swayAngle);
+      } else {
+        group.rotation.z += swayAngle;
+      }
       break;
+    }
 
     default:
       break;
