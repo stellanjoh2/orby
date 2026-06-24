@@ -131,6 +131,27 @@ import {
   createOrbySurfaceUniformRefs,
   creativeLookPresetSupportsSurfaceDetail,
 } from './SvgExtrudeSurfaceShader.js';
+import {
+  attachCreativeLookHoloGlassShader,
+  creativeHoloGlassParamsForMesh,
+  CREATIVE_HOLO_GLASS_ENV_MAP_MUL,
+} from './creativeLookHoloGlass.js';
+import {
+  attachCreativeLookCrystalGemShader,
+  creativeCrystalGemParamsForMesh,
+  CREATIVE_CRYSTAL_GEM_ENV_MAP_MUL,
+  applyCreativeLookCrystalGemPerformanceTuning,
+} from './creativeLookCrystalGem.js';
+import {
+  THERMAL_FRAGMENT,
+  THERMAL_DEFAULT_INTENSITY,
+  THERMAL_DEFAULT_PATTERN_SCALE,
+} from './creativeLookThermalArt.js';
+import {
+  THERMAL_EXTREME_FRAGMENT,
+  THERMAL_EXTREME_DEFAULT_INTENSITY,
+  THERMAL_EXTREME_DEFAULT_PATTERN_SCALE,
+} from './creativeLookThermalExtremeArt.js';
 
 export { creativeLookPresetSupportsSurfaceDetail } from './SvgExtrudeSurfaceShader.js';
 
@@ -139,7 +160,7 @@ export { creativeLookUsesVoxelGeometry, isVoxelCreativeLookPreset } from './crea
 /**
  * Animated presets read `uTime` as one shared timeline: MaterialController sets
  * `uTime = elapsedSeconds * creativeLook.shaderAnimationSpeed` (after pause freeze).
- * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, chrome-plasma, voronoi, scanline-hologram, wire-pulse, vertex-points, dust-field, vectrex, ps2-crush, psx). EGA Pixel uses a fixed 640×350 screen grid (no time scroll).
+ * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, chrome-plasma, voronoi, scanline-hologram, wire-pulse, vertex-points, dust-field, vectrex, ps2-crush, psx, holo-glass, crystal-gem). EGA Pixel uses a fixed 640×350 screen grid (no time scroll).
  *
  * The chrome preset uses MeshPhysicalMaterial so PMREM / CubeUV environment maps match the rest of the viewer.
  * The glass preset uses MeshPhysicalMaterial.transmission for real refraction (Three.js transmission pipeline).
@@ -148,7 +169,7 @@ export { creativeLookUsesVoxelGeometry, isVoxelCreativeLookPreset } from './crea
  * in the transmission prepass — not other transmissive/transparent meshes (Three.js renderer design).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome-plasma' | 'chrome' | 'glass'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome-plasma' | 'chrome' | 'glass' | 'holo-glass' | 'crystal-gem' | 'thermal' | 'thermal-extreme'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
@@ -189,6 +210,10 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'chrome-plasma',
   'chrome',
   'glass',
+  'holo-glass',
+  'crystal-gem',
+  'thermal',
+  'thermal-extreme',
   'spectral-storm',
 ]);
 
@@ -201,7 +226,7 @@ export const CREATIVE_CHROME_BASE_HEX = 0xeef1f5;
 /** Physical env-map presets — need HDRI lighting and Render Backdrop for refraction / reflections. */
 export function creativeLookPresetNeedsHdriBackdrop(preset) {
   const id = normalizeCreativeLookPreset(preset);
-  return id === 'glass' || id === 'chrome';
+  return id === 'glass' || id === 'holo-glass' || id === 'crystal-gem' || id === 'chrome';
 }
 
 /** Full colorwheel range for Shader Lab master hue (degrees). */
@@ -367,6 +392,8 @@ export function prepareCreativeLookWirePulseGeometry(geometry) {
 /** Shader Lab presets that preserve import alpha (vehicle glass, hologram shells, etc.). */
 export const CREATIVE_LOOK_TRANSPARENT_PRESETS = /** @type {const} */ ([
   'glass',
+  'holo-glass',
+  'crystal-gem',
   'chrome',
   'ps2-crush',
   'psx',
@@ -676,6 +703,8 @@ export function creativeLookDefaultIntensity(preset) {
   if (id === 'dither-tritone') return DITHER_TRITONE_DEFAULT_INTENSITY;
   if (id === 'dither-crosshatch') return DITHER_CROSSHATCH_DEFAULT_INTENSITY;
   if (id === 'dither-raster') return DITHER_RASTER_DEFAULT_INTENSITY;
+  if (id === 'thermal') return THERMAL_DEFAULT_INTENSITY;
+  if (id === 'thermal-extreme') return THERMAL_EXTREME_DEFAULT_INTENSITY;
   return CREATIVE_LOOK_INTENSITY_DEFAULT;
 }
 
@@ -689,12 +718,14 @@ export function creativeLookDefaultPatternScale(preset) {
   if (id === 'dither-tritone') return DITHER_TRITONE_DEFAULT_PATTERN_SCALE;
   if (id === 'dither-crosshatch') return DITHER_CROSSHATCH_DEFAULT_PATTERN_SCALE;
   if (id === 'dither-raster') return DITHER_RASTER_DEFAULT_PATTERN_SCALE;
+  if (id === 'thermal') return THERMAL_DEFAULT_PATTERN_SCALE;
+  if (id === 'thermal-extreme') return THERMAL_EXTREME_DEFAULT_PATTERN_SCALE;
   return null;
 }
 
 /**
  * When switching between two dither pixel presets, always snap Scale + Intensity to the
- * destination preset's defaults (Neutral vs Tritone tuning differs).
+ * destination preset's tuned defaults (each variant has its own optimal Scale / Intensity).
  */
 export function shouldResetDitherPresetTuning(prevPreset, nextPreset) {
   const prev = normalizeCreativeLookPreset(prevPreset);
@@ -1003,6 +1034,7 @@ export function resolveCreativeLookPresetChoice(preset) {
   if (p === 'ordered-dither') p = 'dither-neutral';
   if (p === 'pixel-art') p = 'ega-pixel';
   if (p === 'snes') p = 'vga-dos-3d';
+  if (p === 'shutter') p = 'thermal';
   if (p && CREATIVE_LOOK_PRESETS.includes(p)) {
     return /** @type {CreativeLookPreset} */ (p);
   }
@@ -1072,6 +1104,8 @@ export function creativeLookPresetUsesShaderAnimation(preset) {
     id === 'flow-field' ||
     id === 'plasma' ||
     id === 'holographic' ||
+    id === 'holo-glass' ||
+    id === 'crystal-gem' ||
     id === 'spectral-storm' ||
     id === 'chrome-plasma' ||
     id === 'voronoi' ||
@@ -1160,6 +1194,10 @@ export function formatCreativeLookPresetLabel(preset) {
     gouache: 'Gouache',
     chrome: 'True Chrome',
     glass: 'Glass',
+    'holo-glass': 'Holo Glass',
+    'crystal-gem': 'Crystal Gem',
+    thermal: 'Thermal',
+    'thermal-extreme': 'Thermal Extreme',
   });
   return labels[id] ?? id;
 }
@@ -1903,8 +1941,11 @@ uniform float uOpacity;
 
 const vec3 CP_BASE = vec3(0.03137, 0.03137, 0.03137);
 
+// Fract hash (no sin) — same family as Voronoi look in this file.
 float cpHash(vec3 p) {
-  return fract(sin(dot(p, vec3(12.9898, 78.233, 37.199))) * 43758.5453);
+  p = fract(p * vec3(0.1031, 0.1030, 0.0973));
+  p += dot(p, p.yxz + 33.33);
+  return fract((p.x + p.y) * p.z);
 }
 
 float cpNoise(vec3 p) {
@@ -1928,25 +1969,34 @@ float cpNoise(vec3 p) {
   return mix(nxy0, nxy1, f.z);
 }
 
+// 3 octaves — domain warp only needs large-scale flow, not fine grain.
+float cpFbmWarp(vec3 p) {
+  float v = cpNoise(p);
+  p = p * 2.03 + 1.7;
+  v += 0.5 * cpNoise(p);
+  p = p * 2.03 + 1.7;
+  return v + 0.25 * cpNoise(p);
+}
+
+// 4 octaves — final marbling detail (was 5; imperceptible at this contrast).
 float cpFbm(vec3 p) {
-  float v = 0.0;
-  float a = 0.5;
-  for (int i = 0; i < 5; i++) {
-    v += a * cpNoise(p);
-    p = p * 2.03 + 1.7;
-    a *= 0.5;
-  }
-  return v;
+  float v = cpNoise(p);
+  p = p * 2.03 + 1.7;
+  v += 0.5 * cpNoise(p);
+  p = p * 2.03 + 1.7;
+  v += 0.25 * cpNoise(p);
+  p = p * 2.03 + 1.7;
+  return v + 0.125 * cpNoise(p);
 }
 
 vec3 cpNeonRamp(float phase) {
+  float t = fract(phase);
   vec3 electricBlue = vec3(0.0, 0.5, 1.0);
   vec3 cyan = vec3(0.0, 1.0, 1.0);
   vec3 magenta = vec3(1.0, 0.0, 1.0);
-  float t = fract(phase);
-  vec3 a = mix(electricBlue, cyan, smoothstep(0.0, 0.45, t));
-  vec3 b = mix(cyan, magenta, smoothstep(0.45, 0.88, t));
-  return mix(a, b, smoothstep(0.35, 0.92, t));
+  vec3 mid = mix(electricBlue, cyan, smoothstep(0.0, 0.45, t));
+  vec3 hi = mix(cyan, magenta, smoothstep(0.45, 0.88, t));
+  return mix(mid, hi, smoothstep(0.35, 0.92, t));
 }
 
 void main() {
@@ -1970,24 +2020,23 @@ void main() {
   float t = uTime * 0.34;
   vec3 p = vWorldPosition * freq + flowDir * t;
 
-  vec3 q = vec3(
-    cpFbm(p + vec3(0.0, 0.0, t * 0.22)),
-    cpFbm(p + vec3(5.2, 1.3, t * 0.18)),
-    cpFbm(p + vec3(1.7, 4.8, t * 0.24))
-  );
-  vec3 r = vec3(
-    cpFbm(p + 4.0 * q + vec3(8.3, 2.8, t * 0.15)),
-    cpFbm(p + 4.0 * q + vec3(3.1, 6.7, t * 0.19)),
-    cpFbm(p + 4.0 * q + vec3(6.2, 1.4, t * 0.21))
-  );
+  // First warp: 2 FBM samples + derived Z (was 3 full FBM).
+  float q0 = cpFbmWarp(p + vec3(0.0, 0.0, t * 0.22));
+  float q1 = cpFbmWarp(p + vec3(5.2, 1.3, t * 0.18));
+  vec3 q = vec3(q0, q1, mix(q0, q1, 0.58) + cpNoise(p + vec3(1.7, 4.8, t * 0.24)) * 0.42);
+
+  // Second warp: 2 FBM samples + derived Z (was 3 full FBM).
+  vec3 pq = p + 4.0 * q;
+  float r0 = cpFbmWarp(pq + vec3(8.3, 2.8, t * 0.15));
+  float r1 = cpFbmWarp(pq + vec3(3.1, 6.7, t * 0.19));
+  vec3 r = vec3(r0, r1, mix(r0, r1, 0.52) + cpNoise(pq + vec3(6.2, 1.4, t * 0.21)) * 0.38);
 
   float plasma = cpFbm(p + 3.5 * r);
   plasma += cpFbm(p * 1.85 + q * 2.15 + t * 0.12) * 0.58;
-  float layer2 = cpFbm(p * 0.62 - flowDir * t * 0.42 + r * 1.75);
-  plasma = mix(plasma, layer2, 0.36);
+  plasma = mix(plasma, cpFbm(p * 0.62 - flowDir * t * 0.42 + r * 1.75), 0.36);
 
-  float hair = cpFbm(p * 4.8 + r * 2.4 + t * 0.28);
-  hair = abs(hair - 0.5) * 2.0;
+  // Fine striations: single noise sample at high freq (was full FBM).
+  float hair = abs(cpNoise(p * 4.8 + r * 2.4 + t * 0.28) - 0.5) * 2.0;
   plasma += (0.5 - hair) * 0.14 * (0.65 + up * 0.35 - down * 0.25);
 
   float field = plasma * 0.62 + 0.5;
@@ -2607,11 +2656,13 @@ void main() {
 /** Surface-sampled point sprites — mesh-driven magical dust (inspired by particle-mofing look). */
 const DUST_FIELD_VERTEX = /* glsl */ `
 attribute vec4 randomPhase;
+attribute float revealAlpha;
 
 varying vec3 vWorldPosition;
 varying float vRandomAlpha;
 varying float vFogDepth;
 varying float vTwinklePhase;
+varying float vRevealAlpha;
 
 uniform float uTime;
 uniform float uPatternScale;
@@ -2622,6 +2673,7 @@ float dustSineInOut(float x) {
 }
 
 void main() {
+  vRevealAlpha = revealAlpha;
   vRandomAlpha = randomPhase.x + 0.32;
   vTwinklePhase = randomPhase.z * 6.28318 + randomPhase.w * 4.17;
 
@@ -2655,6 +2707,7 @@ void main() {
   float sizeBreath = dustSineInOut(sin(t * 0.78 + phase * 2.4) * 0.5 + 0.5);
   gl_PointSize = sizeBase + mix(2.0, 10.0, inten * 0.5) * sizePulse + 2.5 * sizeBreath;
   gl_PointSize *= clamp(320.0 / max(-mvPosition.z, 0.35), 0.35, 2.8);
+  gl_PointSize *= vRevealAlpha;
 }
 `;
 
@@ -2663,11 +2716,14 @@ varying vec3 vWorldPosition;
 varying float vRandomAlpha;
 varying float vFogDepth;
 varying float vTwinklePhase;
+varying float vRevealAlpha;
 
 uniform float uTime;
 uniform float uOpacity;
 
 void main() {
+  if (vRevealAlpha <= 0.0) discard;
+
   vec2 p = gl_PointCoord * 2.0 - 1.0;
   float len = length(p);
   if (len > 1.0) discard;
@@ -2692,7 +2748,7 @@ void main() {
   vec3 fogCol = vec3(0.015, 0.05, 0.12);
   col = mix(col, fogCol, fog * 0.72);
 
-  float outAlpha = alpha * vRandomAlpha * uOpacity * (1.0 - fog * 0.35);
+  float outAlpha = alpha * vRandomAlpha * uOpacity * vRevealAlpha * (1.0 - fog * 0.35);
   outAlpha *= 0.78 + 0.22 * sin(vTwinklePhase * 1.37 + uTime * 2.35);
   gl_FragColor = vec4(col, outAlpha);
 }
@@ -3776,6 +3832,40 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     return finish(mat);
   }
 
+  if (id === 'thermal') {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uPatternScale: { value: patternScale },
+        uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: WORLD_VERTEX,
+      fragmentShader: lookFrag(THERMAL_FRAGMENT),
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'thermal';
+    return finish(mat);
+  }
+
+  if (id === 'thermal-extreme') {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uPatternScale: { value: patternScale },
+        uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: WORLD_VERTEX,
+      fragmentShader: lookFrag(THERMAL_EXTREME_FRAGMENT),
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'thermal-extreme';
+    return finish(mat);
+  }
+
   if (id === 'voronoi') {
     const tint = diffuseTint ?? new THREE.Color(0x5cc8ff);
     const mat = new THREE.ShaderMaterial({
@@ -3926,6 +4016,82 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       depthWrite: false,
     });
     return finishPhysical(mat, 'glass');
+  }
+
+  if (id === 'holo-glass') {
+    const {
+      thickness,
+      roughness,
+      iridescence,
+      iridescenceThicknessRange,
+    } = creativeHoloGlassParamsForMesh(patternScale, hdriBlur, null, intensity);
+    const mat = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(0xffffff),
+      metalness: 0,
+      roughness,
+      transmission: 1,
+      thickness,
+      ior: 1.52,
+      specularIntensity: 0.85,
+      specularColor: new THREE.Color(0xe8e8f0),
+      iridescence,
+      iridescenceIOR: 1.28,
+      iridescenceThicknessRange,
+      sheen: 0.32,
+      sheenRoughness: 0.74,
+      sheenColor: new THREE.Color(0xc8d8ff),
+      envMapIntensity: CREATIVE_HOLO_GLASS_ENV_MAP_MUL,
+      transparent: true,
+      opacity: 1,
+      attenuationColor: new THREE.Color(0xe8eef8),
+      attenuationDistance: 1.35,
+      side,
+      toneMapped: true,
+      depthWrite: false,
+    });
+    attachCreativeLookHoloGlassShader(mat, {
+      time,
+      patternScale,
+      intensity,
+    });
+    return finishPhysical(mat, 'holo-glass');
+  }
+
+  if (id === 'crystal-gem') {
+    const {
+      thickness,
+      roughness,
+      attenuationDistance,
+    } = creativeCrystalGemParamsForMesh(patternScale, hdriBlur, null, intensity);
+    const mat = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(0xd8eeff),
+      metalness: 0,
+      roughness,
+      transmission: 1,
+      thickness,
+      ior: 1.77,
+      specularIntensity: 1.0,
+      specularColor: new THREE.Color(0xf0f8ff),
+      iridescence: 0,
+      sheen: 0.08,
+      sheenRoughness: 0.92,
+      sheenColor: new THREE.Color(0x88c8e8),
+      envMapIntensity: CREATIVE_CRYSTAL_GEM_ENV_MAP_MUL,
+      transparent: true,
+      opacity: 1,
+      attenuationColor: new THREE.Color(0x041828),
+      attenuationDistance,
+      side,
+      toneMapped: true,
+      depthWrite: false,
+    });
+    attachCreativeLookCrystalGemShader(mat, {
+      time,
+      patternScale,
+      intensity,
+    });
+    applyCreativeLookCrystalGemPerformanceTuning(mat);
+    return finishPhysical(mat, 'crystal-gem');
   }
 
   if (id === 'chrome') {

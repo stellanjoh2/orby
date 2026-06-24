@@ -808,6 +808,8 @@ export function reapplySvgExtrudeSurfaceFromState(model, storeLike, shadingOverr
         if (
           st.creativeLook?.enabled &&
           m?.userData?.orbyCreativeLook === 'glass'
+          || m?.userData?.orbyCreativeLook === 'holo-glass'
+          || m?.userData?.orbyCreativeLook === 'crystal-gem'
         ) {
           return;
         }
@@ -935,6 +937,8 @@ export function creativeLookPresetSupportsSurfaceDetail(preset) {
   if (p === 'glass-holo') p = 'holographic';
   return (
     p === 'holographic' ||
+    p === 'holo-glass' ||
+    p === 'crystal-gem' ||
     p === 'scanline-hologram' ||
     p === 'spectral-storm' ||
     p === 'chrome-plasma' ||
@@ -1125,7 +1129,7 @@ export function syncCreativeLookSurfaceToModel(model, storeLike) {
       mats.forEach((m) => {
         if (!m?.userData?.orbyCreativeLook) return;
         const tag = m.userData.orbyCreativeLook;
-        if ((tag === 'chrome' || tag === 'glass') && m.isMeshPhysicalMaterial) {
+        if ((tag === 'chrome' || tag === 'glass' || tag === 'holo-glass' || tag === 'crystal-gem') && m.isMeshPhysicalMaterial) {
           removeSvgExtrudeProceduralFromMaterial(m);
           return;
         }
@@ -1150,7 +1154,7 @@ export function syncCreativeLookSurfaceToModel(model, storeLike) {
     mats.forEach((m) => {
       if (!m?.userData?.orbyCreativeLook) return;
       const tag = m.userData.orbyCreativeLook;
-      if (tag === 'glass') {
+      if (tag === 'glass' || tag === 'holo-glass' || tag === 'crystal-gem') {
         if (m.isMeshPhysicalMaterial) {
           // Roughness-only triplanar detail — normal inject breaks transmission refraction.
           applySvgExtrudeSurfaceToMaterial(m, {

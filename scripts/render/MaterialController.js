@@ -57,6 +57,17 @@ import {
   syncCreativeLookShadowTint,
 } from './CreativeLookMaterials.js';
 import {
+  creativeHoloGlassParamsForMesh,
+  CREATIVE_HOLO_GLASS_ENV_MAP_MUL,
+  syncCreativeLookHoloGlassUniforms,
+} from './creativeLookHoloGlass.js';
+import {
+  creativeCrystalGemParamsForMesh,
+  CREATIVE_CRYSTAL_GEM_ENV_MAP_MUL,
+  syncCreativeLookCrystalGemUniforms,
+  applyCreativeLookCrystalGemPerformanceTuning,
+} from './creativeLookCrystalGem.js';
+import {
   creativeGouacheMergeFactor,
   creativeGouacheVertexDrift,
   creativeGouacheWobbleScale,
@@ -1912,7 +1923,7 @@ export class MaterialController {
     ) {
       return false;
     }
-    return preset !== 'glass' && preset !== 'chrome';
+    return preset !== 'glass' && preset !== 'holo-glass' && preset !== 'crystal-gem' && preset !== 'chrome';
   }
 
   /** Sketch / Sketch Colour — raster size 0 turns the effect off while the preset stays selected. */
@@ -2607,18 +2618,65 @@ export class MaterialController {
       } else {
         child.material = mk(importOriginal, 0);
       }
-      if (preset === 'glass') {
+      if (preset === 'glass' || preset === 'holo-glass' || preset === 'crystal-gem') {
         const blur = Number(this.stateStore?.getState()?.hdriBlurriness ?? 0);
         const hdriBlurVal = Number.isFinite(blur) ? blur : 0;
         const patchGlassThickness = (m) => {
-          if (m?.userData?.orbyCreativeLook !== 'glass' || !m.isMeshPhysicalMaterial) return;
-          const { thickness, roughness } = creativeGlassParamsForMesh(
-            patternScale,
-            hdriBlurVal,
-            child,
-          );
-          m.thickness = thickness;
-          m.roughness = roughness;
+          const tag = m?.userData?.orbyCreativeLook;
+          if (!m?.isMeshPhysicalMaterial) return;
+          if (tag === 'glass') {
+            const { thickness, roughness } = creativeGlassParamsForMesh(
+              patternScale,
+              hdriBlurVal,
+              child,
+            );
+            m.thickness = thickness;
+            m.roughness = roughness;
+            return;
+          }
+          if (tag === 'holo-glass') {
+            const {
+              thickness,
+              roughness,
+              iridescence,
+              iridescenceThicknessRange,
+            } = creativeHoloGlassParamsForMesh(
+              patternScale,
+              hdriBlurVal,
+              child,
+              this.creativeLookSettings.intensity,
+            );
+            m.thickness = thickness;
+            m.roughness = roughness;
+            m.iridescence = iridescence;
+            m.iridescenceThicknessRange = iridescenceThicknessRange;
+            syncCreativeLookHoloGlassUniforms(m, {
+              time: this._creativeLookTime ?? 0,
+              patternScale,
+              intensity: this.creativeLookSettings.intensity,
+            });
+            return;
+          }
+          if (tag === 'crystal-gem') {
+            const {
+              thickness,
+              roughness,
+              attenuationDistance,
+            } = creativeCrystalGemParamsForMesh(
+              patternScale,
+              hdriBlurVal,
+              child,
+              this.creativeLookSettings.intensity,
+            );
+            m.thickness = thickness;
+            m.roughness = roughness;
+            m.attenuationDistance = attenuationDistance;
+            syncCreativeLookCrystalGemUniforms(m, {
+              time: this._creativeLookTime ?? 0,
+              patternScale,
+              intensity: this.creativeLookSettings.intensity,
+            });
+          }
         };
         if (Array.isArray(child.material)) {
           child.material.forEach(patchGlassThickness);
@@ -2633,7 +2691,7 @@ export class MaterialController {
     });
 
     this._syncCreativeLookShadowTint();
-    if (preset === 'glass') {
+    if (preset === 'glass' || preset === 'holo-glass' || preset === 'crystal-gem') {
       this._stabilizeFontExtrudeGlassPresentation();
     }
     this._appliedCreativeLookPreset = preset;
@@ -3687,10 +3745,26 @@ export class MaterialController {
           const tag = m?.userData?.orbyCreativeLook;
           if (
             creativeLookPresetUsesShaderAnimation(tag) &&
-            m.uniforms?.uTime
+            (m.uniforms?.uTime || m.userData?.orbyCreativeLook === 'holo-glass' || m.userData?.orbyCreativeLook === 'crystal-gem')
           ) {
-            m.uniforms.uTime.value = effectiveTime;
-            if (m.uniforms.uPatternScale) {
+            if (m.uniforms?.uTime) {
+              m.uniforms.uTime.value = effectiveTime;
+            }
+            if (m.userData?.orbyCreativeLook === 'holo-glass' && m.isMeshPhysicalMaterial) {
+              syncCreativeLookHoloGlassUniforms(m, {
+                time: effectiveTime,
+                patternScale,
+                intensity: this.creativeLookSettings.intensity,
+              });
+            }
+            if (m.userData?.orbyCreativeLook === 'crystal-gem' && m.isMeshPhysicalMaterial) {
+              syncCreativeLookCrystalGemUniforms(m, {
+                time: effectiveTime,
+                patternScale,
+                intensity: this.creativeLookSettings.intensity,
+              });
+            }
+            if (m.uniforms?.uPatternScale) {
               m.uniforms.uPatternScale.value = patternScale;
             }
           }
@@ -3740,7 +3814,7 @@ export class MaterialController {
       });
     }
 
-    if (preset === 'glass') {
+    if (preset === 'glass' || preset === 'holo-glass' || preset === 'crystal-gem') {
       const blur = Number(this.stateStore?.getState()?.hdriBlurriness ?? 0);
       const hdriBlur = Number.isFinite(blur) ? blur : 0;
       this.currentModel.traverse((child) => {
@@ -3755,6 +3829,50 @@ export class MaterialController {
             );
             m.thickness = thickness;
             m.roughness = roughness;
+            continue;
+          }
+          if (m?.userData?.orbyCreativeLook === 'holo-glass' && m.isMeshPhysicalMaterial) {
+            const {
+              thickness,
+              roughness,
+              iridescence,
+              iridescenceThicknessRange,
+            } = creativeHoloGlassParamsForMesh(
+              patternScale,
+              hdriBlur,
+              child,
+              this.creativeLookSettings.intensity,
+            );
+            m.thickness = thickness;
+            m.roughness = roughness;
+            m.iridescence = iridescence;
+            m.iridescenceThicknessRange = iridescenceThicknessRange;
+            syncCreativeLookHoloGlassUniforms(m, {
+              time: effectiveTime,
+              patternScale,
+              intensity: this.creativeLookSettings.intensity,
+            });
+            continue;
+          }
+          if (m?.userData?.orbyCreativeLook === 'crystal-gem' && m.isMeshPhysicalMaterial) {
+            const {
+              thickness,
+              roughness,
+              attenuationDistance,
+            } = creativeCrystalGemParamsForMesh(
+              patternScale,
+              hdriBlur,
+              child,
+              this.creativeLookSettings.intensity,
+            );
+            m.thickness = thickness;
+            m.roughness = roughness;
+            m.attenuationDistance = attenuationDistance;
+            syncCreativeLookCrystalGemUniforms(m, {
+              time: effectiveTime,
+              patternScale,
+              intensity: this.creativeLookSettings.intensity,
+            });
           }
         }
       });
@@ -3904,6 +4022,47 @@ export class MaterialController {
           if (m.uniforms?.uWobbleScale) {
             m.uniforms.uWobbleScale.value = creativeSketchWobbleScale(strokeWidth);
           }
+        }
+        if (m.userData.orbyCreativeLook === 'holo-glass' && m.isMeshPhysicalMaterial) {
+          const ps = normalizeCreativeLookPatternScale(
+            'holo-glass',
+            source?.patternScale ?? this.creativeLookSettings.patternScale,
+          );
+          syncCreativeLookHoloGlassUniforms(m, {
+            patternScale: ps,
+            intensity,
+          });
+          const blur = Number(this.stateStore?.getState()?.hdriBlurriness ?? 0);
+          const hdriBlur = Number.isFinite(blur) ? blur : 0;
+          const { iridescence, iridescenceThicknessRange, roughness } = creativeHoloGlassParamsForMesh(
+            ps,
+            hdriBlur,
+            child,
+            intensity,
+          );
+          m.iridescence = iridescence;
+          m.iridescenceThicknessRange = iridescenceThicknessRange;
+          m.roughness = roughness;
+        }
+        if (m.userData.orbyCreativeLook === 'crystal-gem' && m.isMeshPhysicalMaterial) {
+          const ps = normalizeCreativeLookPatternScale(
+            'crystal-gem',
+            source?.patternScale ?? this.creativeLookSettings.patternScale,
+          );
+          syncCreativeLookCrystalGemUniforms(m, {
+            patternScale: ps,
+            intensity,
+          });
+          const blur = Number(this.stateStore?.getState()?.hdriBlurriness ?? 0);
+          const hdriBlur = Number.isFinite(blur) ? blur : 0;
+          const { roughness, attenuationDistance } = creativeCrystalGemParamsForMesh(
+            ps,
+            hdriBlur,
+            child,
+            intensity,
+          );
+          m.roughness = roughness;
+          m.attenuationDistance = attenuationDistance;
         }
         if (m.isMeshPhysicalMaterial) {
           applyCreativeLookPhysicalMasterHue(m, masterHue, brightness);
@@ -5196,6 +5355,81 @@ export class MaterialController {
           return;
         }
 
+        if (material.userData?.orbyCreativeLook === 'holo-glass') {
+          if (!material.isMeshPhysicalMaterial) return;
+          material.envMap = envTexture;
+          material.transmission = 1;
+          if (material.envMapIntensity !== undefined) {
+            material.envMapIntensity =
+              intensity * litEnvMul * CREATIVE_HOLO_GLASS_ENV_MAP_MUL;
+          }
+          const ps = Number(state?.creativeLook?.patternScale);
+          const patternScale = Number.isFinite(ps)
+            ? THREE.MathUtils.clamp(ps, 0.02, 5)
+            : 1;
+          const holoIntensity = Number(state?.creativeLook?.intensity);
+          const {
+            thickness,
+            roughness,
+            iridescence,
+            iridescenceThicknessRange,
+          } = creativeHoloGlassParamsForMesh(
+            patternScale,
+            hdriBlurriness,
+            child,
+            Number.isFinite(holoIntensity) ? holoIntensity : 1,
+          );
+          material.thickness = thickness;
+          material.roughness = roughness;
+          material.iridescence = iridescence;
+          material.iridescenceThicknessRange = iridescenceThicknessRange;
+          material.transparent = true;
+          material.opacity = 1;
+          material.depthWrite = false;
+          if (this._isFontExtrudeModel()) {
+            material.side = THREE.DoubleSide;
+          }
+          material.needsUpdate = true;
+          return;
+        }
+
+        if (material.userData?.orbyCreativeLook === 'crystal-gem') {
+          if (!material.isMeshPhysicalMaterial) return;
+          material.envMap = envTexture;
+          material.transmission = 1;
+          if (material.envMapIntensity !== undefined) {
+            material.envMapIntensity =
+              intensity * litEnvMul * CREATIVE_CRYSTAL_GEM_ENV_MAP_MUL;
+          }
+          const ps = Number(state?.creativeLook?.patternScale);
+          const patternScale = Number.isFinite(ps)
+            ? THREE.MathUtils.clamp(ps, 0.02, 5)
+            : 1;
+          const gemIntensity = Number(state?.creativeLook?.intensity);
+          const {
+            thickness,
+            roughness,
+            attenuationDistance,
+          } = creativeCrystalGemParamsForMesh(
+            patternScale,
+            hdriBlurriness,
+            child,
+            Number.isFinite(gemIntensity) ? gemIntensity : 1,
+          );
+          material.thickness = thickness;
+          material.roughness = roughness;
+          material.attenuationDistance = attenuationDistance;
+          applyCreativeLookCrystalGemPerformanceTuning(material);
+          material.transparent = true;
+          material.opacity = 1;
+          material.depthWrite = false;
+          if (this._isFontExtrudeModel()) {
+            material.side = THREE.DoubleSide;
+          }
+          material.needsUpdate = true;
+          return;
+        }
+
         if (
           material.isMeshStandardMaterial ||
           material.isMeshPhysicalMaterial ||
@@ -6040,7 +6274,12 @@ export class MaterialController {
       if (!child.isMesh || !child.userData?.orbyFontExtrude) return;
       const mats = Array.isArray(child.material) ? child.material : [child.material];
       for (const m of mats) {
-        if (m?.userData?.orbyCreativeLook !== 'glass' || !m.isMeshPhysicalMaterial) continue;
+        if (
+          (m?.userData?.orbyCreativeLook !== 'glass'
+            && m?.userData?.orbyCreativeLook !== 'holo-glass'
+            && m?.userData?.orbyCreativeLook !== 'crystal-gem')
+          || !m.isMeshPhysicalMaterial
+        ) continue;
         // https://threejs.org/examples/webgl_materials_physical_transmission.html uses DoubleSide.
         m.side = THREE.DoubleSide;
         m.needsUpdate = true;

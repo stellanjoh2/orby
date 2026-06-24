@@ -1094,6 +1094,18 @@
                     <button type="button" data-creative-look="glass" class="hdri-icon" data-tooltip="Glass — physical transmission &amp; refraction (Three.js); HDRI + scene. Scale = slab thickness / frost">
                       <img src="./assets/images/creative-look-glass.png" alt="Glass" width="128" height="128" />
                     </button>
+                    <button type="button" data-creative-look="holo-glass" class="hdri-icon" data-tooltip="Holo Glass — physical transmission + thin-film iridescence; animated rainbow rim bands at grazing angles. Scale = slab thickness / frost; Intensity = holo punch">
+                      <img src="./assets/images/creative-look-holo-glass.png" alt="Holo Glass" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="crystal-gem" class="hdri-icon" data-tooltip="Crystal Gem — sapphire body + prismatic dispersion + internal facet fire; physical transmission (IOR 1.77). Scale = facet / inclusion size; Intensity = dispersion &amp; body saturation. HDRI + Render Backdrop recommended.">
+                      <img src="./assets/images/creative-look-crystal-gem.png" alt="Crystal Gem" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="thermal" class="hdri-icon" data-tooltip="Thermal — smooth false-color IR heat map; lit faces read hot (red/white), silhouettes cool (blue/cyan). Scale = contour sharpness; Intensity = contrast; Object Hue shifts palette; Material brightness = heat gain. Bloom recommended.">
+                      <img src="./assets/images/creative-look-thermal.png" alt="Thermal" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="thermal-extreme" class="hdri-icon" data-tooltip="Thermal Extreme — crushed poster IR; purple shadows, neon cyan/green mids, pure red hot zones (purple → cyan → green → yellow → red), film grain. Scale = halo width &amp; band crush; Intensity = punch; Object Hue shifts palette. Bloom recommended.">
+                      <img src="./assets/images/creative-look-thermal-extreme.png" alt="Thermal Extreme" width="128" height="128" />
+                    </button>
                       </div>
                     </div>
                     <div class="creative-look-grid-section">
@@ -1131,7 +1143,7 @@
                     <button type="button" data-creative-look="dither-neutral" class="hdri-icon" data-tooltip="Neutral — hard square pixels with 4×4 Bayer ordered dither; default Scale 0 (finest), Intensity 2; Object Hue shifts output">
                       <img src="./assets/images/creative-look-dither-neutral.png" alt="Neutral Dither" width="128" height="128" />
                     </button>
-                    <button type="button" data-creative-look="dither-tritone" class="hdri-icon" data-tooltip="Tritone — hard 3-tier luminance poster (crushed shadows, lifted highlights); default Scale 0.5, Intensity 2">
+                    <button type="button" data-creative-look="dither-tritone" class="hdri-icon" data-tooltip="Tritone — hard 3-tier luminance poster (crushed shadows, lifted highlights); default Scale 0.5, Intensity 0">
                       <img src="./assets/images/creative-look-dither-tritone.png" alt="Tritone Dither" width="128" height="128" />
                     </button>
                     <button type="button" data-creative-look="dither-crosshatch" class="hdri-icon" data-tooltip="Crosshatch — extreme 8-color crush with transposed Bayer lattice; default Scale 1, Intensity 0; Object Hue shifts output">
@@ -5467,7 +5479,7 @@
           <button type="button" id="closeBugReport" class="close-btn" aria-label="Close"></button>
         </div>
         <p class="load-settings-description">
-          Tell us what’s happening. We’re always looking to improve and really appreciate your feedback. <span class="bug-report-intro-emphasis">We don’t collect contact details</span>, so we can’t reply, but every submission is read.
+          Tell us what’s happening. We’re always looking to improve and really appreciate your feedback. If you can, use <span class="bug-report-intro-emphasis">Copy Scene Settings</span> from the menu and paste it into Details — that helps us pinpoint the issue. <span class="bug-report-intro-emphasis">We don’t collect contact details</span>, so we can’t reply, but every submission is read.
         </p>
         <form id="bugReportForm">
           <div class="bug-report-field">
@@ -5559,7 +5571,7 @@
                   rows="6"
                   maxlength="8000"
                   required
-                  placeholder="About 5+ words: steps to reproduce, browser/OS, what you expected…"
+                  placeholder="About 5+ words: steps to reproduce, browser/OS, what you expected… Paste Copy Scene Settings here if you can."
                   aria-labelledby="bugReportMessageLabel"
                 ></textarea>
                 <div class="bug-report-message-sending-overlay" hidden aria-hidden="true">

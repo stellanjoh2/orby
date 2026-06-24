@@ -210,10 +210,31 @@ export class FontExtrudeUI {
               <option value="right">Right</option>
             </select>
           </label>
+          <div id="fontExtrudeFileFallback" class="font-extrude-file-fallback" hidden>
+            <input type="file" id="fontExtrudeFile" class="sr-only" accept=".ttf,.otf,.woff,.woff2,font/*" />
+            <button type="button" id="fontExtrudeFileBtn" class="ghost-btn small">Load .ttf / .otf…</button>
+          </div>
+          <div class="panel-block-divider" aria-hidden="true"></div>
+          <div class="block-title font-extrude-section-title">Appearance</div>
+          <label class="color-line font-extrude-fill-color">
+            <span data-tooltip="Fill color for 2D preview and generated 3D text">Color</span>
+            <input type="color" id="fontExtrudeFillColor" class="color-chip" value="#808080" />
+          </label>
+          ${FONT_EXTRUDE_SURFACE_POST_GEN_HTML}
+          ${FONT_EXTRUDE_SHAPE_CONTROLS_HTML}
           <div class="panel-block-divider font-extrude-circular-divider" aria-hidden="true"></div>
           <div class="block-title font-extrude-section-title font-extrude-circular-title">Circular wrap</div>
           <label class="slider-line slider-line--toggle-only font-extrude-circular-wrap-line">
-            <span data-tooltip="Arrange letters on a circular arc (uses the first line only). Auto mode fits the full string into a 360° ring.">Wrap on circle</span>
+            <span class="block-title-name">
+              <span data-tooltip="Arrange letters on a circular arc (uses the first line only). Auto mode fits the full string into a 360° ring.">Wrap on circle</span>
+              <span
+                class="dev-badge"
+                data-tooltip="Heads up, some fonts can become weird — Working on it"
+                tabindex="0"
+                role="img"
+                aria-label="Heads up, some fonts can become weird — Working on it"
+              ><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
+            </span>
             <label class="effect-toggle">
               <input type="checkbox" id="fontExtrudeCircularWrapEnabled" />
               <span class="effect-indicator" aria-hidden="true"></span>
@@ -234,18 +255,6 @@ export class FontExtrudeUI {
               <span class="value" data-output="fontExtrudeCircularWrapArc">360°</span>
             </label>
           </div>
-          <div id="fontExtrudeFileFallback" class="font-extrude-file-fallback" hidden>
-            <input type="file" id="fontExtrudeFile" class="sr-only" accept=".ttf,.otf,.woff,.woff2,font/*" />
-            <button type="button" id="fontExtrudeFileBtn" class="ghost-btn small">Load .ttf / .otf…</button>
-          </div>
-          <div class="panel-block-divider" aria-hidden="true"></div>
-          <div class="block-title font-extrude-section-title">Appearance</div>
-          <label class="color-line font-extrude-fill-color">
-            <span data-tooltip="Fill color for 2D preview and generated 3D text">Color</span>
-            <input type="color" id="fontExtrudeFillColor" class="color-chip" value="#808080" />
-          </label>
-          ${FONT_EXTRUDE_SURFACE_POST_GEN_HTML}
-          ${FONT_EXTRUDE_SHAPE_CONTROLS_HTML}
           <button type="button" id="fontExtrudeGenerate" class="accent-action-btn font-extrude-generate" disabled data-tooltip="Extrude preview text into a 3D mesh">
             <i class="fa-solid fa-cube" aria-hidden="true"></i>
             <span>Generate 3D Text</span>
@@ -1629,7 +1638,7 @@ export class FontExtrudeUI {
     ctx.translate(-bounds.minX, -bounds.minY);
     this.controller.drawPreview(ctx, layout);
     if (normalizeFontCircularWrapEnabled(options.circularWrap?.enabled)) {
-      drawCircularArcSpanPreviewIndicator(ctx, layout);
+      drawCircularArcSpanPreviewIndicator(ctx, layout, options.circularWrap);
     }
     ctx.restore();
     this._syncLiveEditorPreviewMode();

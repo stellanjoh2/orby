@@ -244,10 +244,12 @@ export function buildFontCircularLayout({
 
 /**
  * Minimal straight-preview bracket marking where the circular arc starts and ends (first line).
+ * Manual arc span scales the bracket width so the slider has visible feedback on the linear preview.
  * @param {CanvasRenderingContext2D} ctx
  * @param {{ lines?: { paths?: { glyphPath?: { getBoundingBox?: () => { x1: number, x2: number, y1: number, y2: number, isEmpty?: () => boolean } } }[], y?: number }[], fontSize?: number }} layout
+ * @param {{ mode?: unknown, arcDeg?: unknown }} [circularWrap]
  */
-export function drawCircularArcSpanPreviewIndicator(ctx, layout) {
+export function drawCircularArcSpanPreviewIndicator(ctx, layout, circularWrap) {
   const paths = layout?.lines?.[0]?.paths;
   if (!ctx || !paths?.length) return;
 
@@ -266,6 +268,18 @@ export function drawCircularArcSpanPreviewIndicator(ctx, layout) {
   }
   if (!any || !Number.isFinite(minX) || !Number.isFinite(maxX)) return;
 
+  const mode = normalizeFontCircularWrapMode(circularWrap?.mode);
+  const arcDeg = clampFontCircularWrapArcDeg(circularWrap?.arcDeg);
+  let bracketMinX = minX;
+  let bracketMaxX = maxX;
+  if (mode === 'manual' && arcDeg < MAX_FONT_CIRCULAR_WRAP_ARC_DEG) {
+    const centerX = (minX + maxX) * 0.5;
+    const inkWidth = Math.max(maxX - minX, 1);
+    const spanWidth = inkWidth * (arcDeg / MAX_FONT_CIRCULAR_WRAP_ARC_DEG);
+    bracketMinX = centerX - spanWidth * 0.5;
+    bracketMaxX = centerX + spanWidth * 0.5;
+  }
+
   const fontSize = Number(layout?.fontSize) > 0 ? Number(layout.fontSize) : 72;
   const strokeWidth = Math.max(fontSize * 0.025, 0.75);
   const tickHeight = Math.max(fontSize * 0.1, 3);
@@ -278,12 +292,12 @@ export function drawCircularArcSpanPreviewIndicator(ctx, layout) {
   ctx.lineWidth = strokeWidth;
   ctx.lineCap = 'square';
   ctx.beginPath();
-  ctx.moveTo(minX, yBase);
-  ctx.lineTo(minX, yTick);
-  ctx.moveTo(maxX, yBase);
-  ctx.lineTo(maxX, yTick);
-  ctx.moveTo(minX, yTick);
-  ctx.lineTo(maxX, yTick);
+  ctx.moveTo(bracketMinX, yBase);
+  ctx.lineTo(bracketMinX, yTick);
+  ctx.moveTo(bracketMaxX, yBase);
+  ctx.lineTo(bracketMaxX, yTick);
+  ctx.moveTo(bracketMinX, yTick);
+  ctx.lineTo(bracketMaxX, yTick);
   ctx.stroke();
   ctx.restore();
 }

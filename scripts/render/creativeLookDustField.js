@@ -10,6 +10,9 @@ export const DUST_FIELD_DEFAULT_INTENSITY = 0;
 /** Default Shader Lab scale (micro-wobble amplitude). */
 export const DUST_FIELD_DEFAULT_PATTERN_SCALE = 1;
 
+/** World-space anchor triangle shorter than this is treated as collapsed (reveal spawn origin). */
+const DUST_FIELD_REVEAL_MIN_EDGE = 0.002;
+
 const _vA = new THREE.Vector3();
 const _vB = new THREE.Vector3();
 const _vC = new THREE.Vector3();
@@ -17,7 +20,41 @@ const _edge1 = new THREE.Vector3();
 const _edge2 = new THREE.Vector3();
 const _cross = new THREE.Vector3();
 const _out = new THREE.Vector3();
+const _worldA = new THREE.Vector3();
+const _worldB = new THREE.Vector3();
+const _worldC = new THREE.Vector3();
 const _rootInv = new THREE.Matrix4();
+
+/**
+ * Hide dust particles anchored to collapsed / unrevealed font glyphs (scale → 0 at pivot).
+ * Non-font meshes always return 1 — no reveal coupling outside glyph groups.
+ * @param {THREE.Mesh} mesh
+ * @param {number} worldMaxEdge
+ * @returns {number}
+ */
+function computeDustFieldRevealAlpha(mesh, worldMaxEdge) {
+  if (worldMaxEdge < DUST_FIELD_REVEAL_MIN_EDGE) return 0;
+
+  let node = mesh;
+  while (node) {
+    if (node.userData?.orbyFontGlyphGroup) {
+      if (!node.visible) return 0;
+      break;
+    }
+    node = node.parent;
+  }
+
+  const mats = mesh.material
+    ? (Array.isArray(mesh.material) ? mesh.material : [mesh.material])
+    : [];
+  let opacity = 1;
+  for (const m of mats) {
+    if (m && Number.isFinite(m.opacity)) {
+      opacity = Math.min(opacity, m.opacity);
+    }
+  }
+  return opacity < 0.02 ? 0 : opacity;
+}
 
 /** @param {string | undefined} preset */
 export function isDustFieldCreativeLookPreset(preset) {
@@ -235,6 +272,8 @@ export function buildDustFieldGeometry(modelRoot, options) {
 
   const positions = new Float32Array(particleCount * 3);
   const randomPhase = new Float32Array(particleCount * 4);
+  const revealAlphaArr = new Float32Array(particleCount);
+  revealAlphaArr.fill(1);
   const meshIndexArr = new Uint16Array(particleCount);
   const iaArr = new Uint32Array(particleCount);
   const ibArr = new Uint32Array(particleCount);
@@ -280,6 +319,7 @@ export function buildDustFieldGeometry(modelRoot, options) {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('randomPhase', new THREE.BufferAttribute(randomPhase, 4));
+  geometry.setAttribute('revealAlpha', new THREE.BufferAttribute(revealAlphaArr, 1));
   geometry.computeBoundingSphere();
 
   return {
@@ -313,6 +353,8 @@ export function updateDustFieldParticlePositions(anchors, modelRoot, pointsGeome
 
   const posAttr = pointsGeometry.attributes.position;
   const posArr = posAttr.array;
+  const revealAttr = pointsGeometry.attributes.revealAlpha;
+  const revealArr = revealAttr?.array;
   const count = anchors.meshIndex.length;
 
   modelRoot.updateWorldMatrix(true, true);
@@ -326,6 +368,9 @@ export function updateDustFieldParticlePositions(anchors, modelRoot, pointsGeome
     mesh.skeleton.update();
     skeletonsUpdated.add(mesh.skeleton);
   }
+
+  /** @type {Map<THREE.Mesh, number>} */
+  const revealAlphaByMesh = new Map();
 
   for (let i = 0; i < count; i += 1) {
     const mesh = anchors.meshes[anchors.meshIndex[i]];
@@ -347,9 +392,27 @@ export function updateDustFieldParticlePositions(anchors, modelRoot, pointsGeome
     posArr[base] = _out.x;
     posArr[base + 1] = _out.y;
     posArr[base + 2] = _out.z;
+
+    if (revealArr) {
+      let revealAlpha = revealAlphaByMesh.get(mesh);
+      if (revealAlpha === undefined) {
+        _worldA.copy(_vA).applyMatrix4(mesh.matrixWorld);
+        _worldB.copy(_vB).applyMatrix4(mesh.matrixWorld);
+        _worldC.copy(_vC).applyMatrix4(mesh.matrixWorld);
+        const maxEdge = Math.max(
+          _worldA.distanceTo(_worldB),
+          _worldA.distanceTo(_worldC),
+          _worldB.distanceTo(_worldC),
+        );
+        revealAlpha = computeDustFieldRevealAlpha(mesh, maxEdge);
+        revealAlphaByMesh.set(mesh, revealAlpha);
+      }
+      revealArr[i] = revealAlpha;
+    }
   }
 
   posAttr.needsUpdate = true;
+  if (revealAttr) revealAttr.needsUpdate = true;
   if (anchors.animated) {
     pointsGeometry.computeBoundingSphere();
   }

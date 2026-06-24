@@ -77,6 +77,8 @@ export const CREATIVE_LOOK_MATERIAL_PBR_SLIDER_PRESETS = /** @type {const} */ ([
   'sketch-colour',
   'gouache',
   'vectrex',
+  'thermal',
+  'thermal-extreme',
 ]);
 
 /** @param {string} fragmentShader */
