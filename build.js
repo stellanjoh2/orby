@@ -46,6 +46,14 @@ function injectVersionIntoHtml(html) {
       `<div class="dropzone-version-tag">${banner}</div>`,
     )
     .replace(
+      /href="\.\/styles\.css(?:\?v=[^"]*)?"/,
+      `href="./styles.css?v=${v}"`,
+    )
+    .replace(
+      /href="\/styles\.css(?:\?v=[^"]*)?"/,
+      `href="/styles.css?v=${v}"`,
+    )
+    .replace(
       /src="\.\/scripts\/entry\.js(?:\?v=[^"]*)?"/,
       `src="./scripts/entry.js?v=${v}"`,
     )
