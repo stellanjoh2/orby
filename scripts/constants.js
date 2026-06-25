@@ -764,6 +764,17 @@ export function isCreativeLookGouachePostActive(state) {
 }
 
 /**
+ * Shader Lab optics — thermal / night-vision full-viewport grade; auto-on with preset.
+ * @param {{ creativeLook?: { enabled?: boolean, preset?: string } }} state
+ */
+export function isCreativeLookOpticsPostActive(state) {
+  const cl = state.creativeLook && typeof state.creativeLook === 'object' ? state.creativeLook : {};
+  if (!cl.enabled) return false;
+  const preset = typeof cl.preset === 'string' ? cl.preset : '';
+  return preset === 'thermal' || preset === 'thermal-extreme' || preset === 'night-vision';
+}
+
+/**
  * Shader Lab Sketch — stipple grain + ink outline post; auto-on with preset.
  * @param {{ creativeLook?: { enabled?: boolean, preset?: string } }} state
  */

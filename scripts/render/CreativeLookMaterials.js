@@ -144,15 +144,24 @@ import {
   applyCreativeLookCrystalGemPerformanceTuning,
 } from './creativeLookCrystalGem.js';
 import {
-  THERMAL_FRAGMENT,
   THERMAL_DEFAULT_INTENSITY,
   THERMAL_DEFAULT_PATTERN_SCALE,
 } from './creativeLookThermalArt.js';
 import {
-  THERMAL_EXTREME_FRAGMENT,
   THERMAL_EXTREME_DEFAULT_INTENSITY,
   THERMAL_EXTREME_DEFAULT_PATTERN_SCALE,
 } from './creativeLookThermalExtremeArt.js';
+import {
+  NIGHT_VISION_DEFAULT_INTENSITY,
+  NIGHT_VISION_DEFAULT_PATTERN_SCALE,
+  NIGHT_VISION_MESH_GAIN,
+} from './creativeLookNightVisionArt.js';
+import {
+  OPTICS_LUMINANCE_PREP_FRAGMENT,
+  isOpticsCreativeLookPreset,
+} from './creativeLookOpticsArt.js';
+
+export { isOpticsCreativeLookPreset };
 
 export { creativeLookPresetSupportsSurfaceDetail } from './SvgExtrudeSurfaceShader.js';
 
@@ -170,7 +179,7 @@ export { creativeLookUsesVoxelGeometry, isVoxelCreativeLookPreset } from './crea
  * in the transmission prepass — not other transmissive/transparent meshes (Three.js renderer design).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome-plasma' | 'chrome' | 'glass' | 'holo-glass' | 'crystal-gem' | 'thermal' | 'thermal-extreme'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome-plasma' | 'chrome' | 'glass' | 'holo-glass' | 'crystal-gem' | 'thermal' | 'thermal-extreme' | 'night-vision'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
@@ -215,6 +224,7 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'crystal-gem',
   'thermal',
   'thermal-extreme',
+  'night-vision',
   'spectral-storm',
 ]);
 
@@ -706,6 +716,7 @@ export function creativeLookDefaultIntensity(preset) {
   if (id === 'dither-raster') return DITHER_RASTER_DEFAULT_INTENSITY;
   if (id === 'thermal') return THERMAL_DEFAULT_INTENSITY;
   if (id === 'thermal-extreme') return THERMAL_EXTREME_DEFAULT_INTENSITY;
+  if (id === 'night-vision') return NIGHT_VISION_DEFAULT_INTENSITY;
   return CREATIVE_LOOK_INTENSITY_DEFAULT;
 }
 
@@ -721,6 +732,7 @@ export function creativeLookDefaultPatternScale(preset) {
   if (id === 'dither-raster') return DITHER_RASTER_DEFAULT_PATTERN_SCALE;
   if (id === 'thermal') return THERMAL_DEFAULT_PATTERN_SCALE;
   if (id === 'thermal-extreme') return THERMAL_EXTREME_DEFAULT_PATTERN_SCALE;
+  if (id === 'night-vision') return NIGHT_VISION_DEFAULT_PATTERN_SCALE;
   return null;
 }
 
@@ -1129,7 +1141,10 @@ export function creativeLookPresetUsesShaderAnimation(preset) {
     id === 'sketch' ||
     id === 'sketch-colour' ||
     id === 'gouache' ||
-    id === 'ascii-art-4'
+    id === 'ascii-art-4' ||
+    id === 'thermal' ||
+    id === 'thermal-extreme' ||
+    id === 'night-vision'
   );
 }
 
@@ -1207,6 +1222,7 @@ export function formatCreativeLookPresetLabel(preset) {
     'crystal-gem': 'Crystal Gem',
     thermal: 'Thermal',
     'thermal-extreme': 'Thermal Extreme',
+    'night-vision': 'Night Vision',
   });
   return labels[id] ?? id;
 }
@@ -3920,12 +3936,13 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       uniforms: {
         uPatternScale: { value: patternScale },
         uOpacity: { value: shaderAlpha },
+        uLuminanceGain: { value: 1 },
         ...pbrUniforms,
         ...gradeUniforms,
         ...intensityUniform,
       },
       vertexShader: WORLD_VERTEX,
-      fragmentShader: lookFrag(THERMAL_FRAGMENT),
+      fragmentShader: lookFrag(OPTICS_LUMINANCE_PREP_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'thermal';
@@ -3937,15 +3954,34 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       uniforms: {
         uPatternScale: { value: patternScale },
         uOpacity: { value: shaderAlpha },
+        uLuminanceGain: { value: 1 },
         ...pbrUniforms,
         ...gradeUniforms,
         ...intensityUniform,
       },
       vertexShader: WORLD_VERTEX,
-      fragmentShader: lookFrag(THERMAL_EXTREME_FRAGMENT),
+      fragmentShader: lookFrag(OPTICS_LUMINANCE_PREP_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'thermal-extreme';
+    return finish(mat);
+  }
+
+  if (id === 'night-vision') {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uPatternScale: { value: patternScale },
+        uOpacity: { value: shaderAlpha },
+        uLuminanceGain: { value: NIGHT_VISION_MESH_GAIN },
+        ...pbrUniforms,
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: WORLD_VERTEX,
+      fragmentShader: lookFrag(OPTICS_LUMINANCE_PREP_FRAGMENT),
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'night-vision';
     return finish(mat);
   }
 
@@ -4112,25 +4148,25 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       iridescenceThicknessRange,
     } = creativeHoloGlassParamsForMesh(patternScale, hdriBlur, null, intensity);
     const mat = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(0xffffff),
+      color: new THREE.Color(0xd4dce8),
       metalness: 0,
       roughness,
       transmission: 1,
       thickness,
       ior: 1.52,
-      specularIntensity: 0.85,
-      specularColor: new THREE.Color(0xe8e8f0),
+      specularIntensity: 0.64,
+      specularColor: new THREE.Color(0xd8dce8),
       iridescence,
       iridescenceIOR: 1.28,
       iridescenceThicknessRange,
-      sheen: 0.32,
-      sheenRoughness: 0.74,
-      sheenColor: new THREE.Color(0xc8d8ff),
+      sheen: 0.2,
+      sheenRoughness: 0.78,
+      sheenColor: new THREE.Color(0xb8c8e8),
       envMapIntensity: CREATIVE_HOLO_GLASS_ENV_MAP_MUL,
       transparent: true,
       opacity: 1,
-      attenuationColor: new THREE.Color(0xe8eef8),
-      attenuationDistance: 1.35,
+      attenuationColor: new THREE.Color(0xd0d8e8),
+      attenuationDistance: 1.55,
       side,
       toneMapped: true,
       depthWrite: false,

@@ -951,6 +951,36 @@ export class ImageExporter {
   }
 
   /**
+   * Turn off post passes that poison SVG vectorization (glow, antialias fringe, film/noise).
+   * @returns {{ bloom?: boolean, fxaa?: boolean, renderPassClearAlpha: number, grain: object | null }}
+   */
+  _beginSvgVectorCaptureTweaks() {
+    const pp = this.postPipeline;
+    const tweaks = {
+      bloom: pp?.bloomPass?.enabled,
+      fxaa: pp?.fxaaPass?.enabled,
+      renderPassClearAlpha: pp?.renderPass?.clearAlpha ?? 1,
+      grain: pp?.beginSvgExportGrainSuppression?.() ?? null,
+    };
+    // Disable bloom for vector capture to avoid large glow fields in traced SVG
+    if (pp?.bloomPass) pp.bloomPass.enabled = false;
+    // FXAA softens edges into semi-transparent fringe pixels that trace as light halos / jagged slivers.
+    if (pp?.fxaaPass) pp.fxaaPass.enabled = false;
+    if (pp?.renderPass) pp.renderPass.clearAlpha = 0;
+    return tweaks;
+  }
+
+  /** @param {ReturnType<ImageExporter['_beginSvgVectorCaptureTweaks']> | null | undefined} tweaks */
+  _restoreSvgVectorCaptureTweaks(tweaks) {
+    if (!tweaks) return;
+    const pp = this.postPipeline;
+    if (pp?.bloomPass && tweaks.bloom !== undefined) pp.bloomPass.enabled = tweaks.bloom;
+    if (pp?.fxaaPass && tweaks.fxaa !== undefined) pp.fxaaPass.enabled = tweaks.fxaa;
+    if (pp?.renderPass) pp.renderPass.clearAlpha = tweaks.renderPassClearAlpha;
+    pp?.endSvgExportGrainSuppression?.(tweaks.grain);
+  }
+
+  /**
    * Export a flat-color SVG by rendering the current view to PNG and tracing with limited colors
    * @param {'low'|'medium'|'high'} [detail='high'] — trace density and color complexity
    */
@@ -963,33 +993,46 @@ export class ImageExporter {
     const { options, preserveHighlights } = this._getSvgColorVectorizeOptions(detail);
 
     const state = this._saveState();
-    const originalBloomEnabled = this.postPipeline?.bloomPass?.enabled;
-    const originalFxaaEnabled = this.postPipeline?.fxaaPass?.enabled;
-    const originalRenderPassClearAlpha = this.postPipeline?.renderPass?.clearAlpha ?? 1;
+    const captureTweaks = this._beginSvgVectorCaptureTweaks();
     try {
-      // Disable bloom for vector capture to avoid large glow fields in traced SVG
-      if (this.postPipeline?.bloomPass) {
-        this.postPipeline.bloomPass.enabled = false;
-      }
-      // FXAA softens edges into semi-transparent fringe pixels that trace as light halos / jagged slivers.
-      if (this.postPipeline?.fxaaPass) {
-        this.postPipeline.fxaaPass.enabled = false;
-      }
-      if (this.postPipeline?.renderPass) {
-        this.postPipeline.renderPass.clearAlpha = 0;
-      }
       this._setupTransparentRender();
 
-      // Render current view using composer if available (to match on-screen colors)
+      const canvas = this.renderer.domElement;
+      const width = Math.max(1, canvas.width || 1);
+      const height = Math.max(1, canvas.height || 1);
+
+      // Match PNG / pixel-SVG export: full Shader Lab stack (optics, sketch, …) via
+      // renderComposerPassForExport, then read the composer ping-pong buffer — not the default
+      // FBO (canvas.toDataURL misses post passes and can read a stale partial viewport).
+      const prevComposerRenderToScreen = this.composer?.renderToScreen;
       if (this.composer) {
+        this.composer.renderToScreen = false;
+      }
+      try {
+        this._ensureComposerMatchesDrawingBuffer({ strict: true });
         this._ensureFullDrawingBufferViewport();
-        this.composer.render();
+        if (typeof this.renderComposerPassForExport === 'function') {
+          this.renderComposerPassForExport({ transparent: true });
+        } else if (this.composer) {
+          this.composer.render();
+        } else {
+          this.renderer.render(this.scene, this.camera);
+        }
         this._ensureFullDrawingBufferViewport();
-      } else {
-        this.renderer.render(this.scene, this.camera);
+      } finally {
+        if (this.composer && prevComposerRenderToScreen !== undefined) {
+          this.composer.renderToScreen = prevComposerRenderToScreen;
+        }
       }
 
-      const dataUrl = this.renderer.domElement.toDataURL('image/png');
+      const gl = this.renderer.getContext();
+      if (gl && typeof gl.finish === 'function') {
+        gl.finish();
+      }
+
+      const dataUrl = this.composer
+        ? this._captureComposerOutputAsPngDataUrl(width, height)
+        : canvas.toDataURL('image/png');
 
       // Vectorize: options + optional highlight pre-pass for speculars (high / medium)
       const svg = await this._vectorizeWithOptions(dataUrl, options, {
@@ -1006,15 +1049,7 @@ export class ImageExporter {
       }
       this._downloadText(svg, currentFile, 'color.svg', 'image/svg+xml');
     } finally {
-      if (this.postPipeline?.bloomPass && originalBloomEnabled !== undefined) {
-        this.postPipeline.bloomPass.enabled = originalBloomEnabled;
-      }
-      if (this.postPipeline?.fxaaPass && originalFxaaEnabled !== undefined) {
-        this.postPipeline.fxaaPass.enabled = originalFxaaEnabled;
-      }
-      if (this.postPipeline?.renderPass) {
-        this.postPipeline.renderPass.clearAlpha = originalRenderPassClearAlpha;
-      }
+      this._restoreSvgVectorCaptureTweaks(captureTweaks);
       this._restoreState(state);
     }
   }
@@ -1027,19 +1062,8 @@ export class ImageExporter {
   async exportSvgScreenPixel(currentFile, presetId, opts = {}) {
     const transparent = opts.transparent === true;
     const state = this._saveState();
-    const originalBloomEnabled = this.postPipeline?.bloomPass?.enabled;
-    const originalFxaaEnabled = this.postPipeline?.fxaaPass?.enabled;
-    const originalRenderPassClearAlpha = this.postPipeline?.renderPass?.clearAlpha ?? 1;
+    const captureTweaks = this._beginSvgVectorCaptureTweaks();
     try {
-      if (this.postPipeline?.bloomPass) {
-        this.postPipeline.bloomPass.enabled = false;
-      }
-      if (this.postPipeline?.fxaaPass) {
-        this.postPipeline.fxaaPass.enabled = false;
-      }
-      if (this.postPipeline?.renderPass) {
-        this.postPipeline.renderPass.clearAlpha = 0;
-      }
       // Transparent prepass so flat-post shaders fill empty cells with uBgColor
       // instead of 15-bit-quantizing an opaque HDRI/studio background (GBA grid artifact).
       this._setupTransparentRender();
@@ -1092,15 +1116,7 @@ export class ImageExporter {
       }
       this._downloadText(svg, currentFile, 'pixel.svg', 'image/svg+xml');
     } finally {
-      if (this.postPipeline?.bloomPass && originalBloomEnabled !== undefined) {
-        this.postPipeline.bloomPass.enabled = originalBloomEnabled;
-      }
-      if (this.postPipeline?.fxaaPass && originalFxaaEnabled !== undefined) {
-        this.postPipeline.fxaaPass.enabled = originalFxaaEnabled;
-      }
-      if (this.postPipeline?.renderPass) {
-        this.postPipeline.renderPass.clearAlpha = originalRenderPassClearAlpha;
-      }
+      this._restoreSvgVectorCaptureTweaks(captureTweaks);
       this._restoreState(state);
     }
   }
@@ -1612,6 +1628,8 @@ export class ImageExporter {
       );
       
       this.renderer.setRenderTarget(alphaRT);
+      this.renderer.setClearColor(0x000000, 0);
+      this.renderer.setClearAlpha(0);
       this.renderer.clear();
       this.renderer.render(this.scene, this.camera);
       this.renderer.setRenderTarget(null);

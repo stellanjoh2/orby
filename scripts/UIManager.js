@@ -483,7 +483,7 @@ export class UIManager {
       reverseNormals: q('#reverseNormals'),
       normalView: q('#normalView'),
       normalViewMode: q('#normalViewMode'),
-      centerPivot: q('#centerPivot'),
+      centerPivotBtn: q('#centerPivotBtn'),
       stlSmoothingControls: q('#stlSmoothingControls'),
       stlSmoothShading: q('#stlSmoothShading'),
       stlSmoothingAngle: q('#stlSmoothingAngle'),

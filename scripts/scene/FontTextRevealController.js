@@ -137,6 +137,8 @@ export class FontTextRevealController {
     this._materialBaselineSyncDepth = 0;
     /** @type {import('./FontTextConstantController.js').FontTextConstantController | null} */
     this._constantController = null;
+    /** Resume reveal preview when {@link #applyPauseAll} clears after pausing a playing preview. */
+    this._resumeRevealWhenPauseAllClears = false;
   }
 
   /** @param {import('./FontTextConstantController.js').FontTextConstantController | null} controller */
@@ -233,6 +235,10 @@ export class FontTextRevealController {
     return this._previewMode === 'paused';
   }
 
+  isPauseAll() {
+    return this.stateStore?.getState()?.fontExtrude?.pauseAllAnimations === true;
+  }
+
   getPreviewElapsed() {
     return this._elapsed;
   }
@@ -316,11 +322,49 @@ export class FontTextRevealController {
   }
 
   /**
+   * Re-bind glyph meshMaterials after MaterialController swaps materials (e.g. Shader Lab on/off).
+   * Pose / timing state is preserved — only material pointers and rest emissive are refreshed.
+   */
+  _refreshGlyphMaterialReferences() {
+    for (const state of this._glyphStates) {
+      if (!state.group) continue;
+      state.meshMaterials = this._collectGlyphGroupMeshMaterials(state.group);
+    }
+  }
+
+  /**
+   * @param {THREE.Object3D} group
+   * @returns {import('./fontTextRevealTypes.js').RevealGlyphState['meshMaterials']}
+   */
+  _collectGlyphGroupMeshMaterials(group) {
+    /** @type {import('./fontTextRevealTypes.js').RevealGlyphState['meshMaterials']} */
+    const meshMaterials = [];
+    group.traverse((child) => {
+      if (!child.isMesh || !child.material) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      for (const mat of mats) {
+        if (!mat) continue;
+        const { restEmissive, restEmissiveIntensity } = captureMaterialEmissiveRest(mat);
+        meshMaterials.push({
+          mat,
+          opacity: Number.isFinite(mat.opacity) ? mat.opacity : 1,
+          transparent: !!mat.transparent,
+          restEmissive,
+          restEmissiveIntensity,
+        });
+      }
+    });
+    return meshMaterials;
+  }
+
+  /**
    * After MaterialController updates brightness/metalness/emissive, re-sync baseline
    * and re-apply the current reveal pose (slam overlay or rest restore).
    */
   onMaterialBaselineChanged() {
     if (!this._glyphStates.length) return;
+
+    this._refreshGlyphMaterialReferences();
 
     if (this._materialBaselineSyncDepth > 0) {
       this.syncMaterialEmissiveBaseline({ skipReapply: true });
@@ -396,6 +440,7 @@ export class FontTextRevealController {
    */
   bindModel(model) {
     this._stopPreviewLoop();
+    this._constantController?.beginModelTransition?.();
     this._glyphGroups = [];
     this._glyphStates = [];
     this._glyphWordIndices = null;
@@ -408,10 +453,12 @@ export class FontTextRevealController {
     this._lineGroupMeta = new Map();
     this._wordGroupMeta = new Map();
     this._previewMode = 'idle';
+    this._resumeRevealWhenPauseAllClears = false;
 
     if (!isFontExtrudeRevealModel(model)) {
       this._boundModel = null;
       this._elapsed = 0;
+      this._constantController?.onModelBound?.();
       this._notifyPreviewTime();
       return;
     }
@@ -438,9 +485,38 @@ export class FontTextRevealController {
     this._buildLineGroupMeta();
     this.syncMaterialEmissiveBaseline();
 
-    this._constantController?.onModelBound?.();
     this._showIdlePose();
+    this._constantController?.onModelBound?.();
+    if (model?.visible) {
+      this._constantController?.resumeLiveUpdates?.();
+    }
     this._notifyPreviewTime();
+  }
+
+  /**
+   * Snap reveal + constant animations back to their rest starting pose (phase zero).
+   * @param {{ resumeConstant?: boolean }} [options]
+   */
+  resetAllAnimations({ resumeConstant = true } = {}) {
+    if (!this.ensureBoundToModel(this._boundModel)) return;
+
+    if (this.isPreviewPlaying()) {
+      this._stopPreviewLoop();
+    }
+    this._previewMode = 'idle';
+    this._elapsed = this.isEnabled() ? this._revealFullySettledElapsedSec() : 0;
+
+    this._constantController?.resetAnimation?.();
+    if (resumeConstant && !this.isPauseAll()) {
+      this._constantController?.resumeLiveUpdates?.();
+    }
+    this._notifyPreviewTime();
+    this._requestRender();
+  }
+
+  /** Snap constant loop back to phase zero — e.g. after Generate or font change. */
+  resetConstantAnimation() {
+    this._constantController?.resetAnimation?.();
   }
 
   _buildWordRevealMeta() {
@@ -589,28 +665,12 @@ export class FontTextRevealController {
       const box = new THREE.Box3().setFromObject(group);
       const size = box.getSize(new THREE.Vector3());
       const slideDistance = Math.max(size.y * 0.75, 0.08);
-
-      /** @type {RevealGlyphState['meshMaterials']} */
-      const meshMaterials = [];
-      group.traverse((child) => {
-        if (!child.isMesh || !child.material) return;
-        const mats = Array.isArray(child.material) ? child.material : [child.material];
-        for (const mat of mats) {
-          if (!mat) continue;
-          const { restEmissive, restEmissiveIntensity } = captureMaterialEmissiveRest(mat);
-          meshMaterials.push({
-            mat,
-            opacity: Number.isFinite(mat.opacity) ? mat.opacity : 1,
-            transparent: !!mat.transparent,
-            restEmissive,
-            restEmissiveIntensity,
-          });
-        }
-      });
+      const meshMaterials = this._collectGlyphGroupMeshMaterials(group);
 
       return {
         group,
         restPosition: group.position.clone(),
+        restRotationX: group.rotation.x,
         restRotationY: group.rotation.y,
         restRotationZ: group.rotation.z,
         restScale: group.scale.clone(),
@@ -726,6 +786,7 @@ export class FontTextRevealController {
     this._elapsed = 0;
     this._exportDriveActive = false;
     this._previewMode = 'idle';
+    this._resumeRevealWhenPauseAllClears = false;
     this._constantController?.unbind?.();
     this._notifyPreviewTime();
   }
@@ -737,6 +798,7 @@ export class FontTextRevealController {
   startPreview(model) {
     const target = model ?? this._boundModel;
     if (!this.ensureBoundToModel(target)) return false;
+    if (this.isPauseAll()) return false;
     const duration = this.getDurationSec();
 
     if (this._previewMode === 'idle' || this._elapsed >= Math.max(0, duration - 1e-4)) {
@@ -765,6 +827,38 @@ export class FontTextRevealController {
     this._notifyPreviewTime();
     this._requestRender();
     return true;
+  }
+
+  /**
+   * Pause or resume all font animation playback (reveal preview + constant loop).
+   * @param {boolean} active
+   * @param {THREE.Object3D | null | undefined} [model]
+   */
+  applyPauseAll(active, model) {
+    const target = model ?? this._boundModel;
+    if (active) {
+      if (this.isPreviewPlaying() && this.ensureBoundToModel(target)) {
+        this._resumeRevealWhenPauseAllClears = true;
+        this.pausePreview(target);
+      } else {
+        this._resumeRevealWhenPauseAllClears = false;
+      }
+      this._requestRender();
+      return;
+    }
+
+    if (
+      this._resumeRevealWhenPauseAllClears
+      && this.ensureBoundToModel(target)
+      && this.isEnabled()
+      && !this.isPauseAll()
+    ) {
+      this._resumeRevealWhenPauseAllClears = false;
+      this.startPreview(target);
+    } else {
+      this._resumeRevealWhenPauseAllClears = false;
+    }
+    this._requestRender();
   }
 
   /**
@@ -957,6 +1051,7 @@ export class FontTextRevealController {
 
     const tick = (now) => {
       this._previewRaf = 0;
+      if (this.isPauseAll()) return;
       if (this._previewMode !== 'playing' || !this.isEnabled()) return;
 
       const delta = Math.max(0, (now - this._previewLastTs) / 1000);
@@ -983,6 +1078,7 @@ export class FontTextRevealController {
    */
   update(delta) {
     if (this._previewRaf) return;
+    if (this.isPauseAll()) return;
     if (this._previewMode !== 'playing' || !this.isEnabled()) return;
 
     const duration = this.getDurationSec();

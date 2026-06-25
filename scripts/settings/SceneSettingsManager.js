@@ -610,11 +610,6 @@ export class SceneSettingsManager {
         }
         this.eventBus.emit('mesh:stl-smoothing');
       }
-      if (payload.advanced?.centerPivot !== undefined) {
-        const enabled = !!payload.advanced.centerPivot;
-        this.stateStore.set('advanced.centerPivot', enabled);
-        this.eventBus.emit('mesh:center-pivot', enabled);
-      }
       if (payload.fbxMapSlots) {
         const d = this.stateStore.getDefaults().fbxMapSlots;
         const merged = { ...d, ...payload.fbxMapSlots };

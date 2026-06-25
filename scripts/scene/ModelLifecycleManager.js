@@ -204,7 +204,7 @@ export class ModelLifecycleManager {
 
     s.materialController.prepareMesh(object);
     s._setupImportSmoothingForModel(object);
-    s.setCenterPivot(true, { updateState: true, showToast: false });
+    s.recenterPivot({ showToast: false });
 
     const wasFirstLoad = s.isFirstModelLoad;
     if (s.isFirstModelLoad) {
@@ -374,6 +374,7 @@ export class ModelLifecycleManager {
       );
       if (revealDuration > 0) {
         object.visible = true;
+        s.fontTextRevealController?.resetAllAnimations?.({ resumeConstant: true });
         return;
       }
     }
@@ -387,6 +388,7 @@ export class ModelLifecycleManager {
     const startTime = performance.now();
 
     object.visible = true;
+    s.fontTextRevealController?.resetAllAnimations?.({ resumeConstant: false });
     object.scale.set(
       targetScale.x * 0.001,
       targetScale.y * 0.001,
@@ -404,6 +406,7 @@ export class ModelLifecycleManager {
       } else {
         object.scale.copy(targetScale);
         this._meshSpawnScaleRaf = 0;
+        s.fontTextRevealController?.resetAllAnimations?.({ resumeConstant: true });
       }
     };
 

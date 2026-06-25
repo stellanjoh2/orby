@@ -1285,39 +1285,6 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                   <option value="front">From front</option>
                 </select>
               </label>
-              <div class="font-extrude-reveal-preview animation-timeline">
-                <div class="animation-transport-btns">
-                  <button
-                    type="button"
-                    id="fontExtrudeRevealPlay"
-                    class="animation-play-btn"
-                    disabled
-                    aria-label="Play reveal animation"
-                    data-tooltip="Play reveal preview"
-                  >
-                    <i class="fa-solid fa-play" aria-hidden="true"></i>
-                    <span class="sr-only">Play or pause</span>
-                  </button>
-                  <div class="font-extrude-reveal-loop-control" data-tooltip="When off, preview plays once and stops">
-                    <span class="font-extrude-reveal-loop-label">Loop</span>
-                    <label class="effect-toggle font-extrude-reveal-loop-toggle">
-                      <input type="checkbox" id="fontExtrudeRevealLoop" checked />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                    </label>
-                  </div>
-                </div>
-                <input
-                  type="range"
-                  id="fontExtrudeRevealScrub"
-                  min="0"
-                  max="1"
-                  step="0.001"
-                  value="1"
-                  disabled
-                  aria-label="Reveal animation progress"
-                />
-                <span class="font-extrude-reveal-time" id="fontExtrudeRevealTime">0.0s</span>
-              </div>
               ${PANEL_BLOCK_DIVIDER_HTML}
               <div class="font-extrude-reveal-emissive" role="group" aria-label="Emissive reveal">
                 <label class="slider-line slider-line--toggle-only font-extrude-reveal-emissive-slam">
@@ -1356,7 +1323,7 @@ export const FONT_EXTRUDE_CONSTANT_CONTROLS_HTML = `
                 </select>
               </label>
               <label class="slider-line font-extrude-constant-intensity font-extrude-constant-detail" hidden>
-                <span data-tooltip="Motion strength — Float and Wave allow up to 3× vertical peak height (± from rest); Breathe and Sway use a subtler 0–100% range">Intensity</span>
+                <span data-tooltip="Motion strength — Wave allows up to 3× vertical peak height (± from rest); Float uses a gentler bob range; Spin uses Stagger for letter delay; Breathe and Sway use a subtler 0–100% range">Intensity</span>
                 <input id="fontExtrudeConstantIntensity" type="range" min="0" max="1" step="0.01" value="0.5" />
                 <span class="value" data-output="fontExtrudeConstantIntensity">50%</span>
               </label>
@@ -1370,6 +1337,65 @@ export const FONT_EXTRUDE_CONSTANT_CONTROLS_HTML = `
                 <input id="fontExtrudeConstantSpread" type="range" min="0" max="1" step="0.01" value="1" />
                 <span class="value" data-output="fontExtrudeConstantSpread">100%</span>
               </label>
+            </div>
+`;
+
+/** Combined reveal + constant preview — after all animation settings. */
+export const FONT_EXTRUDE_PREVIEW_CONTROLS_HTML = `
+            <div class="font-extrude-preview" id="fontExtrudePreview">
+              <div class="font-extrude-reveal-preview animation-timeline">
+                <div class="animation-transport-btns">
+                  <button
+                    type="button"
+                    id="fontExtrudeRevealPlay"
+                    class="animation-play-btn"
+                    disabled
+                    aria-label="Play text animation preview"
+                    data-tooltip="Play text animation preview"
+                  >
+                    <i class="fa-solid fa-play" aria-hidden="true"></i>
+                    <span class="sr-only">Play or pause</span>
+                  </button>
+                  <div class="font-extrude-reveal-loop-control" data-tooltip="When off, preview plays once and stops">
+                    <span class="font-extrude-reveal-loop-label">Loop</span>
+                    <label class="effect-toggle font-extrude-reveal-loop-toggle">
+                      <input type="checkbox" id="fontExtrudeRevealLoop" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                    </label>
+                  </div>
+                </div>
+                <input
+                  type="range"
+                  id="fontExtrudeRevealScrub"
+                  min="0"
+                  max="1"
+                  step="0.001"
+                  value="1"
+                  disabled
+                  aria-label="Text animation preview progress"
+                />
+                <span class="font-extrude-reveal-time" id="fontExtrudeRevealTime">0.0s</span>
+              </div>
+              <div class="font-extrude-preview-transport-btns">
+                <button
+                  type="button"
+                  id="fontExtrudePauseAllAnimations"
+                  class="ghost-btn small font-extrude-pause-all-btn"
+                  disabled
+                  data-tooltip="Freeze reveal preview and constant loop at the current pose. Resume continues from the same position."
+                >
+                  Pause all
+                </button>
+                <button
+                  type="button"
+                  id="fontExtrudeResetAnimations"
+                  class="ghost-btn small font-extrude-reset-animations-btn"
+                  disabled
+                  data-tooltip="Snap all letters back to their rest pose and restart constant loops from the beginning"
+                >
+                  Reset animations
+                </button>
+              </div>
             </div>
 `;
 
@@ -1397,5 +1423,8 @@ export const FONT_EXTRUDE_POST_GEN_CONTROLS_HTML = `
             ${PANEL_BLOCK_DIVIDER_HTML}
             ${buildFontExtrudeSectionTitleHtml('Constant')}
             ${FONT_EXTRUDE_CONSTANT_CONTROLS_HTML}
+            ${PANEL_BLOCK_DIVIDER_HTML}
+            ${buildFontExtrudeSectionTitleHtml('Preview')}
+            ${FONT_EXTRUDE_PREVIEW_CONTROLS_HTML}
           </div>
 `;

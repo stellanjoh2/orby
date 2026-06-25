@@ -136,8 +136,8 @@ export class MeshControls {
     });
     this.eventBus.on('ui:center-pivot-enabled', (payload) => {
       const enabled = !!(payload?.enabled ?? payload);
-      if (this.ui.inputs.centerPivot) {
-        this.ui.inputs.centerPivot.disabled = !enabled;
+      if (this.ui.inputs.centerPivotBtn) {
+        this.ui.inputs.centerPivotBtn.disabled = !enabled;
       }
     });
 
@@ -210,10 +210,9 @@ export class MeshControls {
       this.stateStore.set('advanced.reverseNormals', enabled);
       this.eventBus.emit('mesh:reverse-normals', enabled);
     });
-    this.ui.inputs.centerPivot?.addEventListener('change', (event) => {
-      const enabled = !!event.target.checked;
-      this.stateStore.set('advanced.centerPivot', enabled);
-      this.eventBus.emit('mesh:center-pivot', enabled);
+    this.ui.inputs.centerPivotBtn?.addEventListener('click', () => {
+      this.ui.uiSounds?.playSelect?.();
+      this.eventBus.emit('mesh:recenter-pivot');
     });
     this.ui.inputs.stlSmoothShading?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
@@ -1343,9 +1342,6 @@ export class MeshControls {
     syncSvgExtrudeControls(this._svgExtrudeCtx(), state, { requireEnabled: true });
     if (this.ui.inputs.reverseNormals) {
       this.ui.inputs.reverseNormals.checked = !!state.advanced?.reverseNormals;
-    }
-    if (this.ui.inputs.centerPivot) {
-      this.ui.inputs.centerPivot.checked = !!state.advanced?.centerPivot;
     }
     const stlControlsVisible = this.resolveImportSmoothingControlsVisible();
     this.syncImportSmoothingControlsVisible(stlControlsVisible);

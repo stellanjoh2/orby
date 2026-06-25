@@ -133,7 +133,6 @@ const RESET_DIRTY_PATHS = {
     'advanced.uvChecker', 'advanced.uvCheckerScale', 'advanced.uvCheckerStyle',
     'advanced.normalView', 'advanced.normalViewMode',
     'advanced.stlSmoothShading', 'advanced.stlSmoothingAngle',
-    'advanced.centerPivot',
   ],
 };
 
@@ -186,7 +185,7 @@ const BLOCK_RESET_TOASTS = {
   bloom: 'Bloom reset',
   'anamorphic-bloom': 'Anamorphic bloom reset',
   'lens-dirt': 'Lens dirt reset',
-  grain: 'Film grain reset',
+  grain: 'Grain reset',
   aberration: 'Chromatic aberration reset',
   'color-checker': 'ColorChecker reset',
   'ambient-occlusion': 'Ambient occlusion reset',
@@ -520,7 +519,6 @@ export class ResetControls {
         'advanced.stlSmoothingAngle',
         defaults.advanced?.stlSmoothingAngle ?? 40,
       );
-      this.stateStore.set('advanced.centerPivot', defaults.advanced?.centerPivot ?? false);
       // Reset material properties
       {
         const mrDefaults = getMaterialMrResetDefaults(
@@ -577,7 +575,7 @@ export class ResetControls {
         defaults.advanced?.normalViewMode ?? 'geometry',
       );
       this.eventBus.emit('mesh:stl-smoothing');
-      this.eventBus.emit('mesh:center-pivot', defaults.advanced?.centerPivot ?? false);
+      this.eventBus.emit('mesh:recenter-pivot', { showToast: false });
 
       this.ui.syncUIFromState();
       this.helpers.showToast('Mesh settings reset', 3200, { notification: false });
@@ -1560,10 +1558,6 @@ export class ResetControls {
               'advanced.stlSmoothingAngle',
               defaults.advanced?.stlSmoothingAngle ?? 40,
             );
-            this.stateStore.set(
-              'advanced.centerPivot',
-              defaults.advanced?.centerPivot ?? false,
-            );
             this.eventBus.emit('mesh:reverse-normals', defaults.advanced?.reverseNormals ?? false);
             this.eventBus.emit('mesh:transparency-fix');
             this.eventBus.emit('mesh:glass-appearance');
@@ -1582,7 +1576,7 @@ export class ResetControls {
               defaults.advanced?.normalViewMode ?? 'geometry',
             );
             this.eventBus.emit('mesh:stl-smoothing');
-            this.eventBus.emit('mesh:center-pivot', defaults.advanced?.centerPivot ?? false);
+            this.eventBus.emit('mesh:recenter-pivot', { showToast: false });
             this.ui.syncUIFromState();
             break;
         }

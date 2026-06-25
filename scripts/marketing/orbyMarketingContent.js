@@ -87,7 +87,7 @@ export const MARKETING_SECTIONS = [
     id: 'orby-marketing-intro',
     title: 'Drop it in.\nSet the stage.\nSend it.',
     lede:
-      'Orby is more than a 3D viewer — it\'s a virtual studio for all your 3D asset needs. Go photoreal for portfolios and client decks, or push into expressive stylized territory — same file, same tab. Export when it feels right.',
+      'Orby is more than a 3D viewer — set the stage on any model, in the browser. Go photoreal for portfolios and client decks, or push into expressive stylized territory for your designs and animations.',
     gradientPhrases: ['more than a 3D viewer'],
   },
   {
@@ -96,7 +96,7 @@ export const MARKETING_SECTIONS = [
     eyebrow: 'Set the stage',
     title: 'Your virtual studio, in the browser',
     lede:
-      'Achieve photorealism without leaving the browser. Every tool you need to light, grade, and present your model is right here — reacting in real time while you orbit the shot.',
+      'Light and grade your model in one tab — every control reacts in real time while you orbit the shot.',
     bullets: [
       'Look Filter presets, luminance curve, full color grade, and ACES filmic tone mapping',
       'Real lenses — depth of field, chromatic aberration, lens flare, lens dirt, bloom, grain, and anamorphic streaks',

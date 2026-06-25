@@ -37,6 +37,7 @@ export class ComposerLifecycle {
     getCreativeLookWatercolourActive,
     getCreativeLookSketchActive,
     getCreativeLookGouacheActive,
+    getCreativeLookOpticsActive,
     getCreativeLookVectrexActive,
     getWireframeOverlayMeshes,
     getTransformControls,
@@ -64,6 +65,8 @@ export class ComposerLifecycle {
       getCreativeLookSketchActive ?? (() => false);
     this.getCreativeLookGouacheActive =
       getCreativeLookGouacheActive ?? (() => false);
+    this.getCreativeLookOpticsActive =
+      getCreativeLookOpticsActive ?? (() => false);
     this.getCreativeLookVectrexActive =
       getCreativeLookVectrexActive ?? (() => false);
     this.getWireframeOverlayMeshes = getWireframeOverlayMeshes ?? (() => []);
@@ -175,6 +178,7 @@ export class ComposerLifecycle {
     const watercolour = this.getCreativeLookWatercolourActive() === true;
     const sketch = this.getCreativeLookSketchActive() === true;
     const gouache = this.getCreativeLookGouacheActive() === true;
+    const optics = this.getCreativeLookOpticsActive() === true;
     const vectrex = this.getCreativeLookVectrexActive() === true;
     if (!watercolour) {
       this.postPipeline?.releaseCreativeLookWatercolour?.();
@@ -184,6 +188,9 @@ export class ComposerLifecycle {
     }
     if (!gouache) {
       this.postPipeline?.releaseCreativeLookGouache?.();
+    }
+    if (!optics) {
+      this.postPipeline?.releaseCreativeLookOptics?.();
     }
     if (!vectrex) {
       this.postPipeline?.releaseCreativeLookVectrex?.();
@@ -221,6 +228,11 @@ export class ComposerLifecycle {
         this.postPipeline?.prepareCreativeLookViewportPresentation?.();
       }
       this.postPipeline?.pushCreativeLookGouachePresentation?.({ viewportBloom });
+    } else if (optics) {
+      if (viewportBloom) {
+        this.postPipeline?.prepareCreativeLookViewportPresentation?.();
+      }
+      this.postPipeline?.pushCreativeLookOpticsPresentation?.({ viewportBloom });
     } else if (sketch) {
       if (viewportBloom) {
         this.postPipeline?.prepareCreativeLookViewportPresentation?.();
@@ -289,6 +301,8 @@ export class ComposerLifecycle {
         this.postPipeline?.popCreativeLookWatercolourPresentation?.();
       } else if (gouache) {
         this.postPipeline?.popCreativeLookGouachePresentation?.();
+      } else if (optics) {
+        this.postPipeline?.popCreativeLookOpticsPresentation?.();
       } else if (sketch) {
         this.postPipeline?.popCreativeLookSketchPresentation?.();
       } else if (vectrex) {
@@ -300,11 +314,14 @@ export class ComposerLifecycle {
       } else {
         this.postPipeline?.releaseCreativeLookWatercolour?.();
         this.postPipeline?.releaseCreativeLookGouache?.();
+        this.postPipeline?.releaseCreativeLookOptics?.();
         this.postPipeline?.releaseCreativeLookSketch?.();
         this.postPipeline?.releaseCreativeLookVectrex?.();
       }
       this.resetRendererViewportToCanvas();
-      if (typeof this.renderer?.setClearAlpha === 'function') {
+      // Transparent PNG/video export reads alpha from a direct scene pass after this —
+      // leaving clearAlpha at 0 avoids an opaque black backdrop in the mask buffer.
+      if (!transparent && typeof this.renderer?.setClearAlpha === 'function') {
         this.renderer.setClearAlpha(1);
       }
     }

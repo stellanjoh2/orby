@@ -8,6 +8,7 @@ import {
   DEFAULT_FONT_CONSTANT_SPREAD,
   DEFAULT_FONT_CONSTANT_TYPE,
   isFontConstantAnimationActive,
+  isFontConstantTypeEnabled,
   normalizeFontConstantType,
 } from './fontTextConstantTypes.js';
 
@@ -20,6 +21,7 @@ export {
   clampFontConstantSpeedSec,
   clampFontConstantSpread,
   isFontConstantAnimationActive,
+  isFontConstantTypeEnabled,
   normalizeFontConstantType,
 } from './fontTextConstantTypes.js';
 
@@ -41,6 +43,8 @@ export class FontTextConstantController {
     this.onNeedRender = onNeedRender;
     this._elapsed = 0;
     this._exportDriveActive = false;
+    /** Hold elapsed + live updates during model bind / spawn. */
+    this._suspendLiveUpdates = true;
     /** @type {import('./fontTextConstantTypes.js').FontConstantTypeId | null} */
     this._lastAppliedType = null;
   }
@@ -76,15 +80,43 @@ export class FontTextConstantController {
     return this._elapsed;
   }
 
+  isPauseAll() {
+    return this.stateStore?.getState()?.fontExtrude?.pauseAllAnimations === true;
+  }
+
   isEnabled() {
-    return isFontConstantAnimationActive(this.getType()) && this.getIntensity() > 0;
+    return isFontConstantTypeEnabled(this.getType(), this.getIntensity());
   }
 
   /** @param {number} delta */
   advance(delta) {
-    if (!this.isEnabled()) return;
+    if (this._suspendLiveUpdates || !this.isEnabled() || this.isPauseAll()) return;
     const d = typeof delta === 'number' && Number.isFinite(delta) ? delta : 0;
     this._elapsed += d;
+  }
+
+  /** Pause live constant updates while a font mesh is being replaced. */
+  beginModelTransition() {
+    this._suspendLiveUpdates = true;
+    this._elapsed = 0;
+  }
+
+  /**
+   * Restart constant loop phase and snap glyphs to the neutral pose.
+   * @param {{ reapply?: boolean }} [options]
+   */
+  resetAnimation({ reapply = true } = {}) {
+    this._elapsed = 0;
+    this._lastAppliedType = this.getType();
+    if (reapply) {
+      const reveal = this._revealController;
+      if (!this.isEnabled() && reveal) {
+        this._snapGlyphsWithoutConstant(reveal);
+      } else {
+        this._reapplyComposite();
+      }
+      this.onNeedRender?.();
+    }
   }
 
   /**
@@ -119,7 +151,9 @@ export class FontTextConstantController {
    * @param {import('../SceneManager.js').SceneManager} scene
    */
   shouldRunLiveUpdate(scene) {
+    if (this._suspendLiveUpdates) return false;
     if (this._exportDriveActive) return false;
+    if (this.isPauseAll()) return false;
     if (scene?.exportMovementPreview?.isActive?.()) return false;
     if (this._revealController?.isPreviewPlaying?.()) return false;
     if (!this.isEnabled()) return false;
@@ -128,6 +162,7 @@ export class FontTextConstantController {
 
   /** @param {number} delta */
   update(delta) {
+    if (this._suspendLiveUpdates) return;
     this._syncConstantTypeChange();
     this.advance(delta);
     this._reapplyComposite();
@@ -139,19 +174,32 @@ export class FontTextConstantController {
     if (!reveal) return;
     reveal.ensureBoundToModel(model ?? reveal._boundModel);
     this._syncConstantTypeChange();
-    this._reapplyComposite();
+    if (!this.isEnabled()) {
+      this._snapGlyphsWithoutConstant(reveal);
+    } else {
+      this._reapplyComposite();
+    }
     this.onNeedRender?.();
   }
 
   onModelBound() {
     this._elapsed = 0;
     this._lastAppliedType = this.getType();
+    this._suspendLiveUpdates = true;
+  }
+
+  /** Resume live constant updates after bind/spawn — snaps loop back to phase zero. */
+  resumeLiveUpdates() {
+    if (this._exportDriveActive) return;
+    this._suspendLiveUpdates = false;
+    this.resetAnimation();
   }
 
   unbind() {
     this._elapsed = 0;
     this._exportDriveActive = false;
     this._lastAppliedType = null;
+    this._suspendLiveUpdates = true;
   }
 
   beginExportDrive() {
@@ -188,16 +236,28 @@ export class FontTextConstantController {
 
     const reveal = this._revealController;
     if (!reveal) return;
-    if (reveal.isPreviewPlaying?.()) return;
-    if (!reveal.ensureBoundToModel(reveal._boundModel)) return;
+    this._snapGlyphsWithoutConstant(reveal);
+  }
 
-    let revealElapsed = 0;
-    if (reveal.isEnabled?.()) {
-      revealElapsed = reveal.isPreviewPaused?.()
-        ? reveal.getPreviewElapsed()
-        : reveal.getSettledRevealElapsedSec();
+  /**
+   * @param {import('./FontTextRevealController.js').FontTextRevealController} reveal
+   */
+  _resolveRevealElapsedForComposite(reveal) {
+    if (reveal.isPreviewPlaying?.() || reveal.isPreviewPaused?.()) {
+      return reveal.getPreviewElapsed();
     }
-    reveal.applyAtTime(revealElapsed, { skipConstant: true });
+    if (reveal.isEnabled?.()) {
+      return reveal.getSettledRevealElapsedSec();
+    }
+    return 0;
+  }
+
+  /**
+   * @param {import('./FontTextRevealController.js').FontTextRevealController} reveal
+   */
+  _snapGlyphsWithoutConstant(reveal) {
+    if (!reveal.ensureBoundToModel(reveal._boundModel)) return;
+    reveal.applyAtTime(this._resolveRevealElapsedForComposite(reveal), { skipConstant: true });
   }
 
   _reapplyComposite() {
@@ -207,12 +267,6 @@ export class FontTextConstantController {
 
     if (!reveal.ensureBoundToModel(reveal._boundModel)) return;
 
-    let elapsed = 0;
-    if (reveal.isEnabled?.()) {
-      elapsed = reveal.isPreviewPaused?.()
-        ? reveal.getPreviewElapsed()
-        : reveal.getSettledRevealElapsedSec();
-    }
-    reveal.applyAtTime(elapsed);
+    reveal.applyAtTime(this._resolveRevealElapsedForComposite(reveal));
   }
 }

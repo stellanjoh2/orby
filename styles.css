@@ -3778,6 +3778,8 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
   --shelf-rhythm: var(--shelf-shell-rhythm);
   --shelf-g: calc(var(--shelf-rhythm) / 2);
   --shelf-panel-gutter: calc(var(--shelf-shell-rhythm) * 14 / 12);
+  /* Stacked .accent-action-btn rows — same rhythm as card-to-card section gutter */
+  --shelf-accent-action-gap: var(--shelf-panel-gutter);
   /* Inset inside lighter panel cards (.panel-block) */
   --shelf-card-padding: 1.2rem;
   /* Headline inset — match card horizontal padding for symmetric section headers */
@@ -4017,11 +4019,11 @@ html:not(.mobile-landing) .shelf .hdri-icon--upload .hdri-icon__check {
   font-size: calc(1.35rem * var(--studio-ui-scale));
 }
 
-/* Scene / Object accent buttons — same vertical rhythm as control rows */
+/* Scene / Object accent buttons — card-to-card gutter rhythm */
 html:not(.mobile-landing) .shelf .scene-controls,
 html:not(.mobile-landing) .shelf .export-controls:not(:has(> .export-option-group)),
 html:not(.mobile-landing) .shelf .map-slots-action-row {
-  gap: var(--shelf-section-gap);
+  gap: var(--shelf-accent-action-gap);
 }
 
 html:not(.mobile-landing) .shelf .export-controls:has(> .export-option-group) {
@@ -5271,6 +5273,10 @@ a.about-highlight:focus-visible {
   margin-bottom: 0;
 }
 
+.topology-warnings-actions + .topology-warnings-actions {
+  margin-top: var(--shelf-accent-action-gap);
+}
+
 .topology-warnings-scan {
   width: 100%;
   justify-content: center;
@@ -6164,6 +6170,10 @@ input[type='range']:disabled::-moz-range-thumb {
   display: block;
 }
 
+[data-subsection='font-extrude'] .font-extrude-preview {
+  display: block;
+}
+
 [data-subsection='font-extrude'] .font-extrude-reveal-emissive {
   display: block;
 }
@@ -6982,6 +6992,10 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   gap: var(--shelf-section-gap);
 }
 
+.export-controls:not(:has(> .export-option-group)) {
+  gap: var(--shelf-accent-action-gap);
+}
+
 .export-controls:has(> .export-option-group) {
   gap: var(--shelf-section-gap);
 }
@@ -6994,7 +7008,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
 .scene-controls {
   display: flex;
   flex-direction: column;
-  gap: var(--shelf-section-gap);
+  gap: var(--shelf-accent-action-gap);
 }
 
 .export-option-group {
@@ -7645,9 +7659,20 @@ body.ui-hidden .shelf {
 /*
  * Row toggle + collapsed foldout + more controls (Advanced → UV Checker → Transparency).
  * The row before the foldout has margin-bottom: 0; restore shelf rhythm before the next block.
+ * Skip [hidden] wrappers (e.g. #stlSmoothingControls) so the next visible row still gets gap.
  */
 :is(.panel-block, .subsection)
-  > .effect-foldout.effect-foldout--collapsed + * {
+  > .effect-foldout.effect-foldout--collapsed
+  + :not(.effect-foldout):not([hidden]),
+:is(.panel-block, .subsection)
+  > .effect-foldout.effect-foldout--collapsed
+  + [hidden]
+  + :not(.effect-foldout):not([hidden]),
+:is(.panel-block, .subsection)
+  > .effect-foldout.effect-foldout--collapsed
+  + [hidden]
+  + [hidden]
+  + :not(.effect-foldout):not([hidden]) {
   margin-top: var(--shelf-section-gap);
 }
 
@@ -8687,11 +8712,29 @@ body.ui-hidden .shelf {
 }
 
 [data-subsection='font-extrude'] .font-extrude-reveal-preview.animation-timeline {
-  margin-bottom: var(--shelf-section-gap);
+  margin-bottom: 0;
 }
 
 [data-subsection='font-extrude'] .font-extrude-reveal-preview.animation-timeline .animation-transport-btns {
   gap: 0.5rem;
+}
+
+[data-subsection='font-extrude'] .font-extrude-preview-transport-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-self: flex-start;
+  margin-top: var(--shelf-section-gap);
+}
+
+[data-subsection='font-extrude'] .font-extrude-pause-all-btn,
+[data-subsection='font-extrude'] .font-extrude-reset-animations-btn {
+  margin-top: 0;
+}
+
+[data-subsection='font-extrude'] .font-extrude-pause-all-btn {
+  align-self: auto;
+  margin-top: 0;
 }
 
 .font-extrude-reveal-loop-control {

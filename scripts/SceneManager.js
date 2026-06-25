@@ -20,6 +20,7 @@ import {
   isCreativeLookViewportPostActive,
   isCreativeLookWatercolourPostActive,
   isCreativeLookGouachePostActive,
+  isCreativeLookOpticsPostActive,
   isCreativeLookSketchPostActive,
   isCreativeLookSketchColourPostActive,
   isCreativeLookAscii4PostActive,
@@ -42,7 +43,7 @@ import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
 import { GroundController } from './render/GroundController.js';
 import { EnvironmentController } from './render/EnvironmentController.js';
-import { syncTransmissionBackdropForCreativeLook, needsTransmissionBackdropForCreativeLook } from './render/backgroundFallback.js';
+import { syncTransmissionBackdropForCreativeLook, needsTransmissionBackdropForCreativeLook, isSolidStudioBackdropActive, resolveSolidStudioBackdropColor } from './render/backgroundFallback.js';
 import { HdriMoodController } from './render/HdriMoodController.js';
 import { CameraController } from './render/CameraController.js';
 import { ModelLoader } from './render/ModelLoader.js';
@@ -72,6 +73,7 @@ import {
   isVectrexCreativeLookPreset,
   isWatercolourCreativeLookPreset,
   isGouacheCreativeLookPreset,
+  isOpticsCreativeLookPreset,
   isSketchColourCreativeLookPreset,
   isSketchFamilyCreativeLookPreset,
   isSketchCreativeLookPreset,
@@ -1163,6 +1165,10 @@ export class SceneManager {
         const state = this.stateStore.getState();
         return isCreativeLookGouachePostActive(state);
       },
+      getCreativeLookOpticsActive: () => {
+        const state = this.stateStore.getState();
+        return isCreativeLookOpticsPostActive(state);
+      },
       getCreativeLookSketchActive: () => {
         const state = this.stateStore.getState();
         return isCreativeLookSketchPostActive(state);
@@ -1190,6 +1196,9 @@ export class SceneManager {
         }
         if (isCreativeLookGouachePostActive(this.stateStore.getState())) {
           this._prepareCreativeLookGouacheFrameUniforms();
+        }
+        if (isCreativeLookOpticsPostActive(this.stateStore.getState())) {
+          this._prepareCreativeLookOpticsFrameUniforms();
         }
         if (isCreativeLookAscii4PostActive(this.stateStore.getState())) {
           this.postPipeline?.updateCreativeLookAscii?.({
@@ -1258,6 +1267,9 @@ export class SceneManager {
         }
         if (isCreativeLookGouachePostActive(this.stateStore.getState())) {
           this._prepareCreativeLookGouacheFrameUniforms();
+        }
+        if (isCreativeLookOpticsPostActive(this.stateStore.getState())) {
+          this._prepareCreativeLookOpticsFrameUniforms();
         }
         if (isCreativeLookAscii4PostActive(this.stateStore.getState())) {
           this.postPipeline?.updateCreativeLookAscii?.({
@@ -1449,6 +1461,7 @@ export class SceneManager {
     this.postPipeline?.creativeLookDither?.setSize(width, height);
     this.postPipeline?.creativeLookWatercolour?.setSize(width, height);
     this.postPipeline?.creativeLookGouache?.setSize(width, height);
+    this.postPipeline?.creativeLookOptics?.setSize(width, height);
     this.postPipeline?.creativeLookSketch?.setSize(width, height);
     this.postPipeline?.creativeLookSketchColour?.setSize(width, height);
     this.postPipeline?.creativeLookVectrex?.setSize(width, height);
@@ -4128,53 +4141,35 @@ export class SceneManager {
     populateImportRawCache(this.currentModel, this.importRawByMesh, { tagStl: isStl });
   }
 
-  _applyCenterPivotFromState() {
-    const wantCentered = !!this.stateStore.getState()?.advanced?.centerPivot;
-    if (wantCentered === !!this._pivotCenterDelta) return;
-    this.setCenterPivot(wantCentered, { updateState: false });
-  }
-
   /**
-   * @param {boolean} enabled
-   * @param {{ updateState?: boolean, showToast?: boolean }} [options]
+   * Move the mesh pivot to the current bounding-box center. Undoes a prior centering
+   * first so extrude / geometry edits can be corrected without reloading.
+   * @param {{ showToast?: boolean }} [options]
    */
-  setCenterPivot(enabled, options = {}) {
-    const wantCentered = !!enabled;
+  recenterPivot(options = {}) {
     if (!this.currentModel || !this.modelRoot) {
-      if (options.updateState !== false) {
-        this.stateStore.set('advanced.centerPivot', false);
+      if (options.showToast !== false) {
+        this.ui?.showToast?.('Load a model first');
       }
       return false;
     }
 
-    if (wantCentered) {
-      if (this._pivotCenterDelta) {
-        return true;
-      }
-      const delta = captureAndApplyCenterPivot(this.modelRoot, this.currentModel);
-      if (!delta) {
-        this.ui?.showToast?.('Could not center pivot');
-        if (options.updateState !== false) {
-          this.stateStore.set('advanced.centerPivot', false);
-          this.ui?.syncUIFromState?.();
-        }
-        return false;
-      }
-      this._pivotCenterDelta = delta;
-    } else {
-      if (!this._pivotCenterDelta) {
-        return true;
-      }
+    if (this._pivotCenterDelta) {
       undoCenterPivot(this.modelRoot, this.currentModel, this._pivotCenterDelta);
       this._pivotCenterDelta = null;
     }
 
-    if (options.updateState !== false) {
-      this.stateStore.set('advanced.centerPivot', wantCentered);
+    const delta = captureAndApplyCenterPivot(this.modelRoot, this.currentModel);
+    if (!delta) {
+      if (options.showToast !== false) {
+        this.ui?.showToast?.('Could not center pivot');
+      }
+      return false;
     }
 
+    this._pivotCenterDelta = delta;
     this._afterPivotChange();
-    if (wantCentered && options.showToast !== false) {
+    if (options.showToast !== false) {
       this.ui?.showToast?.('Pivot centered', 3200, { notification: false });
     }
     return true;
@@ -4871,6 +4866,7 @@ export class SceneManager {
 
     const watercolourOn = creativeLookOn && isWatercolourCreativeLookPreset(presetId);
     const gouacheOn = creativeLookOn && isGouacheCreativeLookPreset(presetId);
+    const opticsOn = creativeLookOn && isOpticsCreativeLookPreset(presetId);
     const sketchOn = creativeLookOn && isSketchCreativeLookPreset(presetId);
     const sketchColourOn = creativeLookOn && isSketchColourCreativeLookPreset(presetId);
     const sketchFamilyOn = sketchOn || sketchColourOn;
@@ -4901,6 +4897,20 @@ export class SceneManager {
     this.postPipeline?.updateCreativeLookGouache?.(gouacheSettings);
     if (!gouacheOn) {
       this.postPipeline?.releaseCreativeLookGouache?.();
+    }
+
+    const opticsSettings = {
+      enabled: opticsOn,
+      variant: presetId,
+      patternScale,
+      intensity: normalizeCreativeLookIntensity(storeCl.intensity ?? mcCl.intensity),
+      masterHue: masterHueRad,
+      backdropFlat: isSolidStudioBackdropActive(this.stateStore.getState()),
+      backdropColor: resolveSolidStudioBackdropColor(this.stateStore.getState()),
+    };
+    this.postPipeline?.updateCreativeLookOptics?.(opticsSettings);
+    if (!opticsOn) {
+      this.postPipeline?.releaseCreativeLookOptics?.();
     }
 
     const sketchParams = resolveCreativeLookSketchParams(
@@ -4942,7 +4952,7 @@ export class SceneManager {
 
     this._syncCreativeLookStudioBackground(creativeLookOn, presetId);
 
-    if (enabled || watercolourOn || gouacheOn || sketchFamilyOn || vectrexOn) {
+    if (enabled || watercolourOn || gouacheOn || opticsOn || sketchFamilyOn || vectrexOn) {
       const sz = new THREE.Vector2();
       this.renderer.getSize(sz);
       if (sz.x > 0 && sz.y > 0) {
@@ -4963,6 +4973,9 @@ export class SceneManager {
         }
         if (gouacheOn) {
           this.postPipeline?.creativeLookGouache?.setSize(sz.x, sz.y);
+        }
+        if (opticsOn) {
+          this.postPipeline?.creativeLookOptics?.setSize(sz.x, sz.y);
         }
         if (sketchOn) {
           this.postPipeline?.creativeLookSketch?.setSize(sz.x, sz.y);
@@ -4989,6 +5002,27 @@ export class SceneManager {
         });
       }
     }
+  }
+
+  /** Per-frame optics post uniforms — animated grain + live intensity/scale. */
+  _prepareCreativeLookOpticsFrameUniforms() {
+    if (!isCreativeLookOpticsPostActive(this.stateStore.getState())) return;
+    const state = this.stateStore.getState();
+    const cl = state.creativeLook ?? {};
+    const presetId = normalizeCreativeLookPreset(cl.preset);
+    const patternScale = normalizeCreativeLookPatternScale(
+      presetId,
+      Number(cl.patternScale),
+    );
+    this.postPipeline?.updateCreativeLookOptics?.({
+      time: this.materialController?.getCreativeLookAnimationTime?.() ?? 0,
+      patternScale,
+      intensity: normalizeCreativeLookIntensity(cl.intensity),
+      variant: presetId,
+      masterHue: creativeLookMasterHueRadians(normalizeCreativeLookMasterHue(cl.masterHue)),
+      backdropFlat: isSolidStudioBackdropActive(state),
+      backdropColor: resolveSolidStudioBackdropColor(state),
+    });
   }
 
   /** Per-frame Gouache post uniforms — pattern scale drives ink width & chalk grain. */
@@ -5312,50 +5346,55 @@ export class SceneManager {
       showFisheyeTransparentPngExportBlockedAlert(this.ui);
       return;
     }
+    if (transparent && !this.currentModel) {
+      this.ui?.showToast?.('Load a mesh before exporting image');
+      return;
+    }
+
     this._suppressResizeForExport = true;
     try {
-      if (transparent) {
-        if (!this.currentModel) {
-          this.ui?.showToast?.('Load a mesh before exporting image');
-          return;
-        }
-        const ok = await this.imageExporter.exportTransparentImage(
-          this.currentModel,
-          this.currentFile,
-          this.cameraController,
-          size,
-          formatId,
-        );
-        if (ok) {
-          this.ui?.showToast?.(
-            `Transparent ${formatMeta.label} exported`,
-            3200,
-            { notification: false },
-          );
-        } else {
+      return await withViewportLoadSpinner(this.ui, `Exporting ${formatMeta.label}`, async () => {
+        try {
+          if (transparent) {
+            const ok = await this.imageExporter.exportTransparentImage(
+              this.currentModel,
+              this.currentFile,
+              this.cameraController,
+              size,
+              formatId,
+            );
+            if (ok) {
+              this.ui?.showToast?.(
+                `Transparent ${formatMeta.label} exported`,
+                3200,
+                { notification: false },
+              );
+            } else {
+              this.ui?.showToast?.(`${formatMeta.label} export failed`);
+            }
+          } else {
+            const originalSize = new THREE.Vector2();
+            this.renderer.getSize(originalSize);
+            const originalPixelRatio = this.renderer.getPixelRatio();
+
+            const cinematicLetterbox219 = !!this.stateStore
+              .getState()
+              .camera?.cinematicLetterbox219;
+            await this.imageExporter.exportImage(
+              this.currentFile,
+              originalSize,
+              originalPixelRatio,
+              size,
+              cinematicLetterbox219,
+              formatId,
+            );
+            this.ui?.showToast?.(`${formatMeta.label} exported`, 3200, { notification: false });
+          }
+        } catch (error) {
+          console.error('Image export failed', error);
           this.ui?.showToast?.(`${formatMeta.label} export failed`);
         }
-      } else {
-        const originalSize = new THREE.Vector2();
-        this.renderer.getSize(originalSize);
-        const originalPixelRatio = this.renderer.getPixelRatio();
-
-        const cinematicLetterbox219 = !!this.stateStore
-          .getState()
-          .camera?.cinematicLetterbox219;
-        await this.imageExporter.exportImage(
-          this.currentFile,
-          originalSize,
-          originalPixelRatio,
-          size,
-          cinematicLetterbox219,
-          formatId,
-        );
-        this.ui?.showToast?.(`${formatMeta.label} exported`, 3200, { notification: false });
-      }
-    } catch (error) {
-      console.error('Image export failed', error);
-      this.ui?.showToast?.(`${formatMeta.label} export failed`);
+      });
     } finally {
       this._suppressResizeForExport = false;
       this.handleResize();
@@ -5371,19 +5410,21 @@ export class SceneManager {
       this.ui?.showToast?.('Load a mesh before exporting SVG');
       return;
     }
-    try {
-      this.ui?.showToast?.('Exporting SVG silhouette…');
-      await this.imageExporter.exportSvgSilhouette(
-        this.currentModel,
-        this.currentFile,
-        this.cameraController,
-      );
-      this.ui?.uiSounds?.playRenderFinished();
-      this.ui?.showToast?.('SVG silhouette exported', 3200, { notification: false });
-    } catch (error) {
-      console.error('SVG export failed', error);
-      this.ui?.showToast?.('SVG export failed');
-    }
+    return withViewportLoadSpinner(this.ui, 'Exporting SVG', async () => {
+      try {
+        this.ui?.showToast?.('Exporting SVG silhouette…');
+        await this.imageExporter.exportSvgSilhouette(
+          this.currentModel,
+          this.currentFile,
+          this.cameraController,
+        );
+        this.ui?.uiSounds?.playRenderFinished();
+        this.ui?.showToast?.('SVG silhouette exported', 3200, { notification: false });
+      } catch (error) {
+        console.error('SVG export failed', error);
+        this.ui?.showToast?.('SVG export failed');
+      }
+    });
   }
 
   async exportSvgColor(settings = {}) {
@@ -5402,29 +5443,31 @@ export class SceneManager {
         ? settings.detail
         : 'high';
     const transparent = settings.transparent === true;
-    try {
-      this.ui?.showToast?.(usePixelSvg ? 'Exporting pixel SVG…' : 'Exporting SVG (color)…');
-      if (usePixelSvg) {
-        await this.imageExporter.exportSvgScreenPixel(this.currentFile, presetId, {
-          transparent,
-        });
-      } else {
-        await this.imageExporter.exportSvgColor(
-          this.currentModel,
-          this.currentFile,
-          level,
+    return withViewportLoadSpinner(this.ui, 'Exporting SVG', async () => {
+      try {
+        this.ui?.showToast?.(usePixelSvg ? 'Exporting pixel SVG…' : 'Exporting SVG (color)…');
+        if (usePixelSvg) {
+          await this.imageExporter.exportSvgScreenPixel(this.currentFile, presetId, {
+            transparent,
+          });
+        } else {
+          await this.imageExporter.exportSvgColor(
+            this.currentModel,
+            this.currentFile,
+            level,
+          );
+        }
+        this.ui?.uiSounds?.playRenderFinished();
+        this.ui?.showToast?.(
+          usePixelSvg ? 'Pixel SVG exported' : 'SVG (color) exported',
+          3200,
+          { notification: false },
         );
+      } catch (error) {
+        console.error('SVG (color) export failed', error);
+        this.ui?.showToast?.('SVG export failed');
       }
-      this.ui?.uiSounds?.playRenderFinished();
-      this.ui?.showToast?.(
-        usePixelSvg ? 'Pixel SVG exported' : 'SVG (color) exported',
-        3200,
-        { notification: false },
-      );
-    } catch (error) {
-      console.error('SVG (color) export failed', error);
-      this.ui?.showToast?.('SVG export failed');
-    }
+    });
   }
 
   async exportSvgGlb() {
@@ -5443,23 +5486,25 @@ export class SceneManager {
       return;
     }
 
-    try {
-      this.ui?.showToast?.('Exporting .GLB…');
-      const sourceName = this.currentFile?.name
-        || this.currentAssetMetadata?.assetName
-        || (exportKind.mode === 'svg' ? 'svg-extrude' : 'model');
-      await this.modelGlbExporter.export({
-        modelRoot: this.modelRoot,
-        sourceName,
-        exportKind,
-        getOriginalMaterial: (mesh) => this.materialController?.getOriginalMaterial?.(mesh),
-      });
-      this.ui?.uiSounds?.playRenderFinished();
-      this.ui?.showToast?.('.GLB exported', 3200, { notification: false });
-    } catch (error) {
-      console.error('GLB export failed', error);
-      this.ui?.showToast?.('.GLB export failed');
-    }
+    return withViewportLoadSpinner(this.ui, 'Exporting GLB', async () => {
+      try {
+        this.ui?.showToast?.('Exporting .GLB…');
+        const sourceName = this.currentFile?.name
+          || this.currentAssetMetadata?.assetName
+          || (exportKind.mode === 'svg' ? 'svg-extrude' : 'model');
+        await this.modelGlbExporter.export({
+          modelRoot: this.modelRoot,
+          sourceName,
+          exportKind,
+          getOriginalMaterial: (mesh) => this.materialController?.getOriginalMaterial?.(mesh),
+        });
+        this.ui?.uiSounds?.playRenderFinished();
+        this.ui?.showToast?.('.GLB exported', 3200, { notification: false });
+      } catch (error) {
+        console.error('GLB export failed', error);
+        this.ui?.showToast?.('.GLB export failed');
+      }
+    });
   }
 
   async exportVideo(settings = {}) {

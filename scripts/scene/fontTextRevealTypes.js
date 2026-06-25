@@ -10,6 +10,7 @@ import { restoreRevealGlyphEmissive } from './fontTextRevealEmissive.js';
  * @typedef {{
  *   group: import('three').Object3D,
  *   restPosition: import('three').Vector3,
+ *   restRotationX: number,
  *   restRotationY: number,
  *   restRotationZ: number,
  *   restScale: import('three').Vector3,
@@ -452,6 +453,7 @@ function applyRevealScale(group, restScale, multiplier) {
  * @param {{
  *   group: import('three').Object3D,
  *   restPosition: import('three').Vector3,
+ *   restRotationX: number,
  *   restRotationY: number,
  *   restRotationZ: number,
  *   slideDistance: number,
@@ -475,6 +477,7 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
   const {
     group,
     restPosition,
+    restRotationX,
     restRotationY,
     restRotationZ,
     restScale,
@@ -492,6 +495,7 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
   const activeSlideDistance = useWordGroup ? wordPivot.slideDistance : slideDistance;
 
   group.position.copy(restPosition);
+  group.rotation.x = restRotationX;
   group.rotation.y = restRotationY;
   group.rotation.z = restRotationZ;
   group.scale.copy(restScale);
@@ -589,6 +593,7 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
  * @param {{
  *   group: import('three').Object3D,
  *   restPosition: import('three').Vector3,
+ *   restRotationX: number,
  *   restRotationY: number,
  *   restRotationZ: number,
  *   restScale: import('three').Vector3,
@@ -602,8 +607,9 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
  * }} state
  */
 export function resetRevealGlyphPose(state) {
-  const { group, restPosition, restRotationY, restRotationZ, restScale, meshMaterials } = state;
+  const { group, restPosition, restRotationX, restRotationY, restRotationZ, restScale, meshMaterials } = state;
   group.position.copy(restPosition);
+  group.rotation.x = restRotationX;
   group.rotation.y = restRotationY;
   group.rotation.z = restRotationZ;
   group.scale.copy(restScale);

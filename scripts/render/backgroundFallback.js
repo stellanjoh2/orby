@@ -1,4 +1,5 @@
 import { creativeLookPresetNeedsHdriBackdrop } from './CreativeLookMaterials.js';
+import { APP_BACKGROUND } from '../constants.js';
 
 /**
  * Viewport backdrop vs HDRI lighting — Render Backdrop off still leaves HDRI lighting on.
@@ -19,6 +20,23 @@ export function isHdriBackdropActive(state) {
 export function isBackgroundFallbackActive(state) {
   // Shader Lab defaults Render Backdrop off, but a manual toggle back on should show the HDRI.
   return !isHdriBackdropActive(state);
+}
+
+/**
+ * Solid flat backdrop (no HDRI image, no gradient/image) — optics presets keep these pixels ungraded.
+ * @param {object | null | undefined} state
+ */
+export function isSolidStudioBackdropActive(state) {
+  if (!state || isHdriBackdropActive(state)) return false;
+  if (state.backgroundSolidEnabled === false) return false;
+  if (state.backgroundGradient?.enabled) return false;
+  if (state.backgroundImage?.enabled && state.backgroundImage?.asset) return false;
+  return true;
+}
+
+/** @param {object | null | undefined} state */
+export function resolveSolidStudioBackdropColor(state) {
+  return state?.background ?? APP_BACKGROUND;
 }
 
 /** Glass / Chrome Shader Lab presets need `scene.background` for transmission refraction. */

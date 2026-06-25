@@ -1,7 +1,13 @@
 import * as THREE from 'three';
 
+/**
+ * Holo Glass reads too hot at default Object → Material brightness (~1.75).
+ * Bias tuned to match the look of mesh brightness ~0.75 without dialing the slider.
+ */
+export const CREATIVE_HOLO_GLASS_EXPOSURE_BIAS = 0.5;
+
 /** Shader Lab holo-glass — HDRI reflection scale (transmission carries the backdrop). */
-export const CREATIVE_HOLO_GLASS_ENV_MAP_MUL = 0.62;
+export const CREATIVE_HOLO_GLASS_ENV_MAP_MUL = 0.62 * CREATIVE_HOLO_GLASS_EXPOSURE_BIAS;
 
 const OPAQUE_FRAGMENT = '#include <opaque_fragment>';
 const COMMON_INCLUDE = '#include <common>';
@@ -101,8 +107,8 @@ const HOLO_GLASS_FRAG_APPLY = /* glsl */ `
     vOrbyHoloWorldNormal,
     cameraPosition - vOrbyHoloWorldPos
   );
-  outgoingLight.rgb = mix(outgoingLight.rgb, holo, clamp(length(holo) * 0.38, 0.0, 0.72));
-  outgoingLight.rgb += holo * (0.55 + uOrbyHoloIntensity * 0.22);
+  outgoingLight.rgb = mix(outgoingLight.rgb, holo, clamp(length(holo) * 0.28, 0.0, 0.55));
+  outgoingLight.rgb += holo * (0.36 + uOrbyHoloIntensity * 0.14);
 }
 `;
 
@@ -195,7 +201,7 @@ export function creativeHoloGlassParamsForMesh(patternScale, hdriBlurriness, mes
   const inten = THREE.MathUtils.clamp(Number(intensity) || 1, 0, 2);
   const ps = THREE.MathUtils.clamp(patternScale, 0.1, 5);
   const u = (ps - 0.1) / 4.9;
-  const iridescence = THREE.MathUtils.clamp(0.52 + inten * 0.38, 0.35, 1);
+  const iridescence = THREE.MathUtils.clamp(0.38 + inten * 0.3, 0.28, 0.88);
   const thicknessMin = Math.round(THREE.MathUtils.lerp(90, 140, u));
   const thicknessMax = Math.round(THREE.MathUtils.lerp(420, 780, u));
   return {

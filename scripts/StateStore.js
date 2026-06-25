@@ -96,6 +96,8 @@ export class StateStore {
         revealUnit: 'character',
         /** Preview playback mode: true loops continuously, false stops at end. */
         revealLoop: true,
+        /** Freeze reveal preview + constant loop at the current pose (Resume continues from there). */
+        pauseAllAnimations: false,
         /** Per-glyph Z travel distance before landing in place. */
         revealSlideDepth: 0.18,
         /** Fraction of each glyph slot for Z travel (0.1–3; above 1 overlaps later letters). */
@@ -108,7 +110,7 @@ export class StateStore {
         /** Seconds for emissive to decay after each letter lands. */
         revealEmissiveDecaySec: 0.35,
         revealEmissiveColor: ORBY_LIME,
-        /** @type {'none' | 'float' | 'wave' | 'breathe' | 'sway'} */
+        /** @type {'none' | 'float' | 'wave' | 'breathe' | 'sway' | 'spin'} */
         constantType: 'none',
         /** 0–1 amplitude for looping motion. */
         constantIntensity: 0.5,
@@ -175,8 +177,6 @@ export class StateStore {
         /** Imported meshes: recompute vertex normals with a crease angle (see Object → Advanced). */
         stlSmoothShading: false,
         stlSmoothingAngle: 40,
-        /** Move mesh pivot to bounding-box center (see centerModelPivot.js). */
-        centerPivot: true,
       },
       hdri: 'beach',
       /** Filename when {@link hdri} is `custom` (blob URL is session-only). */

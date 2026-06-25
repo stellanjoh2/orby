@@ -48,6 +48,7 @@ import {
   fontConstantTypeUsesSpread,
   formatFontConstantIntensityLabel,
   isFontConstantAnimationActive,
+  isFontConstantSpinType,
   isFontConstantVerticalType,
   MAX_FONT_CONSTANT_VERTICAL_INTENSITY,
   MAX_FONT_CONSTANT_INTENSITY,
@@ -318,6 +319,8 @@ export class FontExtrudeUI {
       revealLoop: block.querySelector('#fontExtrudeRevealLoop'),
       revealScrub: block.querySelector('#fontExtrudeRevealScrub'),
       revealTime: block.querySelector('#fontExtrudeRevealTime'),
+      pauseAllAnimations: block.querySelector('#fontExtrudePauseAllAnimations'),
+      resetAnimations: block.querySelector('#fontExtrudeResetAnimations'),
       constantType: block.querySelector('#fontExtrudeConstantType'),
       constantIntensity: block.querySelector('#fontExtrudeConstantIntensity'),
       constantSpeed: block.querySelector('#fontExtrudeConstantSpeed'),
@@ -577,6 +580,10 @@ export class FontExtrudeUI {
 
     els.revealPlay?.addEventListener('click', () => {
       this.ui.uiSounds?.playSelect();
+      if (this.stateStore.getState()?.fontExtrude?.pauseAllAnimations) {
+        this.ui.showToast('Resume all to continue animation playback');
+        return;
+      }
       this._withRevealController((controller, model) => {
         if (!controller.ensureBoundToModel(model)) {
           this.ui.showToast('Reveal needs 3D text — click Generate 3D Text first');
@@ -607,6 +614,26 @@ export class FontExtrudeUI {
       this._withRevealController((controller, model) => {
         controller.scrubPreview?.(value, model);
       });
+    });
+
+    els.pauseAllAnimations?.addEventListener('click', () => {
+      this.ui.uiSounds?.playSelect();
+      const next = !this.stateStore.getState()?.fontExtrude?.pauseAllAnimations;
+      this.stateStore.set('fontExtrude.pauseAllAnimations', next);
+      this._applyPauseAll(next);
+      this._syncAnimationTransportButtons(this.stateStore.getState());
+    });
+
+    els.resetAnimations?.addEventListener('click', () => {
+      this.ui.uiSounds?.playSelect();
+      this._withRevealController((controller, model) => {
+        if (!controller.ensureBoundToModel(model)) {
+          this.ui.showToast('Reset needs 3D text — click Generate 3D Text first');
+          return;
+        }
+        controller.resetAllAnimations?.();
+      });
+      this._syncAnimationTransportButtons(this.stateStore.getState());
     });
 
     els.constantType?.addEventListener('change', () => {
@@ -655,7 +682,13 @@ export class FontExtrudeUI {
 
     this._stateUnsub = this.stateStore.subscribe((state) => this.syncFromState(state));
 
-    this._onFontGenerated = () => this.syncPostGenControlsVisibility();
+    this._onFontGenerated = () => {
+      if (this.stateStore.getState()?.fontExtrude?.pauseAllAnimations) {
+        this.stateStore.set('fontExtrude.pauseAllAnimations', false);
+        this._applyPauseAll(false);
+      }
+      this.syncPostGenControlsVisibility();
+    };
     this._onModelLoadComplete = (payload) => {
       if (payload?.source === 'font' || this._hasFontMesh()) {
         this.syncPostGenControlsVisibility();
@@ -703,6 +736,44 @@ export class FontExtrudeUI {
       this._attachRevealPreviewCallback();
       this.syncRevealPreviewControlsFromController();
     }
+    this._syncAnimationTransportButtons(this.stateStore.getState());
+  }
+
+  _fontAnimationPauseAllAvailable() {
+    const reveal = this._revealController();
+    const constant = this._constantController();
+    return (
+      this._hasFontMesh()
+      && (reveal?.isEnabled?.() || constant?.isEnabled?.())
+    );
+  }
+
+  _applyPauseAll(active) {
+    this._withRevealController((controller, model) => {
+      controller.applyPauseAll?.(active, model);
+    });
+  }
+
+  _fontAnimationControlsAvailable() {
+    return this._fontAnimationPauseAllAvailable();
+  }
+
+  _syncAnimationTransportButtons(state) {
+    this._syncPauseAllButton(state);
+    const { els } = this;
+    if (!els.resetAnimations) return;
+    const available = this._fontAnimationControlsAvailable();
+    els.resetAnimations.disabled = !available;
+  }
+
+  _syncPauseAllButton(state) {
+    const { els } = this;
+    if (!els.pauseAllAnimations) return;
+    const paused = !!state?.fontExtrude?.pauseAllAnimations;
+    const available = this._fontAnimationPauseAllAvailable();
+    els.pauseAllAnimations.disabled = !available;
+    els.pauseAllAnimations.classList.toggle('active', paused);
+    els.pauseAllAnimations.textContent = paused ? 'Resume all' : 'Pause all';
   }
 
   _attachRevealPreviewCallback() {
@@ -737,8 +808,13 @@ export class FontExtrudeUI {
     if (els.revealPlay) {
       els.revealPlay.disabled = !enabled;
       els.revealPlay.setAttribute('aria-pressed', playing ? 'true' : 'false');
-      els.revealPlay.setAttribute('aria-label', playing ? 'Pause reveal animation' : 'Play reveal animation');
-      els.revealPlay.dataset.tooltip = playing ? 'Pause reveal preview' : 'Play reveal preview';
+      els.revealPlay.setAttribute(
+        'aria-label',
+        playing ? 'Pause text animation preview' : 'Play text animation preview',
+      );
+      els.revealPlay.dataset.tooltip = playing
+        ? 'Pause text animation preview'
+        : 'Play text animation preview';
       const icon = els.revealPlay.querySelector('i');
       if (icon) {
         icon.classList.toggle('fa-play', !playing);
@@ -755,8 +831,12 @@ export class FontExtrudeUI {
     }
 
     if (els.revealTime) {
-      els.revealTime.textContent = `${Math.max(0, elapsed).toFixed(1)}s`;
+      const displayElapsed =
+        duration > 0 ? Math.min(Math.max(0, elapsed), duration) : Math.max(0, elapsed);
+      els.revealTime.textContent = `${displayElapsed.toFixed(1)}s`;
     }
+
+    this._syncPauseAllButton(this.stateStore.getState());
   }
 
   _revealController() {
@@ -906,6 +986,7 @@ export class FontExtrudeUI {
     }
     this._syncRevealEmissiveControlsDisabled();
     this._syncConstantControlsFromState(state);
+    this._syncPauseAllButton(state);
   }
 
   _syncConstantControlsFromState(state) {
@@ -954,6 +1035,16 @@ export class FontExtrudeUI {
     const active = isFontConstantAnimationActive(constantType);
     const usesSpread = fontConstantTypeUsesSpread(constantType);
     const vertical = isFontConstantVerticalType(constantType);
+    const spin = isFontConstantSpinType(constantType);
+    const intensityLabel = this.els.constantIntensity
+      ?.closest('.slider-line')
+      ?.querySelector('span[data-tooltip]');
+    if (intensityLabel) {
+      intensityLabel.textContent = spin ? 'Stagger' : 'Intensity';
+      intensityLabel.dataset.tooltip = spin
+        ? 'Delay before each letter starts its spin — 100% triggers all together; lower values ripple through the whole string across lines'
+        : 'Motion strength — Wave allows up to 3× vertical peak height (± from rest); Float uses a gentler bob range; Breathe and Sway use a subtler 0–100% range';
+    }
     if (this.els.constantIntensity) {
       const slider = this.els.constantIntensity;
       slider.max = String(vertical ? MAX_FONT_CONSTANT_VERTICAL_INTENSITY : MAX_FONT_CONSTANT_INTENSITY);

@@ -41,6 +41,7 @@ import { CreativeLookWatercolour } from './CreativeLookWatercolourPass.js';
 import { CreativeLookSketch } from './CreativeLookSketchPass.js';
 import { CreativeLookSketchColour } from './CreativeLookSketchColourPass.js';
 import { CreativeLookGouache } from './CreativeLookGouachePass.js';
+import { CreativeLookOpticsPass } from './CreativeLookOpticsPass.js';
 import {
   AMBIENT_OCCLUSION_INTENSITY_MAX,
   AMBIENT_OCCLUSION_INTENSITY_MIN,
@@ -70,7 +71,7 @@ const CREATIVE_LOOK_GRADING_PASS_KEYS = new Set([
   'toneMappingPass',
 ]);
 
-/** Cam/FX film grain — allowed on Shader Lab presentation stacks. */
+/** Cam/FX grain — allowed on Shader Lab presentation stacks. */
 const CREATIVE_LOOK_GRAIN_PASS_KEYS = new Set(['filmPass', 'grainTintPass']);
 
 export class PostProcessingPipeline {
@@ -120,9 +121,6 @@ export class PostProcessingPipeline {
       0.85,
     );
 
-    this.filmPass = new FilmPass(0.0, 0.0, 648, false);
-    this.filmPass.enabled = false;
-
     const abTier0 = resolveAnamorphicBloomQualityTier(ANAMORPHIC_BLOOM_QUALITY_DEFAULT);
     this._anamorphicBloomSampleRadius = abTier0.sampleRadius;
 
@@ -147,6 +145,9 @@ export class PostProcessingPipeline {
       );
       this.anamorphicBloomPass.enabled = false;
     }
+
+    this.filmPass = new FilmPass(0.0, 0.0, 648, false);
+    this.filmPass.enabled = false;
 
     this.grainTintPass = new ShaderPass(GrainTintShader);
     this.grainTintPass.enabled = false;
@@ -250,6 +251,9 @@ export class PostProcessingPipeline {
     this.creativeLookGouache = new CreativeLookGouache(renderer);
     this.creativeLookGouachePass = this.creativeLookGouache.getPass();
 
+    this.creativeLookOptics = new CreativeLookOpticsPass(renderer);
+    this.creativeLookOpticsPass = this.creativeLookOptics.getPass();
+
     this.composer.addPass(this.renderPass);
     this.composer.addPass(this.creativeLookAsciiPass);
     this.composer.addPass(this.creativeLookEgaPass);
@@ -266,6 +270,7 @@ export class PostProcessingPipeline {
     this.composer.addPass(this.creativeLookSketchPass);
     this.composer.addPass(this.creativeLookSketchColourPass);
     this.composer.addPass(this.creativeLookGouachePass);
+    this.composer.addPass(this.creativeLookOpticsPass);
     this.composer.addPass(this.creativeLookViewportBloomPass);
     this.composer.addPass(this.n8aoPass);
     this.composer.addPass(this.bokehPass);
@@ -310,6 +315,7 @@ export class PostProcessingPipeline {
       { pass: this.creativeLookSketchPass, key: 'creativeLookSketchPass' },
       { pass: this.creativeLookSketchColourPass, key: 'creativeLookSketchColourPass' },
       { pass: this.creativeLookGouachePass, key: 'creativeLookGouachePass' },
+      { pass: this.creativeLookOpticsPass, key: 'creativeLookOpticsPass' },
       { pass: this.creativeLookViewportBloomPass, key: 'creativeLookViewportBloomPass' },
       { pass: this.n8aoPass, key: 'n8aoPass' },
       { pass: this.bokehPass, key: 'bokehPass' },
@@ -349,6 +355,8 @@ export class PostProcessingPipeline {
     this._creativeLookSketchSnapshot = null;
     /** @type {Array<{ enabled: boolean, renderToScreen: boolean }> | null} */
     this._creativeLookGouacheSnapshot = null;
+    /** @type {Array<{ enabled: boolean, renderToScreen: boolean }> | null} */
+    this._creativeLookOpticsSnapshot = null;
     /** @type {{ min: number, mag: number } | null} */
     this._composerFilterRestore = null;
     /** @type {object | null} — last `state.bloom` for Shader Lab viewport bloom prep */
@@ -614,6 +622,7 @@ export class PostProcessingPipeline {
           key === 'creativeLookSketchPass' ||
           key === 'creativeLookSketchColourPass' ||
           key === 'creativeLookGouachePass' ||
+          key === 'creativeLookOpticsPass' ||
           key === 'creativeLookViewportBloomPass'
         ) {
           pass.enabled = false;
@@ -656,6 +665,7 @@ export class PostProcessingPipeline {
         key === 'creativeLookSketchPass' ||
         key === 'creativeLookSketchColourPass' ||
         key === 'creativeLookGouachePass' ||
+          key === 'creativeLookOpticsPass' ||
         key === 'creativeLookViewportBloomPass'
       ) {
         pass.enabled = false;
@@ -747,6 +757,7 @@ export class PostProcessingPipeline {
           key === 'creativeLookSketchPass' ||
           key === 'creativeLookSketchColourPass' ||
           key === 'creativeLookGouachePass' ||
+          key === 'creativeLookOpticsPass' ||
           key === 'creativeLookViewportBloomPass'
         ) {
           pass.enabled = false;
@@ -921,6 +932,119 @@ export class PostProcessingPipeline {
   }
 
   /**
+   * Optics — scene → thermal / night-vision grade → (optional bloom) → grading → screen.
+   * @param {{ viewportBloom?: boolean }} [options]
+   */
+  pushCreativeLookOpticsPresentation({ viewportBloom = false } = {}) {
+    if (this._creativeLookOpticsSnapshot) return;
+
+    this._creativeLookOpticsSnapshot = this._managedPasses.map(({ pass }) => ({
+      enabled: pass.enabled,
+      renderToScreen: pass.renderToScreen,
+    }));
+
+    const slimPostKeys = new Set([
+      'filmPass',
+      'grainTintPass',
+      'anamorphicBloomPass',
+      'aberrationPass',
+      'lensDistortionPass',
+    ]);
+    const gradingKeys = CREATIVE_LOOK_GRADING_PASS_KEYS;
+
+    for (let i = 0; i < this._managedPasses.length; i += 1) {
+      const { pass, key } = this._managedPasses[i];
+      const snap = this._creativeLookOpticsSnapshot[i];
+
+      if (key === 'renderPass') {
+        pass.enabled = true;
+        pass.renderToScreen = false;
+        continue;
+      }
+      if (key === 'creativeLookOpticsPass') {
+        pass.enabled = true;
+        pass.renderToScreen = false;
+        continue;
+      }
+      if (viewportBloom) {
+        if (
+          key === 'creativeLookVectrexPass' ||
+          key === 'creativeLookWatercolourPass' ||
+          key === 'creativeLookSketchPass' ||
+          key === 'creativeLookSketchColourPass' ||
+          key === 'creativeLookGouachePass' ||
+          key === 'creativeLookOpticsPass' ||
+          key === 'creativeLookViewportBloomPass'
+        ) {
+          pass.enabled = false;
+          pass.renderToScreen = false;
+          continue;
+        }
+        if (key === 'bloomPass') {
+          pass.enabled = true;
+          pass.renderToScreen = false;
+          continue;
+        }
+        if (key === 'bloomCompositePass' || key === 'bloomTintPass') {
+          pass.enabled = true;
+          pass.renderToScreen = false;
+          continue;
+        }
+        if (key === 'anamorphicBloomPass') {
+          pass.enabled = snap.enabled;
+          pass.renderToScreen = false;
+          continue;
+        }
+        if (slimPostKeys.has(key)) {
+          pass.enabled = snap.enabled;
+          pass.renderToScreen = false;
+          continue;
+        }
+      }
+      if (CREATIVE_LOOK_GRAIN_PASS_KEYS.has(key)) {
+        pass.enabled = snap.enabled;
+        pass.renderToScreen = false;
+        continue;
+      }
+      if (gradingKeys.has(key)) {
+        pass.enabled = snap.enabled;
+        pass.renderToScreen = false;
+        continue;
+      }
+      pass.enabled = false;
+      pass.renderToScreen = false;
+    }
+  }
+
+  popCreativeLookOpticsPresentation() {
+    const snap = this._creativeLookOpticsSnapshot;
+    if (!snap) return;
+    this._managedPasses.forEach(({ pass }, i) => {
+      pass.enabled = snap[i].enabled;
+      pass.renderToScreen = snap[i].renderToScreen;
+    });
+    if (this.creativeLookOpticsPass) {
+      this.creativeLookOpticsPass.enabled = false;
+    }
+    this._creativeLookOpticsSnapshot = null;
+  }
+
+  releaseCreativeLookOptics() {
+    if (this._creativeLookOpticsSnapshot) {
+      this.popCreativeLookOpticsPresentation();
+      return;
+    }
+    if (this.creativeLookOpticsPass) {
+      this.creativeLookOpticsPass.enabled = false;
+    }
+  }
+
+  /** Shader Lab thermal / night-vision — full-viewport false-color grade. */
+  updateCreativeLookOptics(settings) {
+    this.creativeLookOptics?.updateSettings(settings ?? {});
+  }
+
+  /**
    * Sketch family — scene → (optional wash) → stipple + ink → (optional bloom) → grading → screen.
    * @param {{ viewportBloom?: boolean, passKey?: 'creativeLookSketchPass' | 'creativeLookSketchColourPass' }} [options]
    */
@@ -977,6 +1101,7 @@ export class PostProcessingPipeline {
           key === 'creativeLookVectrexPass' ||
           key === 'creativeLookWatercolourPass' ||
           key === 'creativeLookGouachePass' ||
+          key === 'creativeLookOpticsPass' ||
           key === 'creativeLookViewportBloomPass'
         ) {
           pass.enabled = false;
@@ -1111,7 +1236,7 @@ export class PostProcessingPipeline {
         continue;
       }
 
-      if (key === 'creativeLookVectrexPass' || key === 'creativeLookWatercolourPass' || key === 'creativeLookSketchPass' || key === 'creativeLookSketchColourPass' || key === 'creativeLookGouachePass') {
+      if (key === 'creativeLookVectrexPass' || key === 'creativeLookWatercolourPass' || key === 'creativeLookSketchPass' || key === 'creativeLookSketchColourPass' || key === 'creativeLookGouachePass' || key === 'creativeLookOpticsPass') {
         pass.enabled = false;
         pass.renderToScreen = false;
         continue;
@@ -1200,6 +1325,9 @@ export class PostProcessingPipeline {
     }
     if (this.creativeLookGouachePass && !this._creativeLookGouacheSnapshot) {
       this.creativeLookGouachePass.enabled = false;
+    }
+    if (this.creativeLookOpticsPass && !this._creativeLookOpticsSnapshot) {
+      this.creativeLookOpticsPass.enabled = false;
     }
   }
 
@@ -1540,7 +1668,7 @@ export class PostProcessingPipeline {
   }
 
   /**
-   * Update film grain settings
+   * Update grain settings
    * @param {Object} settings - Grain settings object
    */
   updateGrain(settings) {
@@ -1679,6 +1807,60 @@ export class PostProcessingPipeline {
     const t = Math.max(0, Number(elapsedSec) || 0);
     this.grainTime = t * 60;
     this.grainTintPass.uniforms.time.value = this.grainTime;
+  }
+
+  /**
+   * Suppress film grain for SVG vector capture — noise traces as thousands of micro-paths.
+   * Also zeros Shader Lab chalk grain (sketch / gouache) while leaving ink and colour bands.
+   * @returns {{ filmPass?: boolean, grainTintPass?: boolean, creativeLookGrainScales: Array<number | null> }}
+   */
+  beginSvgExportGrainSuppression() {
+    const snapshot = {
+      filmPass: this.filmPass?.enabled,
+      grainTintPass: this.grainTintPass?.enabled,
+      creativeLookGrainScales: [],
+    };
+    if (this.filmPass) this.filmPass.enabled = false;
+    if (this.grainTintPass) this.grainTintPass.enabled = false;
+    for (const look of [
+      this.creativeLookSketch,
+      this.creativeLookSketchColour,
+      this.creativeLookGouache,
+    ]) {
+      const u = look?.pass?._compositeMat?.uniforms?.uGrainScale;
+      if (u) {
+        snapshot.creativeLookGrainScales.push(u.value);
+        u.value = 0;
+      } else {
+        snapshot.creativeLookGrainScales.push(null);
+      }
+    }
+    return snapshot;
+  }
+
+  /**
+   * @param {{ filmPass?: boolean, grainTintPass?: boolean, creativeLookGrainScales: Array<number | null> } | null | undefined} snapshot
+   */
+  endSvgExportGrainSuppression(snapshot) {
+    if (!snapshot) return;
+    if (this.filmPass && snapshot.filmPass !== undefined) {
+      this.filmPass.enabled = snapshot.filmPass;
+    }
+    if (this.grainTintPass && snapshot.grainTintPass !== undefined) {
+      this.grainTintPass.enabled = snapshot.grainTintPass;
+    }
+    const looks = [
+      this.creativeLookSketch,
+      this.creativeLookSketchColour,
+      this.creativeLookGouache,
+    ];
+    looks.forEach((look, i) => {
+      const prev = snapshot.creativeLookGrainScales[i];
+      const u = look?.pass?._compositeMat?.uniforms?.uGrainScale;
+      if (u && prev !== null && prev !== undefined) {
+        u.value = prev;
+      }
+    });
   }
 
   /**

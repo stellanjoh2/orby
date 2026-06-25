@@ -1100,11 +1100,14 @@
                     <button type="button" data-creative-look="crystal-gem" class="hdri-icon" data-tooltip="Crystal Gem — sapphire body + prismatic dispersion + internal facet fire; physical transmission (IOR 1.77). Scale = facet / inclusion size; Intensity = dispersion &amp; body saturation. HDRI + Render Backdrop recommended.">
                       <img src="./assets/images/creative-look-crystal-gem.png" alt="Crystal Gem" width="128" height="128" />
                     </button>
-                    <button type="button" data-creative-look="thermal" class="hdri-icon" data-tooltip="Thermal — smooth false-color IR heat map; lit faces read hot (red/white), silhouettes cool (blue/cyan). Scale = contour sharpness; Intensity = contrast; Object Hue shifts palette; Material brightness = heat gain. Bloom recommended.">
+                    <button type="button" data-creative-look="thermal" class="hdri-icon" data-tooltip="Thermal — full-scene false-color IR; HDRI + mesh graded together. Lit faces read hot (red/white), silhouettes cool (blue/cyan). Scale = halo width; Intensity = contrast; Object Hue shifts palette; Material brightness = heat gain. Bloom recommended.">
                       <img src="./assets/images/creative-look-thermal.png" alt="Thermal" width="128" height="128" />
                     </button>
-                    <button type="button" data-creative-look="thermal-extreme" class="hdri-icon" data-tooltip="Thermal Extreme — crushed poster IR; purple shadows, neon cyan/green mids, pure red hot zones (purple → cyan → green → yellow → red), film grain. Scale = halo width &amp; band crush; Intensity = punch; Object Hue shifts palette. Bloom recommended.">
+                    <button type="button" data-creative-look="thermal-extreme" class="hdri-icon" data-tooltip="Thermal Extreme — full-scene crushed poster IR; purple shadows, neon cyan/green mids, pure red hot zones, film grain. Scale = halo width &amp; band crush; Intensity = punch; Object Hue shifts palette. Bloom recommended.">
                       <img src="./assets/images/creative-look-thermal-extreme.png" alt="Thermal Extreme" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="night-vision" class="hdri-icon" data-tooltip="Night Vision — full-scene Gen-2 phosphor green NVG; HDRI + mesh graded together. Crushed shadows, neon lime mids, white-hot burnt speculars + halation. Extreme animated ISO scintillation + circular tube vignette. Scale = grain size &amp; halo width; Intensity = contrast &amp; burn; Material brightness = gain. Bloom recommended.">
+                      <img src="./assets/images/creative-look-night-vision.png" alt="Night Vision" width="128" height="128" />
                     </button>
                       </div>
                     </div>
@@ -1412,7 +1415,7 @@
                       <span class="sr-only">Reset</span>
                     </button>
                   </div>
-                  <div class="slider-line">
+                  <div class="slider-line slider-line--toggle-only">
                     <span data-tooltip="Reverse mesh normal direction on the current model">Reverse Normals</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="reverseNormals" />
@@ -1420,7 +1423,7 @@
                       <span class="sr-only">Reverse normal direction</span>
                     </label>
                   </div>
-                  <div class="slider-line">
+                  <div class="slider-line slider-line--toggle-only">
                     <span data-tooltip="Color surface normals as RGB to spot flipped shading or inspect tangent-space normal maps">Normal View</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="normalView" />
@@ -1441,16 +1444,8 @@
                     </select>
                   </label>
                   </div>
-                  <div class="slider-line">
-                    <span data-tooltip="Move the mesh so its bounding-box center sits on the transform origin. Keeps the model in place on screen; fixes off-axis turntable spin. Turn off to restore the file's original pivot.">Center Pivot</span>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="centerPivot" disabled />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Center pivot on geometry</span>
-                    </label>
-                  </div>
                   <div id="stlSmoothingControls" hidden>
-                    <div class="slider-line">
+                    <div class="slider-line slider-line--toggle-only">
                       <span data-tooltip="Recompute vertex normals from triangle facets. STL imports enable this automatically; turn on for GLB/OBJ when you want to adjust crease smoothing.">Smooth Shading</span>
                       <label class="effect-toggle">
                         <input type="checkbox" id="stlSmoothShading" />
@@ -1471,7 +1466,7 @@
                       <span class="value" data-output="stlSmoothingAngle">40°</span>
                     </label>
                   </div>
-                  <div class="slider-line">
+                  <div class="slider-line slider-line--toggle-only">
                     <span data-tooltip="Tile a UV checker map across the model so you can spot stretching and seams. Texture by Atlux.">UV Checker</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="uvChecker" />
@@ -1507,6 +1502,18 @@
                   </div>
                   <div class="panel-block-divider" aria-hidden="true"></div>
                   <div id="topologyWarningsBlock" class="topology-warnings-block">
+                    <div class="export-controls topology-warnings-actions">
+                      <button
+                        type="button"
+                        id="centerPivotBtn"
+                        class="accent-action-btn topology-warnings-scan center-pivot-btn"
+                        data-tooltip="Move the mesh pivot to the current bounding-box center. Keeps the model in place on screen; fixes off-axis turntable spin. Use again after extrude or other geometry changes."
+                        disabled
+                      >
+                        <i class="fa-solid fa-crosshairs" aria-hidden="true"></i>
+                        Center Pivot
+                      </button>
+                    </div>
                     <div class="export-controls topology-warnings-actions">
                       <button
                         type="button"
@@ -4636,16 +4643,16 @@
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="grain">
                   <div class="block-title has-toggle">
-                    <span>Film Grain</span>
+                    <span>Grain</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="grain" aria-label="Reset Film Grain" data-tooltip="Reset Film Grain settings">
+                      <button class="block-reset-btn" data-reset="grain" aria-label="Reset Grain" data-tooltip="Reset Grain settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle" data-tooltip="Enable/disable film grain effect">
+                      <label class="effect-toggle" data-tooltip="Enable/disable grain effect">
                         <input type="checkbox" id="toggleGrain" />
                         <span class="effect-indicator" aria-hidden="true"></span>
-                        <span class="sr-only">Enable Film Grain</span>
+                        <span class="sr-only">Enable Grain</span>
                       </label>
                     </div>
                   </div>
