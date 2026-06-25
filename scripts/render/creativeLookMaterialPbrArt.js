@@ -79,7 +79,7 @@ export const CREATIVE_LOOK_MATERIAL_PBR_SLIDER_PRESETS = /** @type {const} */ ([
   'vectrex',
   'thermal',
   'thermal-extreme',
-  'night-vision',
+  'thermal-acid',
 ]);
 
 /** @param {string} fragmentShader */

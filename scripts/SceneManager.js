@@ -4905,6 +4905,7 @@ export class SceneManager {
       patternScale,
       intensity: normalizeCreativeLookIntensity(storeCl.intensity ?? mcCl.intensity),
       masterHue: masterHueRad,
+      liftCrush,
       backdropFlat: isSolidStudioBackdropActive(this.stateStore.getState()),
       backdropColor: resolveSolidStudioBackdropColor(this.stateStore.getState()),
     };
@@ -5020,6 +5021,7 @@ export class SceneManager {
       intensity: normalizeCreativeLookIntensity(cl.intensity),
       variant: presetId,
       masterHue: creativeLookMasterHueRadians(normalizeCreativeLookMasterHue(cl.masterHue)),
+      liftCrush: normalizeCreativeLookLiftCrush(cl.liftCrush),
       backdropFlat: isSolidStudioBackdropActive(state),
       backdropColor: resolveSolidStudioBackdropColor(state),
     });

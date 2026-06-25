@@ -152,10 +152,11 @@ import {
   THERMAL_EXTREME_DEFAULT_PATTERN_SCALE,
 } from './creativeLookThermalExtremeArt.js';
 import {
-  NIGHT_VISION_DEFAULT_INTENSITY,
-  NIGHT_VISION_DEFAULT_PATTERN_SCALE,
-  NIGHT_VISION_MESH_GAIN,
-} from './creativeLookNightVisionArt.js';
+  THERMAL_ACID_DEFAULT_INTENSITY,
+  THERMAL_ACID_DEFAULT_PATTERN_SCALE,
+  THERMAL_ACID_MESH_GAIN,
+  THERMAL_ACID_LUMINANCE_PREP_FRAGMENT,
+} from './creativeLookThermalAcidArt.js';
 import {
   OPTICS_LUMINANCE_PREP_FRAGMENT,
   isOpticsCreativeLookPreset,
@@ -179,7 +180,7 @@ export { creativeLookUsesVoxelGeometry, isVoxelCreativeLookPreset } from './crea
  * in the transmission prepass — not other transmissive/transparent meshes (Three.js renderer design).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome-plasma' | 'chrome' | 'glass' | 'holo-glass' | 'crystal-gem' | 'thermal' | 'thermal-extreme' | 'night-vision'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome-plasma' | 'chrome' | 'glass' | 'holo-glass' | 'crystal-gem' | 'thermal' | 'thermal-extreme' | 'thermal-acid'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
@@ -224,7 +225,7 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'crystal-gem',
   'thermal',
   'thermal-extreme',
-  'night-vision',
+  'thermal-acid',
   'spectral-storm',
 ]);
 
@@ -716,7 +717,7 @@ export function creativeLookDefaultIntensity(preset) {
   if (id === 'dither-raster') return DITHER_RASTER_DEFAULT_INTENSITY;
   if (id === 'thermal') return THERMAL_DEFAULT_INTENSITY;
   if (id === 'thermal-extreme') return THERMAL_EXTREME_DEFAULT_INTENSITY;
-  if (id === 'night-vision') return NIGHT_VISION_DEFAULT_INTENSITY;
+  if (id === 'thermal-acid') return THERMAL_ACID_DEFAULT_INTENSITY;
   return CREATIVE_LOOK_INTENSITY_DEFAULT;
 }
 
@@ -732,7 +733,7 @@ export function creativeLookDefaultPatternScale(preset) {
   if (id === 'dither-raster') return DITHER_RASTER_DEFAULT_PATTERN_SCALE;
   if (id === 'thermal') return THERMAL_DEFAULT_PATTERN_SCALE;
   if (id === 'thermal-extreme') return THERMAL_EXTREME_DEFAULT_PATTERN_SCALE;
-  if (id === 'night-vision') return NIGHT_VISION_DEFAULT_PATTERN_SCALE;
+  if (id === 'thermal-acid') return THERMAL_ACID_DEFAULT_PATTERN_SCALE;
   return null;
 }
 
@@ -1055,6 +1056,7 @@ export function resolveCreativeLookPresetChoice(preset) {
   if (p === 'ordered-dither') p = 'dither-neutral';
   if (p === 'pixel-art') p = 'ega-pixel';
   if (p === 'snes') p = 'vga-dos-3d';
+  if (p === 'night-vision') p = 'thermal-acid';
   if (p === 'shutter') p = 'thermal';
   if (p && CREATIVE_LOOK_PRESETS.includes(p)) {
     return /** @type {CreativeLookPreset} */ (p);
@@ -1144,7 +1146,7 @@ export function creativeLookPresetUsesShaderAnimation(preset) {
     id === 'ascii-art-4' ||
     id === 'thermal' ||
     id === 'thermal-extreme' ||
-    id === 'night-vision'
+    id === 'thermal-acid'
   );
 }
 
@@ -1222,7 +1224,7 @@ export function formatCreativeLookPresetLabel(preset) {
     'crystal-gem': 'Crystal Gem',
     thermal: 'Thermal',
     'thermal-extreme': 'Thermal Extreme',
-    'night-vision': 'Night Vision',
+    'thermal-acid': 'Thermal Acid',
   });
   return labels[id] ?? id;
 }
@@ -3297,6 +3299,10 @@ export function createCreativeLookMaterial(preset, opts = {}) {
   };
   const lookFrag = (fragmentShader) =>
     withCreativeLookPostProcess(withCreativeLookShadowReceive(fragmentShader));
+  const lookFragOptics = (fragmentShader) =>
+    withCreativeLookPostProcess(withCreativeLookShadowReceive(fragmentShader), {
+      skipLiftCrush: true,
+    });
   const lookFragNoShadow = (fragmentShader) =>
     withCreativeLookPostProcess(fragmentShader, { shadowTint: false });
   const flatPostPrepFrag = (fragmentShader, mode = 'lit') =>
@@ -3309,6 +3315,12 @@ export function createCreativeLookMaterial(preset, opts = {}) {
   const surfaceUniformSpread = surfaceUniformRefs ?? {};
   const lookFragWithSurface = (fragmentShader) =>
     lookFrag(
+      surfaceUniformRefs
+        ? `${ORBY_CREATIVE_SURFACE_FRAG_HELPERS}\n${fragmentShader}`
+        : fragmentShader,
+    );
+  const lookFragOpticsWithSurface = (fragmentShader) =>
+    lookFragOptics(
       surfaceUniformRefs
         ? `${ORBY_CREATIVE_SURFACE_FRAG_HELPERS}\n${fragmentShader}`
         : fragmentShader,
@@ -3942,7 +3954,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         ...intensityUniform,
       },
       vertexShader: WORLD_VERTEX,
-      fragmentShader: lookFrag(OPTICS_LUMINANCE_PREP_FRAGMENT),
+      fragmentShader: lookFragOptics(OPTICS_LUMINANCE_PREP_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'thermal';
@@ -3960,28 +3972,30 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         ...intensityUniform,
       },
       vertexShader: WORLD_VERTEX,
-      fragmentShader: lookFrag(OPTICS_LUMINANCE_PREP_FRAGMENT),
+      fragmentShader: lookFragOptics(OPTICS_LUMINANCE_PREP_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'thermal-extreme';
     return finish(mat);
   }
 
-  if (id === 'night-vision') {
+  if (id === 'thermal-acid') {
     const mat = new THREE.ShaderMaterial({
       uniforms: {
+        uTime: { value: time },
         uPatternScale: { value: patternScale },
         uOpacity: { value: shaderAlpha },
-        uLuminanceGain: { value: NIGHT_VISION_MESH_GAIN },
+        uLuminanceGain: { value: THERMAL_ACID_MESH_GAIN },
         ...pbrUniforms,
         ...gradeUniforms,
         ...intensityUniform,
+        ...surfaceUniformSpread,
       },
-      vertexShader: WORLD_VERTEX,
-      fragmentShader: lookFrag(OPTICS_LUMINANCE_PREP_FRAGMENT),
+      vertexShader: WORLD_SURFACE_VERTEX,
+      fragmentShader: lookFragOpticsWithSurface(THERMAL_ACID_LUMINANCE_PREP_FRAGMENT),
       ...commonMatOpts,
     });
-    mat.userData.orbyCreativeLook = 'night-vision';
+    mat.userData.orbyCreativeLook = 'thermal-acid';
     return finish(mat);
   }
 

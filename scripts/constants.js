@@ -2,6 +2,7 @@
 
 import { COLOR_CHECKER_MESH_WIDTH } from './scene/ColorCheckerMesh.js';
 import { resolveCreativeLookSketchParams } from './render/creativeLookSketchArt.js';
+import { isOpticsCreativeLookPreset } from './render/creativeLookOpticsArt.js';
 
 /** Default near-black — app surfaces, lime CTAs, letterbox mattes, UI chrome. */
 export const ORBY_BLACK = '#080808';
@@ -764,14 +765,14 @@ export function isCreativeLookGouachePostActive(state) {
 }
 
 /**
- * Shader Lab optics — thermal / night-vision full-viewport grade; auto-on with preset.
+ * Shader Lab optics — thermal full-viewport grade; auto-on with preset.
  * @param {{ creativeLook?: { enabled?: boolean, preset?: string } }} state
  */
 export function isCreativeLookOpticsPostActive(state) {
   const cl = state.creativeLook && typeof state.creativeLook === 'object' ? state.creativeLook : {};
   if (!cl.enabled) return false;
   const preset = typeof cl.preset === 'string' ? cl.preset : '';
-  return preset === 'thermal' || preset === 'thermal-extreme' || preset === 'night-vision';
+  return isOpticsCreativeLookPreset(preset);
 }
 
 /**

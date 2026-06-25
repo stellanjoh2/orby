@@ -932,7 +932,7 @@ export class PostProcessingPipeline {
   }
 
   /**
-   * Optics — scene → thermal / night-vision grade → (optional bloom) → grading → screen.
+   * Optics — scene → thermal grade → (optional bloom) → grading → CA / fisheye → screen.
    * @param {{ viewportBloom?: boolean }} [options]
    */
   pushCreativeLookOpticsPresentation({ viewportBloom = false } = {}) {
@@ -990,16 +990,11 @@ export class PostProcessingPipeline {
           pass.renderToScreen = false;
           continue;
         }
-        if (key === 'anamorphicBloomPass') {
-          pass.enabled = snap.enabled;
-          pass.renderToScreen = false;
-          continue;
-        }
-        if (slimPostKeys.has(key)) {
-          pass.enabled = snap.enabled;
-          pass.renderToScreen = false;
-          continue;
-        }
+      }
+      if (slimPostKeys.has(key)) {
+        pass.enabled = snap.enabled;
+        pass.renderToScreen = false;
+        continue;
       }
       if (CREATIVE_LOOK_GRAIN_PASS_KEYS.has(key)) {
         pass.enabled = snap.enabled;
@@ -1039,7 +1034,7 @@ export class PostProcessingPipeline {
     }
   }
 
-  /** Shader Lab thermal / night-vision — full-viewport false-color grade. */
+  /** Shader Lab thermal — full-viewport false-color grade. */
   updateCreativeLookOptics(settings) {
     this.creativeLookOptics?.updateSettings(settings ?? {});
   }

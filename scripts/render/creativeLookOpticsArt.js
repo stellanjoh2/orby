@@ -11,29 +11,32 @@ import {
   THERMAL_EXTREME_DEFAULT_PATTERN_SCALE,
 } from './creativeLookThermalExtremeArt.js';
 import {
-  NIGHT_VISION_PALETTE_GLSL,
-  NIGHT_VISION_DEFAULT_INTENSITY,
-  NIGHT_VISION_DEFAULT_PATTERN_SCALE,
-  NIGHT_VISION_SCENE_GAIN,
-} from './creativeLookNightVisionArt.js';
-import { FLAT_POST_MASTER_HUE_GLSL } from './creativeLookFlatPostMasterHue.js';
+  THERMAL_ACID_PALETTE_GLSL,
+  THERMAL_ACID_DEFAULT_INTENSITY,
+  THERMAL_ACID_DEFAULT_PATTERN_SCALE,
+  THERMAL_ACID_SCENE_GAIN,
+} from './creativeLookThermalAcidArt.js';
+import {
+  CREATIVE_LOOK_LIFT_CRUSH_GLSL,
+  FLAT_POST_MASTER_HUE_GLSL,
+} from './creativeLookFlatPostMasterHue.js';
 
 export {
   THERMAL_DEFAULT_INTENSITY,
   THERMAL_DEFAULT_PATTERN_SCALE,
   THERMAL_EXTREME_DEFAULT_INTENSITY,
   THERMAL_EXTREME_DEFAULT_PATTERN_SCALE,
-  NIGHT_VISION_DEFAULT_INTENSITY,
-  NIGHT_VISION_DEFAULT_PATTERN_SCALE,
-  NIGHT_VISION_SCENE_GAIN,
+  THERMAL_ACID_DEFAULT_INTENSITY,
+  THERMAL_ACID_DEFAULT_PATTERN_SCALE,
+  THERMAL_ACID_SCENE_GAIN,
 };
 
-/** @typedef {'thermal' | 'thermal-extreme' | 'night-vision'} OpticsCreativeLookVariant */
+/** @typedef {'thermal' | 'thermal-extreme' | 'thermal-acid'} OpticsCreativeLookVariant */
 
 export const OPTICS_CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'thermal',
   'thermal-extreme',
-  'night-vision',
+  'thermal-acid',
 ]);
 
 /** @param {string | undefined | null} preset */
@@ -43,9 +46,10 @@ export function isOpticsCreativeLookPreset(preset) {
 
 /** @param {string | undefined | null} preset @returns {OpticsCreativeLookVariant | null} */
 export function resolveOpticsCreativeLookVariant(preset) {
-  if (preset === 'thermal' || preset === 'thermal-extreme' || preset === 'night-vision') {
+  if (preset === 'thermal' || preset === 'thermal-extreme' || preset === 'thermal-acid') {
     return preset;
   }
+  if (preset === 'night-vision') return 'thermal-acid';
   return null;
 }
 
@@ -81,6 +85,19 @@ float opticsScaleNorm(float sc) {
   float logMin = -3.321928094887362;
   float logMax = 2.321928094887362;
   return (log2(clamp(sc, 0.1, 5.0)) - logMin) / (logMax - logMin);
+}
+
+// seamHard 0 = smooth continuous ramp; 1 = hard poster band steps.
+float opticsThermalBandLuma(float lum, float bandCount, float seamHard) {
+  lum = clamp(lum, 0.0, 1.0);
+  seamHard = clamp(seamHard, 0.0, 1.0);
+  bandCount = max(bandCount, 2.0);
+  float scaled = lum * bandCount;
+  float bandBase = floor(scaled);
+  float bandFrac = fract(scaled);
+  float edgeWidth = mix(0.5, 0.004, seamHard);
+  float shaped = smoothstep(0.5 - edgeWidth, 0.5 + edgeWidth, bandFrac);
+  return (bandBase + shaped) / bandCount;
 }
 `;
 
@@ -141,7 +158,14 @@ uniform vec3 uBackdropColor;
 ${OPTICS_LUMA_GLSL}
 ${OPTICS_HASH_GLSL}
 ${OPTICS_INTENSITY_GLSL}
+${CREATIVE_LOOK_LIFT_CRUSH_GLSL}
 ${FLAT_POST_MASTER_HUE_GLSL}
+
+vec3 opticsFinishGrade(vec3 col) {
+  col = applyCreativeLiftCrush(col);
+  col = applyFlatPostMasterHue(col);
+  return clamp(col, 0.0, 1.0);
+}
 
 float opticsSceneLuma(vec3 c) {
   return opticsLuma(c) * uSceneGain;
@@ -200,6 +224,8 @@ void main() {
   float up = upDown.x;
   float down = upDown.y;
   float u = opticsScaleNorm(uPatternScale);
+  float seamHard = u;
+  float bandCount = mix(4.0, 10.0, u);
 
   vec2 px = 1.0 / max(uResolution, vec2(1.0));
   float bleed = opticsHighlightBleed(tDiffuse, vUv, px * mix(1.2, 2.8, u), rawLum);
@@ -208,14 +234,14 @@ void main() {
   float lum = clamp((rawLum - 0.5) * (1.05 + up * 0.85 - down * 0.55) + 0.5, 0.0, 1.0);
   lum = smoothstep(0.0, 1.0, lum);
   lum = clamp(lum + halo, 0.0, 1.0);
+  lum = opticsThermalBandLuma(lum, bandCount, seamHard);
 
   vec3 col = orbyThermalPalette(lum);
 
   float hotGlow = smoothstep(0.82, 0.97, lum);
   col += vec3(1.0, 0.92, 0.75) * hotGlow * (0.14 + up * 0.16);
 
-  col = applyFlatPostMasterHue(col);
-  gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+  gl_FragColor = vec4(opticsFinishGrade(col), 1.0);
 }
 `;
 
@@ -235,6 +261,7 @@ void main() {
   float up = upDown.x;
   float down = upDown.y;
   float u = opticsScaleNorm(uPatternScale);
+  float seamHard = u;
   float bandCount = mix(5.0, 9.0, u);
   float grainCoarse = mix(1.4, 0.58, u);
 
@@ -243,9 +270,9 @@ void main() {
   float halo = bleed * (0.38 + up * 0.22);
 
   float lum = clamp((rawLum - 0.5) * (1.35 + up * 1.15 - down * 0.45) + 0.5, 0.0, 1.0);
-  lum = floor(lum * bandCount + 0.001) / bandCount;
+  lum = opticsThermalBandLuma(lum, bandCount, seamHard);
   float glowLum = clamp(lum + halo, 0.0, 1.0);
-  glowLum = floor(glowLum * bandCount + 0.001) / bandCount;
+  glowLum = opticsThermalBandLuma(glowLum, bandCount, seamHard);
 
   vec3 col = orbyThermalExtremePalette(glowLum);
 
@@ -269,14 +296,13 @@ void main() {
   col += grain * (0.12 + halo * 0.10);
 
   col = orbyThermalExtremeSaturate(col, 1.38);
-  col = applyFlatPostMasterHue(col);
-  gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+  gl_FragColor = vec4(opticsFinishGrade(col), 1.0);
 }
 `;
 
-export const OPTICS_NIGHT_VISION_POST_FRAGMENT = /* glsl */ `
+export const OPTICS_THERMAL_ACID_POST_FRAGMENT = /* glsl */ `
 ${OPTICS_POST_HEADER}
-${NIGHT_VISION_PALETTE_GLSL}
+${THERMAL_ACID_PALETTE_GLSL}
 
 void main() {
   vec3 src = texture2D(tDiffuse, vUv).rgb;
@@ -290,49 +316,49 @@ void main() {
   float up = upDown.x;
   float down = upDown.y;
   float u = opticsScaleNorm(uPatternScale);
+  float seamHard = u;
   float grainCoarse = mix(1.55, 0.62, u);
+  float bandCount = mix(6.0, 10.0, u);
 
   vec2 px = 1.0 / max(uResolution, vec2(1.0));
   float bleed = opticsHighlightBleed(tDiffuse, vUv, px * mix(1.6, 3.8, u), rawLum);
-  float halo = bleed * (0.40 + up * 0.24);
+  float halo = bleed * (0.42 + up * 0.26);
 
-  float lum = clamp((rawLum - 0.5) * (1.34 + up * 1.15 - down * 0.38) + 0.5, 0.0, 1.0);
-  lum = pow(lum, mix(1.02, 0.86, up));
+  float lum = clamp((rawLum - 0.5) * (1.38 + up * 1.18 - down * 0.38) + 0.5, 0.0, 1.0);
+  lum = pow(lum, mix(1.02, 0.84, up));
+  lum = opticsThermalBandLuma(lum, bandCount, seamHard);
   float peakLift = smoothstep(0.62, 0.92, rawLum) * (0.08 + up * 0.06);
   float glowLum = clamp(lum + halo + peakLift, 0.0, 1.0);
+  glowLum = opticsThermalBandLuma(glowLum, bandCount, seamHard);
 
-  vec3 col = orbyNightVisionPalette(glowLum);
+  vec3 col = orbyThermalAcidPalette(glowLum);
 
-  float burnStart = mix(0.70, 0.56, up);
-  float burn = smoothstep(burnStart, burnStart + 0.14, glowLum);
-  col = mix(col, vec3(0.94, 1.0, 0.82), burn * (0.78 + up * 0.18));
+  vec3 coldBlue = vec3(0.05, 0.12, 0.78);
+  float coldFill = (1.0 - clamp(halo * 2.5, 0.0, 1.0)) * (1.0 - glowLum * 0.68);
+  col = mix(col, coldBlue, coldFill * (0.40 + down * 0.12));
 
-  col += orbyNightVisionPalette(clamp(glowLum + halo * 0.36, 0.0, 1.0)) * halo * (0.32 + up * 0.26);
+  col += orbyThermalAcidPalette(clamp(glowLum + halo * 0.38, 0.0, 1.0)) * halo * (0.36 + up * 0.28);
 
-  float hotSpec = smoothstep(0.66, 0.94, glowLum) * clamp(halo * 2.8 + peakLift * 3.0, 0.0, 1.0);
-  col += vec3(0.88, 1.0, 0.72) * hotSpec * (0.32 + up * 0.34);
+  float neonEdge = smoothstep(0.38, 0.72, glowLum) * clamp(halo * 2.6 + peakLift * 2.8, 0.0, 1.0);
+  col += vec3(0.12, 0.98, 0.18) * neonEdge * (0.26 + up * 0.30);
 
-  float hotGlow = smoothstep(0.78, 0.94, glowLum);
-  col += vec3(0.82, 1.0, 0.68) * hotGlow * (0.12 + up * 0.14);
-
-  vec2 centered = vUv - 0.5;
-  float tubeDist = length(centered);
-  float tubeVig = smoothstep(0.62, 0.28, tubeDist);
-  col *= mix(0.08, 1.0, tubeVig);
+  float hotStart = mix(0.74, 0.60, up);
+  float hot = smoothstep(hotStart, hotStart + 0.14, glowLum);
+  col = mix(col, mix(vec3(0.98, 0.94, 0.06), vec3(0.98, 0.10, 0.04), hot), hot * (0.72 + up * 0.20));
 
   vec2 grainPair = opticsGrain(gl_FragCoord.xy, grainCoarse, uTime);
   float grain = grainPair.x;
   float spike = grainPair.y;
   grain += spike * (0.28 + up * 0.18);
   float grainMask = mix(0.55, 1.0, smoothstep(0.08, 0.72, glowLum));
-  grainMask *= mix(1.0, 0.78, burn);
-  col += grain * grainMask * (0.22 + up * 0.16);
+  grainMask *= mix(1.0, 0.82, hot);
+  col += grain * grainMask * (0.24 + up * 0.16);
 
   float scint = sin(uTime * 18.5 + opticsHash(floor(gl_FragCoord.xy * 0.4)) * 6.28) * 0.5 + 0.5;
-  col += (scint - 0.5) * 0.04 * grainMask * (1.0 - burn * 0.6);
+  col += (scint - 0.5) * 0.04 * grainMask * (1.0 - hot * 0.5);
 
-  col = applyFlatPostMasterHue(col);
-  gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+  col = orbyThermalAcidSaturate(col, 1.42);
+  gl_FragColor = vec4(opticsFinishGrade(col), 1.0);
 }
 `;
 
@@ -340,5 +366,5 @@ void main() {
 export const OPTICS_POST_FRAGMENTS = {
   thermal: OPTICS_THERMAL_POST_FRAGMENT,
   'thermal-extreme': OPTICS_THERMAL_EXTREME_POST_FRAGMENT,
-  'night-vision': OPTICS_NIGHT_VISION_POST_FRAGMENT,
+  'thermal-acid': OPTICS_THERMAL_ACID_POST_FRAGMENT,
 };

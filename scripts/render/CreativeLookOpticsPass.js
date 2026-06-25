@@ -5,7 +5,7 @@ import {
   OPTICS_THERMAL_POST_FRAGMENT,
   resolveOpticsCreativeLookVariant,
   THERMAL_DEFAULT_INTENSITY,
-  NIGHT_VISION_SCENE_GAIN,
+  THERMAL_ACID_SCENE_GAIN,
 } from './creativeLookOpticsArt.js';
 
 const VERTEX_SHADER = /* glsl */ `
@@ -17,7 +17,7 @@ void main() {
 `;
 
 /**
- * Shader Lab optics — full-viewport thermal / night-vision grade (HDRI + mesh + backdrop).
+ * Shader Lab optics — full-viewport thermal grade (HDRI + mesh + backdrop).
  */
 export class CreativeLookOpticsPass {
   /** @param {import('three').WebGLRenderer} renderer */
@@ -34,6 +34,7 @@ export class CreativeLookOpticsPass {
         uPatternScale: { value: 1 },
         uTime: { value: 0 },
         uMasterHue: { value: 0 },
+        uLiftCrush: { value: 0 },
         uSceneGain: { value: 1 },
         uBackdropFlat: { value: 0 },
         uBackdropColor: { value: new THREE.Color('#000000') },
@@ -61,7 +62,7 @@ export class CreativeLookOpticsPass {
     }
     this._variant = next;
     this.material.fragmentShader = OPTICS_POST_FRAGMENTS[next];
-    this.material.uniforms.uSceneGain.value = next === 'night-vision' ? NIGHT_VISION_SCENE_GAIN : 1;
+    this.material.uniforms.uSceneGain.value = next === 'thermal-acid' ? THERMAL_ACID_SCENE_GAIN : 1;
     this.material.needsUpdate = true;
   }
 
@@ -81,6 +82,7 @@ export class CreativeLookOpticsPass {
    *   patternScale?: number,
    *   time?: number,
    *   masterHue?: number,
+   *   liftCrush?: number,
    *   backdropFlat?: boolean,
    *   backdropColor?: string,
    * }} settings
@@ -105,6 +107,9 @@ export class CreativeLookOpticsPass {
     }
     if (typeof settings.masterHue === 'number') {
       this.material.uniforms.uMasterHue.value = settings.masterHue;
+    }
+    if (typeof settings.liftCrush === 'number') {
+      this.material.uniforms.uLiftCrush.value = THREE.MathUtils.clamp(settings.liftCrush, -1, 1);
     }
     if (typeof settings.backdropFlat === 'boolean') {
       this.material.uniforms.uBackdropFlat.value = settings.backdropFlat ? 1 : 0;
