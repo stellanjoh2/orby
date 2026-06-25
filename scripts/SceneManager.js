@@ -151,6 +151,8 @@ import {
   runSvgExtrudeImporterMutation,
   sanitizeSvgExtrudeColorDepths,
   sanitizeSvgExtrudeColorOffsets,
+  sanitizeSvgExtrudeColorReplacements,
+  normalizeSvgExtrudeHexColor,
 } from './scene/SvgExtrudeSceneOps.js';
 import {
   clampExtrudeBevelAmount,
@@ -983,9 +985,9 @@ export class SceneManager {
     this.viewportFramingOverlays.setCompositionGridOverlayVisible(enabled, options);
   }
 
-  /** @see ViewportFramingOverlays#setCompositionGuidesInverted */
-  setCompositionGuidesInverted(inverted) {
-    this.viewportFramingOverlays.setCompositionGuidesInverted(inverted);
+  /** @see ViewportFramingOverlays#setCompositionPortraitCropGuideVisible */
+  setCompositionPortraitCropGuideVisible(enabled) {
+    this.viewportFramingOverlays.setCompositionPortraitCropGuideVisible(enabled);
   }
 
   /** @see ViewportFramingOverlays#setCinematicLetterbox219Visible */
@@ -1092,7 +1094,7 @@ export class SceneManager {
       groundController: this.groundController,
       getState: () => this.stateStore.getState(),
       updateBloom: (settings) => this.updateBloom(settings),
-      updateGrain: (settings) => this.updateGrain(settings),
+      updateGrain: (settings) => this.postPipeline?.updateGrain(settings),
       setBloomState: (value) => this.stateStore.set('bloom', value),
       fallbackBackgroundColor: this.backgroundController?.getColor() ?? APP_BACKGROUND,
     });
@@ -2147,10 +2149,6 @@ export class SceneManager {
     this._syncShadowCameraBounds();
   }
 
-  setLensFlareEnabled(enabled) {
-    this.lensFlareController?.setEnabled(enabled);
-  }
-
   setLensFlareRotation(value) {
     this.lensFlareController?.setRotation(value);
     this._syncKeyLightFromLensFlareIfConnected();
@@ -2232,111 +2230,9 @@ export class SceneManager {
     }
   }
 
-  setLensFlareColor(value) {
-    this.lensFlareController?.setColor(value);
-  }
-
-  setLensFlareQuality(mode) {
-    this.lensFlareController?.setQuality(mode);
-  }
-
-  setLensFlareHaloIntensity(value) {
-    this.lensFlareController?.setHaloIntensity(value);
-  }
-
-  setLensFlareStreakLength(value) {
-    this.lensFlareController?.setStreakLength(value);
-  }
-
-  setLensFlareSunDiscScale(value) {
-    this.lensFlareController?.setSunDiscScale(value);
-  }
-
-  setLensFlareSunDiscBlur(value) {
-    this.lensFlareController?.setSunDiscBlur(value);
-  }
-
-  setLensFlareSunDiscColor(value) {
-    this.lensFlareController?.setSunDiscColor(value);
-  }
-
-  setLensFlareDiscGlowIntensity(value) {
-    this.lensFlareController?.setDiscGlowIntensity(value);
-  }
-
-  setLensFlareDiscGlowSize(value) {
-    this.lensFlareController?.setDiscGlowSize(value);
-  }
-
-  setLensFlareDiscGlowColor(value) {
-    this.lensFlareController?.setDiscGlowColor(value);
-  }
-
-  setGodRaysEnabled(enabled) {
-    this.godRaysController?.setEnabled(enabled);
-  }
-
-  setGodRaysColor(value) {
-    this.godRaysController?.setColor(value);
-  }
-
-  setGodRaysLightScale(value) {
-    this.godRaysController?.setLightScale(value);
-  }
-
-  setGodRaysOpacity(value) {
-    this.godRaysController?.setOpacity(value);
-  }
-
-  setGodRaysDensity(value) {
-    this.godRaysController?.setDensity(value);
-  }
-
-  setGodRaysDecay(value) {
-    this.godRaysController?.setDecay(value);
-  }
-
-  setGodRaysWeight(value) {
-    this.godRaysController?.setWeight(value);
-  }
-
-  setGodRaysExposure(value) {
-    this.godRaysController?.setExposure(value);
-  }
-
-  setGodRaysClampMax(value) {
-    this.godRaysController?.setClampMax(value);
-  }
-
-  setGodRaysBlur(enabled) {
-    this.godRaysController?.setBlur(enabled);
-  }
-
   setLensFlareSpinDuringOrbit(enabled) {
     this.stateStore.set('lensFlare.spinDuringOrbit', !!enabled);
     this.lensFlareController?.setSpinDuringOrbit(enabled);
-  }
-
-  /** @deprecated Legacy presets — maps to opacity. */
-  setGodRaysStrength(value) {
-    this.godRaysController?.setStrength(value);
-  }
-
-  /** @deprecated Legacy presets — maps to density. */
-  setGodRaysLength(value) {
-    this.godRaysController?.setLength(value);
-  }
-
-  /** @deprecated Legacy presets — maps to decay. */
-  setGodRaysSoftness(value) {
-    this.godRaysController?.setSoftness(value);
-  }
-
-  /** @deprecated No-op (pmndrs has no threshold). */
-  setGodRaysThreshold() {}
-
-  setGodRaysQuality(value) {
-    this.godRaysController?.setQuality(value);
   }
 
   setClayNormalMap(enabled) {
@@ -2401,55 +2297,6 @@ export class SceneManager {
     }
   }
 
-  setContrast(value) {
-    this.postPipeline?.setContrast(value);
-  }
-
-
-  setSaturation(value) {
-    this.postPipeline?.setSaturation(value);
-  }
-
-  setClarity(value) {
-    this.postPipeline?.setClarity(value);
-  }
-
-  setFade(value) {
-    this.postPipeline?.setFade(value);
-  }
-
-  setSharpness(value) {
-    this.postPipeline?.setSharpness(value);
-  }
-
-  setToneCurve(curve) {
-    this.postPipeline?.setToneCurve(curve);
-  }
-
-  setTemperature(kelvin) {
-    this.postPipeline?.setTemperature(kelvin);
-  }
-
-  setTint(value) {
-    this.postPipeline?.setTint(value);
-  }
-
-  setHighlights(value) {
-    this.postPipeline?.setHighlights(value);
-  }
-
-  setShadows(value) {
-    this.postPipeline?.setShadows(value);
-  }
-
-  setVignette(value) {
-    this.postPipeline?.setVignette(value);
-  }
-
-  setVignetteColor(color) {
-    this.postPipeline?.setVignetteColor(color);
-  }
-
   setHdriEnabled(enabled) {
     this.hdriEnabled = enabled;
     this.environmentController?.setEnabled(enabled);
@@ -2467,10 +2314,6 @@ export class SceneManager {
     this.ui?.updateHdriReceiveShadowsAoDisabled?.();
     // Reset auto-exposure when HDRI is toggled (scene brightness changes dramatically)
     this.autoExposureController?.resetLuminance();
-  }
-
-  setToneMapping(value) {
-    this.postPipeline?.setToneMapping(value);
   }
 
   applyLookFilter(presetId) {
@@ -2514,14 +2357,6 @@ export class SceneManager {
       this.ui.inputs.hdriRotation.value = this.hdriRotation;
       this.ui.updateValueLabel('hdriRotation', this.hdriRotation, 'angle');
     }
-  }
-
-  setClaySettings(patch) {
-    this.materialController.setClaySettings(patch);
-  }
-
-  setWireframeSettings(patch) {
-    this.materialController.setWireframeSettings(patch);
   }
 
   clearWireframeOverlay() {
@@ -2684,22 +2519,6 @@ export class SceneManager {
     this.ui?.applyBlockStates?.(this.stateStore.getState());
   }
 
-  setGroundWire(enabled) {
-    this.groundController?.setWireEnabled(enabled);
-  }
-
-  setGroundSolidColor(color) {
-    this.groundController?.setSolidColor(color);
-  }
-
-  setGroundWireColor(color) {
-    this.groundController?.setWireColor(color);
-  }
-
-  setGroundWireOpacity(value) {
-    this.groundController?.setWireOpacity(value);
-  }
-
   setAutoRotateSpeed(speed, { silent = false } = {}) {
     const next = Number(speed) || 0;
     if (next === this.autoRotateSpeed) return;
@@ -2742,10 +2561,6 @@ export class SceneManager {
     this.backgroundController?.setGroundY(value);
     this._updateHdriShadowReceiverContact();
     this._syncShadowCameraBounds();
-  }
-
-  setGridY(value) {
-    this.groundController?.setGridY(value);
   }
 
   /**
@@ -2911,34 +2726,6 @@ export class SceneManager {
     this._syncShadowCameraBounds();
   }
 
-  setGridScale(value) {
-    this.groundController?.setGridScale(value);
-  }
-
-  setGridLineWidth(value) {
-    this.groundController?.setGridLineWidth(value);
-  }
-
-  setBaseMetalness(value, { updateState = true } = {}) {
-    this.groundController?.setBaseMetalness(value);
-    if (updateState) this.stateStore.set('baseMetalness', value);
-  }
-
-  setBaseRoughness(value, { updateState = true } = {}) {
-    this.groundController?.setBaseRoughness(value);
-    if (updateState) this.stateStore.set('baseRoughness', value);
-  }
-
-  setBaseReflection(value, { updateState = true } = {}) {
-    this.groundController?.setBaseReflection(value);
-    if (updateState) this.stateStore.set('baseReflection', value);
-  }
-
-  setBaseClearcoat(value, { updateState = true } = {}) {
-    this.groundController?.setBaseClearcoat(value);
-    if (updateState) this.stateStore.set('baseClearcoat', value);
-  }
-
   setBaseSurface(settings = {}, { updateState = true } = {}) {
     const state = this.stateStore.getState();
     const preset = settings.preset ?? state.baseSurfacePreset ?? 'none';
@@ -2959,21 +2746,6 @@ export class SceneManager {
     this._updateBaseAppearAnimation();
     this._updateBaseGlassAppearAnimation();
     this.ui?.applyBlockStates?.(this.stateStore.getState());
-  }
-
-  setBaseGlassBlur(value, { updateState = true } = {}) {
-    this.groundController?.setBaseGlassBlur(value);
-    if (updateState) this.stateStore.set('baseGlassBlur', value);
-  }
-
-  setBaseGlassAmount(value, { updateState = true } = {}) {
-    this.groundController?.setBaseGlassAmount(value);
-    if (updateState) this.stateStore.set('baseGlassAmount', value);
-  }
-
-  setBaseGlassBrightness(value, { updateState = true } = {}) {
-    this.groundController?.setBaseGlassBrightness(value);
-    if (updateState) this.stateStore.set('baseGlassBrightness', value);
   }
 
   setBackdropEnabled(enabled, { updateState = true } = {}) {
@@ -3000,11 +2772,6 @@ export class SceneManager {
     this._syncShadowCameraBounds();
   }
 
-  setBackdropColor(color, { updateState = true } = {}) {
-    this.groundController?.setBackdropColor(color);
-    if (updateState) this.stateStore.set('backdropColor', color);
-  }
-
   setBackdropRotation(value, { updateState = true } = {}) {
     this.groundController?.setBackdropRotation(value);
     if (updateState) this.stateStore.set('backdropRotation', value);
@@ -3016,16 +2783,6 @@ export class SceneManager {
     if (updateState) this.stateStore.set('backdropY', value);
     this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
     this._syncShadowCameraBounds();
-  }
-
-  setBackdropMetalness(value, { updateState = true } = {}) {
-    this.groundController?.setBackdropMetalness(value);
-    if (updateState) this.stateStore.set('backdropMetalness', value);
-  }
-
-  setBackdropRoughness(value, { updateState = true } = {}) {
-    this.groundController?.setBackdropRoughness(value);
-    if (updateState) this.stateStore.set('backdropRoughness', value);
   }
 
   setBackdropSurface(settings = {}, { updateState = true } = {}) {
@@ -3546,10 +3303,6 @@ export class SceneManager {
     }
   }
 
-  setFresnelSettings(settings = {}) {
-    this.materialController.setFresnelSettings(settings);
-  }
-
   setSubsurfaceSettings(patch = {}) {
     const cur = this.stateStore.getState().subsurface ?? {};
     this.materialController.setSubsurfaceSettings({
@@ -3641,10 +3394,6 @@ export class SceneManager {
     this.syncAnamorphicBloomFromState();
   }
 
-  updateGrain(settings) {
-    this.postPipeline?.updateGrain(settings);
-  }
-
   /** @returns {import('./render/HistogramController.js').HistogramController | null} */
   ensureHistogramController() {
     if (this.histogramController) return this.histogramController;
@@ -3678,10 +3427,6 @@ export class SceneManager {
       container.classList.toggle('histogram-container--collapsed', true);
       container.classList.toggle('histogram-container--expanded', false);
     }
-  }
-
-  updateAberration(settings) {
-    this.postPipeline?.updateAberration(settings);
   }
 
   updateAmbientOcclusion(settings) {
@@ -4389,21 +4134,44 @@ export class SceneManager {
       : (settings.enabled !== undefined && settings.availableColors === undefined
         ? !!settings.enabled
         : false);
-    const color = settings.color || settings.overrideColor || '#7ed321';
+    const color = settings.color || settings.overrideColor || DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR;
     if (updateState) {
       this.stateStore.set('svgExtrude.colorOverride', enabled);
       this.stateStore.set('svgExtrude.overrideColor', color);
     }
+    this.applySvgExtrudeColors();
+  }
+
+  /**
+   * Live-recolor SVG extrude meshes from current color state. Global override wins;
+   * otherwise per-fill replacements apply, falling back to each mesh's original fill.
+   * No geometry rebuild — just material color copies.
+   * @param {Record<string, string> | null} [replacementsOverride] transient map for preview
+   */
+  applySvgExtrudeColors(replacementsOverride = null) {
     if (!this.currentModel || !this.isSvgExtrudeModel) return;
-    const overrideColor = new THREE.Color(color);
+    const svg = this.stateStore.getState().svgExtrude || {};
+    const overrideEnabled = !!svg.colorOverride;
+    const overrideColor = new THREE.Color(svg.overrideColor || DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR);
+    const replacements = replacementsOverride || svg.colorReplacements || {};
     this.currentModel.traverse((child) => {
       if (!child.isMesh || !child.userData?.orbySvgExtrude) return;
-      const baseHex = child.userData.orbySvgBaseColor || '#ffffff';
-      const baseLinear = child.userData.orbySvgBaseColorLinear;
-      const baseColor = (baseLinear && Number.isFinite(baseLinear.r) && Number.isFinite(baseLinear.g) && Number.isFinite(baseLinear.b))
-        ? new THREE.Color().setRGB(baseLinear.r, baseLinear.g, baseLinear.b)
-        : new THREE.Color(baseHex);
-      const targetColor = enabled ? overrideColor : baseColor;
+      let targetColor;
+      if (overrideEnabled) {
+        targetColor = overrideColor;
+      } else {
+        const grouped = child.userData.orbySvgGroupedColor;
+        const replacementHex = grouped ? replacements[grouped] : undefined;
+        if (replacementHex) {
+          targetColor = new THREE.Color(replacementHex);
+        } else {
+          const baseHex = child.userData.orbySvgBaseColor || '#ffffff';
+          const baseLinear = child.userData.orbySvgBaseColorLinear;
+          targetColor = (baseLinear && Number.isFinite(baseLinear.r) && Number.isFinite(baseLinear.g) && Number.isFinite(baseLinear.b))
+            ? new THREE.Color().setRGB(baseLinear.r, baseLinear.g, baseLinear.b)
+            : new THREE.Color(baseHex);
+        }
+      }
       const originalMaterial = this.materialController.getOriginalMaterial(child);
       const applyColor = (material) => {
         if (!material) return;
@@ -4417,6 +4185,59 @@ export class SceneManager {
       applyColor(child.material);
     });
     this.materialController.updateMaterials();
+  }
+
+  setSvgExtrudeColorReplacements(colorReplacements = {}, options = {}) {
+    const { updateState = true } = options;
+    if (!this.currentModel || !this.isSvgExtrudeModel) return;
+    const sanitized = sanitizeSvgExtrudeColorReplacements(colorReplacements, this.stateStore);
+    if (updateState) {
+      this.stateStore.set('svgExtrude.colorReplacements', sanitized);
+    }
+    this.applySvgExtrudeColors();
+  }
+
+  /**
+   * Update one fill's recolor. `commit: false` recolors live without writing state
+   * (used during native color-picker drag so the per-color shelf doesn't re-render).
+   * @param {{ color?: string, replacement?: string, commit?: boolean }} [payload]
+   */
+  /**
+   * Reset one fill back to defaults: clears its per-color depth, position, and recolor.
+   * @param {string} color grouped palette hex
+   */
+  resetSvgExtrudeColor(color) {
+    if (!color) return;
+    const svg = this.stateStore.getState().svgExtrude || {};
+    const depths = { ...(svg.colorDepths || {}) };
+    const offsets = { ...(svg.colorOffsets || {}) };
+    const replacements = { ...(svg.colorReplacements || {}) };
+    delete depths[color];
+    delete offsets[color];
+    delete replacements[color];
+    // Recolor first (state cleared) so the depth/offset rebuilds restore the base fill.
+    this.setSvgExtrudeColorReplacements(replacements, { updateState: true });
+    this.setSvgExtrudeColorDepths(depths, { updateState: true });
+    this.setSvgExtrudeColorOffsets(offsets, { updateState: true });
+  }
+
+  setSvgExtrudeColorReplacement({ color, replacement, commit = true } = {}) {
+    if (!color) return;
+    const state = this.stateStore.getState();
+    const palette = state.svgExtrude?.availableColors || [];
+    if (!palette.includes(color)) return;
+    const existing = { ...(state.svgExtrude?.colorReplacements || {}) };
+    const normalized = normalizeSvgExtrudeHexColor(replacement);
+    if (!normalized || normalized === normalizeSvgExtrudeHexColor(color)) {
+      delete existing[color];
+    } else {
+      existing[color] = normalized;
+    }
+    if (commit) {
+      this.setSvgExtrudeColorReplacements(existing, { updateState: true });
+    } else {
+      this.applySvgExtrudeColors(existing);
+    }
   }
 
   fitCameraToObject(object) {

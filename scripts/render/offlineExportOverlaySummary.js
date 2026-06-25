@@ -7,12 +7,12 @@ import {
   normalizeExportHdriRotationSettings,
   normalizeExportMeshAnimationSettings,
 } from './exportVideoMovements.js';
-
-const RESOLUTION_PIXELS = {
-  '1080p': '1920 × 1080',
-  '1440p': '2560 × 1440',
-  '2160p': '3840 × 2160',
-};
+import {
+  getExportVideoResolutionSize,
+  getExportVideoResolutionSummaryLabel,
+  normalizeExportVideoAspectRatio,
+  normalizeExportVideoResolution,
+} from './exportVideoResolution.js';
 
 /** Default export job for dropzone / URL overlay preview. */
 export const OFFLINE_EXPORT_OVERLAY_PREVIEW_JOB = {
@@ -30,6 +30,7 @@ export const OFFLINE_EXPORT_OVERLAY_PREVIEW_JOB = {
   durationSec: 5,
   fps: 24,
   resolution: '1080p',
+  aspectRatio: '16:9',
   spins: 1,
   subtleSpinDegrees: 0,
   spinDirection: 'forward',
@@ -140,13 +141,12 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
     exportJob,
     exportJob.clipCount ?? 0,
   );
-  const resolution =
-    exportJob.resolution === '1440p' || exportJob.resolution === '2160p'
-      ? exportJob.resolution
-      : '1080p';
+  const resolution = normalizeExportVideoResolution(exportJob.resolution);
+  const aspectRatio = normalizeExportVideoAspectRatio(exportJob.aspectRatio);
   const durationSec = exportJob.durationSec ?? 5;
   const fps = exportJob.fps ?? 24;
   const totalFrames = Math.max(2, Math.round(Number(durationSec) * Number(fps)));
+  const defaultSize = getExportVideoResolutionSize(resolution, aspectRatio);
   const sequenceFolderName =
     typeof renderContext.sequenceFolderName === 'string'
       ? renderContext.sequenceFolderName.trim()
@@ -160,11 +160,11 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
     typeof renderContext.zipFileName === 'string' ? renderContext.zipFileName.trim() : '';
   const exportWidth =
     Number(renderContext.exportWidth)
-    || Number(RESOLUTION_PIXELS[resolution]?.split(' × ')[0])
+    || defaultSize.width
     || 1920;
   const exportHeight =
     Number(renderContext.exportHeight)
-    || Number(RESOLUTION_PIXELS[resolution]?.split(' × ')[1])
+    || defaultSize.height
     || 1080;
   const postFxState =
     renderContext.postFxState && typeof renderContext.postFxState === 'object'
@@ -193,8 +193,9 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
   addRow(
     rows,
     'Resolution',
-    `${resolution} (${RESOLUTION_PIXELS[resolution]})`,
+    getExportVideoResolutionSummaryLabel(resolution, aspectRatio),
   );
+  addRow(rows, 'Aspect', aspectRatio);
   addRow(rows, 'Duration', `${durationSec}s`);
   addRow(rows, 'Frame rate', `${fps} fps`);
   addRow(rows, 'Frame count', totalFrames);

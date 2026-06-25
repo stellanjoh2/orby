@@ -1,0 +1,42 @@
+---
+description: Shelf rows without a range slider use wide label layout — do not reserve the middle slider column
+alwaysApply: true
+---
+
+# Shelf non-slider rows — wide labels
+
+**Official UI policy.** Stacked sliders use a 2-row layout (label + value header, full-width track). Rows **without** `input[type='range']` must **not** keep the old 3-column `label | slider | value` grid — that wastes the middle column and truncates titles like “Receive Shadows + AO”.
+
+## Layout contracts (`.shelf` tokens in `styles.css`)
+
+| Row type | Grid | Label | Control |
+|----------|------|-------|---------|
+| **Slider** (`.slider-line:has(> input[type='range'])`) | `1fr auto` + track row | Col 1, ellipsis OK | Value col 2 |
+| **Toggle / no range** (`.slider-line:not(:has(> input[type='range']))`) | `--shelf-row-grid-toggle` → `1fr auto` | Col 1, **no ellipsis** (`overflow: visible`) | `.effect-toggle` col 2 |
+| **Select** (no row value) | `--shelf-row-grid` (3-col) | `--shelf-span-label-wide` (`1 / 3`) | `select` in value col |
+| **Color** | `--shelf-row-grid` | `--shelf-span-label-wide` | `.color-chip` in value col |
+| **Map slot** | `--shelf-row-grid` | Col 1 (buttons use control col) | unchanged |
+
+Tokens:
+
+- `--shelf-row-grid` — 3-col legacy for select/color/map when a middle control column is needed
+- `--shelf-row-grid-toggle` — `minmax(0, 1fr) auto` for toggle-only `.slider-line`
+- `--shelf-span-label-wide` — `1 / 3` (label + former slider column)
+
+## Do
+
+- New toggle rows: `.slider-line` + label + `.effect-toggle` only — **no** `input[type='range']`
+- Long toggle titles: rely on wide label column; tooltip for extra detail is optional
+- Slider rows: keep ellipsis on long labels (value shares the header row)
+
+## Don't
+
+- Put non-slider rows on `--shelf-row-grid` with label only in column 1 and toggle in `--shelf-span-control-full` — truncates titles
+- Apply `text-overflow: ellipsis` to non-slider shelf labels by default
+- Reuse slider 3-col placement for toggles “because `.slider-line` always used that grid”
+
+## Manual verify
+
+1. Studio → HDRI → **Receive Shadows + AO** — full title visible, toggle right-aligned
+2. Any **Bloom** / **Render Backdrop** toggle-only row — label not clipped
+3. Stacked slider (e.g. Exposure) — label still ellipsizes if absurdly long; track full width

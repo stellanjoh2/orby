@@ -17,6 +17,14 @@ import {
 import { lightsRotationForExportFrame } from '../config/lightsAutoRotate.js';
 import { buildOfflineExportOverlaySummary } from './offlineExportOverlaySummary.js';
 import { getDrawingBufferPixels } from './drawingBufferSize.js';
+import {
+  exportVideoAspectSequenceSuffix,
+  getExportVideoResolutionPixelLabel,
+  getExportVideoResolutionSize,
+  isPortraitExportVideoAspect,
+  normalizeExportVideoAspectRatio,
+  normalizeExportVideoResolution,
+} from './exportVideoResolution.js';
 
 export class VideoExporter {
   constructor({
@@ -137,14 +145,23 @@ export class VideoExporter {
     return `${safeBase}_${mode}_${durationSec}s_${frame}.png`;
   }
 
-  _sequenceFolderName(baseName, durationSec, fps, spinSettings, resolution, mode = 'turntable') {
+  _sequenceFolderName(
+    baseName,
+    durationSec,
+    fps,
+    spinSettings,
+    resolution,
+    mode = 'turntable',
+    aspectRatio = '16:9',
+  ) {
     const safeBase = (baseName || 'orby')
       .replace(/\.[a-z0-9]+$/i, '')
       .replace(/[^a-zA-Z0-9_-]+/g, '_')
       .replace(/^_+|_+$/g, '')
       || 'orby';
     const spinLabel = exportSpinSequenceLabel(spinSettings);
-    return `${safeBase}_${mode}_${durationSec}s_${fps}fps_${spinLabel}_${resolution}`;
+    const aspectSuffix = exportVideoAspectSequenceSuffix(aspectRatio);
+    return `${safeBase}_${mode}_${durationSec}s_${fps}fps_${spinLabel}_${resolution}${aspectSuffix}`;
   }
 
   _applyVideoExportFrame({
@@ -333,6 +350,7 @@ export class VideoExporter {
     spinSettings,
     resolution,
     mode = 'turntable',
+    aspectRatio = '16:9',
   }) {
     let JSZipMod = null;
     try {
@@ -352,6 +370,7 @@ export class VideoExporter {
       spinSettings,
       resolution,
       mode,
+      aspectRatio,
     );
     const folder = zip.folder(folderName);
     if (!folder) return false;
@@ -385,6 +404,7 @@ export class VideoExporter {
     spinSettings,
     resolution,
     mode = 'turntable',
+    aspectRatio = '16:9',
   }) {
     const folderName = this._sequenceFolderName(
       baseName,
@@ -393,6 +413,7 @@ export class VideoExporter {
       spinSettings,
       resolution,
       mode,
+      aspectRatio,
     );
     const sequenceDirHandle = await parentHandle.getDirectoryHandle(folderName, { create: true });
     return { folderName, sequenceDirHandle };
@@ -626,10 +647,8 @@ export class VideoExporter {
     return 8_000_000;
   }
 
-  _getVideoResolutionSize(resolutionKey) {
-    if (resolutionKey === '1440p') return { width: 2560, height: 1440 };
-    if (resolutionKey === '2160p') return { width: 3840, height: 2160 };
-    return { width: 1920, height: 1080 }; // 1080p default
+  _getVideoResolutionSize(resolutionKey, aspectRatio = '16:9') {
+    return getExportVideoResolutionSize(resolutionKey, aspectRatio);
   }
 
   _applyTransparentFrameSetup() {
@@ -667,7 +686,7 @@ export class VideoExporter {
     }
   }
 
-  _applyVideoExportSize(width, height) {
+  _applyVideoExportSize(width, height, aspectRatio = '16:9') {
     const previousSize = new THREE.Vector2();
     this.renderer.getSize(previousSize);
     const previousPixelRatio = this.renderer.getPixelRatio();
@@ -688,24 +707,36 @@ export class VideoExporter {
     const state = this.stateStore?.getState?.();
     const lensDistortionActive = this.imageExporter?.isLensDistortionActive?.() === true;
     const fisheyeActive = !!state?.fisheye?.enabled;
+    const portraitExport = isPortraitExportVideoAspect(aspectRatio);
 
     this.syncPerspectiveProjection?.({ fovScale: exportFovScale });
 
-    // 1080p/1440p/2160p are 16∶9; a wider studio viewport keeps the same vertical FOV but
-    // shows more horizontally — export looked zoomed-in without this adjustment.
     if (
       !fisheyeActive
       && !lensDistortionActive
       && Math.abs(previousAspect - newAspect) > 1e-4
     ) {
       const baseVfov = state?.camera?.fov ?? this.camera?.fov ?? 45;
-      const adjusted = verticalFovForAspectPreservingHorizontalFov(
-        baseVfov,
-        previousAspect,
-        newAspect,
-      );
-      this.camera.fov = adjusted * exportFovScale;
-      this.camera.updateProjectionMatrix();
+      if (portraitExport && previousAspect < newAspect) {
+        // Rare tall viewport: preserve horizontal FOV (crop top/bottom).
+        const adjusted = verticalFovForAspectPreservingHorizontalFov(
+          baseVfov,
+          previousAspect,
+          newAspect,
+        );
+        this.camera.fov = adjusted * exportFovScale;
+        this.camera.updateProjectionMatrix();
+      } else if (!portraitExport) {
+        // 16∶9 export — preserve horizontal FOV on wide studio viewports.
+        const adjusted = verticalFovForAspectPreservingHorizontalFov(
+          baseVfov,
+          previousAspect,
+          newAspect,
+        );
+        this.camera.fov = adjusted * exportFovScale;
+        this.camera.updateProjectionMatrix();
+      }
+      // 9∶16 center crop — keep vertical FOV (no adjustment on typical wide viewports).
     }
 
     return {
@@ -1013,10 +1044,8 @@ export class VideoExporter {
         : 'medium';
     const spinSettings = normalizeExportSpinSettings(settings);
     const movTransparent = !!settings?.movTransparent;
-    const resolution =
-      settings?.resolution === '1440p' || settings?.resolution === '2160p'
-        ? settings.resolution
-        : '1080p';
+    const resolution = normalizeExportVideoResolution(settings?.resolution);
+    const aspectRatio = normalizeExportVideoAspectRatio(settings?.aspectRatio);
     const fps = settings?.fps === 30 || settings?.fps === 60 ? settings.fps : 24;
     const totalFrames = Math.max(2, Math.round(durationSec * fps));
 
@@ -1041,7 +1070,8 @@ export class VideoExporter {
     const originalClearAlpha = this.renderer.getClearAlpha();
     const originalClearColor = this.renderer.getClearColor(new THREE.Color()).clone();
     const shouldUseTransparentFrames = format === 'png' && movTransparent;
-    const outputSize = this._getVideoResolutionSize(resolution);
+    const outputSize = this._getVideoResolutionSize(resolution, aspectRatio);
+    const resolutionLabel = getExportVideoResolutionPixelLabel(resolution, aspectRatio);
     if (resolution === '2160p' && (fps >= 60 || mp4Quality === 'high')) {
       this.ui?.showToast?.(
         '4K export is heavy on this browser/GPU and may use fallback encoding',
@@ -1056,12 +1086,14 @@ export class VideoExporter {
         spinSettings,
         resolution,
         modeLabel,
+        aspectRatio,
       );
       const state = this.stateStore?.getState?.() ?? {};
       const summary = buildOfflineExportOverlaySummary({
         exportJob: {
           ...settings,
           resolution,
+          aspectRatio,
           durationSec,
           fps,
           movTransparent: shouldUseTransparentFrames,
@@ -1097,7 +1129,11 @@ export class VideoExporter {
       this.ui?.updateOfflineExportOverlayProgress?.({ frameIndex: 0, totalFrames });
       await this._yieldUntilPaintCommitted();
     }
-    const sizeSnapshot = this._applyVideoExportSize(outputSize.width, outputSize.height);
+    const sizeSnapshot = this._applyVideoExportSize(
+      outputSize.width,
+      outputSize.height,
+      aspectRatio,
+    );
     const exportSession = {
       movements,
       spinSettings,
@@ -1129,7 +1165,7 @@ export class VideoExporter {
           ? `${spinSummary}; ${hdriLabel}`
           : spinSummary;
         this.ui?.showToast?.(
-          `Recording MP4 (${durationSec}s, ${fps}fps, ${resolution}, ${mp4Quality}, ${modeLabel}, ${motionSummary})…`,
+          `Recording MP4 (${durationSec}s, ${fps}fps, ${resolutionLabel}, ${mp4Quality}, ${modeLabel}, ${motionSummary})…`,
         );
         try {
           const success = await this._exportTurntableRealtimeRecorder({
@@ -1182,6 +1218,7 @@ export class VideoExporter {
               spinSettings,
               resolution,
               mode: modeLabel,
+              aspectRatio,
             });
             sequenceDirHandle = prepared.sequenceDirHandle;
             sequenceFolderLabel = `${outputDirectoryHandle.name}/${prepared.folderName}`;
@@ -1252,6 +1289,7 @@ export class VideoExporter {
             spinSettings,
             resolution,
             mode: modeLabel,
+            aspectRatio,
           });
           if (!zipped) {
             // Last-resort fallback if zip library failed to load.

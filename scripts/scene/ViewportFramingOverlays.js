@@ -40,6 +40,9 @@ export class ViewportFramingOverlays {
       animate: compositionGridAnimate,
     });
     this.setCompositionGuidesInverted(!!cam.compositionGuidesInverted);
+    this.setCompositionPortraitCropGuideVisible(
+      !!cam.compositionGridEnabled && !!cam.compositionPortraitCropGuide,
+    );
     this.setCinematicLetterbox219Visible(!!cam.cinematicLetterbox219, {
       animate: letterboxAnimate,
     });
@@ -71,9 +74,12 @@ export class ViewportFramingOverlays {
       el.classList.remove(
         'composition-grid-overlay--fade-in',
         'composition-grid-overlay--instant',
+        'composition-grid-overlay--portrait-crop',
       );
       el.hidden = true;
       el.setAttribute('aria-hidden', 'true');
+      const cropEl = el.querySelector('.composition-grid-overlay__portrait-crop');
+      if (cropEl) cropEl.setAttribute('aria-hidden', 'true');
     };
 
     const applyInstantOn = () => {
@@ -119,6 +125,9 @@ export class ViewportFramingOverlays {
         outMsRaw > 0 ? outMsRaw : COMPOSITION_GRID_FADE_FALLBACK_MS;
       this._compositionGridHideTimeout = window.setTimeout(() => {
         this._compositionGridHideTimeout = null;
+        el.classList.remove('composition-grid-overlay--portrait-crop');
+        const cropEl = el.querySelector('.composition-grid-overlay__portrait-crop');
+        if (cropEl) cropEl.setAttribute('aria-hidden', 'true');
         el.hidden = true;
         el.setAttribute('aria-hidden', 'true');
       }, outMs);
@@ -133,6 +142,20 @@ export class ViewportFramingOverlays {
     if (!el) return;
     this._compositionGridOverlayEl = el;
     el.classList.toggle('composition-grid-overlay--inverted', !!inverted);
+  }
+
+  /** 9∶16 center-crop preview nested in the 16×9 composition frame. */
+  setCompositionPortraitCropGuideVisible(enabled) {
+    const el =
+      this._compositionGridOverlayEl ??
+      document.getElementById('compositionGridOverlay');
+    if (!el) return;
+    this._compositionGridOverlayEl = el;
+    el.classList.toggle('composition-grid-overlay--portrait-crop', !!enabled);
+    const cropEl = el.querySelector('.composition-grid-overlay__portrait-crop');
+    if (cropEl) {
+      cropEl.setAttribute('aria-hidden', enabled ? 'false' : 'true');
+    }
   }
 
   /** Viewport-only 21∶9 mattes (Camera → 21∶9 letterbox). */

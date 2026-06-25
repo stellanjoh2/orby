@@ -1,0 +1,112 @@
+import {
+  DEFAULT_BACKDROP_METALNESS,
+  DEFAULT_BACKDROP_ROUGHNESS,
+  DEFAULT_BASE_GLASS_BLUR,
+  DEFAULT_BASE_GLASS_AMOUNT,
+  DEFAULT_BASE_GLASS_BRIGHTNESS,
+  DEFAULT_MATERIAL_METALNESS,
+  DEFAULT_MATERIAL_ROUGHNESS,
+  ORBY_LIME,
+} from '../../constants.js';
+import {
+  DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
+  DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
+  DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
+} from '../../import/extrudeDefaults.js';
+
+/** HDRI, ground/podium/backdrop, lens flare, and god rays. */
+export function createStudioDefaults() {
+  return {
+    hdri: 'beach',
+    /** Filename when {@link hdri} is `custom` (blob URL is session-only). */
+    hdriCustomName: null,
+    /** Embedded custom HDRI bytes for copy / .orby round-trip. */
+    hdriCustomAsset: null,
+    hdriEnabled: true,
+    hdriStrength: 2,
+    hdriBlurriness: 0,
+    hdriRotation: 0,
+    hdriBackground: true,
+    /** Invisible shadow/AO catcher over HDRI backdrop (see HdriShadowReceiver). */
+    hdriReceiveShadowsAo: false,
+    groundSolid: false,
+    groundWire: false,
+    groundWireOpacity: 1.0,
+    groundY: 0,
+    gridY: 0,
+    baseScale: 1,
+    gridScale: 1,
+    gridLineWidth: 1,
+    baseMetalness: DEFAULT_MATERIAL_METALNESS,
+    baseRoughness: DEFAULT_MATERIAL_ROUGHNESS,
+    baseReflection: 1,
+    baseClearcoat: 0,
+    baseSurfacePreset: DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
+    baseSurfaceScale: DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
+    baseSurfaceStrength: DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
+    /** Planar glass reflection on solid base top — independent toggle; shares placement/scale with base. */
+    baseGlassSurface: false,
+    baseGlassBlur: DEFAULT_BASE_GLASS_BLUR,
+    baseGlassAmount: DEFAULT_BASE_GLASS_AMOUNT,
+    baseGlassBrightness: DEFAULT_BASE_GLASS_BRIGHTNESS,
+    backdropEnabled: false,
+    backdropScale: 1,
+    backdropWidth: 2,
+    backdropColor: '#808080',
+    backdropRotation: 0,
+    backdropY: 0,
+    backdropMetalness: DEFAULT_BACKDROP_METALNESS,
+    backdropRoughness: DEFAULT_BACKDROP_ROUGHNESS,
+    backdropSurfacePreset: DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
+    backdropSurfaceScale: DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
+    backdropSurfaceStrength: DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
+    groundSolidColor: '#808080',
+    groundWireColor: ORBY_LIME,
+    lensFlare: {
+      enabled: false,
+      rotation: 0,
+      height: 15,
+      color: '#d28756',
+      quality: 'high',
+      haloIntensity: 1.0,
+      streakLength: 5.0,
+      sunDiscScale: 1.5,
+      sunDiscBlur: 1.25,
+      sunDiscColor: '#fff0c8',
+      discGlowIntensity: 0,
+      discGlowSize: 5,
+      discGlowColor: '#ff8844',
+      /** Procedural streak spin (iTime) — only while camera auto-orbit is active. */
+      spinDuringOrbit: false,
+      /** When true, key-light rotate/height follow lens-flare rotation/height. */
+      keyLightConnected: false,
+      /** Pre-connect key-light pose; set when connecting, cleared on disconnect. */
+      keyLightRestore: null,
+      anamorphicBloom: {
+        enabled: false,
+        quality: 'medium',
+        strength: 1.0,
+        spread: 0.2,
+        /** Streak axis in degrees (0–180); 0 = horizontal (classic anamorphic). */
+        streakAngle: 0,
+        threshold: 0.7,
+        soften: 0.12,
+        streakTint: '#7ec8ff',
+      },
+    },
+    /** pmndrs GodRays — sun direction follows lens flare (rotation/height). */
+    godRays: {
+      enabled: false,
+      color: '#ffe8c4',
+      lightScale: 0.4,
+      opacity: 1,
+      density: 0.96,
+      decay: 0.92,
+      weight: 0.4,
+      exposure: 0.6,
+      clampMax: 1,
+      blur: true,
+      quality: 'medium',
+    },
+  };
+}

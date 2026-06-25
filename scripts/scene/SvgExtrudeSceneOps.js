@@ -177,3 +177,38 @@ export function sanitizeSvgExtrudeColorOffsets(colorOffsets, stateStore) {
   });
   return sanitized;
 }
+
+/**
+ * Coerce a value to a `#rrggbb` lowercase hex, or null if not a valid color string.
+ * @param {unknown} value
+ * @returns {string | null}
+ */
+export function normalizeSvgExtrudeHexColor(value) {
+  if (typeof value !== 'string') return null;
+  let hex = value.trim().toLowerCase();
+  if (!hex) return null;
+  if (hex[0] !== '#') hex = `#${hex}`;
+  if (/^#[0-9a-f]{3}$/.test(hex)) {
+    hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+  }
+  return /^#[0-9a-f]{6}$/.test(hex) ? hex : null;
+}
+
+/**
+ * Keep only replacements whose key is a current palette color and whose value is a
+ * valid hex that differs from the base color (same-as-base = no replacement).
+ * @param {Record<string, unknown>} colorReplacements
+ * @param {import('../StateStore.js').StateStore} stateStore
+ */
+export function sanitizeSvgExtrudeColorReplacements(colorReplacements, stateStore) {
+  const availableColors = stateStore.getState()?.svgExtrude?.availableColors || [];
+  const sanitized = {};
+  Object.entries(colorReplacements || {}).forEach(([color, value]) => {
+    if (!availableColors.includes(color)) return;
+    const normalized = normalizeSvgExtrudeHexColor(value);
+    if (!normalized) return;
+    if (normalized === normalizeSvgExtrudeHexColor(color)) return;
+    sanitized[color] = normalized;
+  });
+  return sanitized;
+}

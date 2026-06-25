@@ -129,9 +129,8 @@ import {
   WIREFRAME_EDGES_THRESHOLD_DEG,
   WIREFRAME_POLYGON_OFFSET_FACTOR,
   WIREFRAME_POLYGON_OFFSET_UNITS,
-  WIREFRAME_OPACITY_VISIBLE,
-  WIREFRAME_OPACITY_OVERLAY,
   DEFAULT_WIREFRAME_LINE_WIDTH,
+  DEFAULT_WIREFRAME_OPACITY,
   wireframeLineWidthToPixels,
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_METALNESS,
@@ -394,6 +393,7 @@ export class MaterialController {
         onlyVisibleFaces: true,
         hideMesh: false,
         thickness: DEFAULT_WIREFRAME_LINE_WIDTH,
+        opacity: DEFAULT_WIREFRAME_OPACITY,
       }),
     };
     {
@@ -4651,6 +4651,18 @@ export class MaterialController {
   _buildOffsetWireframeSourceGeometry(sourceGeometry, options = {}) {
     const { applySurfaceOffset = true } = options;
     const geometry = sourceGeometry.clone();
+
+    // Flat-shaded meshes split vertices per face (distinct normals/uvs), so mergeVertices
+    // can't weld them. Strip those attributes first so the weld happens purely by position
+    // (skin attributes are kept), otherwise the normal push moves each face's vertices along
+    // its own face normal and the triangles separate into floating objects.
+    if (applySurfaceOffset) {
+      geometry.deleteAttribute('normal');
+      geometry.deleteAttribute('uv');
+      geometry.deleteAttribute('uv1');
+      geometry.deleteAttribute('uv2');
+    }
+
     const merged = mergeVertices(geometry, 1e-4);
     const working = merged !== geometry ? merged : geometry;
     if (merged !== geometry) {
@@ -4661,7 +4673,6 @@ export class MaterialController {
       return working;
     }
 
-    working.deleteAttribute('normal');
     working.computeVertexNormals();
 
     const positions = working.attributes.position;
@@ -4691,6 +4702,7 @@ export class MaterialController {
     color,
     onlyVisibleFaces,
     thickness,
+    opacity,
     width,
     height,
     pixelRatio,
@@ -4700,10 +4712,8 @@ export class MaterialController {
       linewidth: wireframeLineWidthToPixels(thickness),
       depthTest: onlyVisibleFaces,
       depthWrite: false,
-      transparent: !onlyVisibleFaces,
-      opacity: onlyVisibleFaces
-        ? WIREFRAME_OPACITY_VISIBLE
-        : WIREFRAME_OPACITY_OVERLAY,
+      transparent: opacity < 1 || !onlyVisibleFaces,
+      opacity,
       toneMapped: true,
       worldUnits: false,
     });
@@ -4717,16 +4727,14 @@ export class MaterialController {
     return material;
   }
 
-  _createWireframeBasicMaterial({ color, onlyVisibleFaces, thickness }) {
+  _createWireframeBasicMaterial({ color, onlyVisibleFaces, thickness, opacity }) {
     const material = new THREE.MeshBasicMaterial({
       color: new THREE.Color(color),
       wireframe: true,
       depthTest: onlyVisibleFaces,
       depthWrite: false,
-      transparent: !onlyVisibleFaces,
-      opacity: onlyVisibleFaces
-        ? WIREFRAME_OPACITY_VISIBLE
-        : WIREFRAME_OPACITY_OVERLAY,
+      transparent: opacity < 1 || !onlyVisibleFaces,
+      opacity,
     });
     material.linewidth = wireframeLineWidthToPixels(thickness);
     if (onlyVisibleFaces) {
@@ -4769,11 +4777,13 @@ export class MaterialController {
         color,
         onlyVisibleFaces,
         thickness = DEFAULT_WIREFRAME_LINE_WIDTH,
+        opacity = DEFAULT_WIREFRAME_OPACITY,
       } = this.wireframeSettings;
       this._wireframeLineMaterial = this._createWireframeLineMaterial({
         color,
         onlyVisibleFaces,
         thickness,
+        opacity,
         width: 0,
         height: 0,
         pixelRatio: window.devicePixelRatio || 1,
@@ -4782,6 +4792,7 @@ export class MaterialController {
         color,
         onlyVisibleFaces,
         thickness,
+        opacity,
       });
 
       // Create wireframe meshes that follow the model.
@@ -4800,9 +4811,11 @@ export class MaterialController {
         // InstancedMesh uses instance matrices; a plain wire clone would not match instances.
         if (child.isInstancedMesh) return;
 
-        const pushAlongNormals = !onlyVisibleFaces;
+        // Always push wireframe source geometry out along normals so lines hover just
+        // off the surface instead of being exactly glued to it. The polygon-offset depth
+        // bias (only-visible-faces) still applies on top to keep front edges from z-fighting.
         let offsetGeometry = this._buildOffsetWireframeSourceGeometry(child.geometry, {
-          applySurfaceOffset: pushAlongNormals,
+          applySurfaceOffset: true,
         });
         const sourceGeometry = offsetGeometry;
 

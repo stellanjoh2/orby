@@ -228,7 +228,7 @@ html:not(.mobile-landing) {
   --shelf-headline-font-size: calc(12px * var(--studio-ui-scale));
   --shelf-tab-title-font-size: calc(28px * var(--studio-ui-scale));
   --ui-accent-action-font-size: calc(0.8rem * var(--studio-ui-scale));
-  --color-chip-w: calc(92px * var(--studio-ui-scale));
+  --color-chip-w: calc(184px * var(--studio-ui-scale));
   --ui-orby-pill-pad-block: calc(0.52rem * var(--studio-ui-scale));
   --ui-orby-pill-pad-inline: calc(1.9rem * var(--studio-ui-scale));
 }
@@ -3087,6 +3087,79 @@ body.export-overlay-debug #dropzone {
   max-width: 100%;
 }
 
+/* 9∶16 center-crop preview — nested in the 16×9 frame (portrait video export). */
+.composition-grid-overlay__portrait-crop {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  z-index: 3;
+  display: none;
+  width: auto;
+  height: 100%;
+  aspect-ratio: 9 / 16;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.composition-grid-overlay--portrait-crop .composition-grid-overlay__portrait-crop {
+  display: block;
+}
+
+.composition-grid-overlay__portrait-crop-shade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in srgb, var(--orby-black) 42%, transparent);
+  pointer-events: none;
+}
+
+.composition-grid-overlay__portrait-crop-shade--left {
+  right: 100%;
+  width: 50vw;
+}
+
+.composition-grid-overlay__portrait-crop-shade--right {
+  left: 100%;
+  width: 50vw;
+}
+
+.composition-grid-overlay__portrait-crop-svg {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  shape-rendering: geometricPrecision;
+}
+
+.composition-grid-overlay__portrait-crop-svg line,
+.composition-grid-overlay__portrait-crop-svg circle {
+  fill: none;
+  stroke: rgba(255, 255, 255, var(--comp-guide-alpha));
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+}
+
+.composition-grid-overlay__portrait-crop-svg .composition-grid-overlay__action-safe {
+  fill: none;
+  stroke: rgba(255, 255, 255, var(--comp-guide-alpha-muted));
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+.composition-grid-overlay--inverted .composition-grid-overlay__portrait-crop-svg line,
+.composition-grid-overlay--inverted .composition-grid-overlay__portrait-crop-svg circle {
+  stroke: rgba(0, 0, 0, var(--comp-guide-alpha));
+}
+
+.composition-grid-overlay--inverted .composition-grid-overlay__portrait-crop-svg .composition-grid-overlay__action-safe {
+  stroke: rgba(0, 0, 0, var(--comp-guide-alpha-muted));
+}
+
 /* Older engines without container query units: SVG still letterboxes inside full overlay */
 @supports not (width: 1cqw) {
   .composition-grid-overlay__frame {
@@ -3752,12 +3825,18 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
 
 .shelf {
   /* Inset of panel box from the browser chrome (top / right / bottom) — --shelf-inset on :root / html */
-  /* ── Control row layout (.slider-line, .select-line, .color-line, .map-slot-row) ──
-   * 50% label · 50% control+value · dropdowns auto-width in control column. */
+  /* ── Control row layout (.select-line, .color-line, .map-slot-row) — 3-col grid.
+   * .slider-line with range: stacked header + full-width track.
+   * .slider-line without range: --shelf-row-grid-toggle (label | control). See .cursor/rules/shelf-non-slider-rows.mdc */
   --shelf-row-value-col: 2.5rem;
   --slider-value-col: var(--shelf-row-value-col);
   --shelf-row-label-col: minmax(0, 1fr);
   --shelf-row-control-col: minmax(0, 1fr);
+  --shelf-slider-stack-gap: calc(0.4rem + var(--shelf-vertical-extra)); /* label/value row → track */
+  /* Figma-style pill slider — track height = thumb diameter */
+  --shelf-slider-size: 12px;
+  --shelf-slider-size-muted: 10px;
+  --shelf-slider-track-bg: rgba(255, 255, 255, 0.14);
   --shelf-row-col-gap: 0.45rem;
   --shelf-row-grid: var(--shelf-row-label-col) var(--shelf-row-control-col) var(--shelf-row-value-col);
   --shelf-place-label: 1;
@@ -3766,11 +3845,15 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
   --shelf-span-control: 2;
   --shelf-span-control-full: 2 / -1;
   --shelf-span-label-toggle: 1 / 3;
+  /* Non-slider rows: label spans former slider column — toggle/select/color sit in value col */
+  --shelf-span-label-wide: 1 / 3;
+  --shelf-row-grid-toggle: minmax(0, 1fr) auto;
   --shelf-toggle-track-height: calc(0.65rem + 0.5rem);
   --shelf-dropdown-pill-height: var(--orby-dropdown-height);
   --shelf-select-inner-stroke: 2px;
-  /* Vertical rhythm — 24px @ 2560: headlines (.block-title), dividers, control rows, foldout tops */
-  --shelf-section-gap: 24px;
+  --shelf-vertical-extra: 4px; /* +breathing room on vertical shelf rhythm */
+  /* Vertical rhythm — 28px @ 2560 ref (24 + --shelf-vertical-extra): headlines, dividers, control rows */
+  --shelf-section-gap: calc(24px + var(--shelf-vertical-extra));
   /* Card inset from shelf chrome — independent of section gap */
   --shelf-shell-rhythm: 12px;
   --shelf-control-gap: var(--shelf-section-gap); /* same rhythm as control rows — flex stacks, export groups, foldouts */
@@ -3785,14 +3868,14 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
   /* Headline inset — match card horizontal padding for symmetric section headers */
   --shelf-section-inset: var(--shelf-card-padding); /* horizontal card inset only — not vertical headline rhythm */
   --shelf-scrollbar-edge-offset: 12px;
-  --shelf-scroll-end-pad: 1.25rem;
+  --shelf-scroll-end-pad: calc(1.25rem + var(--shelf-vertical-extra));
   /* Panel footer: last card → version line, logo → shelf bottom (symmetrical) */
-  --shelf-footer-outer-gap: 1.75rem;
+  --shelf-footer-outer-gap: calc(1.75rem + var(--shelf-vertical-extra));
   /* HDRI grid (Studio tab) — 2560×1440 reference */
   --shelf-hdri-sphere-img: 78px;
   --shelf-hdri-sphere-ring: 92px;
   --shelf-hdri-grid-gap-x: 1rem;
-  --shelf-hdri-grid-gap-y: 34px; /* thumbnail edge-to-edge @ 2560×1440 */
+  --shelf-hdri-grid-gap-y: calc(34px + var(--shelf-vertical-extra)); /* thumbnail edge-to-edge @ 2560×1440 */
   /* Shader Lab + Object Display pickers — smaller (4-up / dense grids) */
   --shelf-picker-sphere-img: 54px;
   --shelf-picker-sphere-ring: 70px;
@@ -3839,8 +3922,11 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
 
 html:not(.mobile-landing) .shelf {
   font-size: calc(1rem * var(--studio-ui-scale));
-  /* 24px @ 2560, ~19px @ 1920 */
-  --shelf-section-gap: calc(19.2px + 4.8px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
+  --shelf-vertical-extra: calc(4px * var(--studio-ui-scale));
+  /* 28px @ 2560, ~23px @ 1920 (includes --shelf-vertical-extra) */
+  --shelf-section-gap: calc(
+    19.2px + 4.8px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25) + var(--shelf-vertical-extra)
+  );
   --shelf-shell-rhythm: calc(10px + 2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
   --shelf-g: calc(var(--shelf-shell-rhythm) / 2);
   --shelf-rhythm: var(--shelf-shell-rhythm);
@@ -3849,12 +3935,12 @@ html:not(.mobile-landing) .shelf {
   --shelf-card-padding: calc(16px + 3.2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
   --shelf-section-inset: var(--shelf-card-padding); /* horizontal card inset only — not vertical headline rhythm */
   --shelf-scrollbar-edge-offset: calc(12px * var(--studio-ui-scale));
-  --shelf-scroll-end-pad: calc(1.25rem * var(--studio-ui-scale));
-  --shelf-footer-outer-gap: calc(1.75rem * var(--studio-ui-scale));
+  --shelf-scroll-end-pad: calc(1.25rem * var(--studio-ui-scale) + var(--shelf-vertical-extra));
+  --shelf-footer-outer-gap: calc(1.75rem * var(--studio-ui-scale) + var(--shelf-vertical-extra));
   --shelf-hdri-sphere-img: round(78px * var(--studio-ui-scale), 1px);
   --shelf-hdri-sphere-ring: round(92px * var(--studio-ui-scale), 1px);
   --shelf-hdri-grid-gap-x: calc(1rem * var(--studio-ui-scale));
-  --shelf-hdri-grid-gap-y: round(34px * var(--studio-ui-scale), 1px);
+  --shelf-hdri-grid-gap-y: round(calc(34px * var(--studio-ui-scale) + var(--shelf-vertical-extra)), 1px);
   --shelf-picker-sphere-img: round(54px * var(--studio-ui-scale), 1px);
   --shelf-picker-sphere-ring: round(70px * var(--studio-ui-scale), 1px);
   --shelf-sphere-ring-border: round(3px * var(--studio-ui-scale), 1px);
@@ -3862,6 +3948,9 @@ html:not(.mobile-landing) .shelf {
   --shelf-toggle-track-height: calc(1.15rem * var(--studio-ui-scale));
   --shelf-dropdown-pill-height: calc(var(--orby-dropdown-height) * var(--studio-ui-scale));
   --shelf-select-inner-stroke: calc(2px * var(--studio-ui-scale));
+  --shelf-slider-stack-gap: calc(0.4rem * var(--studio-ui-scale) + var(--shelf-vertical-extra));
+  --shelf-slider-size: calc(12px * var(--studio-ui-scale));
+  --shelf-slider-size-muted: calc(10px * var(--studio-ui-scale));
   width: calc(380px * var(--studio-ui-scale));
 }
 
@@ -3887,7 +3976,7 @@ html:not(.mobile-landing) .shelf .panel-block {
 }
 
 html:not(.mobile-landing) .shelf .color-chip {
-  height: calc(12px * var(--studio-ui-scale));
+  height: calc(18px * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .shelf input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
@@ -3905,17 +3994,50 @@ html:not(.mobile-landing) .shelf .rotation-notch i {
 }
 
 html:not(.mobile-landing) .shelf .slider-line input[type='range'] {
-  height: calc(2px * var(--studio-ui-scale));
+  height: var(--shelf-slider-size);
 }
 
-html:not(.mobile-landing) .shelf .slider-line input[type='range']::-webkit-slider-runnable-track {
-  height: calc(2px * var(--studio-ui-scale));
-  border-radius: calc(1px * var(--studio-ui-scale));
-}
-
+html:not(.mobile-landing) .shelf .slider-line input[type='range']::-webkit-slider-runnable-track,
 html:not(.mobile-landing) .shelf .slider-line input[type='range']::-moz-range-track {
-  height: calc(2px * var(--studio-ui-scale));
-  border-radius: calc(1px * var(--studio-ui-scale));
+  height: var(--shelf-slider-size);
+  border-radius: calc(var(--shelf-slider-size) / 2);
+}
+
+html:not(.mobile-landing) .shelf .slider-line input[type='range']::-webkit-slider-thumb {
+  width: var(--shelf-slider-size);
+  height: var(--shelf-slider-size);
+  margin-top: 0;
+}
+
+html:not(.mobile-landing) .shelf .slider-line input[type='range']::-moz-range-thumb {
+  width: var(--shelf-slider-size);
+  height: var(--shelf-slider-size);
+}
+
+html:not(.mobile-landing) .shelf .subsection.is-muted .slider-line input[type='range'],
+html:not(.mobile-landing) .shelf .panel-block.is-muted .slider-line input[type='range'] {
+  height: var(--shelf-slider-size-muted);
+}
+
+html:not(.mobile-landing) .shelf .subsection.is-muted .slider-line input[type='range']::-webkit-slider-runnable-track,
+html:not(.mobile-landing) .shelf .panel-block.is-muted .slider-line input[type='range']::-webkit-slider-runnable-track,
+html:not(.mobile-landing) .shelf .subsection.is-muted .slider-line input[type='range']::-moz-range-track,
+html:not(.mobile-landing) .shelf .panel-block.is-muted .slider-line input[type='range']::-moz-range-track {
+  height: var(--shelf-slider-size-muted);
+  border-radius: calc(var(--shelf-slider-size-muted) / 2);
+}
+
+html:not(.mobile-landing) .shelf .subsection.is-muted .slider-line input[type='range']::-webkit-slider-thumb,
+html:not(.mobile-landing) .shelf .panel-block.is-muted .slider-line input[type='range']::-webkit-slider-thumb {
+  width: var(--shelf-slider-size-muted);
+  height: var(--shelf-slider-size-muted);
+  margin-top: 0;
+}
+
+html:not(.mobile-landing) .shelf .subsection.is-muted .slider-line input[type='range']::-moz-range-thumb,
+html:not(.mobile-landing) .shelf .panel-block.is-muted .slider-line input[type='range']::-moz-range-thumb {
+  width: var(--shelf-slider-size-muted);
+  height: var(--shelf-slider-size-muted);
 }
 
 html:not(.mobile-landing) .shelf input[type='range']::-webkit-slider-thumb {
@@ -4641,7 +4763,8 @@ a.about-highlight:focus-visible {
 .panel-block {
   border: none;
   border-radius: 6px;
-  padding: var(--shelf-card-padding, 1.2rem);
+  padding: 28px var(--shelf-card-padding, 1.2rem);
+  /* Section-to-section gutter stays in sync with the shelf's right inset (--shelf-panel-gutter) */
   margin-bottom: var(--shelf-panel-gutter);
   background: var(--shelf-card-bg);
   /* Skip layout/paint for off-screen cards while scrolling .panels (placeholder height avoids thumb jump) */
@@ -4654,24 +4777,40 @@ a.about-highlight:focus-visible {
   margin-bottom: var(--shelf-panel-gutter);
 }
 
-/* In-block separator — symmetric gap above & below the rule (--shelf-section-gap) */
+/* In-block separator — full-bleed 1px hairline seam. */
 .panel-block-divider,
 .font-extrude-divider,
 .font-extrude-reveal-preview-divider,
 .font-extrude-reveal-emissive-divider {
-  margin: var(--shelf-section-gap) 0;
+  margin: var(--shelf-section-gap) calc(-1 * var(--shelf-section-inset));
   padding: 0;
-  border-top: 1px solid var(--stroke);
-  border-bottom: none;
-  max-width: 100%;
+  border: none;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  max-width: none;
 }
 
-/* Separator that wraps content below the rule (e.g. font Surface / Bevel blocks) */
+/* Separator that wraps content below the rule (e.g. font Surface / Bevel blocks).
+   Full-bleed; the ::before knocks a 1px see-through slot at the wrapper's top edge,
+   horizontal padding re-insets the wrapped content to row alignment. */
 .font-extrude-surface-group,
 .extrude-bevel-group {
-  margin: 0;
-  padding-top: var(--shelf-section-gap);
-  border-top: 1px solid var(--stroke);
+  position: relative;
+  margin: 0 calc(-1 * var(--shelf-section-inset));
+  padding: var(--shelf-section-gap) var(--shelf-section-inset) 0;
+  border-top: none;
+}
+
+.font-extrude-surface-group::before,
+.extrude-bevel-group::before,
+.advanced-glass-controls:not([hidden])::before,
+.export-video-foldout:not(.export-video-foldout--borderless)::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  pointer-events: none;
 }
 
 .extrude-bevel-group > :last-child,
@@ -4701,9 +4840,9 @@ a.about-highlight:focus-visible {
   margin-top: 0;
 }
 
-/* Flex stacks (.export-controls) — gap owns rhythm; divider is a line only */
+/* Flex stacks (.export-controls) — gap owns rhythm; divider is a full-bleed line only */
 :is(.export-controls, .scene-controls) > .panel-block-divider {
-  margin: 0;
+  margin: 0 calc(-1 * var(--shelf-section-inset));
 }
 
 /* Toggle-only subsections — symmetric gap above & below the rule (equal headline padding) */
@@ -4726,12 +4865,12 @@ a.about-highlight:focus-visible {
 /*
  * Shelf section headings (all tabs): body font stack. Never use --brand-font-headline here—that
  * is only for .panel-header-title and dropzone/marketing headlines.
- * Vertical rhythm: --shelf-section-gap (24px) — never --shelf-section-inset.
+ * Vertical rhythm: --shelf-section-gap (28px ref) — never --shelf-section-inset.
  */
 .block-title {
-  font-size: var(--shelf-headline-font-size);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 16px;
+  text-transform: none;
+  letter-spacing: 0;
   color: var(--accent);
   margin-bottom: var(--shelf-section-gap);
   font-weight: 400;
@@ -5408,9 +5547,10 @@ a.about-highlight:focus-visible {
 }
 
 .advanced-glass-controls:not([hidden]) {
-  margin-top: var(--shelf-section-gap);
-  padding-top: var(--shelf-section-gap);
-  border-top: 1px solid var(--stroke);
+  position: relative;
+  margin: var(--shelf-section-gap) calc(-1 * var(--shelf-section-inset)) 0;
+  padding: var(--shelf-section-gap) var(--shelf-section-inset) 0;
+  border-top: none;
 }
 
 /* Mesh → Advanced — open Information tab at Transparency section */
@@ -5569,11 +5709,9 @@ button.advanced-info-doc-btn {
 :is(.panel-block, .subsection, .effect-foldout, .export-option-group)
   > :is(.slider-line, .color-line, .select-line, .map-slot-row):last-child,
 :is(.panel-block, .subsection, .effect-foldout)
-  > :is(.slider-line, .color-line, .select-line):has(+ .effect-foldout),
+  > :is(.slider-line, .color-line, .select-line):has(+ .effect-foldout, + .clip-planes-foldout),
 :is(.panel-block, .subsection, .effect-foldout)
   > :is(.slider-line, .color-line, .select-line, .map-slot-row):has(+ .panel-block-divider),
-:is(.panel-block, .subsection, .effect-foldout)
-  > :is(.slider-line, .color-line, .select-line):has(+ .clip-planes-foldout--collapsed + .panel-block-divider),
 .effect-foldout > :is(.slider-line, .color-line, .select-line, .map-slot-row):has(+ .creative-look-foldout--collapsed),
 :is(.panel-block, .subsection, .effect-foldout)
   > :is(.segmented, .view-preset-grid, .lens-preset-grid, .iso-controls-stack):has(+ .panel-block-divider),
@@ -5596,10 +5734,9 @@ button.advanced-info-doc-btn {
 }
 
 /*
- * Shelf control rows — one grid contract for sliders, selects, colors, map slots.
- * Widths: --shelf-row-* on .shelf · placement: --shelf-span-* · never hardcode grid-column here.
+ * Shelf control rows — selects/colors/map slots use 3-col grid.
+ * Sliders: label + value header row, full-width track below (toggle rows keep 3-col).
  */
-.slider-line,
 .color-line,
 .select-line {
   display: grid;
@@ -5611,22 +5748,86 @@ button.advanced-info-doc-btn {
   font-size: var(--shelf-label-font-size);
 }
 
-/* Labels — single line, ellipsis (toggle-only rows override below) */
-.slider-line > :is(span:first-child, .slider-line-label, .block-title-name),
+/*
+ * Base row margin lives here (specificity 0,1,0) — same level as .color-line/.select-line —
+ * so container overrides like `.creative-look-foldout-body > .slider-line` (0,2,0) and
+ * `> :last-child`/`:has(+ divider)` zeroing rules still win. The :has()/:not(:has()) layout
+ * rules below set grid only — never re-declare margin-bottom there (it would beat 0,2,0 zeroing).
+ */
+.slider-line {
+  margin-bottom: var(--shelf-section-gap);
+}
+
+/* Stacked slider — header row + edge-to-edge track */
+.slider-line:has(> input[type='range']) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: var(--shelf-row-col-gap);
+  row-gap: var(--shelf-slider-stack-gap);
+  align-items: center;
+  font-size: var(--shelf-label-font-size);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+/* Toggle / label-only rows — label | control (no wasted slider column) */
+.slider-line:not(:has(> input[type='range'])) {
+  display: grid;
+  grid-template-columns: var(--shelf-row-grid-toggle);
+  column-gap: var(--shelf-row-col-gap);
+  row-gap: 0;
+  align-items: center;
+  font-size: var(--shelf-label-font-size);
+}
+
+/* Labels — ellipsis on stacked slider headers only; non-slider rows get full label width */
+.slider-line:has(> input[type='range']) > :is(span:first-child, .slider-line-label, .block-title-name),
 .select-line > span:first-child,
 .color-line > span:first-child,
 .map-slot-label {
-  grid-column: var(--shelf-place-label);
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.slider-line:not(:has(> input[type='range'])) > :is(span:first-child, .slider-line-label, .block-title-name) {
+  grid-column: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.slider-line:has(> input[type='range']) > :is(span:first-child, .slider-line-label, .block-title-name) {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.slider-line:has(> input[type='range']) > :is(span:first-child, .slider-line-label, .block-title-name):has(.slider-snap-btn) {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.slider-line:not(:has(> input[type='range'])) > :is(span:first-child, .slider-line-label, .block-title-name),
+.select-line > span:first-child,
+.color-line > span:first-child,
+.map-slot-label {
+  grid-column: var(--shelf-place-label);
+}
+
+/* Non-slider shelf rows — label uses slider column too (see --shelf-span-label-wide) */
+.select-line:not(:has(> .value:not(:empty))) > span:first-child,
+.color-line > span:first-child {
+  grid-column: var(--shelf-span-label-wide);
+  overflow: visible;
+  text-overflow: clip;
+}
+
 .slider-line > :is(span:first-child, .slider-line-label, .block-title-name) {
   align-self: center;
   text-align: left;
-  letter-spacing: -0.01em;
   color: var(--text-dim);
 }
 
@@ -5667,9 +5868,19 @@ button.advanced-info-doc-btn {
   color: var(--text-dim);
 }
 
-/* Value readouts — trailing column */
-.slider-line .value,
-.slider-line .slider-value-group,
+/* Value readouts — stacked sliders: header row right; toggle rows: trailing column */
+.slider-line:has(> input[type='range']) > .value,
+.slider-line:has(> input[type='range']) > .slider-value-group {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+}
+
+.slider-line:not(:has(> input[type='range'])) .value,
+.slider-line:not(:has(> input[type='range'])) .slider-value-group,
 .select-line > .value {
   grid-column: var(--shelf-place-value);
 }
@@ -5692,7 +5903,7 @@ button.advanced-info-doc-btn {
 }
 
 .color-line .color-chip {
-  grid-column: var(--shelf-span-control-full);
+  grid-column: var(--shelf-place-value);
   justify-self: end;
   min-width: 0;
 }
@@ -5759,24 +5970,13 @@ button.advanced-info-doc-btn {
   display: none;
 }
 
-/* Toggles — full label text; switch in value column on toggle-only rows */
-.slider-line.slider-line--toggle-only > :is(span:first-child, .slider-line-label, .block-title-name) {
-  grid-column: var(--shelf-span-label-toggle);
-  overflow: visible;
-  text-overflow: clip;
-}
-
+/* Toggles — switch in trailing column; label uses full row minus control */
 .slider-line.slider-line--toggle-only .value {
   display: none;
 }
 
-.slider-line > .effect-toggle {
-  grid-column: var(--shelf-span-control-full);
-  justify-self: end;
-}
-
-.slider-line.slider-line--toggle-only > .effect-toggle {
-  grid-column: var(--shelf-place-value);
+.slider-line:not(:has(> input[type='range'])) > .effect-toggle {
+  grid-column: 2;
   justify-self: end;
 }
 
@@ -5827,13 +6027,14 @@ button.advanced-info-doc-btn {
 /* Removed - all toggles now use .effect-toggle system */
 
 .slider-line input[type='range'] {
-  grid-column: var(--shelf-span-control);
+  grid-column: 1 / -1;
+  grid-row: 2;
   align-self: center;
   justify-self: stretch;
   width: 100%;
   min-width: 0;
-  height: 2px;
-  border-radius: 1px;
+  height: var(--shelf-slider-size, 12px);
+  border-radius: calc(var(--shelf-slider-size, 12px) / 2);
   position: relative;
   /* Remove default track styling */
   -webkit-appearance: none;
@@ -5845,19 +6046,25 @@ button.advanced-info-doc-btn {
   transition: opacity 0.2s ease;
 }
 
-/* WebKit slider track with fill effect */
+.subsection.is-muted .slider-line input[type='range'],
+.panel-block.is-muted .slider-line input[type='range'] {
+  height: var(--shelf-slider-size-muted, 10px);
+  border-radius: calc(var(--shelf-slider-size-muted, 10px) / 2);
+}
+
+/* Figma-style pill track — rail height matches thumb (--shelf-slider-size) */
 .slider-line input[type='range']::-webkit-slider-runnable-track {
   width: 100%;
-  height: 2px;
-  border-radius: 1px;
+  height: var(--shelf-slider-size, 12px);
+  border-radius: calc(var(--shelf-slider-size, 12px) / 2);
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 0%,
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-end, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 100%
   );
   transition: background 0.2s ease;
 }
@@ -5866,26 +6073,28 @@ button.advanced-info-doc-btn {
 .slider-line input[type='range']:is(:active, :focus-visible)::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 0%,
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-end, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 100%
   );
 }
 
 /* Muted shelf sections: gray fill instead of accent color */
 .subsection.is-muted .slider-line input[type='range']::-webkit-slider-runnable-track,
 .panel-block.is-muted .slider-line input[type='range']::-webkit-slider-runnable-track {
+  height: var(--shelf-slider-size-muted, 10px);
+  border-radius: calc(var(--shelf-slider-size-muted, 10px) / 2);
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 0%,
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--text-dim) 45%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--text-dim) 45%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-end, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 100%
   );
 }
 
@@ -5894,28 +6103,28 @@ button.advanced-info-doc-btn {
 .panel-block.is-muted .slider-line input[type='range']:is(:active, :focus-visible)::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 0%,
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-start, 0%),
     var(--text-dim) var(--slider-fill-start, 0%),
     var(--text-dim) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-end, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 100%
   );
 }
 
 /* Firefox slider track with fill effect */
 .slider-line input[type='range']::-moz-range-track {
   width: 100%;
-  height: 2px;
-  border-radius: 1px;
+  height: var(--shelf-slider-size, 12px);
+  border-radius: calc(var(--shelf-slider-size, 12px) / 2);
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 0%,
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-end, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 100%
   );
   border: none;
   transition: background 0.2s ease;
@@ -5925,26 +6134,28 @@ button.advanced-info-doc-btn {
 .slider-line input[type='range']:is(:active, :focus-visible)::-moz-range-track {
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 0%,
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-end, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 100%
   );
 }
 
 /* Muted blocks: use gray fill instead of accent color */
 .subsection.is-muted .slider-line input[type='range']::-moz-range-track,
 .panel-block.is-muted .slider-line input[type='range']::-moz-range-track {
+  height: var(--shelf-slider-size-muted, 10px);
+  border-radius: calc(var(--shelf-slider-size-muted, 10px) / 2);
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 0%,
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--text-dim) 45%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--text-dim) 45%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-end, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 100%
   );
 }
 
@@ -5953,41 +6164,149 @@ button.advanced-info-doc-btn {
 .panel-block.is-muted .slider-line input[type='range']:is(:active, :focus-visible)::-moz-range-track {
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 0%,
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-start, 0%),
     var(--text-dim) var(--slider-fill-start, 0%),
     var(--text-dim) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-end, 0%),
+    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 100%
   );
 }
 
-/* Temperature and Tint sliders keep their custom gradients */
-.slider-line--temperature input[type='range']::-webkit-slider-runnable-track {
-  background: linear-gradient(90deg, #1d5bff, #f6f2ff, #ffbb6b);
+/* Temperature, Tint, and Saturation sliders keep custom gradients (pill rail).
+   Gradient is held in a custom property so the base + active/focus rules can
+   never drift apart. WebKit and Firefox pseudo-elements MUST stay in separate
+   rules: a single comma-grouped list with both vendor pseudo-elements is
+   invalid per engine and gets dropped wholesale (that silently killed the
+   Kelvin gradient). */
+.slider-line--temperature {
+  --rail-gradient: linear-gradient(90deg, #1d5bff, #f6f2ff, #ffbb6b);
 }
 
-.slider-line--temperature input[type='range']::-moz-range-track {
-  background: linear-gradient(90deg, #1d5bff, #f6f2ff, #ffbb6b);
+.slider-line--tint {
+  --rail-gradient: linear-gradient(90deg, #36d681, #f6f2ff, #d56bff);
 }
 
-.slider-line--tint input[type='range']::-webkit-slider-runnable-track {
-  background: linear-gradient(90deg, #36d681, #f6f2ff, #d56bff);
+/* Thumb drop shadow — stronger on the bright Kelvin/tint rails where a soft
+   shadow otherwise washes out against the light gradient stops. */
+.slider-line {
+  --thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
-.slider-line--tint input[type='range']::-moz-range-track {
-  background: linear-gradient(90deg, #36d681, #f6f2ff, #d56bff);
+.slider-line--temperature,
+.slider-line--tint {
+  --thumb-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
 }
 
-/* Temperature / tint: keyboard focus brightens the track (no thumb-only focus ring) */
-.slider-line--temperature input[type='range']:focus-visible::-webkit-slider-runnable-track,
-.slider-line--tint input[type='range']:focus-visible::-webkit-slider-runnable-track {
+.slider-line--saturation {
+  --rail-gradient: linear-gradient(90deg, #525252, #949494, var(--orby-purple-bright, #9d80ff));
+}
+
+.slider-line--temperature input[type='range']::-webkit-slider-runnable-track,
+.slider-line--tint input[type='range']::-webkit-slider-runnable-track,
+.slider-line--saturation input[type='range']::-webkit-slider-runnable-track {
+  background: var(--rail-gradient);
+}
+
+.slider-line--temperature input[type='range']::-moz-range-track,
+.slider-line--tint input[type='range']::-moz-range-track,
+.slider-line--saturation input[type='range']::-moz-range-track {
+  background: var(--rail-gradient);
+}
+
+/* While dragging (:active) or focused the generic track rule would replace the
+   gradient with the lime fill — re-assert the gradient here (higher source
+   order, equal specificity) and brighten it for the focus/drag affordance. */
+.slider-line--temperature input[type='range']:is(:active, :focus-visible)::-webkit-slider-runnable-track,
+.slider-line--tint input[type='range']:is(:active, :focus-visible)::-webkit-slider-runnable-track,
+.slider-line--saturation input[type='range']:is(:active, :focus-visible)::-webkit-slider-runnable-track {
+  background: var(--rail-gradient);
   filter: brightness(1.14);
 }
 
-.slider-line--temperature input[type='range']:focus-visible::-moz-range-track,
-.slider-line--tint input[type='range']:focus-visible::-moz-range-track {
+.slider-line--temperature input[type='range']:is(:active, :focus-visible)::-moz-range-track,
+.slider-line--tint input[type='range']:is(:active, :focus-visible)::-moz-range-track,
+.slider-line--saturation input[type='range']:is(:active, :focus-visible)::-moz-range-track {
+  background: var(--rail-gradient);
   filter: brightness(1.14);
+}
+
+/* Shelf slider thumb — same diameter as pill rail (Figma-style) */
+.slider-line input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: var(--shelf-slider-size, 12px);
+  height: var(--shelf-slider-size, 12px);
+  margin-top: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgba(120, 120, 120, 0.95),
+    var(--thumb-shadow);
+  transition:
+    transform 0.15s ease,
+    width 0.15s ease,
+    height 0.15s ease,
+    background 0.2s ease,
+    box-shadow 0.15s ease;
+}
+
+.slider-line input[type='range']::-moz-range-thumb {
+  width: var(--shelf-slider-size, 12px);
+  height: var(--shelf-slider-size, 12px);
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgba(120, 120, 120, 0.95),
+    var(--thumb-shadow);
+  transition:
+    transform 0.15s ease,
+    width 0.15s ease,
+    height 0.15s ease,
+    background 0.2s ease,
+    box-shadow 0.15s ease;
+}
+
+.subsection.is-muted .slider-line input[type='range']::-webkit-slider-thumb,
+.panel-block.is-muted .slider-line input[type='range']::-webkit-slider-thumb,
+.subsection.is-muted .slider-line input[type='range']::-moz-range-thumb,
+.panel-block.is-muted .slider-line input[type='range']::-moz-range-thumb {
+  width: var(--shelf-slider-size-muted, 10px);
+  height: var(--shelf-slider-size-muted, 10px);
+  margin-top: 0;
+  background: #999 !important;
+  box-shadow: none !important;
+}
+
+.slider-line input[type='range']:hover::-webkit-slider-thumb {
+  transform: scale(1.083);
+  box-shadow:
+    0 0 0 1px rgba(120, 120, 120, 0.95),
+    var(--thumb-shadow);
+}
+
+.slider-line input[type='range']:active::-webkit-slider-thumb {
+  transform: scale(1.083);
+  box-shadow:
+    0 0 0 1px rgba(120, 120, 120, 0.95),
+    var(--thumb-shadow);
+}
+
+.slider-line input[type='range']:hover::-moz-range-thumb {
+  transform: scale(1.083);
+  box-shadow:
+    0 0 0 1px rgba(120, 120, 120, 0.95),
+    var(--thumb-shadow);
+}
+
+.slider-line input[type='range']:active::-moz-range-thumb {
+  transform: scale(1.083);
+  box-shadow:
+    0 0 0 1px rgba(120, 120, 120, 0.95),
+    var(--thumb-shadow);
 }
 
 /* Disabled sliders */
@@ -5996,41 +6315,53 @@ button.advanced-info-doc-btn {
 }
 
 /* Disabled slider thumbs should be solid gray, closer to label color */
-input[type='range']:disabled::-webkit-slider-thumb {
+.slider-line input[type='range']:disabled::-webkit-slider-thumb {
   background: #999 !important;
   box-shadow: none !important;
   cursor: not-allowed;
 }
 
-input[type='range']:disabled::-moz-range-thumb {
+.slider-line input[type='range']:disabled::-moz-range-thumb {
   background: #999 !important;
   box-shadow: none !important;
   cursor: not-allowed;
 }
 
-.slider-line--temperature input[type='range'] {
-  background: linear-gradient(90deg, #1d5bff, #f6f2ff, #ffbb6b);
-}
-
-.slider-line--tint input[type='range'] {
-  background: linear-gradient(90deg, #36d681, #f6f2ff, #d56bff);
+.slider-line input[type='range'].is-disabled-handle::-webkit-slider-thumb,
+.slider-line input[type='range'].is-disabled-handle::-moz-range-thumb {
+  background: #999 !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
 }
 
 .slider-line .value {
-  justify-self: stretch;
   align-self: center;
-  width: 100%;
-  max-width: 100%;
   min-width: 0;
   height: auto;
   max-height: none;
-  color: var(--text-dim);
-  font-size: var(--shelf-label-font-size);
-  line-height: 1.25;
   text-align: right;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.slider-line:has(> input[type='range']) .value {
+  justify-self: end;
+  width: auto;
+  max-width: none;
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  color: var(--text);
+}
+
+.slider-line:not(:has(> input[type='range'])) .value {
+  justify-self: stretch;
+  width: 100%;
+  max-width: 100%;
+  font-size: var(--shelf-label-font-size);
+  line-height: 1.25;
+  color: var(--text-dim);
 }
 
 .slider-line .value:hover {
@@ -6057,10 +6388,10 @@ input[type='range']:disabled::-moz-range-thumb {
   padding: 0 0.22rem;
   border: 1px solid var(--stroke);
   border-radius: 4px;
-  line-height: 1;
+  line-height: 1.25;
   background: rgba(20, 16, 34, 0.9);
   color: var(--text);
-  font-size: var(--shelf-label-font-size);
+  font-size: inherit;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -6132,6 +6463,16 @@ input[type='range']:disabled::-moz-range-thumb {
   display: contents;
 }
 
+/*
+ * display: contents drops .extrude-bevel-group's box, so its ::before hairline anchors to
+ * .subsection (position: relative) and paints at the subsection top — a line above the headline.
+ * SVG extrude has no in-block rule before bevel rows; suppress the stray pseudo.
+ */
+[data-subsection='svg-extrude'] .extrude-bevel-group::before {
+  content: none;
+  display: none;
+}
+
 [data-subsection='svg-extrude'] :is(.slider-line, .select-line):has(+ .extrude-bevel-group) {
   margin-bottom: var(--shelf-section-gap);
 }
@@ -6197,6 +6538,33 @@ input[type='range']:disabled::-moz-range-thumb {
 
 #svgExtrudeColorDepths .slider-line {
   margin-bottom: var(--shelf-section-gap);
+}
+
+/* Per-fill reset — sits inline after the "Depth N" label; resets that fill only. */
+.svg-fill-reset {
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  padding: 0;
+  margin-left: 0.4em;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: color 0.2s ease;
+}
+
+.svg-fill-reset:hover {
+  color: var(--accent);
+}
+
+.svg-fill-reset i {
+  font-size: 10px;
+  line-height: 1;
+  color: inherit;
 }
 
 .svg-extrude-note {
@@ -6460,9 +6828,9 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 }
 
 .color-chip {
-  width: var(--color-chip-w, 92px);
+  width: var(--color-chip-w, 184px);
   max-width: 100%;
-  height: 12px;
+  height: 18px;
   padding: 0;
   border: none;
   border-radius: 9999px;
@@ -6902,7 +7270,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   border: none;
   background: rgba(255, 255, 255, 0.15);
   box-shadow: none;
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease;
 }
 
 .hdri-icon--upload .hdri-icon__plus,
@@ -6975,14 +7343,14 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   content-visibility: visible;
 }
 
-/* Video export is the tallest shelf block — default --xl cap (120rem) clips FPS / Resolution */
+/* Video export is the tallest shelf block — grow to content so FPS / Resolution never clip */
 .panel-block[data-export-section='video'] .effect-foldout--expanded {
-  max-height: 240rem;
+  max-height: max-content;
 }
 
-/* Font extrude — --xl cap clips Reveal emissive at the bottom when post-gen is open */
+/* Font extrude — grow to content so Reveal emissive at the bottom never clips when post-gen is open */
 [data-effect-foldout='font-extrude'].effect-foldout--expanded.effect-foldout--xl {
-  max-height: 240rem;
+  max-height: max-content;
 }
 
 /* Export — uniform section gap between groups and inside option groups */
@@ -7114,8 +7482,10 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
 }
 
 .export-video-foldout {
-  border-top: 1px solid var(--stroke);
-  padding-top: var(--shelf-section-gap);
+  position: relative;
+  margin: 0 calc(-1 * var(--shelf-section-inset));
+  border-top: none;
+  padding: var(--shelf-section-gap) var(--shelf-section-inset) 0;
   display: flex;
   flex-direction: column;
   gap: var(--shelf-section-gap);
@@ -7612,11 +7982,17 @@ body.ui-hidden .shelf {
   opacity: 0;
   overflow: hidden;
   min-width: 0;
+  /* Animate to intrinsic content height (Chrome 129+); other engines expand
+   * fully without the tween — never clip. See --md/--lg/--xl note below. */
+  interpolate-size: allow-keywords;
   transition: max-height 0.25s ease, opacity 0.25s ease;
 }
 
 .effect-foldout--expanded {
-  max-height: 28rem;
+  /* Grow to natural height so tall / nested foldouts (e.g. Lights rig) can never
+   * crop their bottom rows. The --md/--lg/--xl classes are kept for markup
+   * compatibility but no longer impose a fixed ceiling. */
+  max-height: max-content;
   opacity: 1;
   padding-top: var(--shelf-section-gap);
   overflow: visible;
@@ -7629,16 +8005,10 @@ body.ui-hidden .shelf {
   padding-top: var(--shelf-section-gap);
 }
 
-.effect-foldout--expanded.effect-foldout--md {
-  max-height: 52rem;
-}
-
-.effect-foldout--expanded.effect-foldout--lg {
-  max-height: 80rem;
-}
-
+.effect-foldout--expanded.effect-foldout--md,
+.effect-foldout--expanded.effect-foldout--lg,
 .effect-foldout--expanded.effect-foldout--xl {
-  max-height: 120rem;
+  max-height: max-content;
 }
 
 .effect-foldout--collapsed {
@@ -7704,13 +8074,17 @@ body.ui-hidden .shelf {
   max-height: 0;
   opacity: 0;
   overflow: hidden;
+  /* Grow to content (Chrome 129+ animates; other engines expand instantly) so the
+   * Near / Far Clip rows are never cropped — matches .effect-foldout behavior. */
+  interpolate-size: allow-keywords;
   transition: max-height 0.25s ease, opacity 0.25s ease;
 }
 
 .clip-planes-foldout--expanded {
-  max-height: 6.5rem;
+  max-height: max-content;
   opacity: 1;
   padding-top: var(--shelf-section-gap);
+  overflow: visible;
 }
 
 .clip-planes-foldout--collapsed {
@@ -7783,7 +8157,7 @@ body.ui-hidden .shelf {
   max-height: 120rem;
   opacity: 1;
   padding-top: var(--shelf-section-gap);
-  padding-bottom: var(--shelf-section-gap);
+  padding-bottom: 0;
   overflow: visible;
 }
 

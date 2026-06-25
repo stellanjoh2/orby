@@ -330,14 +330,14 @@ export function buildFontBevelTypeSelectHtml(options = {}) {
 export function buildExtrudeBevelGroupHtml(options = {}) {
   const depth = Number(options.depth ?? DEFAULT_EXTRUDE_DEPTH) || DEFAULT_EXTRUDE_DEPTH;
   const parts = [];
-  if (options.bevelType !== false) {
-    parts.push(buildFontBevelTypeSelectHtml(options.bevelType ?? {}));
-  }
   if (options.bevel !== false) {
     parts.push(buildExtrudeBevelSliderHtml({
       depth,
       ...(options.bevel ?? {}),
     }));
+  }
+  if (options.bevelType !== false) {
+    parts.push(buildFontBevelTypeSelectHtml(options.bevelType ?? {}));
   }
   if (!parts.length) return '';
   return `<div class="extrude-bevel-group" role="group" aria-label="Bevel">${parts.join('')}</div>`;
@@ -390,9 +390,6 @@ export function buildExtrudeCoreControlsHtml(sections = {}) {
   if (depthOpts) {
     parts.push(buildExtrudeDepthSliderHtml(depthOpts));
   }
-  if (sections.detail !== false) {
-    parts.push(buildExtrudeDetailSelectHtml(sections.detail ?? {}));
-  }
   if (sections.angle !== false) {
     parts.push(buildExtrudeAngleSliderHtml(sections.angle ?? {}));
   }
@@ -405,6 +402,9 @@ export function buildExtrudeCoreControlsHtml(sections = {}) {
       bevel: sections.bevel,
       bevelType: sections.bevelType ?? false,
     }));
+  }
+  if (sections.detail !== false) {
+    parts.push(buildExtrudeDetailSelectHtml(sections.detail ?? {}));
   }
   return parts.join('');
 }
@@ -772,10 +772,13 @@ export function flushPendingExtrudeMesh(ctx, slider) {
     }
   }
 
-  if (inputs.colorDepths?.contains(slider)) {
-    const color = slider.dataset.color;
+  // Per-color sliders are re-rendered on every sync, so by the time the
+  // scrub-end fires the dragged node has been detached from the container.
+  // Match on dataset.color (which the detached node still carries) instead of
+  // DOM containment so the deferred mesh rebuild still flushes on release.
+  const color = slider.dataset.color;
+  if (color) {
     const kind = slider.dataset.kind || 'depth';
-    if (!color) return;
     const timerKey = `${kind}:${color}`;
     const existingTimer = timers.colorDebounce.get(timerKey);
     if (existingTimer) {
@@ -976,6 +979,37 @@ export function bindSvgExtrudeControls(ctx) {
   };
 
   inputs.colorDepths?.addEventListener('input', onColorDepthInput);
+
+  const onColorReplacementEvent = (event, commit) => {
+    const input = event.target;
+    if (!input || input.tagName !== 'INPUT' || input.type !== 'color') return;
+    if (input.dataset.kind !== 'replacement') return;
+    const color = input.dataset.color;
+    if (!color) return;
+    const replacement = input.value;
+    // Keep the sibling chip (other row, same fill) visually in sync without a re-render.
+    inputs.colorDepths
+      ?.querySelectorAll(`input[type="color"][data-color="${color}"]`)
+      .forEach((chip) => {
+        if (chip !== input) chip.value = replacement;
+      });
+    eventBus.emit('mesh:svg-extrude-color-replacement', { color, replacement, commit });
+  };
+
+  // `input` = live recolor while the picker is open (no state write → no shelf rebuild);
+  // `change` = commit to state once the picker closes.
+  inputs.colorDepths?.addEventListener('input', (event) => onColorReplacementEvent(event, false));
+  inputs.colorDepths?.addEventListener('change', (event) => onColorReplacementEvent(event, true));
+
+  inputs.colorDepths?.addEventListener('click', (event) => {
+    const btn = event.target.closest?.('button[data-kind="reset"]');
+    if (!btn) return;
+    const color = btn.dataset.color;
+    if (!color) return;
+    // Drop focus so the post-reset re-render of this container isn't blocked.
+    btn.blur();
+    eventBus.emit('mesh:svg-extrude-color-reset', { color });
+  });
 }
 
 function syncExtrudeBevelControlInputs(ctx, svg, canEdit) {
@@ -1124,12 +1158,19 @@ export function syncSvgExtrudeControls(ctx, state, options = {}) {
  */
 export function renderSvgColorDepthControls(container, state, ui) {
   if (!container) return;
+  // Don't rebuild while a per-color picker/slider inside is being used — a native
+  // color dialog stays bound to its <input>, and replacing innerHTML would detach it.
+  // Only block for inputs; a focused reset button should not stop the refresh.
+  const active = document.activeElement;
+  if (active && active.tagName === 'INPUT' && container.contains(active)) return;
   const enabled = !!state.svgExtrude?.enabled;
   const palette = Array.isArray(state.svgExtrude?.availableColors)
     ? state.svgExtrude.availableColors
     : [];
   const overrides = state.svgExtrude?.colorDepths || {};
   const offsets = state.svgExtrude?.colorOffsets || {};
+  const replacements = state.svgExtrude?.colorReplacements || {};
+  const overrideEnabled = !!state.svgExtrude?.colorOverride;
   const globalDepth = Number(state.svgExtrude?.depth ?? DEFAULT_EXTRUDE_DEPTH);
 
   if (!enabled) {
@@ -1152,7 +1193,21 @@ export function renderSvgColorDepthControls(container, state, ui) {
   }
   container.style.display = '';
 
-  const rows = `<div class="svg-extrude-note">Fine-tune each fill. Depth above scales all layers together.</div>${palette
+  const buildChip = (color, index) => {
+    const swatch = normalizeColorForPicker(replacements[color]) || normalizeColorForPicker(color) || '#000000';
+    const disabled = !enabled || overrideEnabled;
+    const titleHex = (replacements[color] || color).toUpperCase();
+    return `<input type="color" class="color-chip${disabled ? ' is-disabled-handle' : ''}" value="${swatch}" data-color="${color}" data-kind="replacement"${
+      disabled ? ' disabled' : ''
+    } aria-label="Recolor fill ${index + 1} (${color.toUpperCase()})" title="Recolor fill ${index + 1} (${titleHex})" />`;
+  };
+
+  const buildFillReset = (color, index, isDirty) =>
+    isDirty
+      ? `<button type="button" class="svg-fill-reset" data-kind="reset" data-color="${color}" aria-label="Reset fill ${index + 1}" title="Reset depth, position & color for fill ${index + 1}"><i class="fa-solid fa-rotate-left"></i></button>`
+      : '';
+
+  const rows = palette
     .map((color, index) => {
       const depth = Number.isFinite(Number(overrides[color]))
         ? Number(overrides[color])
@@ -1160,31 +1215,50 @@ export function renderSvgColorDepthControls(container, state, ui) {
       const safeDepth = Math.max(0.01, Math.min(2.0, depth));
       const offset = Number.isFinite(Number(offsets[color])) ? Number(offsets[color]) : 0;
       const safeOffset = Math.max(-1.0, Math.min(1.0, offset));
+      const isDirty =
+        overrides[color] !== undefined ||
+        offsets[color] !== undefined ||
+        replacements[color] !== undefined;
+      // Rows use <div> (not <label>) so the embedded color picker doesn't become the
+      // row's implicit labeled control and hijack clicks on the depth/position text.
       return `
-<label class="slider-line">
+<div class="slider-line">
   <span>
-    <span class="color-chip" style="background:${color}; pointer-events:none;" title="${color.toUpperCase()}"></span>
+    ${buildChip(color, index)}
     Depth ${index + 1}
+    ${buildFillReset(color, index, isDirty)}
   </span>
   <input type="range" min="0.01" max="2" step="0.005" value="${safeDepth.toFixed(2)}" data-color="${color}" data-kind="depth" aria-label="Per-color depth ${index + 1} (${color.toUpperCase()})" title="Depth for ${color.toUpperCase()}" />
   <span class="value">${safeDepth.toFixed(2)}</span>
-</label>
-<label class="slider-line">
+</div>
+<div class="slider-line">
   <span>
-    <span class="color-chip" style="background:${color}; pointer-events:none;" title="${color.toUpperCase()}"></span>
+    ${buildChip(color, index)}
     Position ${index + 1}
   </span>
   <input type="range" min="-1" max="1" step="0.005" value="${safeOffset.toFixed(2)}" data-color="${color}" data-kind="offset" aria-label="Per-color position ${index + 1} (${color.toUpperCase()})" title="Position for ${color.toUpperCase()}" />
   <span class="value">${safeOffset.toFixed(2)}</span>
-</label>`;
+</div>`;
     })
-    .join('')}`;
+    .join('');
 
   container.innerHTML = rows;
   container.querySelectorAll('input[type="range"]').forEach((input) => {
     input.disabled = !enabled;
     input.classList.toggle('is-disabled-handle', !enabled);
   });
+}
+
+/** Coerce a palette/replacement color to a `#rrggbb` value an `<input type="color">` accepts. */
+function normalizeColorForPicker(value) {
+  if (typeof value !== 'string') return null;
+  let hex = value.trim().toLowerCase();
+  if (!hex) return null;
+  if (hex[0] !== '#') hex = `#${hex}`;
+  if (/^#[0-9a-f]{3}$/.test(hex)) {
+    hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+  }
+  return /^#[0-9a-f]{6}$/.test(hex) ? hex : null;
 }
 
 function buildFontRevealTypeOptionsHtml() {
@@ -1224,7 +1298,6 @@ export const FONT_EXTRUDE_SHAPE_CONTROLS_HTML = `
             label: 'Extrude Depth',
             tooltip: 'Overall extrusion depth for generated text',
           })}
-          ${buildFontExtrudeOutlineQualitySelectHtml()}
           ${buildExtrudeAngleSliderHtml({
             id: 'fontExtrudeMeshAngle',
             outputKey: 'fontExtrudeMeshAngle',
@@ -1246,7 +1319,8 @@ export const FONT_EXTRUDE_SHAPE_CONTROLS_HTML = `
               outputKey: 'fontExtrudeBevelAmount',
               tooltip: 'Edge bevel size — max 10% of extrusion depth',
             },
-          })}`;
+          })}
+          ${buildFontExtrudeOutlineQualitySelectHtml()}`;
 
 /** Reveal animation — only visible once 3D text exists. */
 export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `

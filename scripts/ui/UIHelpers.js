@@ -1,9 +1,14 @@
-import { formatDofFStopLabel } from '../constants.js';
+import { formatDofFStopLabel, cameraShadowsUiToShader } from '../constants.js';
 import {
+  getAtPath,
   isPointerOnSliderThumb,
   resolveSliderDefaultValue,
   resolveSliderInputKey,
 } from './sliderDefaultPaths.js';
+import {
+  parseManifestRangeValue,
+  writeStateAndEmit,
+} from '../state/controlManifestCore.js';
 
 /**
  * UIHelpers - Utility methods for UI management
@@ -136,7 +141,7 @@ export class UIHelpers {
   }
 
   /**
-   * Double-click a slider value label to type an exact number; Enter or blur commits.
+   * Double-click a slider value label to reset to default; Shift+double-click to type an exact value.
    */
   setupValueLabelInlineEdit() {
     if (this._valueLabelEditBound) return;
@@ -148,8 +153,40 @@ export class UIHelpers {
       const label = event.target.closest('.value[data-output], #svgExtrudeColorDepths .value');
       if (!label) return;
       event.preventDefault();
-      this.startValueLabelEdit(label);
+
+      if (event.shiftKey) {
+        this.startValueLabelEdit(label);
+        return;
+      }
+
+      const slider = this.resolveSliderForValueLabel(label);
+      if (slider) {
+        this.resetRangeSliderToDefault(slider);
+      }
     });
+  }
+
+  /**
+   * Restore one range slider to its StateStore (or export) default and emit `input`.
+   * @returns {boolean} true when the value changed
+   */
+  resetRangeSliderToDefault(slider) {
+    if (!(slider instanceof HTMLInputElement) || slider.type !== 'range' || slider.disabled) {
+      return false;
+    }
+
+    const inputKey = resolveSliderInputKey(slider, this.ui?.inputs ?? {});
+    const defaults = this.stateStore?.getDefaults?.();
+    const defaultValue = resolveSliderDefaultValue(slider, inputKey, defaults);
+    if (!Number.isFinite(defaultValue)) return false;
+
+    const current = parseFloat(slider.value);
+    if (Number.isFinite(current) && Math.abs(current - defaultValue) < 1e-6) return false;
+
+    this.setRangeValueProgrammatically(slider, defaultValue);
+    this.updateSliderFill(slider);
+    slider.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
   }
 
   startValueLabelEdit(label) {
@@ -470,26 +507,14 @@ export class UIHelpers {
 
     const onEnd = (event) => {
       if (!pending || event.pointerId !== pending.pointerId) return;
-      const { slider, startX, startY, startValue } = pending;
+      const { slider, startX, startY } = pending;
       clearPending();
 
       if (Math.hypot(event.clientX - startX, event.clientY - startY) > 4) return;
 
-      const current = parseFloat(slider.value);
-      const start = parseFloat(startValue);
-      if (Number.isFinite(start) && Number.isFinite(current) && Math.abs(current - start) > 1e-6) {
-        return;
-      }
-
-      const inputKey = resolveSliderInputKey(slider, this.ui?.inputs ?? {});
-      const defaults = this.stateStore?.getDefaults?.();
-      const defaultValue = resolveSliderDefaultValue(slider, inputKey, defaults);
-      if (!Number.isFinite(defaultValue)) return;
-
-      if (Number.isFinite(current) && Math.abs(current - defaultValue) < 1e-6) return;
-
-      this.setRangeValueProgrammatically(slider, defaultValue);
-      slider.dispatchEvent(new Event('input', { bubbles: true }));
+      // Thumb-only gesture — do not require value unchanged between down/up; some
+      // browsers (notably on full-gradient rails) nudge the value on click.
+      this.resetRangeSliderToDefault(slider);
     };
 
     root.addEventListener(
@@ -507,7 +532,6 @@ export class UIHelpers {
           pointerId: event.pointerId,
           startX: event.clientX,
           startY: event.clientY,
-          startValue: slider.value,
           onEnd,
         };
         window.addEventListener('pointerup', onEnd, true);
@@ -534,10 +558,11 @@ export class UIHelpers {
   updateSliderFill(slider) {
     if (!slider || slider.type !== 'range') return;
     
-    // Skip temperature and tint sliders (they have custom gradients)
+    // Skip temperature, tint, and saturation sliders (custom gradient rails)
     const sliderLine = slider.closest('.slider-line');
     if (sliderLine?.classList.contains('slider-line--temperature') || 
-        sliderLine?.classList.contains('slider-line--tint')) {
+        sliderLine?.classList.contains('slider-line--tint') ||
+        sliderLine?.classList.contains('slider-line--saturation')) {
       return;
     }
     
@@ -576,9 +601,11 @@ export class UIHelpers {
         sliderLine?.classList.contains('slider-line--surface-detail') ||
         getComputedStyle(slider).direction === 'rtl';
       if (isRtl) {
-        // Mirror fill when the track uses direction: rtl (e.g. Surface Detail).
-        slider.style.setProperty('--slider-fill-start', `${100 - fillPercent}%`);
-        slider.style.setProperty('--slider-fill-end', '100%');
+        // Track is mirrored (direction: rtl, e.g. Surface Detail) so the thumb sits at
+        // (100 - fillPercent)% from the left. Fill the left edge up to the thumb so lime
+        // grows left→thumb like every other slider (was filling thumb→right = backwards).
+        slider.style.setProperty('--slider-fill-start', '0%');
+        slider.style.setProperty('--slider-fill-end', `${100 - fillPercent}%`);
       } else {
         slider.style.setProperty('--slider-fill-start', '0%');
         slider.style.setProperty('--slider-fill-end', `${fillPercent}%`);
@@ -688,6 +715,166 @@ export class UIHelpers {
   }
 
   /**
+   * Dual-write helper — persist state and emit scene apply event.
+   */
+  writeStateAndEmit(statePath, event, value) {
+    writeStateAndEmit(this.stateStore, this.eventBus, statePath, event, value);
+  }
+
+  /**
+   * Bind a range input from a UI manifest entry.
+   * @param {import('../state/uiMeshControlManifest.js').UiControlManifestEntry} entry
+   */
+  bindManifestRangeControl(entry) {
+    const input = this.ui.inputs[entry.inputId];
+    if (!input) return;
+
+    input.addEventListener('input', (event) => {
+      const value = parseManifestRangeValue(event.target.value, {
+        min: entry.clampMin,
+        max: entry.clampMax,
+        fallback: entry.fallback,
+      });
+      if (entry.labelKey) {
+        this.updateValueLabel(entry.labelKey, value, entry.labelType);
+      }
+      this.writeStateAndEmit(entry.statePath, entry.event, value);
+    });
+    this.enableSliderKeyboardStepping(input);
+  }
+
+  /**
+   * Bind a checkbox from a UI manifest entry.
+   * @param {import('../state/uiMeshControlManifest.js').UiControlManifestEntry} entry
+   */
+  bindManifestCheckboxControl(entry) {
+    const input = this.ui.inputs[entry.inputId];
+    if (!input) return;
+
+    input.addEventListener('change', (event) => {
+      const value = !!event.target.checked;
+      this.writeStateAndEmit(entry.statePath, entry.event, value);
+    });
+  }
+
+  /**
+   * Bind a color input from a UI manifest entry.
+   * @param {import('../state/uiMeshControlManifest.js').UiControlManifestEntry} entry
+   */
+  bindManifestColorControl(entry) {
+    this.bindColorInput(entry.inputId, entry.statePath, entry.event);
+  }
+
+  /**
+   * Bind multiple UI manifest entries (range / checkbox / color).
+   * @param {import('../state/uiMeshControlManifest.js').UiControlManifestEntry[]} entries
+   */
+  bindManifestControls(entries) {
+    for (const entry of entries) {
+      const type = entry.inputType ?? 'range';
+      if (type === 'color') this.bindManifestColorControl(entry);
+      else if (type === 'checkbox') this.bindManifestCheckboxControl(entry);
+      else this.bindManifestRangeControl(entry);
+    }
+  }
+
+  /**
+   * Bind Render-style manifest entries — optional look-filter batch wrapper,
+   * slice emit, scalar transforms, snap-to-center, and emit hooks.
+   * @param {import('../state/uiRenderControlManifest.js').RenderManifestEntry[]} entries
+   * @param {{ commitLookFilterTouchWith?: (fn: () => void) => void, emitHooks?: Record<string, () => void> }} [options]
+   */
+  bindLookFilterManifestControls(entries, options = {}) {
+    const { commitLookFilterTouchWith, emitHooks = {} } = options;
+
+    for (const entry of entries) {
+      const input = this.ui.inputs[entry.inputId];
+      if (!input) continue;
+
+      const writeState = (value) => {
+        const apply = () => this.stateStore.set(entry.statePath, value);
+        if (entry.lookFilterTouch && commitLookFilterTouchWith) {
+          commitLookFilterTouchWith(apply);
+        } else {
+          apply();
+        }
+      };
+
+      const emitAfter = (scalarValue) => {
+        if (entry.emitHook && emitHooks[entry.emitHook]) {
+          emitHooks[entry.emitHook]();
+          return;
+        }
+        if (entry.emitNoPayload) {
+          this.eventBus.emit(entry.event);
+          return;
+        }
+        if (entry.emitSlice) {
+          this.eventBus.emit(entry.event, getAtPath(this.stateStore.getState(), entry.emitSlice));
+          return;
+        }
+        let emitVal = scalarValue;
+        if (entry.emitTransform === 'divide100') emitVal = scalarValue / 100;
+        else if (entry.emitTransform === 'shadowsShader') {
+          emitVal = cameraShadowsUiToShader(scalarValue);
+        }
+        this.eventBus.emit(entry.event, emitVal);
+      };
+
+      const type = entry.inputType ?? 'range';
+      if (type === 'checkbox') {
+        input.addEventListener('change', (event) => {
+          const value = !!event.target.checked;
+          writeState(value);
+          emitAfter(value);
+        });
+        continue;
+      }
+      if (type === 'color') {
+        input.addEventListener('input', (event) => {
+          const value = event.target.value;
+          writeState(value);
+          emitAfter(value);
+        });
+        continue;
+      }
+
+      input.addEventListener('input', (event) => {
+        const slider = event.target;
+        let value;
+        if (entry.snapCenter) {
+          const { min, max, center } = entry.snapCenter;
+          value = this.applySnapToCenter(slider, min, max, center, event);
+          if (entry.fallback != null && !Number.isFinite(value)) {
+            value = entry.fallback;
+          }
+        } else {
+          value = parseManifestRangeValue(slider.value, {
+            min: entry.clampMin,
+            max: entry.clampMax,
+            fallback: entry.fallback,
+          });
+          if (entry.rewriteClamp && parseFloat(slider.value) !== value) {
+            slider.value = String(value);
+          }
+        }
+        if (!Number.isFinite(value)) return;
+        if (entry.labelKey) {
+          this.updateValueLabel(
+            entry.labelKey,
+            value,
+            entry.labelType,
+            entry.labelDecimals,
+          );
+        }
+        writeState(value);
+        emitAfter(value);
+      });
+      this.enableSliderKeyboardStepping(input);
+    }
+  }
+
+  /**
    * Unified color input handler
    * @param {string} inputId - The color input ID
    * @param {string} statePath - StateStore path (e.g., 'clay.color', 'lensFlare.color')
@@ -696,11 +883,10 @@ export class UIHelpers {
   bindColorInput(inputId, statePath, eventName) {
     const input = this.ui.inputs[inputId];
     if (!input) return;
-    
+
     input.addEventListener('input', (event) => {
       const value = event.target.value;
-      this.stateStore.set(statePath, value);
-      this.eventBus.emit(eventName, value);
+      this.writeStateAndEmit(statePath, eventName, value);
     });
   }
 

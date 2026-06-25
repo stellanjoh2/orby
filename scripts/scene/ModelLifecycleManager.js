@@ -118,6 +118,7 @@ export class ModelLifecycleManager {
       s.stateStore.set('svgExtrude.availableColors', []);
       s.stateStore.set('svgExtrude.colorDepths', {});
       s.stateStore.set('svgExtrude.colorOffsets', {});
+      s.stateStore.set('svgExtrude.colorReplacements', {});
       s.stateStore.set('svgExtrude.flipDirection', false);
       return;
     }
@@ -139,8 +140,11 @@ export class ModelLifecycleManager {
       svgExtrude.colorDepths ?? s.stateStore.getState()?.svgExtrude?.colorDepths ?? {};
     const existingColorOffsets =
       svgExtrude.colorOffsets ?? s.stateStore.getState()?.svgExtrude?.colorOffsets ?? {};
+    const existingColorReplacements =
+      svgExtrude.colorReplacements ?? s.stateStore.getState()?.svgExtrude?.colorReplacements ?? {};
     const nextColorDepths = {};
     const nextColorOffsets = {};
+    const nextColorReplacements = {};
     availableColors.forEach((color) => {
       if (existingColorDepths[color] !== undefined) {
         nextColorDepths[color] = existingColorDepths[color];
@@ -148,9 +152,13 @@ export class ModelLifecycleManager {
       if (existingColorOffsets[color] !== undefined) {
         nextColorOffsets[color] = existingColorOffsets[color];
       }
+      if (existingColorReplacements[color] !== undefined) {
+        nextColorReplacements[color] = existingColorReplacements[color];
+      }
     });
     s.stateStore.set('svgExtrude.colorDepths', nextColorDepths);
     s.stateStore.set('svgExtrude.colorOffsets', nextColorOffsets);
+    s.stateStore.set('svgExtrude.colorReplacements', nextColorReplacements);
     const nextBevelAmount = clampExtrudeBevelAmount(
       svgExtrude.bevelAmount ??
         s.stateStore.getState()?.svgExtrude?.bevelAmount ??
@@ -164,6 +172,7 @@ export class ModelLifecycleManager {
     s.stateStore.set('svgExtrude.detail', nextDetail);
     s.setSvgExtrudeColorDepths(nextColorDepths, { updateState: false });
     s.setSvgExtrudeColorOffsets(nextColorOffsets, { updateState: false });
+    s.setSvgExtrudeColorReplacements(nextColorReplacements, { updateState: false });
     s.setSvgExtrudeFlipDirection(flipDirection, { updateState: false });
     s.setSvgExtrudeBevel({ amount: nextBevelAmount }, { updateState: false });
     const svgState = s.stateStore.getState().svgExtrude || {};
@@ -187,7 +196,7 @@ export class ModelLifecycleManager {
     }
     const fresnelState = s.stateStore.getState().fresnel;
     if (fresnelState?.enabled) {
-      s.setFresnelSettings(fresnelState);
+      s.materialController?.setFresnelSettings(fresnelState);
     }
   }
 
@@ -247,7 +256,7 @@ export class ModelLifecycleManager {
       },
     });
     s.setShading(state.shading);
-    s.ui.syncMeshControls(s.stateStore.getState());
+    s.ui.meshControls?.sync(s.stateStore.getState());
     s._refreshImportSmoothingUi();
     s.repairRenderSurfacesAfterModelLoad?.();
     if (state.gobo?.texture) {
@@ -276,7 +285,7 @@ export class ModelLifecycleManager {
     s.ui.syncAnimationJointScale({ visible: false, enabled: false, value: state.animation?.jointScale ?? 0.5 });
     s.refreshBoneHelpers();
     if (state.fresnel?.enabled) {
-      s.setFresnelSettings(state.fresnel);
+      s.materialController?.setFresnelSettings(state.fresnel);
     }
     if (s.scene.environment) {
       const intensity = Math.max(0, s.hdriStrength);
@@ -306,7 +315,7 @@ export class ModelLifecycleManager {
     requestAnimationFrame(() => {
       const studio = s.stateStore.getState();
       s.setGroundSolid(studio.groundSolid);
-      s.setGroundWire(studio.groundWire);
+      s.groundController?.setWireEnabled(studio.groundWire);
       s.materialController?.resyncEmissiveFromImportedMaterials?.();
     });
 

@@ -79,6 +79,7 @@ export class SceneSettingsManager {
       hardEdgeAngle: svg.hardEdgeAngle,
       colorDepths: svg.colorDepths,
       colorOffsets: svg.colorOffsets,
+      colorReplacements: svg.colorReplacements,
       flipDirection: svg.flipDirection,
       colorOverride: svg.colorOverride,
       overrideColor: svg.overrideColor,
@@ -371,6 +372,9 @@ export class SceneSettingsManager {
         if (payload.wireframe.thickness !== undefined) {
           this.eventBus.emit('mesh:wireframe-thickness', payload.wireframe.thickness);
         }
+        if (payload.wireframe.opacity !== undefined) {
+          this.eventBus.emit('mesh:wireframe-opacity', payload.wireframe.opacity);
+        }
       }
       if (payload.creativeLook) {
         this.stateStore.set('creativeLook', payload.creativeLook);
@@ -455,6 +459,10 @@ export class SceneSettingsManager {
       if (payload.svgExtrude?.colorOffsets !== undefined) {
         this.stateStore.set('svgExtrude.colorOffsets', payload.svgExtrude.colorOffsets || {});
         this.eventBus.emit('mesh:svg-extrude-color-offsets', payload.svgExtrude.colorOffsets || {});
+      }
+      if (payload.svgExtrude?.colorReplacements !== undefined) {
+        this.stateStore.set('svgExtrude.colorReplacements', payload.svgExtrude.colorReplacements || {});
+        this.eventBus.emit('mesh:svg-extrude-color-replacements', payload.svgExtrude.colorReplacements || {});
       }
       if (payload.svgExtrude?.flipDirection !== undefined) {
         const enabled = !!payload.svgExtrude.flipDirection;
@@ -1200,6 +1208,16 @@ export class SceneSettingsManager {
           this.eventBus.emit(
             'camera:composition-guides-inverted',
             !!payload.camera.compositionGuidesInverted,
+          );
+        }
+        if (payload.camera.compositionPortraitCropGuide !== undefined) {
+          this.stateStore.set(
+            'camera.compositionPortraitCropGuide',
+            !!payload.camera.compositionPortraitCropGuide,
+          );
+          this.eventBus.emit(
+            'camera:composition-portrait-crop-guide',
+            !!payload.camera.compositionPortraitCropGuide,
           );
         }
         if (payload.camera.cinematicLetterbox219 !== undefined) {

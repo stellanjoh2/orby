@@ -210,5 +210,11 @@ export function isPointerOnSliderThumb(slider, clientX, tolerancePx = 10) {
     getComputedStyle(slider).direction === 'rtl';
   const thumbCenterX = isRtl ? rect.right - ratio * rect.width : rect.left + ratio * rect.width;
 
-  return Math.abs(clientX - thumbCenterX) <= tolerancePx;
+  const isGradientRail =
+    sliderLine?.classList.contains('slider-line--temperature') ||
+    sliderLine?.classList.contains('slider-line--tint') ||
+    sliderLine?.classList.contains('slider-line--saturation');
+  const hitTolerance = isGradientRail ? Math.max(tolerancePx, 14) : tolerancePx;
+
+  return Math.abs(clientX - thumbCenterX) <= hitTolerance;
 }

@@ -21,6 +21,10 @@ import {
   syncBackdropSurfaceControls,
 } from './svgExtrudeControlsShared.js';
 import { DEFAULT_LIGHTS_SHADOW_SOFTNESS } from '../config/shadowQuality.js';
+import {
+  STUDIO_CHECKBOX_UI_MANIFEST,
+  STUDIO_UI_CONTROL_MANIFEST,
+} from '../state/uiStudioControlManifest.js';
 
 export class StudioControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
@@ -83,6 +87,9 @@ export class StudioControls {
   }
 
   bind() {
+    this.helpers.bindManifestControls(STUDIO_UI_CONTROL_MANIFEST);
+    this.helpers.bindManifestControls(STUDIO_CHECKBOX_UI_MANIFEST);
+
     // HDRI controls
     this.ui.inputs.hdriButtons.forEach((button) => {
       button.addEventListener('click', () => {
@@ -129,18 +136,6 @@ export class StudioControls {
       this.stateStore.set('hdriStrength', actual);
       this.eventBus.emit('studio:hdri-strength', actual);
     });
-    this.ui.inputs.hdriBlurriness.addEventListener('input', (event) => {
-      const value = Math.min(1, Math.max(0, parseFloat(event.target.value)));
-      this.helpers.updateValueLabel('hdriBlurriness', value, 'decimal');
-      this.stateStore.set('hdriBlurriness', value);
-      this.eventBus.emit('studio:hdri-blurriness', value);
-    });
-    this.ui.inputs.hdriRotation.addEventListener('input', (event) => {
-      const value = Math.min(360, Math.max(0, parseFloat(event.target.value)));
-      this.helpers.updateValueLabel('hdriRotation', value, 'angle');
-      this.stateStore.set('hdriRotation', value);
-      this.eventBus.emit('studio:hdri-rotation', value);
-    });
     this.ui.inputs.hdriBackground.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('hdriBackground', enabled);
@@ -148,11 +143,6 @@ export class StudioControls {
       this.ui.syncHdriBackgroundCheckboxes?.(enabled, { except: event.target });
       this.ui.updateHdriBackgroundFallbackVisibility?.();
       this.ui.updateHdriReceiveShadowsAoDisabled?.();
-    });
-    this.ui.inputs.hdriReceiveShadowsAo?.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
-      this.stateStore.set('hdriReceiveShadowsAo', enabled);
-      this.eventBus.emit('studio:hdri-receive-shadows-ao', enabled);
     });
 
     // Lens Flare
@@ -169,58 +159,6 @@ export class StudioControls {
       }
       this.ui.updateLensFlareControlsDisabled();
     });
-    this.ui.inputs.lensFlareRotation?.addEventListener('input', (event) => {
-      const value = Math.min(360, Math.max(0, parseFloat(event.target.value)));
-      this.helpers.updateValueLabel('lensFlareRotation', value, 'angle');
-      this.stateStore.set('lensFlare.rotation', value);
-      this.eventBus.emit('studio:lens-flare-rotation', value);
-    });
-    this.ui.inputs.lensFlareHeight?.addEventListener('input', (event) => {
-      const value = Math.min(90, Math.max(0, parseFloat(event.target.value) || 0));
-      event.target.value = value;
-      this.helpers.updateValueLabel('lensFlareHeight', value, 'angle');
-      this.stateStore.set('lensFlare.height', value);
-      this.eventBus.emit('studio:lens-flare-height', value);
-    });
-    this.ui.inputs.lensFlareHalo?.addEventListener('input', (event) => {
-      const value = Math.min(5, Math.max(0, parseFloat(event.target.value) || 0));
-      this.helpers.updateValueLabel('lensFlareHalo', value, 'multiplier');
-      this.stateStore.set('lensFlare.haloIntensity', value);
-      this.eventBus.emit('studio:lens-flare-halo', value);
-    });
-    this.ui.inputs.lensFlareStreakLength?.addEventListener('input', (event) => {
-      const value = Math.min(10, Math.max(0, parseFloat(event.target.value) || 0));
-      this.helpers.updateValueLabel('lensFlareStreakLength', value, 'decimal');
-      this.stateStore.set('lensFlare.streakLength', value);
-      this.eventBus.emit('studio:lens-flare-streak-length', value);
-    });
-    this.ui.inputs.lensFlareSunDiscScale?.addEventListener('input', (event) => {
-      const value = Math.min(10, Math.max(0, parseFloat(event.target.value) || 0));
-      this.helpers.updateValueLabel('lensFlareSunDiscScale', value, 'decimal');
-      this.stateStore.set('lensFlare.sunDiscScale', value);
-      this.eventBus.emit('studio:lens-flare-sun-disc-scale', value);
-    });
-    this.ui.inputs.lensFlareSunDiscBlur?.addEventListener('input', (event) => {
-      const value = Math.min(5, Math.max(0, parseFloat(event.target.value) || 0));
-      this.helpers.updateValueLabel('lensFlareSunDiscBlur', value, 'decimal');
-      this.stateStore.set('lensFlare.sunDiscBlur', value);
-      this.eventBus.emit('studio:lens-flare-sun-disc-blur', value);
-    });
-    this.helpers.bindColorInput('lensFlareSunDiscColor', 'lensFlare.sunDiscColor', 'studio:lens-flare-sun-disc-color');
-    this.ui.inputs.lensFlareDiscGlowIntensity?.addEventListener('input', (event) => {
-      const value = Math.min(10, Math.max(0, parseFloat(event.target.value) || 0));
-      this.helpers.updateValueLabel('lensFlareDiscGlowIntensity', value, 'decimal');
-      this.stateStore.set('lensFlare.discGlowIntensity', value);
-      this.eventBus.emit('studio:lens-flare-disc-glow-intensity', value);
-    });
-    this.ui.inputs.lensFlareDiscGlowSize?.addEventListener('input', (event) => {
-      const value = Math.min(10, Math.max(0, parseFloat(event.target.value) || 0));
-      this.helpers.updateValueLabel('lensFlareDiscGlowSize', value, 'decimal');
-      this.stateStore.set('lensFlare.discGlowSize', value);
-      this.eventBus.emit('studio:lens-flare-disc-glow-size', value);
-    });
-    this.helpers.bindColorInput('lensFlareDiscGlowColor', 'lensFlare.discGlowColor', 'studio:lens-flare-disc-glow-color');
-    this.helpers.bindColorInput('lensFlareColor', 'lensFlare.color', 'studio:lens-flare-color');
     this.ui.inputs.lensFlareQuality?.addEventListener('change', (event) => {
       const value = event.target.value;
       this.stateStore.set('lensFlare.quality', value);
@@ -319,62 +257,6 @@ export class StudioControls {
       this.stateStore.set('groundSolid', enabled);
       this.eventBus.emit('studio:ground-solid', enabled);
     });
-    this.ui.inputs.groundWire.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
-      this.stateStore.set('groundWire', enabled);
-      this.eventBus.emit('studio:ground-wire', enabled);
-    });
-    this.helpers.bindColorInput('groundSolidColor', 'groundSolidColor', 'studio:ground-solid-color');
-    this.helpers.bindColorInput('groundWireColor', 'groundWireColor', 'studio:ground-wire-color');
-    this.ui.inputs.groundWireOpacity.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('groundWireOpacity', value, 'decimal');
-      this.stateStore.set('groundWireOpacity', value);
-      this.eventBus.emit('studio:ground-wire-opacity', value);
-    });
-    this.ui.inputs.gridLineWidth?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('gridLineWidth', value, 'decimal');
-      this.stateStore.set('gridLineWidth', value);
-      this.eventBus.emit('studio:grid-line-width', value);
-    });
-    if (this.ui.inputs.gridLineWidth) {
-      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.gridLineWidth);
-    }
-    this.ui.inputs.groundY.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('groundY', value, 'distance');
-      this.stateStore.set('groundY', value);
-      this.eventBus.emit('studio:ground-y', value);
-    });
-    this.helpers.enableSliderKeyboardStepping(this.ui.inputs.groundY);
-    this.ui.inputs.gridY?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('gridY', value, 'distance');
-      this.stateStore.set('gridY', value);
-      this.eventBus.emit('studio:grid-y', value);
-    });
-    if (this.ui.inputs.gridY) {
-      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.gridY);
-    }
-    this.ui.inputs.baseScale?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('baseScale', value, 'decimal');
-      this.stateStore.set('baseScale', value);
-      this.eventBus.emit('studio:base-scale', value);
-    });
-    this.ui.inputs.baseMetalness?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('baseMetalness', value, 'decimal');
-      this.stateStore.set('baseMetalness', value);
-      this.eventBus.emit('studio:base-metalness', value);
-    });
-    this.ui.inputs.baseRoughness?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('baseRoughness', value, 'decimal');
-      this.stateStore.set('baseRoughness', value);
-      this.eventBus.emit('studio:base-roughness', value);
-    });
     bindBaseSurfaceControls(this._baseSurfaceCtx(), {
       mirrorCtx: this._baseGlassSurfaceCtx(),
       mirrorCanEdit: (st) => this._isBaseGlassOn(st),
@@ -391,39 +273,6 @@ export class StudioControls {
       this.eventBus.emit('studio:base-glass-surface', enabled);
       this.ui.applyBlockStates?.(this.stateStore.getState());
     });
-    this.ui.inputs.baseGlassBrightness?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('baseGlassBrightness', value, 'decimal');
-      this.stateStore.set('baseGlassBrightness', value);
-      this.eventBus.emit('studio:base-glass-brightness', value);
-    });
-    if (this.ui.inputs.baseGlassBrightness) {
-      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.baseGlassBrightness);
-    }
-    this.ui.inputs.baseGlassBlur?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('baseGlassBlur', value, 'decimal');
-      this.stateStore.set('baseGlassBlur', value);
-      this.eventBus.emit('studio:base-glass-blur', value);
-    });
-    if (this.ui.inputs.baseGlassBlur) {
-      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.baseGlassBlur);
-    }
-    this.ui.inputs.baseGlassAmount?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('baseGlassAmount', value, 'decimal');
-      this.stateStore.set('baseGlassAmount', value);
-      this.eventBus.emit('studio:base-glass-amount', value);
-    });
-    if (this.ui.inputs.baseGlassAmount) {
-      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.baseGlassAmount);
-    }
-    this.ui.inputs.gridScale?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('gridScale', value, 'decimal');
-      this.stateStore.set('gridScale', value);
-      this.eventBus.emit('studio:grid-scale', value);
-    });
     this.ui.inputs.backdropEnabled?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
       if (enabled) this.ui.uiSounds?.playShelfShow();
@@ -432,44 +281,7 @@ export class StudioControls {
       this.eventBus.emit('studio:backdrop-enabled', enabled);
       this.ui.applyBlockStates?.(this.stateStore.getState());
     });
-    this.helpers.bindColorInput('backdropColor', 'backdropColor', 'studio:backdrop-color');
-    this.ui.inputs.backdropMetalness?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('backdropMetalness', value, 'decimal');
-      this.stateStore.set('backdropMetalness', value);
-      this.eventBus.emit('studio:backdrop-metalness', value);
-    });
-    this.ui.inputs.backdropRoughness?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('backdropRoughness', value, 'decimal');
-      this.stateStore.set('backdropRoughness', value);
-      this.eventBus.emit('studio:backdrop-roughness', value);
-    });
     bindBackdropSurfaceControls(this._backdropSurfaceCtx());
-    this.ui.inputs.backdropScale?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('backdropScale', value, 'decimal');
-      this.stateStore.set('backdropScale', value);
-      this.eventBus.emit('studio:backdrop-scale', value);
-    });
-    this.ui.inputs.backdropWidth?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('backdropWidth', value, 'decimal');
-      this.stateStore.set('backdropWidth', value);
-      this.eventBus.emit('studio:backdrop-width', value);
-    });
-    this.ui.inputs.backdropRotation?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('backdropRotation', value, 'angle');
-      this.stateStore.set('backdropRotation', value);
-      this.eventBus.emit('studio:backdrop-rotation', value);
-    });
-    this.ui.inputs.backdropY?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('backdropY', value, 'distance');
-      this.stateStore.set('backdropY', value);
-      this.eventBus.emit('studio:backdrop-y', value);
-    });
     this.ui.inputs.backdropSnap?.addEventListener('click', () => {
       this.ui.uiSounds?.playSelect();
       this.eventBus.emit('studio:backdrop-snap');

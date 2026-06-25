@@ -3,13 +3,9 @@
  * Manages DOF, bloom, grain, aberration, camera, exposure, and export
  */
 import {
-  AMBIENT_OCCLUSION_INTENSITY_MIN,
-  CAMERA_SHADOWS_UI_MAX,
-  CAMERA_SHADOWS_UI_MIN,
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DOF_FOCUS_MIN_M,
   DOF_UI_CONTROL_IDS,
-  cameraShadowsUiToShader,
   clampCameraShadowsUi,
   effectiveVignetteIntensity,
   getAntiAliasingUiState,
@@ -29,6 +25,10 @@ import {
   DEFAULT_CAMERA_POSITION,
   defaultCameraDistance,
 } from '../camera/cameraDefaults.js';
+import {
+  RENDER_LOOK_FILTER_MANIFEST,
+  RENDER_PLAIN_MANIFEST,
+} from '../state/uiRenderControlManifest.js';
 
 const ANAMORPHIC_BLOOM_INPUT_KEYS = [
   'anamorphicBloomEnabled',
@@ -99,6 +99,22 @@ export class RenderControls {
         }
       });
     };
+
+    const emitVignetteFromState = () => {
+      const cam = this.stateStore.getState().camera ?? {};
+      const defCam = this.stateStore.getDefaults().camera ?? {};
+      this.eventBus.emit(
+        'render:vignette',
+        effectiveVignetteIntensity(cam, defCam),
+      );
+    };
+
+    this.helpers.bindLookFilterManifestControls(RENDER_LOOK_FILTER_MANIFEST, {
+      commitLookFilterTouchWith,
+      emitHooks: { vignetteEffective: emitVignetteFromState },
+    });
+    this.helpers.bindLookFilterManifestControls(RENDER_PLAIN_MANIFEST);
+
     // DOF
     const emitDof = () => this.eventBus.emit('render:dof', this.stateStore.getState().dof);
     this._syncDofControlStates = (dof) => {
@@ -161,36 +177,6 @@ export class RenderControls {
       this._syncDofControlStates(this.stateStore.getState().dof);
       emitDof();
     });
-    const bindDofBlurMul = (inputId, stateKey, outputKey) => {
-      const input = this.ui.inputs[inputId];
-      if (!input) return;
-      input.addEventListener('input', (event) => {
-        const value = parseFloat(event.target.value);
-        this.helpers.updateValueLabel(outputKey, value, 'decimal', 2);
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set(stateKey, value);
-        });
-        emitDof();
-      });
-    };
-    bindDofBlurMul('dofForegroundBlur', 'dof.foregroundBlur', 'dofForegroundBlur');
-    bindDofBlurMul('dofBackgroundBlur', 'dof.backgroundBlur', 'dofBackgroundBlur');
-    this.ui.inputs.dofAperture.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('dofAperture', value, 'fstop');
-      commitLookFilterTouchWith(() => {
-        this.stateStore.set('dof.aperture', value);
-      });
-      emitDof();
-    });
-    if (this.ui.inputs.toggleDofZoomAttenuation) {
-      this.ui.inputs.toggleDofZoomAttenuation.addEventListener('change', (event) => {
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set('dof.zoomAttenuation', event.target.checked);
-        });
-        emitDof();
-      });
-    }
     if (this.ui.inputs.toggleDofFocusPlane) {
       this.ui.inputs.toggleDofFocusPlane.addEventListener('change', (event) => {
         this.stateStore.set('dof.showFocusPlane', event.target.checked);
@@ -226,23 +212,6 @@ export class RenderControls {
       );
       emitBloom();
     });
-    [['bloomThreshold', 'threshold'], ['bloomStrength', 'strength'], ['bloomRadius', 'radius']].forEach(([inputKey, property]) => {
-      this.ui.inputs[inputKey].addEventListener('input', (event) => {
-        const value = parseFloat(event.target.value);
-        this.helpers.updateValueLabel(inputKey, value, 'decimal');
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set(`bloom.${property}`, value);
-        });
-        emitBloom();
-      });
-    });
-    this.ui.inputs.bloomColor.addEventListener('input', (event) => {
-      const value = event.target.value;
-      commitLookFilterTouchWith(() => {
-        this.stateStore.set('bloom.color', value);
-      });
-      emitBloom();
-    });
     if (this.ui.inputs.bloomQuality) {
       this.ui.inputs.bloomQuality.addEventListener('change', (event) => {
         const raw = event.target.value;
@@ -269,65 +238,6 @@ export class RenderControls {
         emitAnamorphicBloom();
       });
     }
-    if (this.ui.inputs.anamorphicBloomStrength) {
-      this.ui.inputs.anamorphicBloomStrength.addEventListener('input', (event) => {
-        const value = parseFloat(event.target.value);
-        this.helpers.updateValueLabel('anamorphicBloomStrength', value, 'decimal');
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set('lensFlare.anamorphicBloom.strength', value);
-        });
-        emitAnamorphicBloom();
-      });
-    }
-    if (this.ui.inputs.anamorphicBloomSpread) {
-      this.ui.inputs.anamorphicBloomSpread.addEventListener('input', (event) => {
-        let value = parseFloat(event.target.value);
-        value = Math.min(ANAMORPHIC_BLOOM_SPREAD_MAX, Math.max(0, value));
-        if (value !== parseFloat(event.target.value)) {
-          event.target.value = String(value);
-        }
-        this.helpers.updateValueLabel('anamorphicBloomSpread', value, 'decimal');
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set('lensFlare.anamorphicBloom.spread', value);
-        });
-        emitAnamorphicBloom();
-      });
-    }
-    if (this.ui.inputs.anamorphicBloomStreakAngle) {
-      this.ui.inputs.anamorphicBloomStreakAngle.addEventListener('input', (event) => {
-        const value = Math.min(180, Math.max(0, parseFloat(event.target.value)));
-        this.helpers.updateValueLabel('anamorphicBloomStreakAngle', value, 'angle');
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set('lensFlare.anamorphicBloom.streakAngle', value);
-        });
-        emitAnamorphicBloom();
-      });
-    }
-    if (this.ui.inputs.anamorphicBloomThreshold) {
-      this.ui.inputs.anamorphicBloomThreshold.addEventListener('input', (event) => {
-        const value = parseFloat(event.target.value);
-        this.helpers.updateValueLabel('anamorphicBloomThreshold', value, 'decimal');
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set('lensFlare.anamorphicBloom.threshold', value);
-        });
-        emitAnamorphicBloom();
-      });
-    }
-    if (this.ui.inputs.anamorphicBloomSoften) {
-      this.ui.inputs.anamorphicBloomSoften.addEventListener('input', (event) => {
-        const value = parseFloat(event.target.value);
-        this.helpers.updateValueLabel('anamorphicBloomSoften', value, 'decimal');
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set('lensFlare.anamorphicBloom.soften', value);
-        });
-        emitAnamorphicBloom();
-      });
-    }
-    this.helpers.bindColorInput(
-      'anamorphicBloomStreakTint',
-      'lensFlare.anamorphicBloom.streakTint',
-      'studio:lens-flare-anamorphic-bloom',
-    );
     if (this.ui.inputs.anamorphicBloomQuality) {
       this.ui.inputs.anamorphicBloomQuality.addEventListener('change', (event) => {
         const q = normalizeAnamorphicBloomQualityId(event.target.value);
@@ -358,25 +268,6 @@ export class RenderControls {
           this.stateStore.set('lensDirt.enabled', enabled);
         });
         this.ui.setEffectControlsDisabled(['lensDirtStrength', 'lensDirtTintColor'], !enabled);
-        emitLensDirt();
-      });
-    }
-    if (this.ui.inputs.lensDirtStrength) {
-      this.ui.inputs.lensDirtStrength.addEventListener('input', (event) => {
-        const value = parseFloat(event.target.value);
-        this.helpers.updateValueLabel('lensDirtStrength', value, 'decimal');
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set('lensDirt.strength', value);
-        });
-        emitLensDirt();
-      });
-    }
-    if (this.ui.inputs.lensDirtTintColor) {
-      this.ui.inputs.lensDirtTintColor.addEventListener('input', (event) => {
-        const value = event.target.value;
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set('lensDirt.tintColor', value);
-        });
         emitLensDirt();
       });
     }
@@ -417,14 +308,6 @@ export class RenderControls {
       );
       emitAberration();
     });
-    this.ui.inputs.aberrationAmount.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('aberrationAmount', value, 'decimal', 4);
-      commitLookFilterTouchWith(() => {
-        this.stateStore.set('aberration.amount', value);
-      });
-      emitAberration();
-    });
 
     const emitAmbientOcclusion = () =>
       this.eventBus.emit('render:ambient-occlusion', this.stateStore.getState().ambientOcclusion);
@@ -446,30 +329,6 @@ export class RenderControls {
         emitAmbientOcclusion();
       });
     }
-    if (this.ui.inputs.ambientOcclusionIntensity) {
-      this.ui.inputs.ambientOcclusionIntensity.addEventListener('input', (event) => {
-        const raw = parseFloat(event.target.value);
-        const value = Math.max(AMBIENT_OCCLUSION_INTENSITY_MIN, raw);
-        if (value !== raw) {
-          event.target.value = String(value);
-        }
-        this.helpers.updateValueLabel('ambientOcclusionIntensity', value, 'decimal');
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set('ambientOcclusion.intensity', value);
-        });
-        emitAmbientOcclusion();
-      });
-    }
-    if (this.ui.inputs.ambientOcclusionRadius) {
-      this.ui.inputs.ambientOcclusionRadius.addEventListener('input', (event) => {
-        const value = parseFloat(event.target.value);
-        this.helpers.updateValueLabel('ambientOcclusionRadius', value, 'decimal');
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set('ambientOcclusion.radius', value);
-        });
-        emitAmbientOcclusion();
-      });
-    }
     if (this.ui.inputs.ambientOcclusionQuality) {
       this.ui.inputs.ambientOcclusionQuality.addEventListener('change', (event) => {
         const value = event.target.value;
@@ -477,14 +336,6 @@ export class RenderControls {
           value === 'low' || value === 'medium' ? value : 'max';
         commitLookFilterTouchWith(() => {
           this.stateStore.set('ambientOcclusion.quality', normalized);
-        });
-        emitAmbientOcclusion();
-      });
-    }
-    if (this.ui.inputs.ambientOcclusionColor) {
-      this.ui.inputs.ambientOcclusionColor.addEventListener('input', (event) => {
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set('ambientOcclusion.color', event.target.value);
         });
         emitAmbientOcclusion();
       });
@@ -520,10 +371,26 @@ export class RenderControls {
           enabled,
           animate: true,
         });
-        this.ui.setEffectControlsDisabled(
-          ['compositionGuidesColor'],
-          !enabled,
-        );
+        this.ui.setEffectControlsDisabled(['compositionGuidesColor'], !enabled);
+        if (enabled) {
+          const cropOn = !!(this.stateStore.getState().camera?.compositionPortraitCropGuide);
+          this.eventBus.emit('camera:composition-portrait-crop-guide', cropOn);
+        }
+      });
+    }
+    const setCompositionAspect = (portrait) => {
+      this.stateStore.set('camera.compositionPortraitCropGuide', portrait);
+      this.eventBus.emit('camera:composition-portrait-crop-guide', portrait);
+      this.syncCompositionAspectButtons(portrait);
+    };
+    if (this.ui.inputs.compositionAspectLandscape) {
+      this.ui.inputs.compositionAspectLandscape.addEventListener('click', () => {
+        setCompositionAspect(false);
+      });
+    }
+    if (this.ui.inputs.compositionAspectPortrait) {
+      this.ui.inputs.compositionAspectPortrait.addEventListener('click', () => {
+        setCompositionAspect(true);
       });
     }
     if (this.ui.inputs.compositionGuidesColor) {
@@ -562,15 +429,6 @@ export class RenderControls {
     }
 
     // Camera (FOV + lens presets live in LensControls.js)
-    this.ui.inputs.cameraTilt?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      if (!Number.isFinite(value)) return;
-      this.helpers.updateValueLabel('cameraTilt', value, 'angle');
-      this.stateStore.set('camera.tilt', value);
-      this.eventBus.emit('camera:tilt', value);
-    });
-    if (this.ui.inputs.cameraTilt) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraTilt);
-
     const emitCameraWorldPosition = (position) => {
       if (this.stateStore.getState().camera?.isometric?.enabled) return;
       this.stateStore.set('camera.worldPosition', { ...position });
@@ -673,48 +531,7 @@ export class RenderControls {
         emitFisheye();
       });
     }
-    if (this.ui.inputs.fisheyeHorizontalFOV) {
-      this.ui.inputs.fisheyeHorizontalFOV.addEventListener('input', (event) => {
-        const value = parseFloat(event.target.value);
-        this.helpers.updateValueLabel('fisheyeHorizontalFOV', value, 'angle');
-        this.stateStore.set('fisheye.horizontalFOVDeg', value);
-        emitFisheye();
-      });
-    }
-    if (this.ui.inputs.fisheyeStrength) {
-      this.ui.inputs.fisheyeStrength.addEventListener('input', (event) => {
-        const value = parseFloat(event.target.value);
-        this.helpers.updateValueLabel('fisheyeStrength', value, 'decimal');
-        this.stateStore.set('fisheye.strength', value);
-        emitFisheye();
-      });
-    }
-    if (this.ui.inputs.fisheyeCylindricalRatio) {
-      this.ui.inputs.fisheyeCylindricalRatio.addEventListener(
-        'input',
-        (event) => {
-          const value = parseFloat(event.target.value);
-          this.helpers.updateValueLabel(
-            'fisheyeCylindricalRatio',
-            value,
-            'decimal',
-          );
-          this.stateStore.set('fisheye.cylindricalRatio', value);
-          emitFisheye();
-        },
-      );
-    }
 
-    // Exposure
-    this.ui.inputs.exposure.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, 0, 2, 1.0, event);
-      this.helpers.updateValueLabel('exposure', value, 'decimal');
-      commitLookFilterTouchWith(() => {
-        this.stateStore.set('exposure', value);
-      });
-      this.eventBus.emit('scene:exposure', value);
-    });
-    this.helpers.enableSliderKeyboardStepping(this.ui.inputs.exposure);
     if (this.ui.inputs.autoExposure) {
       this.ui.inputs.autoExposure.addEventListener('change', (event) => {
         const enabled = event.target.checked;
@@ -767,114 +584,9 @@ export class RenderControls {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraClipFar);
     }
 
-    // Color & Tone
-    this.ui.inputs.cameraContrast?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, 0, 2, 1.0, event);
-      commitLookFilterTouchWith(() => {
-        this.stateStore.set('camera.contrast', value);
-      });
-      this.helpers.updateValueLabel('cameraContrast', value, 'decimal');
-      this.eventBus.emit('render:contrast', value);
-    });
-    if (this.ui.inputs.cameraContrast) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraContrast);
-
-    this.ui.inputs.cameraTemperature?.addEventListener('input', (event) => {
-      const parsed = this.helpers.applySnapToCenter(event.target, 2000, 10000, 6000, event);
-      const kelvin = Number.isFinite(parsed) ? parsed : CAMERA_TEMPERATURE_NEUTRAL_K;
-      commitLookFilterTouchWith(() => {
-        this.stateStore.set('camera.temperature', kelvin);
-      });
-      this.helpers.updateValueLabel('cameraTemperature', kelvin, 'kelvin');
-      this.eventBus.emit('render:temperature', kelvin);
-    });
-    if (this.ui.inputs.cameraTemperature) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraTemperature);
-
-    this.ui.inputs.cameraTint?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, -100, 100, 0, event) || 0;
-      commitLookFilterTouchWith(() => {
-        this.stateStore.set('camera.tint', value);
-      });
-      this.helpers.updateValueLabel('cameraTint', value, 'integer');
-      this.eventBus.emit('render:tint', value / 100);
-    });
-    if (this.ui.inputs.cameraTint) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraTint);
-
-    this.ui.inputs.cameraHighlights?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, -100, 100, 0, event) || 0;
-      commitLookFilterTouchWith(() => {
-        this.stateStore.set('camera.highlights', value);
-      });
-      this.helpers.updateValueLabel('cameraHighlights', value, 'integer');
-      this.eventBus.emit('render:highlights', value / 100);
-    });
-    if (this.ui.inputs.cameraHighlights) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraHighlights);
-
-    this.ui.inputs.cameraShadows?.addEventListener('input', (event) => {
-      const value =
-        this.helpers.applySnapToCenter(
-          event.target,
-          CAMERA_SHADOWS_UI_MIN,
-          CAMERA_SHADOWS_UI_MAX,
-          0,
-          event,
-        ) || 0;
-      commitLookFilterTouchWith(() => {
-        this.stateStore.set('camera.shadows', value);
-      });
-      this.helpers.updateValueLabel('cameraShadows', value, 'integer');
-      this.eventBus.emit('render:shadows', cameraShadowsUiToShader(value));
-    });
-    if (this.ui.inputs.cameraShadows) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraShadows);
-
-    this.ui.inputs.cameraSaturation?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, 0, 2, 1.0, event);
-      commitLookFilterTouchWith(() => {
-        this.stateStore.set('camera.saturation', value);
-      });
-      this.helpers.updateValueLabel('cameraSaturation', value, 'decimal');
-      this.eventBus.emit('render:saturation', value);
-    });
-    if (this.ui.inputs.cameraSaturation) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraSaturation);
-
-    this.ui.inputs.cameraClarity?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, -100, 100, 0, event);
-      commitLookFilterTouchWith(() => {
-        this.stateStore.set('camera.clarity', value);
-      });
-      this.helpers.updateValueLabel('cameraClarity', value, 'integer');
-      this.eventBus.emit('render:clarity', value);
-    });
-    if (this.ui.inputs.cameraClarity) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraClarity);
-
-    this.ui.inputs.cameraFade?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value) || 0;
-      commitLookFilterTouchWith(() => {
-        this.stateStore.set('camera.fade', value);
-      });
-      this.helpers.updateValueLabel('cameraFade', value, 'integer');
-      this.eventBus.emit('render:fade', value);
-    });
-    if (this.ui.inputs.cameraFade) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraFade);
-
-    this.ui.inputs.cameraSharpness?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value) || 0;
-      commitLookFilterTouchWith(() => {
-        this.stateStore.set('camera.sharpness', value);
-      });
-      this.helpers.updateValueLabel('cameraSharpness', value, 'integer');
-      this.eventBus.emit('render:sharpness', value);
-    });
-    if (this.ui.inputs.cameraSharpness) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraSharpness);
+    // Color & Tone — sliders bound via RENDER_LOOK_FILTER_MANIFEST
 
     // Vignette
-    const emitVignetteFromState = () => {
-      const cam = this.stateStore.getState().camera ?? {};
-      const defCam = this.stateStore.getDefaults().camera ?? {};
-      this.eventBus.emit(
-        'render:vignette',
-        effectiveVignetteIntensity(cam, defCam),
-      );
-    };
     this.ui.inputs.toggleVignette?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       commitLookFilterTouchWith(() => {
@@ -892,23 +604,6 @@ export class RenderControls {
         !enabled,
       );
       emitVignetteFromState();
-    });
-    this.ui.inputs.vignetteIntensity?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, 0, 1, 0, event);
-      commitLookFilterTouchWith(() => {
-        this.stateStore.set('camera.vignette', value);
-      });
-      this.helpers.updateValueLabel('vignetteIntensity', value, 'decimal');
-      emitVignetteFromState();
-    });
-    if (this.ui.inputs.vignetteIntensity) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.vignetteIntensity);
-
-    this.ui.inputs.vignetteColor?.addEventListener('input', (event) => {
-      const value = event.target.value;
-      commitLookFilterTouchWith(() => {
-        this.stateStore.set('camera.vignetteColor', value);
-      });
-      this.eventBus.emit('render:vignette-color', value);
     });
 
     if (this.ui.inputs.renderQuality) {
@@ -1472,11 +1167,11 @@ export class RenderControls {
       this.ui.inputs.compositionGridEnabled.checked = gridOn;
       // Do not emit `camera:composition-grid` here — same reason as letterbox (sync runs inside
       // the checkbox `change` handler before `{ animate: true }` is emitted).
-      this.ui.setEffectControlsDisabled(
-        ['compositionGuidesColor'],
-        !gridOn,
-      );
+      this.ui.setEffectControlsDisabled(['compositionGuidesColor'], !gridOn);
     }
+    this.syncCompositionAspectButtons(
+      !!(state.camera?.compositionPortraitCropGuide),
+    );
     if (this.ui.inputs.compositionGuidesColor) {
       const inverted = !!(state.camera?.compositionGuidesInverted);
       this.ui.inputs.compositionGuidesColor.value = inverted ? 'dark' : 'light';
@@ -1591,6 +1286,20 @@ export class RenderControls {
 
     this.toneCurveController?.syncFromState(state);
     this._syncExportSizeControls();
+  }
+
+  /** Highlight the active composition-guide aspect — 16∶9 (portrait off) vs 9∶16 (portrait crop). */
+  syncCompositionAspectButtons(portrait) {
+    const landscapeBtn = this.ui.inputs.compositionAspectLandscape;
+    const portraitBtn = this.ui.inputs.compositionAspectPortrait;
+    if (landscapeBtn) {
+      landscapeBtn.classList.toggle('active', !portrait);
+      landscapeBtn.setAttribute('aria-pressed', portrait ? 'false' : 'true');
+    }
+    if (portraitBtn) {
+      portraitBtn.classList.toggle('active', !!portrait);
+      portraitBtn.setAttribute('aria-pressed', portrait ? 'true' : 'false');
+    }
   }
 
   syncCameraWorldPose(pose) {

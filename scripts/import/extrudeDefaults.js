@@ -28,7 +28,7 @@ export const DEFAULT_SVG_EXTRUDE_SURFACE_PRESET = 'none';
 export const DEFAULT_SVG_EXTRUDE_SURFACE_SCALE = 1.0;
 export const DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH = 1.0;
 
-/** Default `svgExtrude` slice — keep in sync with {@link StateStore} initial state. */
+/** Default `svgExtrude` slice — canonical source: {@link createImportDefaults} in `state/defaults/importDefaults.js`. */
 export const DEFAULT_SVG_EXTRUDE_STATE = {
   enabled: false,
   depth: DEFAULT_EXTRUDE_DEPTH,
@@ -38,6 +38,8 @@ export const DEFAULT_SVG_EXTRUDE_STATE = {
   availableColors: [],
   colorDepths: {},
   colorOffsets: {},
+  /** Per-fill recolor overrides keyed by grouped palette hex (live material recolor, no rebuild). */
+  colorReplacements: {},
   flipDirection: false,
   colorOverride: false,
   overrideColor: DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
@@ -65,6 +67,7 @@ export function resolveSvgExtrudeDefaults(source = {}) {
     availableColors: Array.isArray(svg.availableColors) ? [...svg.availableColors] : [],
     colorDepths: { ...(svg.colorDepths || {}) },
     colorOffsets: { ...(svg.colorOffsets || {}) },
+    colorReplacements: { ...(svg.colorReplacements || {}) },
     flipDirection: !!svg.flipDirection,
     colorOverride: !!svg.colorOverride,
     overrideColor: svg.overrideColor ?? DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
@@ -97,6 +100,7 @@ export function resetSvgExtrudeState(stateStore, eventBus, storeDefaults = {}) {
     stateStore.set('svgExtrude.detail', svg.detail);
     stateStore.set('svgExtrude.colorDepths', svg.colorDepths);
     stateStore.set('svgExtrude.colorOffsets', svg.colorOffsets);
+    stateStore.set('svgExtrude.colorReplacements', svg.colorReplacements);
     stateStore.set('svgExtrude.flipDirection', svg.flipDirection);
     stateStore.set('svgExtrude.colorOverride', svg.colorOverride);
     stateStore.set('svgExtrude.overrideColor', svg.overrideColor);
@@ -112,6 +116,7 @@ export function resetSvgExtrudeState(stateStore, eventBus, storeDefaults = {}) {
   eventBus.emit('mesh:svg-extrude-detail', svg.detail);
   eventBus.emit('mesh:svg-extrude-color-depths', svg.colorDepths);
   eventBus.emit('mesh:svg-extrude-color-offsets', svg.colorOffsets);
+  eventBus.emit('mesh:svg-extrude-color-replacements', svg.colorReplacements);
   eventBus.emit('mesh:svg-extrude-flip-direction', svg.flipDirection);
   eventBus.emit('mesh:svg-extrude-color-override', {
     enabled: svg.colorOverride,
@@ -139,6 +144,7 @@ export function buildFontExtrudeSvgExtrudeBaseline(overrides = {}) {
     availableColors: [],
     colorDepths: {},
     colorOffsets: {},
+    colorReplacements: {},
     flipDirection: true,
     colorOverride: false,
     overrideColor: DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,

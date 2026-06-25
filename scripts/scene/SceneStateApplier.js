@@ -55,26 +55,26 @@ function createStateApplySteps() {
       id: 'ground',
       apply: (s, state) => {
         s.setGroundSolid(state.groundSolid);
-        s.setGroundWire(state.groundWire);
-        s.setGroundSolidColor(state.groundSolidColor);
-        s.setGroundWireColor(state.groundWireColor);
-        s.setGroundWireOpacity(state.groundWireOpacity);
+        s.groundController?.setWireEnabled(state.groundWire);
+        s.groundController?.setSolidColor(state.groundSolidColor);
+        s.groundController?.setWireColor(state.groundWireColor);
+        s.groundController?.setWireOpacity(state.groundWireOpacity);
         s.setGroundY(state.groundY ?? 0);
-        s.setGridY(state.gridY ?? 0);
+        s.groundController?.setGridY(state.gridY ?? 0);
       },
     },
     {
       id: 'base',
       apply: (s, state) => {
         s.setBaseScale(state.baseScale ?? 1, { updateState: false });
-        s.setBaseMetalness(state.baseMetalness ?? DEFAULT_MATERIAL_METALNESS, {
-          updateState: false,
-        });
-        s.setBaseRoughness(state.baseRoughness ?? DEFAULT_MATERIAL_ROUGHNESS, {
-          updateState: false,
-        });
-        s.setBaseReflection(state.baseReflection ?? 1, { updateState: false });
-        s.setBaseClearcoat(state.baseClearcoat ?? 0, { updateState: false });
+        s.groundController?.setBaseMetalness(
+          state.baseMetalness ?? DEFAULT_MATERIAL_METALNESS,
+        );
+        s.groundController?.setBaseRoughness(
+          state.baseRoughness ?? DEFAULT_MATERIAL_ROUGHNESS,
+        );
+        s.groundController?.setBaseReflection(state.baseReflection ?? 1);
+        s.groundController?.setBaseClearcoat(state.baseClearcoat ?? 0);
         s.setBaseSurface(
           {
             preset: state.baseSurfacePreset,
@@ -87,15 +87,10 @@ function createStateApplySteps() {
           !!(state.baseGlassSurface ?? state.podiumReflectMesh ?? false),
           { updateState: false },
         );
-        s.setBaseGlassBlur(state.baseGlassBlur ?? DEFAULT_BASE_GLASS_BLUR, {
-          updateState: false,
-        });
-        s.setBaseGlassAmount(state.baseGlassAmount ?? DEFAULT_BASE_GLASS_AMOUNT, {
-          updateState: false,
-        });
-        s.setBaseGlassBrightness(
+        s.groundController?.setBaseGlassBlur(state.baseGlassBlur ?? DEFAULT_BASE_GLASS_BLUR);
+        s.groundController?.setBaseGlassAmount(state.baseGlassAmount ?? DEFAULT_BASE_GLASS_AMOUNT);
+        s.groundController?.setBaseGlassBrightness(
           state.baseGlassBrightness ?? DEFAULT_BASE_GLASS_BRIGHTNESS,
-          { updateState: false },
         );
       },
     },
@@ -105,15 +100,15 @@ function createStateApplySteps() {
         s.setBackdropEnabled(!!state.backdropEnabled, { updateState: false });
         s.setBackdropScale(state.backdropScale ?? 1, { updateState: false });
         s.setBackdropWidth(state.backdropWidth ?? 2, { updateState: false });
-        s.setBackdropColor(state.backdropColor ?? '#808080', { updateState: false });
+        s.groundController?.setBackdropColor(state.backdropColor ?? '#808080');
         s.setBackdropRotation(state.backdropRotation ?? 0, { updateState: false });
         s.setBackdropY(state.backdropY ?? 0, { updateState: false });
-        s.setBackdropMetalness(state.backdropMetalness ?? DEFAULT_BACKDROP_METALNESS, {
-          updateState: false,
-        });
-        s.setBackdropRoughness(state.backdropRoughness ?? DEFAULT_BACKDROP_ROUGHNESS, {
-          updateState: false,
-        });
+        s.groundController?.setBackdropMetalness(
+          state.backdropMetalness ?? DEFAULT_BACKDROP_METALNESS,
+        );
+        s.groundController?.setBackdropRoughness(
+          state.backdropRoughness ?? DEFAULT_BACKDROP_ROUGHNESS,
+        );
         s.setBackdropSurface(
           {
             preset: state.backdropSurfacePreset,
@@ -128,8 +123,8 @@ function createStateApplySteps() {
       id: 'wireframe-grid',
       apply: (s, state) => {
         s.setSceneGeometryWireframe(false);
-        s.setGridScale(state.gridScale ?? 1);
-        s.setGridLineWidth(state.gridLineWidth ?? 1);
+        s.groundController?.setGridScale(state.gridScale ?? 1);
+        s.groundController?.setGridLineWidth(state.gridLineWidth ?? 1);
       },
     },
     {
@@ -281,6 +276,9 @@ function createStateApplySteps() {
         if (state.svgExtrude?.colorOffsets !== undefined) {
           s.setSvgExtrudeColorOffsets(state.svgExtrude.colorOffsets, { updateState: false });
         }
+        if (state.svgExtrude?.colorReplacements !== undefined) {
+          s.setSvgExtrudeColorReplacements(state.svgExtrude.colorReplacements, { updateState: false });
+        }
         if (state.svgExtrude?.flipDirection !== undefined) {
           s.setSvgExtrudeFlipDirection(state.svgExtrude.flipDirection, { updateState: false });
         }
@@ -313,8 +311,8 @@ function createStateApplySteps() {
       id: 'post-lens-dirt',
       apply: (s, state) => {
         s.lensDirtController?.updateSettings(state.lensDirt);
-        s.updateGrain(state.grain);
-        s.updateAberration(state.aberration);
+        s.postPipeline?.updateGrain(state.grain);
+        s.postPipeline?.updateAberration(state.aberration);
       },
     },
     {
@@ -324,26 +322,26 @@ function createStateApplySteps() {
         s.backgroundController?.setSolidEnabled(getBackgroundMode(state) === 'solid');
         s.backgroundGradientController?.setConfig(state.backgroundGradient ?? {});
         s.backgroundImageController?.setConfig(state.backgroundImage ?? {});
-        s.setToneMapping(state.toneMapping ?? 'aces-filmic');
+        s.postPipeline?.setToneMapping(state.toneMapping ?? 'aces-filmic');
         s.setHdriStrength(state.hdriStrength ?? 2);
       },
     },
     {
       id: 'camera-color-grade',
       apply: (s, state) => {
-        s.setContrast(state.camera?.contrast ?? 1.0);
-        s.setSaturation(state.camera?.saturation ?? 1.0);
-        s.setClarity(state.camera?.clarity ?? 0);
-        s.setFade(state.camera?.fade ?? 0);
-        s.setSharpness(state.camera?.sharpness ?? 0);
-        s.setToneCurve(state.toneCurve);
-        s.setTemperature(state.camera?.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
-        s.setTint((state.camera?.tint ?? 0) / 100);
-        s.setHighlights((state.camera?.highlights ?? 0) / 100);
-        s.setShadows(cameraShadowsUiToShader(state.camera?.shadows ?? 0));
+        s.postPipeline?.setContrast(state.camera?.contrast ?? 1.0);
+        s.postPipeline?.setSaturation(state.camera?.saturation ?? 1.0);
+        s.postPipeline?.setClarity(state.camera?.clarity ?? 0);
+        s.postPipeline?.setFade(state.camera?.fade ?? 0);
+        s.postPipeline?.setSharpness(state.camera?.sharpness ?? 0);
+        s.postPipeline?.setToneCurve(state.toneCurve);
+        s.postPipeline?.setTemperature(state.camera?.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
+        s.postPipeline?.setTint((state.camera?.tint ?? 0) / 100);
+        s.postPipeline?.setHighlights((state.camera?.highlights ?? 0) / 100);
+        s.postPipeline?.setShadows(cameraShadowsUiToShader(state.camera?.shadows ?? 0));
         const defaultCam = s.stateStore.getDefaults().camera ?? {};
-        s.setVignette(effectiveVignetteIntensity(state.camera, defaultCam));
-        s.setVignetteColor(state.camera?.vignetteColor ?? '#080808');
+        s.postPipeline?.setVignette(effectiveVignetteIntensity(state.camera, defaultCam));
+        s.postPipeline?.setVignetteColor(state.camera?.vignetteColor ?? '#080808');
       },
     },
     {

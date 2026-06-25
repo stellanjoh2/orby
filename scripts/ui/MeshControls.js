@@ -3,10 +3,9 @@
  * Manages shading, materials, transforms, clay, wireframe, fresnel, and export settings
  */
 import {
-  DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_WIREFRAME_LINE_WIDTH,
-  MATERIAL_EMISSIVE_SLIDER_MAX,
+  DEFAULT_WIREFRAME_OPACITY,
   getMaterialMrResetDefaults,
   ORBY_BLACK,
 } from '../constants.js';
@@ -53,7 +52,18 @@ import {
   renderSvgColorDepthControls,
 } from './svgExtrudeControlsShared.js';
 import { normalizeExportSubtleSpinDegrees, normalizeExportHdriRotationDegrees } from '../render/exportVideoMovements.js';
+import {
+  EXPORT_VIDEO_ASPECT_LANDSCAPE,
+  EXPORT_VIDEO_ASPECT_PORTRAIT,
+  getExportVideoResolutionPixelLabel,
+  isPortraitExportVideoAspect,
+  normalizeExportVideoAspectRatio,
+} from '../render/exportVideoResolution.js';
 import { IMPORT_MESH_SMOOTHING_ENABLED } from '../import/stlNormalSmoothing.js';
+import {
+  MESH_CHECKBOX_UI_MANIFEST,
+  MESH_UI_CONTROL_MANIFEST,
+} from '../state/uiMeshControlManifest.js';
 export class MeshControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
     this.eventBus = eventBus;
@@ -160,56 +170,12 @@ export class MeshControls {
       });
     });
 
-    // Material controls
-    this.ui.inputs.materialBrightness?.addEventListener('input', (event) => {
-      const parsed = parseFloat(event.target.value);
-      const value = Number.isFinite(parsed)
-        ? Math.max(0, Math.min(5, parsed))
-        : DEFAULT_MATERIAL_BRIGHTNESS;
-      this.helpers.updateValueLabel('materialBrightness', value, 'decimal');
-      this.stateStore.set('material.brightness', value);
-      this.eventBus.emit('mesh:material-brightness', value);
-    });
-    if (this.ui.inputs.materialBrightness) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.materialBrightness);
-
-    this.ui.inputs.materialMetalness?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      const clampedValue = isNaN(value) ? 0.0 : Math.max(0, Math.min(1, value));
-      this.helpers.updateValueLabel('materialMetalness', clampedValue, 'decimal');
-      this.stateStore.set('material.metalness', clampedValue);
-      this.eventBus.emit('mesh:material-metalness', clampedValue);
-    });
-    if (this.ui.inputs.materialMetalness) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.materialMetalness);
-
-    this.ui.inputs.materialRoughness?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      const clampedValue = isNaN(value) ? 0.5 : Math.max(0, Math.min(1, value));
-      this.helpers.updateValueLabel('materialRoughness', clampedValue, 'decimal');
-      this.stateStore.set('material.roughness', clampedValue);
-      this.eventBus.emit('mesh:material-roughness', clampedValue);
-    });
-    if (this.ui.inputs.materialRoughness) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.materialRoughness);
-
-    this.ui.inputs.materialEmissive?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      const clampedValue = isNaN(value)
-        ? 0
-        : Math.max(0, Math.min(MATERIAL_EMISSIVE_SLIDER_MAX, value));
-      this.helpers.updateValueLabel('materialEmissive', clampedValue, 'decimal');
-      this.stateStore.set('material.emissive', clampedValue);
-      this.eventBus.emit('mesh:material-emissive', clampedValue);
-    });
-    if (this.ui.inputs.materialEmissive) {
-      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.materialEmissive);
-    }
+    // Transform + material + clay — manifest-driven dual-write
+    this.helpers.bindManifestControls(MESH_UI_CONTROL_MANIFEST);
+    this.helpers.bindManifestControls(MESH_CHECKBOX_UI_MANIFEST);
 
     bindSvgExtrudeControls(this._svgExtrudeCtx());
     bindExtrudeBevelControls(this._svgExtrudeCtx());
-    this.ui.inputs.reverseNormals?.addEventListener('change', (event) => {
-      const enabled = !!event.target.checked;
-      this.stateStore.set('advanced.reverseNormals', enabled);
-      this.eventBus.emit('mesh:reverse-normals', enabled);
-    });
     this.ui.inputs.centerPivotBtn?.addEventListener('click', () => {
       this.ui.uiSounds?.playSelect?.();
       this.eventBus.emit('mesh:recenter-pivot');
@@ -340,62 +306,6 @@ export class MeshControls {
     if (this.ui.inputs.glassBody) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.glassBody);
     }
-    // Transform controls
-    this.ui.inputs.scale.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('scale', value, 'multiplier');
-      this.stateStore.set('scale', value);
-      this.eventBus.emit('mesh:scale', value);
-    });
-    this.helpers.enableSliderKeyboardStepping(this.ui.inputs.scale);
-
-    this.ui.inputs.xOffset?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('xOffset', value, 'distance');
-      this.stateStore.set('xOffset', value);
-      this.eventBus.emit('mesh:xOffset', value);
-    });
-    if (this.ui.inputs.xOffset) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.xOffset);
-
-    this.ui.inputs.yOffset?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('yOffset', value, 'distance');
-      this.stateStore.set('yOffset', value);
-      this.eventBus.emit('mesh:yOffset', value);
-    });
-    if (this.ui.inputs.yOffset) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.yOffset);
-
-    this.ui.inputs.zOffset?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('zOffset', value, 'distance');
-      this.stateStore.set('zOffset', value);
-      this.eventBus.emit('mesh:zOffset', value);
-    });
-    if (this.ui.inputs.zOffset) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.zOffset);
-
-    this.ui.inputs.rotationX?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('rotationX', value, 'angle');
-      this.stateStore.set('rotationX', value);
-      this.eventBus.emit('mesh:rotationX', value);
-    });
-    if (this.ui.inputs.rotationX) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.rotationX);
-
-    this.ui.inputs.rotationY?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('rotationY', value, 'angle');
-      this.stateStore.set('rotationY', value);
-      this.eventBus.emit('mesh:rotationY', value);
-    });
-    if (this.ui.inputs.rotationY) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.rotationY);
-
-    this.ui.inputs.rotationZ?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('rotationZ', value, 'angle');
-      this.stateStore.set('rotationZ', value);
-      this.eventBus.emit('mesh:rotationZ', value);
-    });
-    if (this.ui.inputs.rotationZ) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.rotationZ);
 
     // Turntable (mesh auto-rotate)
     this.ui.inputs.autoRotate.forEach((input) => {
@@ -411,14 +321,6 @@ export class MeshControls {
       const direction = event.target.value === 'reverse' ? 'reverse' : 'forward';
       this.stateStore.set('autoRotateDirection', direction);
       this.eventBus.emit('mesh:auto-rotate-direction', direction);
-    });
-
-    // Clay controls
-    this.helpers.bindColorInput('clayColor', 'clay.color', 'mesh:clay-color');
-    this.ui.inputs.clayNormalMap?.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
-      this.stateStore.set('clay.normalMap', enabled);
-      this.eventBus.emit('mesh:clay-normal-map', enabled);
     });
 
     /* Subsurface UI — enable with SUBSURFACE_FEATURE_ENABLED in MaterialController.js + uncomment index.html subsection.
@@ -489,6 +391,16 @@ export class MeshControls {
     });
     if (this.ui.inputs.wireframeThickness) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.wireframeThickness);
+    }
+    this.ui.inputs.wireframeOpacity?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      if (!Number.isFinite(value)) return;
+      this.helpers.updateValueLabel('wireframeOpacity', value, 'decimal');
+      this.stateStore.set('wireframe.opacity', value);
+      this.eventBus.emit('mesh:wireframe-opacity', value);
+    });
+    if (this.ui.inputs.wireframeOpacity) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.wireframeOpacity);
     }
 
     const updateCreativeLookFoldout = (open) => {
@@ -1180,10 +1092,68 @@ export class MeshControls {
           && resolution !== '2160p'
         ) return;
         this.ui.exportSettings.video.resolution = resolution;
-        document.querySelectorAll('[data-video-resolution]').forEach((btn) => {
+        syncExportVideoResolutionUi();
+      });
+    });
+
+    const syncExportVideoResolutionUi = () => {
+      const video = this.ui.exportSettings.video || {};
+      const resolution =
+        video.resolution === '1440p' || video.resolution === '2160p'
+          ? video.resolution
+          : '1080p';
+      const aspectRatio = normalizeExportVideoAspectRatio(video.aspectRatio);
+      document.querySelectorAll('[data-video-resolution]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.videoResolution === resolution);
+        btn.dataset.tooltip = getExportVideoResolutionPixelLabel(
+          btn.dataset.videoResolution,
+          aspectRatio,
+        );
+      });
+    };
+
+    const enablePortraitCropPreview = () => {
+      const cam = this.stateStore.getState().camera ?? {};
+      if (!cam.compositionGridEnabled && this.ui.inputs.compositionGridEnabled) {
+        this.ui.inputs.compositionGridEnabled.checked = true;
+        this.stateStore.set('camera.compositionGridEnabled', true);
+        this.eventBus.emit('camera:composition-grid', { enabled: true, animate: true });
+        this.ui.setEffectControlsDisabled(['compositionGuidesColor'], false);
+      }
+      if (cam.compositionPortraitCropGuide) {
+        this.eventBus.emit('camera:composition-portrait-crop-guide', true);
+        return;
+      }
+      this.stateStore.set('camera.compositionPortraitCropGuide', true);
+      this.eventBus.emit('camera:composition-portrait-crop-guide', true);
+    };
+
+    document.querySelectorAll('[data-video-aspect-ratio]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const aspectRatio = button.dataset.videoAspectRatio;
+        if (
+          aspectRatio !== EXPORT_VIDEO_ASPECT_LANDSCAPE
+          && aspectRatio !== EXPORT_VIDEO_ASPECT_PORTRAIT
+        ) return;
+        this.ui.exportSettings.video.aspectRatio = aspectRatio;
+        document.querySelectorAll('[data-video-aspect-ratio]').forEach((btn) => {
           btn.classList.toggle('active', btn === button);
         });
+        syncExportVideoResolutionUi();
+        if (isPortraitExportVideoAspect(aspectRatio)) {
+          enablePortraitCropPreview();
+        }
+        notifyExportPreviewSettingsChanged();
       });
+    });
+
+    syncExportVideoResolutionUi();
+    document.querySelectorAll('[data-video-aspect-ratio]').forEach((btn) => {
+      btn.classList.toggle(
+        'active',
+        btn.dataset.videoAspectRatio
+          === normalizeExportVideoAspectRatio(this.ui.exportSettings.video?.aspectRatio),
+      );
     });
 
     document.querySelectorAll('[data-video-mov-transparent]').forEach((button) => {
@@ -1491,6 +1461,15 @@ export class MeshControls {
         this.helpers.updateValueLabel(
           'wireframeThickness',
           state.wireframe.thickness ?? DEFAULT_WIREFRAME_LINE_WIDTH,
+          'decimal',
+        );
+      }
+      if (this.ui.inputs.wireframeOpacity) {
+        this.ui.inputs.wireframeOpacity.value =
+          state.wireframe.opacity ?? DEFAULT_WIREFRAME_OPACITY;
+        this.helpers.updateValueLabel(
+          'wireframeOpacity',
+          state.wireframe.opacity ?? DEFAULT_WIREFRAME_OPACITY,
           'decimal',
         );
       }

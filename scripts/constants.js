@@ -63,7 +63,7 @@ export function normalizeAnimationDisplayFps(fps) {
 }
 
 /** Push wireframe overlay along normals (studio units: 1 unit = 1 m). */
-export const WIREFRAME_OFFSET = 0.1;
+export const WIREFRAME_OFFSET = 0.05;
 
 /**
  * Surface push for wireframe source geometry. Caps at {@link WIREFRAME_OFFSET}; scales down for
@@ -88,6 +88,8 @@ export const WIREFRAME_OPACITY_VISIBLE = 1.0;
 export const WIREFRAME_OPACITY_OVERLAY = 0.8;
 /** Default wireframe line thickness slider value (maps to screen-space pixels via LineMaterial). */
 export const DEFAULT_WIREFRAME_LINE_WIDTH = 1;
+/** Default wireframe line opacity slider value (0–1). */
+export const DEFAULT_WIREFRAME_OPACITY = 1;
 
 export function clampWireframeLineWidth(value) {
   return Math.min(2.5, Math.max(0.5, Number(value) || DEFAULT_WIREFRAME_LINE_WIDTH));
