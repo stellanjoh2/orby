@@ -6499,6 +6499,17 @@ button.advanced-info-doc-btn {
   display: contents;
 }
 
+/*
+ * Same display: contents leak as SVG extrude: dropping the bevel group's box re-anchors its
+ * ::before hairline to .subsection (position: relative), painting a stray rule above the
+ * "Generate from Font" headline once the foldout expands. Bevel sits mid-"3D Shape" section
+ * with no separator before it — suppress the pseudo.
+ */
+[data-subsection='font-extrude'] .extrude-bevel-group::before {
+  content: none;
+  display: none;
+}
+
 [data-subsection='font-extrude'] .font-extrude-post-gen:not([hidden]) {
   display: block;
 }
@@ -6529,6 +6540,19 @@ button.advanced-info-doc-btn {
 }
 
 [data-subsection='font-extrude'] .extrude-bevel-group > :last-child {
+  margin-bottom: var(--shelf-section-gap);
+}
+
+/*
+ * display: contents makes the Bevel Type row the :last-child of .extrude-bevel-group, so the
+ * "foldout last row → no bottom margin" rule (specificity 0,5,0) over-matches it and collapses
+ * the gap against the Polygon Count row that actually follows. Restore the section gap with a
+ * higher-specificity, font-scoped override when the bevel group is followed by Polygon Count.
+ */
+[data-subsection='font-extrude']
+  .effect-foldout
+  .extrude-bevel-group:has(+ .font-extrude-outline-quality-line)
+  > :last-child {
   margin-bottom: var(--shelf-section-gap);
 }
 
