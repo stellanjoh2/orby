@@ -243,6 +243,33 @@ export class LocalFontPreviewCache {
     return this._registerCssPreviewFace(key, file);
   }
 
+  /**
+   * CSS family for an arbitrary font Blob, cached + deduped by key. Used by the
+   * live editor to render in the exact bytes of the active font.
+   * @param {string} key
+   * @param {Blob} blob
+   * @returns {Promise<string>} CSS font-family for preview (quoted) or 'inherit'
+   */
+  async getFontFamilyForBlob(key, blob) {
+    if (!key || !blob) return 'inherit';
+    if (this._cssPreviewBlocked.has(key)) return 'inherit';
+    const cached = this._entries.get(key);
+    if (cached) {
+      this._touch(key);
+      return `"${cached.cssFamily}", sans-serif`;
+    }
+    let pending = this._loading.get(key);
+    if (!pending) {
+      pending = this._registerCssPreviewFace(key, blob);
+      this._loading.set(key, pending);
+    }
+    try {
+      return await pending;
+    } finally {
+      this._loading.delete(key);
+    }
+  }
+
   dispose() {
     for (const key of [...this._entries.keys()]) {
       this._evict(key);

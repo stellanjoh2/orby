@@ -92,17 +92,10 @@ export class FontFamilyPicker {
     if (this.hidden) this.hidden.value = this._value;
     if (this.triggerLabel) {
       this.triggerLabel.textContent = this._label;
-      const family =
-        this._fonts.find((f) => f.postscriptName === this._value)?.family || label;
-      if (this._value && family && family !== '— Select font —') {
-        this._applyPreviewStyles(this.triggerLabel, family, { includePreviewSize: false });
-      } else {
-        this.triggerLabel.style.fontFamily = 'inherit';
-        this.triggerLabel.style.fontSize = '';
-      }
-    }
-    if (this._value && this.triggerLabel?.style.fontFamily === 'inherit') {
-      void this._applyPreviewToElement(this.triggerLabel, this._value);
+      // Keep the selected name in the normal UI font so it reads crisp white like
+      // the other dropdown triggers (the per-typeface preview stays in the list).
+      this.triggerLabel.style.fontFamily = 'inherit';
+      this.triggerLabel.style.fontSize = '';
     }
     this._syncSelectedOption();
   }
@@ -113,9 +106,6 @@ export class FontFamilyPicker {
     this._optionsBuilt = false;
     if (this.listbox) this.listbox.innerHTML = '';
     this.setValue(postscriptName, label);
-    if (previewFontFamily && this.triggerLabel) {
-      this.triggerLabel.style.fontFamily = previewFontFamily;
-    }
   }
 
   getValue() {
@@ -171,7 +161,6 @@ export class FontFamilyPicker {
     this.listbox.style.zIndex = '12000';
 
     this._startObserver();
-    void this._applyPreviewToElement(this.triggerLabel, this._value);
     this.listbox
       .querySelector('.font-extrude-family-option.is-selected')
       ?.scrollIntoView({ block: 'nearest' });

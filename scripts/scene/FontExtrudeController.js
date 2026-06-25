@@ -194,6 +194,11 @@ export class FontExtrudeController {
     /** @type {import('../vendor/opentype.module.js').Font | null} */
     this.font = null;
     this.fontLabel = '';
+    /** Exact bytes of the active font, reused for a metric-matched CSS @font-face. */
+    /** @type {Blob | null} */
+    this._activeFontBlob = null;
+    /** @type {string} */
+    this._activeFontKey = '';
     /** @type {THREE.Group | null} */
     this.lastGeneratedGroup = null;
     this._localFontsSupported =
@@ -258,6 +263,25 @@ export class FontExtrudeController {
   }
 
   /**
+   * CSS font-family that renders the **currently loaded** font from its exact
+   * bytes, so the live-editor textarea lays out identically to the canvas
+   * preview (caret tracks the glyphs). Falls back to 'inherit' only when the
+   * browser refuses the font as a CSS @font-face.
+   * @returns {Promise<string>}
+   */
+  async getActiveCssFontFamily() {
+    if (!this.font || !this._activeFontBlob || !this._activeFontKey) return 'inherit';
+    try {
+      return await this.previewCache.getFontFamilyForBlob(
+        this._activeFontKey,
+        this._activeFontBlob,
+      );
+    } catch {
+      return 'inherit';
+    }
+  }
+
+  /**
    * @param {string} postscriptName
    * @param {string} familyName
    */
@@ -282,6 +306,10 @@ export class FontExtrudeController {
       const buffer = await fontData.arrayBuffer();
       this.font = opentype.parse(buffer);
       this.fontLabel = fontData.name.replace(/\.[^/.]+$/, '') || 'Font';
+      // Keep the exact bytes so the live-editor textarea can render in the same
+      // font as the canvas preview (caret must track the glyphs you see).
+      this._activeFontBlob = fontData;
+      this._activeFontKey = `__active__:file:${fontData.name}:${fontData.size}:${fontData.lastModified}`;
       return this.font;
     }
     if (typeof fontData === 'string' && this._localFontsSupported) {
@@ -294,6 +322,8 @@ export class FontExtrudeController {
       const buffer = await blob.arrayBuffer();
       this.font = opentype.parse(buffer);
       this.fontLabel = match.fullName || match.family || fontData;
+      this._activeFontBlob = blob;
+      this._activeFontKey = `__active__:ps:${fontData}`;
       return this.font;
     }
     throw new Error('Invalid font source');

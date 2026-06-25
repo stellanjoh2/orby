@@ -193,6 +193,14 @@ export class FontExtrudeUI {
               <option value="none">None</option>
             </select>
           </label>
+          <label class="select-line font-extrude-align-line" id="fontExtrudeAlignLine">
+            <span data-tooltip="Horizontal alignment of each line">Align</span>
+            <select id="fontExtrudeAlign" aria-label="Text alignment">
+              <option value="left">Left</option>
+              <option value="center" selected>Center</option>
+              <option value="right">Right</option>
+            </select>
+          </label>
           <label class="slider-line">
             <span data-tooltip="Letter-spacing in thousandths of an em">Letter Spacing</span>
             <input id="fontExtrudeTracking" type="range" min="-100" max="200" step="1" value="0" />
@@ -203,18 +211,14 @@ export class FontExtrudeUI {
             <input id="fontExtrudeLineHeight" type="range" min="0.1" max="2.5" step="0.05" value="1" />
             <span class="value" data-output="fontExtrudeLineHeight">1.00×</span>
           </label>
-          <label class="select-line font-extrude-align-line" id="fontExtrudeAlignLine">
-            <span data-tooltip="Horizontal alignment of each line">Align</span>
-            <select id="fontExtrudeAlign" aria-label="Text alignment">
-              <option value="left">Left</option>
-              <option value="center" selected>Center</option>
-              <option value="right">Right</option>
-            </select>
-          </label>
           <div id="fontExtrudeFileFallback" class="font-extrude-file-fallback" hidden>
             <input type="file" id="fontExtrudeFile" class="sr-only" accept=".ttf,.otf,.woff,.woff2,font/*" />
             <button type="button" id="fontExtrudeFileBtn" class="ghost-btn small">Load .ttf / .otf…</button>
           </div>
+          <button type="button" id="fontExtrudeGenerate" class="accent-action-btn font-extrude-generate" disabled data-tooltip="Extrude preview text into a 3D mesh">
+            <i class="fa-solid fa-cube" aria-hidden="true"></i>
+            <span>Generate 3D Text</span>
+          </button>
           <div class="panel-block-divider" aria-hidden="true"></div>
           <div class="block-title font-extrude-section-title">Appearance</div>
           <label class="color-line font-extrude-fill-color">
@@ -256,10 +260,6 @@ export class FontExtrudeUI {
               <span class="value" data-output="fontExtrudeCircularWrapArc">360°</span>
             </label>
           </div>
-          <button type="button" id="fontExtrudeGenerate" class="accent-action-btn font-extrude-generate" disabled data-tooltip="Extrude preview text into a 3D mesh">
-            <i class="fa-solid fa-cube" aria-hidden="true"></i>
-            <span>Generate 3D Text</span>
-          </button>
           ${FONT_EXTRUDE_POST_GEN_CONTROLS_HTML}
         </div>
       </div>
@@ -1500,26 +1500,45 @@ export class FontExtrudeUI {
     if (!active) this._resetTextareaEditorStyles();
   }
 
-  /** @returns {string} */
-  _activeFontPostscriptName() {
-    return this.els.variant?.value || this.familyPicker?.getValue() || '';
-  }
-
-  /** Measure CSS baseline offset from the top of a line box (px). */
-  _measureTextareaBaselineOffset(fontFamily, fontSizePx) {
+  /**
+   * CSS baseline offset from the top of the first line box (px), accounting for
+   * the half-leading that `line-height` adds above the glyphs. Without the
+   * half-leading term the caret sat ~9% of the font size too high.
+   * @param {string} fontFamily
+   * @param {number} fontSizePx
+   * @param {number} [lineHeightPx]
+   */
+  _measureTextareaBaselineOffset(fontFamily, fontSizePx, lineHeightPx = fontSizePx) {
     const font = this.controller.font;
-    if (font && (!fontFamily || fontFamily === 'inherit')) {
-      const upm = font.unitsPerEm || 1000;
-      return (font.ascender / upm) * fontSizePx;
+    let ascent;
+    let descent;
+    if (fontFamily && fontFamily !== 'inherit' && typeof document !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.font = `${fontSizePx}px ${fontFamily}`;
+        const metrics = ctx.measureText('Hg');
+        ascent = Number.isFinite(metrics.fontBoundingBoxAscent)
+          ? metrics.fontBoundingBoxAscent
+          : Number.isFinite(metrics.actualBoundingBoxAscent)
+            ? metrics.actualBoundingBoxAscent
+            : undefined;
+        descent = Number.isFinite(metrics.fontBoundingBoxDescent)
+          ? metrics.fontBoundingBoxDescent
+          : Number.isFinite(metrics.actualBoundingBoxDescent)
+            ? metrics.actualBoundingBoxDescent
+            : undefined;
+      }
     }
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return fontSizePx * 0.75;
-    ctx.font = `${fontSizePx}px ${fontFamily}`;
-    const metrics = ctx.measureText('Hg');
-    if (Number.isFinite(metrics.fontBoundingBoxAscent)) return metrics.fontBoundingBoxAscent;
-    if (Number.isFinite(metrics.actualBoundingBoxAscent)) return metrics.actualBoundingBoxAscent;
-    return fontSizePx * 0.75;
+    if ((ascent === undefined || descent === undefined) && font) {
+      const upm = font.unitsPerEm || 1000;
+      ascent = ascent ?? (font.ascender / upm) * fontSizePx;
+      descent = descent ?? (Math.abs(font.descender) / upm) * fontSizePx;
+    }
+    if (ascent === undefined) ascent = fontSizePx * 0.8;
+    if (descent === undefined) descent = fontSizePx * 0.2;
+    const halfLeading = (lineHeightPx - (ascent + descent)) / 2;
+    return halfLeading + ascent;
   }
 
   /** Drop inline layout overrides so shelf CSS applies before a font loads. */
@@ -1554,23 +1573,25 @@ export class FontExtrudeUI {
     if (!ta || !this.controller.font) return;
 
     const options = this.getOptions();
-    const { slotLeft, slotTop, scale, bounds, cssW, pad } = viewport;
+    const { slotLeft, slotTop, scale, bounds, pad } = viewport;
     const fontSizePx = layout.fontSize * scale;
     const lineHeightPx = layout.fontSize * options.lineHeight * scale;
     const letterSpacingPx = (options.tracking / 1000) * fontSizePx;
-    const postscriptName = this._activeFontPostscriptName();
-    const fontFamily = postscriptName
-      ? await this.controller.getPreviewFontFamily(postscriptName)
-      : 'inherit';
+    // Render the textarea in the EXACT bytes of the active font so its caret
+    // tracks the glyphs drawn on the canvas. (The old per-postscript lookup
+    // silently fell back to the UI font, putting the caret in a fictional spot.)
+    const fontFamily = await this.controller.getActiveCssFontFamily();
 
     const firstLineY = layout.lines?.[0]?.y ?? layout.fontSize * 0.85;
     const baselineScreenY = slotTop + (firstLineY - bounds.minY) * scale;
-    const baselineOffset = this._measureTextareaBaselineOffset(fontFamily, fontSizePx);
+    const baselineOffset = this._measureTextareaBaselineOffset(
+      fontFamily,
+      fontSizePx,
+      lineHeightPx,
+    );
     const paddingTop = baselineScreenY - baselineOffset;
 
-    const layoutOriginLeft = slotLeft - bounds.minX * scale;
-    const blockWidth = Math.max(layout.maxWidth ?? layout.width ?? 1, 1) * scale;
-    const blockLeft = layoutOriginLeft;
+    const blockLeft = slotLeft - bounds.minX * scale;
 
     ta.style.fontFamily = fontFamily;
     ta.style.fontSize = `${fontSizePx}px`;
@@ -1582,8 +1603,11 @@ export class FontExtrudeUI {
     ta.style.overflowWrap = 'normal';
     ta.style.paddingTop = `${paddingTop}px`;
     if (layout.align === 'center') {
-      ta.style.paddingLeft = `${blockLeft}px`;
-      ta.style.paddingRight = `${Math.max(pad, cssW - blockLeft - blockWidth)}px`;
+      // The canvas centers each line within the padded box, so a symmetric box
+      // (center at cssW/2) matches it. Building large/negative paddings here only
+      // got clamped by the browser and shifted centered text sideways.
+      ta.style.paddingLeft = `${pad}px`;
+      ta.style.paddingRight = `${pad}px`;
     } else if (layout.align === 'right') {
       ta.style.paddingLeft = `${Math.max(pad, blockLeft)}px`;
       ta.style.paddingRight = `${pad}px`;

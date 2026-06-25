@@ -4079,6 +4079,17 @@
                       <option value="manual">Manual</option>
                     </select>
                   </label>
+                  <div class="slider-line slider-line--toggle-only">
+                    <span class="slider-line-label">Focus plane</span>
+                    <label
+                      class="effect-toggle"
+                      data-tooltip="View-depth focal plane used by the DOF shader (purple = in focus here). If blur seams sit in front of or behind this plane, that is a DOF bug — not wrong slider use."
+                    >
+                      <input type="checkbox" id="toggleDofFocusPlane" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show focus plane</span>
+                    </label>
+                  </div>
                   <label class="slider-line">
                     <span>Focus distance</span>
                     <input
@@ -4091,17 +4102,6 @@
                     />
                     <span class="value" data-output="dofFocus">1.5m</span>
                   </label>
-                  <div class="slider-line slider-line--toggle-only">
-                    <span class="slider-line-label">Focus plane</span>
-                    <label
-                      class="effect-toggle"
-                      data-tooltip="View-depth focal plane used by the DOF shader (purple = in focus here). If blur seams sit in front of or behind this plane, that is a DOF bug — not wrong slider use."
-                    >
-                      <input type="checkbox" id="toggleDofFocusPlane" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Show focus plane</span>
-                    </label>
-                  </div>
                   <label class="slider-line">
                     <span data-tooltip="Blur on geometry nearer than the focal plane (nose, front wings). Keep low to avoid artifacts.">Near blur</span>
                     <input
