@@ -88,8 +88,10 @@ export class PostProcessingPipeline {
 
     this.composer = new MeshglEffectComposer(this.renderer);
     this.renderPass = new MeshglRenderPass(scene, camera);
-    this.renderPass.getBackgroundGradientController =
-      opts.getBackgroundGradientController ?? null;
+    this.renderPass.resolveBackgroundGradientController =
+      typeof opts.getBackgroundGradientController === 'function'
+        ? opts.getBackgroundGradientController
+        : () => null;
     // clearAlpha = 1 ensures the background color shows when scene.background is null
     this.renderPass.clearAlpha = 1;
 

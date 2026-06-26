@@ -33,6 +33,7 @@ import {
   restoreTransparentCaptureSetup,
   cropTransparentTopDownRgbaToCanvas as cropTransparentTopDownRgbaToCanvasFn,
 } from './capture/TransparentCapture.js';
+import { readGradientMergedTopDownRgba } from './capture/captureGradientComposite.js';
 import {
   pinAsciiReferenceForCapture,
   unpinAsciiReferenceForCapture,
@@ -395,12 +396,18 @@ export class ImageExporter {
       const dstRow = y * rowStride;
       flipped.set(pixels.subarray(srcRow, srcRow + rowStride), dstRow);
     }
+    return this._pixelsTopDownToCanvas(flipped, targetWidth, targetHeight, {
+      cinematicLetterbox219,
+    });
+  }
+
+  _pixelsTopDownToCanvas(pixels, targetWidth, targetHeight, { cinematicLetterbox219 = false } = {}) {
     const exportCanvas = document.createElement('canvas');
     exportCanvas.width = targetWidth;
     exportCanvas.height = targetHeight;
     const ctx = exportCanvas.getContext('2d');
     const imageData = ctx.createImageData(targetWidth, targetHeight);
-    imageData.data.set(flipped);
+    imageData.data.set(pixels);
     ctx.putImageData(imageData, 0, 0);
     if (cinematicLetterbox219) {
       this._fillCinematicLetterbox219Mattes(ctx, targetWidth, targetHeight);
@@ -644,6 +651,49 @@ export class ImageExporter {
       logDebug = LOG_CAPTURE_DEBUG,
     } = {},
   ) {
+    const gradient = this.backgroundController?.gradientController;
+    if (gradient?.shouldBlitForCapture?.()) {
+      const transparentSetup = applyTransparentCaptureSetup({
+        renderer: this.renderer,
+        scene: this.scene,
+        composer: this.composer,
+        backgroundController: this.backgroundController,
+        postPipeline: this.postPipeline,
+      });
+      try {
+        const topDown = readGradientMergedTopDownRgba({
+          renderer: this.renderer,
+          scene: this.scene,
+          camera: this.camera,
+          composer: this.composer,
+          width: fallbackWidth,
+          height: fallbackHeight,
+          getGradientRgba: () => gradient.getCaptureGradientRgba(),
+          renderFrame: () => retryRender?.(),
+          finishGpu: () => {
+            const gl = this.renderer.getContext();
+            if (gl && typeof gl.finish === 'function') {
+              gl.finish();
+            }
+          },
+        });
+        return this._pixelsTopDownToCanvas(topDown, fallbackWidth, fallbackHeight, {
+          cinematicLetterbox219,
+        });
+      } finally {
+        restoreTransparentCaptureSetup(
+          {
+            renderer: this.renderer,
+            scene: this.scene,
+            composer: this.composer,
+            backgroundController: this.backgroundController,
+            postPipeline: this.postPipeline,
+          },
+          transparentSetup,
+        );
+      }
+    }
+
     const capture = this._readComposerOutputPixels(fallbackWidth, fallbackHeight, {
       allowResample,
       retryRender,

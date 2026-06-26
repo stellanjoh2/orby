@@ -258,14 +258,22 @@ export class ComposerLifecycle {
     }
     try {
       this.ensureComposerBuffersMatchRenderer();
-      this.resetRendererViewportToCanvas();
-      const db = getDrawingBufferPixels(this.renderer);
+      const gradient = this.backgroundController?.gradientController;
+      const captureBlit = gradient?.shouldBlitForCapture?.() === true;
+      if (captureBlit) {
+        gradient.pinCaptureViewport(this.renderer);
+      } else {
+        this.resetRendererViewportToCanvas();
+      }
       if (!transparent) {
-        this.backgroundController?.gradientController?.syncToDrawingBuffer?.(
-          db.width,
-          db.height,
-          { forceRedraw: true },
-        );
+        if (captureBlit) {
+          const { width: cw, height: ch } = gradient.getCapturePixelSize();
+          gradient.syncToDrawingBuffer(cw, ch, { forceRedraw: true });
+          this.scene.background = null;
+        } else {
+          const db = getDrawingBufferPixels(this.renderer);
+          gradient?.syncToDrawingBuffer?.(db.width, db.height, { forceRedraw: true });
+        }
         this.syncRendererClearForSceneBackground();
       }
       this.composer.render();

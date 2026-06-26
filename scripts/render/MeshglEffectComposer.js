@@ -8,6 +8,39 @@ import { resetRendererFullViewport } from './resetRendererFullViewport.js';
  * the rest of the canvas stays black (screen-fixed “2D frame”).
  */
 export class MeshglEffectComposer extends EffectComposer {
+  constructor(...args) {
+    super(...args);
+    /** @type {{ width: number, height: number } | null} */
+    this._exportCaptureViewportPin = null;
+  }
+
+  /** Pin every pass viewport to export resolution (not studio canvas logical size). */
+  setExportCaptureViewportPin(width, height) {
+    this._exportCaptureViewportPin = {
+      width: Math.max(1, Math.floor(width)),
+      height: Math.max(1, Math.floor(height)),
+    };
+  }
+
+  clearExportCaptureViewportPin() {
+    this._exportCaptureViewportPin = null;
+  }
+
+  _resetPassViewport(renderer) {
+    const pin = this._exportCaptureViewportPin;
+    if (pin) {
+      renderer.setViewport(0, 0, pin.width, pin.height);
+      if (typeof renderer.setScissor === 'function') {
+        renderer.setScissor(0, 0, pin.width, pin.height);
+      }
+      if (typeof renderer.setScissorTest === 'function') {
+        renderer.setScissorTest(false);
+      }
+      return;
+    }
+    resetRendererFullViewport(renderer);
+  }
+
   render(deltaTime) {
     if (deltaTime === undefined) {
       deltaTime = this.clock.getDelta();
@@ -20,9 +53,11 @@ export class MeshglEffectComposer extends EffectComposer {
       const pass = this.passes[i];
       if (pass.enabled === false) continue;
 
-      resetRendererFullViewport(this.renderer);
+      this._resetPassViewport(this.renderer);
+      pass._keepExportCaptureViewport = !!this._exportCaptureViewportPin;
       pass.renderToScreen = this.renderToScreen && this.isLastEnabledPass(i);
       pass.render(this.renderer, this.writeBuffer, this.readBuffer, deltaTime, maskActive);
+      pass._keepExportCaptureViewport = false;
 
       if (pass.needsSwap) {
         if (maskActive) {
@@ -45,6 +80,6 @@ export class MeshglEffectComposer extends EffectComposer {
     }
 
     this.renderer.setRenderTarget(currentRenderTarget);
-    resetRendererFullViewport(this.renderer);
+    this._resetPassViewport(this.renderer);
   }
 }

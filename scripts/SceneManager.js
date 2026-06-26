@@ -219,6 +219,8 @@ export class SceneManager {
     this.panelsShelfScrolling = false;
     /** Skip rAF resize while PNG/export pipeline mutates renderer size (avoids composer/canvas mismatch). */
     this._suppressResizeForExport = false;
+    /** Guard overlapping offline capture preview requests (scrub debounce + button). */
+    this._capturePreviewInFlight = false;
     this.eventBus.on('ui:panels-scrolling', (payload) => {
       this.setPanelsShelfScrolling(!!payload?.active);
     });
@@ -1132,6 +1134,7 @@ export class SceneManager {
   setupComposer() {
     this.postPipeline = new PostProcessingPipeline(this.renderer, this.scene, this.camera, {
       getDofDepthProxy: () => this.backgroundController?.getBackgroundSphere?.() ?? null,
+      getBackgroundGradientController: () => this.backgroundGradientController,
     });
     this.composer = this.postPipeline.composer;
     this.lensDirtPass = this.postPipeline.lensDirtPass;
@@ -5413,11 +5416,20 @@ export class SceneManager {
   }
 
   async captureExportPreviewFrame(options = {}) {
-    const { download = true, showThumbnail = false } = options;
+    const {
+      download = true,
+      showThumbnail = false,
+      preservePreviewSession = false,
+      showSpinner = true,
+    } = options;
+
+    if (this._capturePreviewInFlight) {
+      return null;
+    }
 
     const resolvedPreviewT = this._resolveExportPreviewScrubT(options);
-    const previewActive = this.exportMovementPreview?.isActive?.();
-    if (previewActive) {
+    const wasPreviewActive = this.exportMovementPreview?.isActive?.();
+    if (wasPreviewActive) {
       this.exportMovementPreview.stop({ silent: true });
     }
 
@@ -5436,22 +5448,28 @@ export class SceneManager {
       this.renderLoop.stop();
     }
     this._suppressResizeForExport = true;
+    this._capturePreviewInFlight = true;
+
+    const runCapture = async () =>
+      this.videoExporter?.capturePreviewFrame(exportSettings, {
+        download,
+        previewT: resolvedPreviewT,
+        showThumbnail,
+      });
 
     try {
-      return await withViewportLoadSpinner(this.ui, 'Capture preview frame', async () => {
-        return await this.videoExporter?.capturePreviewFrame(exportSettings, {
-          download,
-          previewT: resolvedPreviewT,
-          showThumbnail,
-        });
-      });
+      if (showSpinner) {
+        return await withViewportLoadSpinner(this.ui, 'Capture preview frame', runCapture);
+      }
+      return await runCapture();
     } finally {
+      this._capturePreviewInFlight = false;
       this._suppressResizeForExport = false;
       this.handleResize();
       if (resumeRenderLoop) {
         this.renderLoop.start();
       }
-      if (resolvedPreviewT > 0) {
+      if (wasPreviewActive && (preservePreviewSession || resolvedPreviewT > 0)) {
         this.scrubExportVideoPreview(resolvedPreviewT);
       }
     }

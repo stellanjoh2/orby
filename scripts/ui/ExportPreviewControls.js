@@ -1,5 +1,8 @@
 import { ExportMovementPreview } from '../render/ExportMovementPreview.js';
-import { USE_CAPTURE_PREVIEW_ON_SCRUB } from '../constants.js';
+import {
+  SCRUB_CAPTURE_DEBOUNCE_MS,
+  USE_CAPTURE_PREVIEW_ON_SCRUB,
+} from '../constants.js';
 
 /**
  * Export movement preview transport — play/stop, scrub, reset, and time readout.
@@ -9,6 +12,8 @@ export class ExportPreviewControls {
     this.eventBus = eventBus;
     this.ui = ui;
     this._scrubbing = false;
+    this._scrubCaptureTimer = null;
+    this._scrubCapturePendingT = null;
   }
 
   bind() {
@@ -40,15 +45,7 @@ export class ExportPreviewControls {
     this.ui.dom.exportPreviewScrub?.addEventListener('pointerup', () => {
       this._scrubbing = false;
       this.ui.dom.exportPreviewScrub?.classList.remove('is-scrub-playing');
-      if (USE_CAPTURE_PREVIEW_ON_SCRUB) {
-        const t = parseFloat(this.ui.dom.exportPreviewScrub?.value ?? '0');
-        this.eventBus.emit('export:video-capture-preview', {
-          download: false,
-          previewT: t,
-          showThumbnail: true,
-          ...(this.ui.exportSettings.video || {}),
-        });
-      }
+      this._flushScrubCapturePreview();
     });
     this.ui.dom.exportPreviewScrub?.addEventListener('pointercancel', () => {
       this._scrubbing = false;
@@ -61,6 +58,7 @@ export class ExportPreviewControls {
         t: value,
         ...(this.ui.exportSettings.video || {}),
       });
+      this._scheduleScrubCapturePreview(value);
     });
 
     this.ui.dom.exportPreviewPauseAll?.addEventListener('click', () => {
@@ -193,5 +191,32 @@ export class ExportPreviewControls {
     if (scrub) {
       this.ui.updateSliderFill?.(scrub);
     }
+  }
+
+  _scheduleScrubCapturePreview(t) {
+    if (!USE_CAPTURE_PREVIEW_ON_SCRUB) return;
+    this._scrubCapturePendingT = t;
+    clearTimeout(this._scrubCaptureTimer);
+    this._scrubCaptureTimer = setTimeout(
+      () => this._flushScrubCapturePreview(),
+      SCRUB_CAPTURE_DEBOUNCE_MS,
+    );
+  }
+
+  _flushScrubCapturePreview() {
+    if (!USE_CAPTURE_PREVIEW_ON_SCRUB) return;
+    clearTimeout(this._scrubCaptureTimer);
+    this._scrubCaptureTimer = null;
+    const t = this._scrubCapturePendingT;
+    if (!Number.isFinite(t)) return;
+    this._scrubCapturePendingT = null;
+    this.eventBus.emit('export:video-capture-preview', {
+      download: false,
+      previewT: t,
+      showThumbnail: true,
+      preservePreviewSession: true,
+      showSpinner: false,
+      ...(this.ui.exportSettings.video || {}),
+    });
   }
 }

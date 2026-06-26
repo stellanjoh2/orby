@@ -32,9 +32,12 @@ import {
   resolveVideoExportFrameTiming,
 } from './capture/captureVideoExportFrame.js';
 import {
+  applyTransparentCaptureSetup,
   cropTransparentTopDownRgbaToCanvas,
   readTransparentMergedTopDownRgba,
+  restoreTransparentCaptureSetup,
 } from './capture/TransparentCapture.js';
+import { readGradientMergedTopDownRgba } from './capture/captureGradientComposite.js';
 
 export class VideoExporter {
   constructor({
@@ -623,6 +626,11 @@ export class VideoExporter {
     const { width: targetWidth, height: targetHeight } =
       this._resolveExportCapturePixelSize(exportWidth, exportHeight);
 
+    const gradient = this.backgroundController?.gradientController;
+    if (gradient?.shouldBlitForCapture?.()) {
+      return this._captureGradientCompositePngDataUrl(targetWidth, targetHeight);
+    }
+
     this._renderComposerFrameForCapture({ exportWidth: targetWidth, exportHeight: targetHeight });
     this._finishGpuFrame();
     return this.imageExporter._captureComposerOutputAsPngDataUrl(
@@ -638,6 +646,45 @@ export class VideoExporter {
         },
       },
     );
+  }
+
+  _captureGradientCompositePngDataUrl(width, height) {
+    const gradient = this.backgroundController?.gradientController;
+    const transparentSetup = applyTransparentCaptureSetup({
+      renderer: this.renderer,
+      scene: this.scene,
+      composer: this.composer,
+      backgroundController: this.backgroundController,
+      postPipeline: this.imageExporter?.postPipeline,
+    });
+    try {
+      const topDown = readGradientMergedTopDownRgba({
+        renderer: this.renderer,
+        scene: this.scene,
+        camera: this.camera,
+        composer: this.composer,
+        width,
+        height,
+        getGradientRgba: () => gradient.getCaptureGradientRgba(),
+        renderFrame: () => {
+          this._renderComposerFrameForCapture({ exportWidth: width, exportHeight: height });
+        },
+        finishGpu: () => this._finishGpuFrame(),
+      });
+      const canvas = this.imageExporter._pixelsTopDownToCanvas(topDown, width, height);
+      return canvas.toDataURL('image/png');
+    } finally {
+      restoreTransparentCaptureSetup(
+        {
+          renderer: this.renderer,
+          scene: this.scene,
+          composer: this.composer,
+          backgroundController: this.backgroundController,
+          postPipeline: this.imageExporter?.postPipeline,
+        },
+        transparentSetup,
+      );
+    }
   }
 
   _captureTransparentFramePngDataUrl(exportWidth, exportHeight) {

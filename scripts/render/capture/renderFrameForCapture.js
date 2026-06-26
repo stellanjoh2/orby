@@ -32,8 +32,16 @@ export function renderFrameForCapture(deps) {
     creativeLookCaptureDeps,
   } = deps;
 
+  let captureW = width;
+  let captureH = height;
+  if (imageExporter?._setExportFramebufferSize) {
+    const synced = imageExporter._setExportFramebufferSize(width, height);
+    captureW = synced.width;
+    captureH = synced.height;
+  }
+
   const ctx = createCaptureContext(
-    { width, height },
+    { width: captureW, height: captureH },
     { transparent },
   );
 
@@ -53,18 +61,21 @@ export function renderFrameForCapture(deps) {
     renderComposerPassForExport
     ?? composerLifecycle?.renderComposerPassForExport?.bind(composerLifecycle);
 
-  if (typeof renderExportPass === 'function') {
-    renderExportPass({ transparent: ctx.transparent });
-    return ctx;
-  }
-
   const composer = imageExporter?.composer;
-  if (composer) {
-    composer.render();
-    return ctx;
+  composer?.setExportCaptureViewportPin?.(ctx.width, ctx.height);
+  try {
+    if (typeof renderExportPass === 'function') {
+      renderExportPass({ transparent: ctx.transparent });
+    } else if (composer) {
+      composer.render();
+    } else {
+      deps.renderer?.render?.(deps.scene, deps.camera);
+    }
+  } finally {
+    composer?.clearExportCaptureViewportPin?.();
   }
 
-  deps.renderer?.render?.(deps.scene, deps.camera);
+  imageExporter?._setExportViewport?.(ctx.width, ctx.height);
   return ctx;
 }
 

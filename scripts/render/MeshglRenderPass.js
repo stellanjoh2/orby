@@ -7,6 +7,18 @@ import { resetRendererFullViewport } from './resetRendererFullViewport.js';
  * from bloom/reflector passes becomes a screen-fixed black band on the next frame.
  */
 export class MeshglRenderPass extends RenderPass {
+  _resolveBackgroundGradientController() {
+    const resolver = this.resolveBackgroundGradientController;
+    if (typeof resolver === 'function') {
+      return resolver() ?? null;
+    }
+    const legacy = this.getBackgroundGradientController;
+    if (typeof legacy === 'function') {
+      return legacy() ?? null;
+    }
+    return legacy ?? null;
+  }
+
   render(renderer, writeBuffer, readBuffer, deltaTime, maskActive) {
     const camera = this.camera;
     const savedCameraViewport = camera?.viewport;
@@ -42,12 +54,31 @@ export class MeshglRenderPass extends RenderPass {
     }
 
     try {
-      resetRendererFullViewport(renderer);
-      renderer.setRenderTarget(this.renderToScreen ? null : readBuffer);
-      // setRenderTarget copies the RT viewport — re-assert full canvas before the scene draw.
-      resetRendererFullViewport(renderer);
+      const gradientCtrl = this._resolveBackgroundGradientController();
+      const useCaptureBlit = gradientCtrl?.shouldBlitForCapture?.() === true;
+      const keepExportViewport = this._keepExportCaptureViewport === true || useCaptureBlit;
 
-      if (this.clear === true) {
+      if (!keepExportViewport) {
+        resetRendererFullViewport(renderer);
+      }
+      renderer.setRenderTarget(this.renderToScreen ? null : readBuffer);
+
+      if (useCaptureBlit) {
+        gradientCtrl.pinCaptureViewport(renderer);
+      } else if (!keepExportViewport) {
+        resetRendererFullViewport(renderer);
+      }
+
+      if (useCaptureBlit) {
+        // Gradient is composited in CPU after readback — transparent GL background only.
+        if (this.clear === true) {
+          renderer.clear(
+            renderer.autoClearColor,
+            renderer.autoClearDepth,
+            renderer.autoClearStencil,
+          );
+        }
+      } else if (this.clear === true) {
         renderer.clear(
           renderer.autoClearColor,
           renderer.autoClearDepth,
@@ -55,7 +86,11 @@ export class MeshglRenderPass extends RenderPass {
         );
       }
 
-      resetRendererFullViewport(renderer);
+      if (useCaptureBlit) {
+        gradientCtrl.pinCaptureViewport(renderer);
+      } else if (!keepExportViewport) {
+        resetRendererFullViewport(renderer);
+      }
       renderer.render(this.scene, this.camera);
     } finally {
       if (this.clearColor !== null) {
@@ -72,7 +107,12 @@ export class MeshglRenderPass extends RenderPass {
       if (camera && savedCameraViewport !== undefined) {
         camera.viewport = savedCameraViewport;
       }
-      resetRendererFullViewport(renderer);
+      const keepExportViewport =
+        this._keepExportCaptureViewport === true
+        || this._resolveBackgroundGradientController()?.shouldBlitForCapture?.();
+      if (!keepExportViewport) {
+        resetRendererFullViewport(renderer);
+      }
     }
   }
 }

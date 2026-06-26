@@ -651,10 +651,13 @@ export const ALLOW_CAPTURE_RESAMPLE = false;
 export const LOG_CAPTURE_DEBUG = false;
 
 /**
- * After export preview scrub, render one offline capture tile (same path as encode).
- * Heavy — off by default; use Capture preview frame button for manual verification.
+ * After export preview scrub settles, render one offline capture tile (same path as encode).
+ * Debounced while dragging; flush on release. Heavy at 4K — disable if scrub feels sluggish.
  */
-export const USE_CAPTURE_PREVIEW_ON_SCRUB = false;
+export const USE_CAPTURE_PREVIEW_ON_SCRUB = true;
+
+/** Ms to wait after last scrub input before offline capture (when USE_CAPTURE_PREVIEW_ON_SCRUB). */
+export const SCRUB_CAPTURE_DEBOUNCE_MS = 450;
 
 /** @typedef {'max' | 'medium' | 'low'} RenderQualityTierId */
 
