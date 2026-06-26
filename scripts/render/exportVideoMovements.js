@@ -169,9 +169,13 @@ export function exportSpinToastLabel(spin) {
   return `${spin.subtleSpinDegrees}° subtle spin, ${dir}`;
 }
 
-/** @param {unknown} value @returns {0 | 22.5 | 45 | 90} */
-export function normalizeExportHdriRotationDegrees(value) {
-  return normalizeExportSubtleSpinDegrees(value);
+/**
+ * Export-only HDRI spin (22.5°/45°/90° over clip length) — temporarily disabled.
+ * Studio HDRI rotation slider (`state.hdriRotation`) is unchanged.
+ * @returns {0}
+ */
+export function normalizeExportHdriRotationDegrees(_value) {
+  return 0;
 }
 
 /**

@@ -120,8 +120,7 @@ export class ExportMovementPreview {
   /** Whether export settings describe any previewable motion. */
   static canPreview(settings = {}) {
     const movements = normalizeExportVideoMovements(settings);
-    const hdriRotationSettings = normalizeExportHdriRotationSettings(settings);
-    return hasExportVideoMovement(movements) || hdriRotationSettings.degrees > 0;
+    return hasExportVideoMovement(movements);
   }
 
   _settingsFingerprint(settings = {}) {
@@ -252,7 +251,7 @@ export class ExportMovementPreview {
       return false;
     }
     if (!ExportMovementPreview.canPreview(settings)) {
-      this.ui?.showToast?.('Enable at least one movement or HDRI rotation to preview');
+      this.ui?.showToast?.('Enable at least one movement to preview');
       return false;
     }
 
@@ -326,7 +325,7 @@ export class ExportMovementPreview {
       return false;
     }
     if (!ExportMovementPreview.canPreview(settings)) {
-      this.ui?.showToast?.('Enable at least one movement or HDRI rotation to preview');
+      this.ui?.showToast?.('Enable at least one movement to preview');
       return false;
     }
 

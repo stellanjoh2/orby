@@ -1061,8 +1061,8 @@ export class VideoExporter {
 
     const movements = normalizeExportVideoMovements(settings);
     const hdriRotationSettings = normalizeExportHdriRotationSettings(settings);
-    if (!hasExportVideoMovement(movements) && !hdriRotationSettings.degrees) {
-      this.ui?.showToast?.('Enable at least one movement or HDRI rotation to export');
+    if (!hasExportVideoMovement(movements)) {
+      this.ui?.showToast?.('Enable at least one movement to export');
       return;
     }
     const modeLabel = exportVideoMovementLabel(movements);

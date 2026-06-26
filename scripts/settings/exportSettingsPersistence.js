@@ -5,7 +5,6 @@ import {
   normalizeExportPitchOffset,
   normalizeExportSpins,
   normalizeExportSubtleSpinDegrees,
-  normalizeExportHdriRotationDegrees,
   normalizeExportVideoMovements,
 } from '../render/exportVideoMovements.js';
 import {
@@ -82,14 +81,14 @@ export function applySavedExportSettings(target, saved) {
   target.video.spins = normalizeExportSpins(video.spins);
   target.video.subtleSpinDegrees = normalizeExportSubtleSpinDegrees(video.subtleSpinDegrees);
   target.video.spinDirection = video.spinDirection === 'reverse' ? 'reverse' : 'forward';
-  target.video.hdriRotationDegrees = normalizeExportHdriRotationDegrees(video.hdriRotationDegrees);
+  target.video.hdriRotationDegrees = 0;
+  target.video.aspectRatio = normalizeExportVideoAspectRatio(video.aspectRatio);
 
   if (video.fps !== undefined) {
     const fps = Number(video.fps);
     if (fps === 24 || fps === 30 || fps === 60) target.video.fps = fps;
   }
   target.video.resolution = normalizeExportVideoResolution(video.resolution);
-  target.video.aspectRatio = normalizeExportVideoAspectRatio(video.aspectRatio);
 
   if (video.mp4Quality === 'low' || video.mp4Quality === 'medium' || video.mp4Quality === 'high') {
     target.video.mp4Quality = video.mp4Quality;

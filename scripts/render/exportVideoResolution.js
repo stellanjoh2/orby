@@ -19,10 +19,9 @@ const PORTRAIT_SIZES = {
  * @param {unknown} value
  * @returns {'16:9' | '9:16'}
  */
-export function normalizeExportVideoAspectRatio(value) {
-  return value === EXPORT_VIDEO_ASPECT_PORTRAIT
-    ? EXPORT_VIDEO_ASPECT_PORTRAIT
-    : EXPORT_VIDEO_ASPECT_LANDSCAPE;
+/** Portrait 9∶16 export UI removed temporarily — always landscape until capture parity is restored. */
+export function normalizeExportVideoAspectRatio(_value) {
+  return EXPORT_VIDEO_ASPECT_LANDSCAPE;
 }
 
 /**

@@ -4903,13 +4903,6 @@
                       <option value="dark">Dark</option>
                     </select>
                   </label>
-                  <div class="export-option-group composition-aspect-group">
-                    <span class="export-label" data-tooltip="Fit the composition guides to a landscape (16∶9) frame or a portrait (9∶16) center-crop for vertical video export">Aspect</span>
-                    <div class="export-button-group">
-                      <button type="button" id="compositionAspectLandscape" data-composition-aspect="16:9" class="export-option-btn active" aria-pressed="true" data-tooltip="Fit composition guides to a 16∶9 landscape frame">16∶9</button>
-                      <button type="button" id="compositionAspectPortrait" data-composition-aspect="9:16" class="export-option-btn" aria-pressed="false" data-tooltip="Show the 9∶16 center-crop window used for portrait video export">9∶16</button>
-                    </div>
-                  </div>
                   </div>
                 </div>
                 <div class="panel-block-divider"></div>
@@ -5158,18 +5151,10 @@
                     </div>
                   </div>
                   <div class="export-option-group">
-                    <label class="export-label">Spin Direction · Object, camera &amp; HDRI</label>
+                    <label class="export-label">Spin Direction · Object &amp; camera</label>
                     <div class="export-button-group">
-                      <button type="button" data-video-spin-direction="forward" class="export-option-btn active" data-tooltip="Default direction for mesh/camera spins and HDRI rotation">FORWARD</button>
-                      <button type="button" data-video-spin-direction="reverse" class="export-option-btn" data-tooltip="Opposite direction for mesh/camera spins and HDRI rotation">REVERSE</button>
-                    </div>
-                  </div>
-                  <div class="export-option-group">
-                    <label class="export-label">HDRI Rotation · Environment</label>
-                    <div class="export-button-group export-button-group--triple">
-                      <button type="button" data-video-hdri-rotation="22.5" class="export-option-btn" data-tooltip="Rotate the HDRI dome 22.5° over the export length — lighting and reflections only, not the mesh or camera">22.5°</button>
-                      <button type="button" data-video-hdri-rotation="45" class="export-option-btn" data-tooltip="Rotate the HDRI dome 45° over the export length — lighting and reflections only">45°</button>
-                      <button type="button" data-video-hdri-rotation="90" class="export-option-btn" data-tooltip="Rotate the HDRI dome 90° over the export length — lighting and reflections only">90°</button>
+                      <button type="button" data-video-spin-direction="forward" class="export-option-btn active" data-tooltip="Default direction for mesh/camera spins">FORWARD</button>
+                      <button type="button" data-video-spin-direction="reverse" class="export-option-btn" data-tooltip="Opposite direction for mesh/camera spins">REVERSE</button>
                     </div>
                   </div>
                   <div id="exportMovementSliders" class="export-option-group">
@@ -5360,13 +5345,6 @@
                       <button data-video-fps="24" class="export-option-btn active" data-tooltip="Cinematic motion">24</button>
                       <button data-video-fps="30" class="export-option-btn" data-tooltip="Smoother standard video">30</button>
                       <button data-video-fps="60" class="export-option-btn" data-tooltip="Very smooth motion, larger files">60</button>
-                    </div>
-                  </div>
-                  <div class="export-option-group">
-                    <label class="export-label">Aspect</label>
-                    <div class="export-button-group">
-                      <button data-video-aspect-ratio="16:9" class="export-option-btn active" data-tooltip="Landscape — 16∶9 (YouTube, web)">16∶9</button>
-                      <button data-video-aspect-ratio="9:16" class="export-option-btn" data-tooltip="Portrait — 9∶16 center crop (Reels, TikTok, Shorts)">9∶16</button>
                     </div>
                   </div>
                   <div class="export-option-group">

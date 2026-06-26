@@ -51,13 +51,11 @@ import {
   syncSvgExtrudeControls,
   renderSvgColorDepthControls,
 } from './svgExtrudeControlsShared.js';
-import { normalizeExportSubtleSpinDegrees, normalizeExportHdriRotationDegrees } from '../render/exportVideoMovements.js';
+import { normalizeExportSubtleSpinDegrees } from '../render/exportVideoMovements.js';
 import {
-  EXPORT_VIDEO_ASPECT_LANDSCAPE,
-  EXPORT_VIDEO_ASPECT_PORTRAIT,
   getExportVideoResolutionPixelLabel,
-  isPortraitExportVideoAspect,
   normalizeExportVideoAspectRatio,
+  normalizeExportVideoResolution,
 } from '../render/exportVideoResolution.js';
 import { IMPORT_MESH_SMOOTHING_ENABLED } from '../import/stlNormalSmoothing.js';
 import {
@@ -1006,7 +1004,6 @@ export class MeshControls {
       const subtleEnabled = fullSpins === 0;
       const subtleDegrees = normalizeExportSubtleSpinDegrees(video.subtleSpinDegrees);
       const spinDirection = video.spinDirection === 'reverse' ? 'reverse' : 'forward';
-      const hdriDegrees = normalizeExportHdriRotationDegrees(video.hdriRotationDegrees);
 
       document.querySelectorAll('[data-video-spins]').forEach((btn) => {
         const spins = parseInt(btn.dataset.videoSpins, 10);
@@ -1026,11 +1023,6 @@ export class MeshControls {
 
       document.querySelectorAll('[data-video-spin-direction]').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.videoSpinDirection === spinDirection);
-      });
-
-      document.querySelectorAll('[data-video-hdri-rotation]').forEach((btn) => {
-        const degrees = normalizeExportHdriRotationDegrees(parseFloat(btn.dataset.videoHdriRotation));
-        btn.classList.toggle('active', degrees > 0 && degrees === hdriDegrees);
       });
     };
 
@@ -1068,19 +1060,6 @@ export class MeshControls {
       });
     });
 
-    document.querySelectorAll('[data-video-hdri-rotation]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const degrees = parseFloat(button.dataset.videoHdriRotation);
-        const normalized = normalizeExportHdriRotationDegrees(degrees);
-        if (!normalized) return;
-        const video = this.ui.exportSettings.video;
-        const current = normalizeExportHdriRotationDegrees(video.hdriRotationDegrees);
-        video.hdriRotationDegrees = current === normalized ? 0 : normalized;
-        syncExportSpinUi();
-        notifyExportPreviewSettingsChanged();
-      });
-    });
-
     syncExportSpinUi();
 
     document.querySelectorAll('[data-video-resolution]').forEach((button) => {
@@ -1098,10 +1077,9 @@ export class MeshControls {
 
     const syncExportVideoResolutionUi = () => {
       const video = this.ui.exportSettings.video || {};
-      const resolution =
-        video.resolution === '1440p' || video.resolution === '2160p'
-          ? video.resolution
-          : '1080p';
+      video.aspectRatio = normalizeExportVideoAspectRatio(video.aspectRatio);
+      const resolution = normalizeExportVideoResolution(video.resolution);
+      video.resolution = resolution;
       const aspectRatio = normalizeExportVideoAspectRatio(video.aspectRatio);
       document.querySelectorAll('[data-video-resolution]').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.videoResolution === resolution);
@@ -1112,49 +1090,7 @@ export class MeshControls {
       });
     };
 
-    const enablePortraitCropPreview = () => {
-      const cam = this.stateStore.getState().camera ?? {};
-      if (!cam.compositionGridEnabled && this.ui.inputs.compositionGridEnabled) {
-        this.ui.inputs.compositionGridEnabled.checked = true;
-        this.stateStore.set('camera.compositionGridEnabled', true);
-        this.eventBus.emit('camera:composition-grid', { enabled: true, animate: true });
-        this.ui.setEffectControlsDisabled(['compositionGuidesColor'], false);
-      }
-      if (cam.compositionPortraitCropGuide) {
-        this.eventBus.emit('camera:composition-portrait-crop-guide', true);
-        return;
-      }
-      this.stateStore.set('camera.compositionPortraitCropGuide', true);
-      this.eventBus.emit('camera:composition-portrait-crop-guide', true);
-    };
-
-    document.querySelectorAll('[data-video-aspect-ratio]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const aspectRatio = button.dataset.videoAspectRatio;
-        if (
-          aspectRatio !== EXPORT_VIDEO_ASPECT_LANDSCAPE
-          && aspectRatio !== EXPORT_VIDEO_ASPECT_PORTRAIT
-        ) return;
-        this.ui.exportSettings.video.aspectRatio = aspectRatio;
-        document.querySelectorAll('[data-video-aspect-ratio]').forEach((btn) => {
-          btn.classList.toggle('active', btn === button);
-        });
-        syncExportVideoResolutionUi();
-        if (isPortraitExportVideoAspect(aspectRatio)) {
-          enablePortraitCropPreview();
-        }
-        notifyExportPreviewSettingsChanged();
-      });
-    });
-
     syncExportVideoResolutionUi();
-    document.querySelectorAll('[data-video-aspect-ratio]').forEach((btn) => {
-      btn.classList.toggle(
-        'active',
-        btn.dataset.videoAspectRatio
-          === normalizeExportVideoAspectRatio(this.ui.exportSettings.video?.aspectRatio),
-      );
-    });
 
     document.querySelectorAll('[data-video-mov-transparent]').forEach((button) => {
       button.addEventListener('click', () => {
@@ -1191,13 +1127,6 @@ export class MeshControls {
       syncExportMovementButtons();
       updatePngTransparentUi();
       updateMp4Ui();
-      document.querySelectorAll('[data-video-aspect-ratio]').forEach((btn) => {
-        btn.classList.toggle(
-          'active',
-          btn.dataset.videoAspectRatio
-            === normalizeExportVideoAspectRatio(this.ui.exportSettings.video?.aspectRatio),
-        );
-      });
     };
   }
 

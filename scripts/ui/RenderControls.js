@@ -373,24 +373,11 @@ export class RenderControls {
         });
         this.ui.setEffectControlsDisabled(['compositionGuidesColor'], !enabled);
         if (enabled) {
-          const cropOn = !!(this.stateStore.getState().camera?.compositionPortraitCropGuide);
-          this.eventBus.emit('camera:composition-portrait-crop-guide', cropOn);
+          this.eventBus.emit(
+            'camera:composition-portrait-crop-guide',
+            !!(this.stateStore.getState().camera?.compositionPortraitCropGuide),
+          );
         }
-      });
-    }
-    const setCompositionAspect = (portrait) => {
-      this.stateStore.set('camera.compositionPortraitCropGuide', portrait);
-      this.eventBus.emit('camera:composition-portrait-crop-guide', portrait);
-      this.syncCompositionAspectButtons(portrait);
-    };
-    if (this.ui.inputs.compositionAspectLandscape) {
-      this.ui.inputs.compositionAspectLandscape.addEventListener('click', () => {
-        setCompositionAspect(false);
-      });
-    }
-    if (this.ui.inputs.compositionAspectPortrait) {
-      this.ui.inputs.compositionAspectPortrait.addEventListener('click', () => {
-        setCompositionAspect(true);
       });
     }
     if (this.ui.inputs.compositionGuidesColor) {
@@ -1169,9 +1156,6 @@ export class RenderControls {
       // the checkbox `change` handler before `{ animate: true }` is emitted).
       this.ui.setEffectControlsDisabled(['compositionGuidesColor'], !gridOn);
     }
-    this.syncCompositionAspectButtons(
-      !!(state.camera?.compositionPortraitCropGuide),
-    );
     if (this.ui.inputs.compositionGuidesColor) {
       const inverted = !!(state.camera?.compositionGuidesInverted);
       this.ui.inputs.compositionGuidesColor.value = inverted ? 'dark' : 'light';
@@ -1288,19 +1272,8 @@ export class RenderControls {
     this._syncExportSizeControls();
   }
 
-  /** Highlight the active composition-guide aspect — 16∶9 (portrait off) vs 9∶16 (portrait crop). */
-  syncCompositionAspectButtons(portrait) {
-    const landscapeBtn = this.ui.inputs.compositionAspectLandscape;
-    const portraitBtn = this.ui.inputs.compositionAspectPortrait;
-    if (landscapeBtn) {
-      landscapeBtn.classList.toggle('active', !portrait);
-      landscapeBtn.setAttribute('aria-pressed', portrait ? 'false' : 'true');
-    }
-    if (portraitBtn) {
-      portraitBtn.classList.toggle('active', !!portrait);
-      portraitBtn.setAttribute('aria-pressed', portrait ? 'true' : 'false');
-    }
-  }
+  /** @deprecated Portrait 9∶16 composition toggle removed from UI. */
+  syncCompositionAspectButtons(_portrait) {}
 
   syncCameraWorldPose(pose) {
     const position = pose?.position ?? DEFAULT_CAMERA_POSITION;
