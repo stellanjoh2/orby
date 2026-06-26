@@ -111,6 +111,28 @@ export class BackgroundGradientController {
     this._texture.needsUpdate = true;
   }
 
+  /**
+   * Offline capture — full-frame gradient at export resolution after viewport is set.
+   * @param {{ width?: number, height?: number, transparent?: boolean }} [ctx]
+   */
+  prepareForCapture(ctx = {}) {
+    if (ctx.transparent || !this.isActive()) return;
+    const w = ctx.width;
+    const h = ctx.height;
+    if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) {
+      this.syncToDrawingBuffer(w, h, { forceRedraw: true });
+    } else {
+      this.syncToDrawingBuffer(undefined, undefined, { forceRedraw: true });
+    }
+    this.applyIfActive();
+  }
+
+  /** Restore gradient canvas to interactive viewport size after export. */
+  restoreAfterCapture() {
+    if (!this.isActive()) return;
+    this.syncToDrawingBuffer(undefined, undefined, { forceRedraw: true });
+  }
+
   handleResize(width, height) {
     if (!this.isActive()) return;
     void width;

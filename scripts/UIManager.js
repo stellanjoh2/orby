@@ -400,6 +400,9 @@ export class UIManager {
     this.dom.exportPreviewScrub = q('#exportPreviewScrub');
     this.dom.exportPreviewTime = q('#exportPreviewTime');
     this.dom.exportPreviewPauseAll = q('#exportPreviewPauseAll');
+    this.dom.exportCapturePreviewThumbWrap = q('#exportCapturePreviewThumbWrap');
+    this.dom.exportCapturePreviewThumb = q('#exportCapturePreviewThumb');
+    this.dom.exportCapturePreviewThumbLabel = q('#exportCapturePreviewThumbLabel');
     this.dom.animationTimeReferenceSection = q('#animationTimeReferenceSection');
     this.dom.animationFrameNumbers = q('#animationFrameNumbers');
     this.dom.clipPlanesFoldout = q('#clipPlanesFoldout');
@@ -732,6 +735,7 @@ export class UIManager {
       exportSvgColor: q('#exportSvgColorButton'),
       exportSvgGlb: q('#exportSvgGlbButton'),
       exportVideo: q('#exportVideoButton'),
+      exportVideoCapturePreview: q('#exportVideoCapturePreviewButton'),
       exportPngFolderChoose: q('#exportPngFolderChoose'),
       exportVideoCameraSave: q('#exportVideoCameraSaveButton'),
       exportVideoCameraRestore: q('#exportVideoCameraRestoreButton'),
@@ -2531,6 +2535,32 @@ export class UIManager {
 
   syncExportPreviewAvailability(hasModel) {
     this.exportPreviewControls?.syncAvailability(hasModel);
+  }
+
+  /**
+   * Show last offline capture preview tile (export resolution, not live viewport).
+   * @param {string} objectUrl
+   * @param {{ width?: number, height?: number, frameIndex?: number, totalFrames?: number }} [meta]
+   */
+  showExportCapturePreviewThumb(objectUrl, meta = {}) {
+    const wrap = this.dom.exportCapturePreviewThumbWrap;
+    const img = this.dom.exportCapturePreviewThumb;
+    const label = this.dom.exportCapturePreviewThumbLabel;
+    wrap?.classList.toggle('export-capture-preview-thumb--transparent', !!meta.transparent);
+    if (img) {
+      if (img.dataset.objectUrl) {
+        URL.revokeObjectURL(img.dataset.objectUrl);
+      }
+      img.src = objectUrl;
+      img.dataset.objectUrl = objectUrl;
+    }
+    if (label && meta.width && meta.height) {
+      const frame = Number.isFinite(meta.frameIndex) ? meta.frameIndex + 1 : 1;
+      const total = meta.totalFrames ?? '?';
+      const alphaNote = meta.transparent ? ' · transparent' : '';
+      label.textContent = `Export capture ${meta.width}×${meta.height}${alphaNote} · frame ${frame}/${total}`;
+    }
+    wrap?.removeAttribute('hidden');
   }
 
   syncAnimationDisplayFps(fps) {

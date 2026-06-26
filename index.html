@@ -5355,6 +5355,18 @@
                       <button data-video-resolution="2160p" class="export-option-btn" data-tooltip="3840 × 2160 (4K). Heavy encode; some browsers may fall back.">2160p</button>
                     </div>
                   </div>
+                  <button
+                    id="exportVideoCapturePreviewButton"
+                    class="accent-action-btn"
+                    data-tooltip="Render one offline frame at export resolution (same path as PNG encode). Uses preview scrub time when preview is active."
+                  >
+                    <i class="fa-solid fa-camera"></i>
+                    Capture preview frame
+                  </button>
+                  <div class="export-capture-preview-thumb" id="exportCapturePreviewThumbWrap" hidden>
+                    <img id="exportCapturePreviewThumb" alt="Last export capture preview" width="320" height="180" />
+                    <span class="export-capture-preview-thumb-label" id="exportCapturePreviewThumbLabel"></span>
+                  </div>
                   <button id="exportVideoButton" class="accent-action-btn" data-tooltip="Export MP4 or PNG sequence. For long PNG exports, choose an output folder to write frames directly to disk.">
                     <i class="fa-solid fa-film"></i>
                     Export Video

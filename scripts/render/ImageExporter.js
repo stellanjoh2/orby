@@ -8,9 +8,7 @@ import {
 } from './imageExportFormats.js';
 import { isArtisticCreativeLookPreset } from './creativeLookPresetSliders.js';
 import { SKETCH_PAPER_RGB } from './creativeLookSketchArt.js';
-import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
 import { resetRendererFullViewport } from './resetRendererFullViewport.js';
-import { getComposerOutputRenderTarget } from './composerOutputBuffer.js';
 import {
   buildScreenPixelSvg,
   buildScreenPixelSvgFromGlPixels,
@@ -19,6 +17,28 @@ import {
 } from './screenPixelSvgExport.js';
 import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/EffectComposer.js';
 import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js';
+import { USE_CAPTURE_SESSION, ALLOW_CAPTURE_RESAMPLE, LOG_CAPTURE_DEBUG } from '../constants.js';
+import {
+  clampCapturePixelSize,
+  resolvePngExportCaptureSize,
+} from './capture/CaptureSizePolicy.js';
+import { runOfflineCaptureSession } from './capture/OfflineCaptureSession.js';
+import { captureReadback, resampleRgba } from './capture/captureReadback.js';
+import { prepareCaptureFeatures, restoreCaptureFeatures } from './capture/captureFeatureHooks.js';
+import { downloadExportCanvas } from './capture/encodeExportBlob.js';
+import {
+  applyTransparentCaptureSetup,
+  extractCroppedTransparentCanvas,
+  readTransparentMergedTopDownRgba,
+  restoreTransparentCaptureSetup,
+  cropTransparentTopDownRgbaToCanvas as cropTransparentTopDownRgbaToCanvasFn,
+} from './capture/TransparentCapture.js';
+import {
+  pinAsciiReferenceForCapture,
+  unpinAsciiReferenceForCapture,
+  pinLensDistortionForExportCapture,
+  unpinLensDistortionForExportCapture,
+} from './capture/capturePostPipelinePins.js';
 
 /**
  * ImageExporter
@@ -48,8 +68,24 @@ export class ImageExporter {
      * when `composer.render()` alone leaves a sub-viewport.
      */
     renderComposerPassForExport,
+    /** Same instance wired to `renderComposerPassForExport` — capture session entry. */
+    composerLifecycle,
+    /**
+     * GPU / canvas clamp reduced export dimensions — show toast in studio UI.
+     * @type {(info: {
+     *   requestedWidth: number,
+     *   requestedHeight: number,
+     *   actualWidth: number,
+     *   actualHeight: number,
+     *   reason: 'gpu-max' | 'drawing-buffer',
+     * }) => void}
+     */
+    notifyExportSizeClamped,
+    environmentController,
     /** @type {() => object | undefined} */
     getRenderState,
+    /** @type {import('./capture/captureArtisticLookPrep.js').ArtisticLookCaptureDeps | undefined} */
+    creativeLookCaptureDeps,
   } = {}) {
     this.renderer = renderer;
     this.scene = scene;
@@ -61,8 +97,18 @@ export class ImageExporter {
     this.syncPostProcessingForLogicalSize = syncPostProcessingForLogicalSize;
     this.syncPerspectiveProjection = syncPerspectiveProjection;
     this.renderComposerPassForExport = renderComposerPassForExport;
+    this.composerLifecycle = composerLifecycle;
+    this.notifyExportSizeClamped = notifyExportSizeClamped;
+    this.environmentController = environmentController;
     this.getRenderState = getRenderState;
+    this.creativeLookCaptureDeps = creativeLookCaptureDeps;
     this._imageTracerLoaded = false;
+    /** @type {number | null} — learned max w×h the browser actually allocates for export. */
+    this._maxExportPixelArea = null;
+    /** @type {(() => void) | null} — SceneManager re-applies HDRI + backdrop after capture. */
+    this.reapplyStudioAfterCapture = null;
+    /** @type {(() => number) | null} */
+    this.getHdriRotationDegrees = null;
   }
 
   /**
@@ -132,6 +178,9 @@ export class ImageExporter {
 
     this._pinAsciiExportReference(originalSize);
     try {
+      this.environmentController?.beginCaptureRotationSnapshot?.(
+        this.getHdriRotationDegrees?.() ?? this.environmentController?.rotation,
+      );
       const { width: exportW, height: exportH } = this._setExportFramebufferSize(
         targetWidth,
         targetHeight,
@@ -148,6 +197,13 @@ export class ImageExporter {
       try {
         this._ensureComposerMatchesDrawingBuffer({ strict: true });
         this._setExportViewport(exportW, exportH);
+        prepareCaptureFeatures(
+          {
+            backgroundController: this.backgroundController,
+            environmentController: this.environmentController,
+          },
+          { width: exportW, height: exportH },
+        );
         if (typeof this.renderComposerPassForExport === 'function') {
           // Opaque clear + paper backdrop — same as the interactive viewport loop.
           this.renderComposerPassForExport({ transparent: false });
@@ -167,19 +223,22 @@ export class ImageExporter {
         gl.finish();
       }
 
-      const capture = this._readComposerOutputPixels(exportW, exportH);
+      const capture = this._readComposerOutputPixels(exportW, exportH, {
+        retryRender: () => {
+          if (typeof this.renderComposerPassForExport === 'function') {
+            this.renderComposerPassForExport({ transparent: false });
+          } else if (this.composer) {
+            this.composer.render();
+          } else {
+            this.renderer.render(this.scene, this.camera);
+          }
+        },
+      });
       if (!capture?.pixels) {
         throw new Error('Artistic transparent export capture failed');
       }
 
-      let { pixels, width, height } = capture;
-      const fw = Math.max(1, exportW);
-      const fh = Math.max(1, exportH);
-      if (width !== fw || height !== fh) {
-        pixels = this._resampleRgba(pixels, width, height, fw, fh);
-        width = fw;
-        height = fh;
-      }
+      const { pixels, width, height } = capture;
 
       this._keyArtisticPaperBackdropToAlpha(pixels, width, height);
       const canvas = this._pixelsToFlippedCanvas(pixels, width, height);
@@ -198,6 +257,11 @@ export class ImageExporter {
       if (this.syncPerspectiveProjection) {
         this.syncPerspectiveProjection();
       }
+      restoreCaptureFeatures({
+        backgroundController: this.backgroundController,
+        environmentController: this.environmentController,
+      });
+      this.reapplyStudioAfterCapture?.();
       this._ensureFullDrawingBufferViewport();
     } finally {
       this._unpinAsciiExportReference();
@@ -213,7 +277,7 @@ export class ImageExporter {
     const r = this.renderer;
     r.setRenderTarget(null);
     resetRendererFullViewport(r);
-    this.backgroundController?.gradientController?.syncToDrawingBuffer?.();
+    this.backgroundController?.gradientController?.restoreAfterCapture?.();
   }
 
   /**
@@ -345,33 +409,68 @@ export class ImageExporter {
   }
 
   /**
-   * Largest square texture / renderbuffer the current GL context can allocate.
-   * Browsers may also clamp `canvas.width` below this.
-   */
-  _getMaxExportPixelDimension() {
-    const gl = this.renderer.getContext();
-    if (!gl) return 8192;
-    const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 8192;
-    const maxRb = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) || maxTex;
-    return Math.max(1, Math.min(maxTex, maxRb, 16384));
-  }
-
-  /**
    * Scale down export dimensions when they exceed GPU / canvas limits (avoids clamped
    * backing stores with crop/readback still sized for the requested resolution).
    */
   _clampExportPixelSize(width, height) {
-    const cap = this._getMaxExportPixelDimension();
-    let w = Math.max(1, Math.round(width));
-    let h = Math.max(1, Math.round(height));
-    if (w <= cap && h <= cap) {
-      return { width: w, height: h };
+    return clampCapturePixelSize(
+      width,
+      height,
+      this.renderer,
+      this._maxExportPixelArea,
+    );
+  }
+
+  /** Remember the largest w×h export the browser actually gave us (area budget). */
+  _rememberExportPixelAreaBudget(width, height) {
+    const area = Math.max(1, Math.round(width) * Math.round(height));
+    if (this._maxExportPixelArea == null || area < this._maxExportPixelArea) {
+      this._maxExportPixelArea = area;
     }
-    const fit = Math.min(cap / w, cap / h);
-    return {
-      width: Math.max(1, Math.floor(w * fit)),
-      height: Math.max(1, Math.floor(h * fit)),
-    };
+  }
+
+  /**
+   * Align canvas + Three.js internal size with the real GL backing store after browser clamp.
+   * @param {{ width: number, height: number }} size
+   */
+  _coerceRendererToBackingStorePixels({ width, height }) {
+    const w = Math.max(1, Math.round(width));
+    const h = Math.max(1, Math.round(height));
+    const canvas = this.renderer.domElement;
+    if (canvas) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    this.renderer.setPixelRatio(1);
+    if (typeof this.renderer.setDrawingBufferSize === 'function') {
+      this.renderer.setDrawingBufferSize(w, h, 1);
+    } else {
+      this.renderer.setSize(w, h, false);
+    }
+    this._syncRendererInternalSizeToCanvasBackingStore();
+  }
+
+  /**
+   * Resize the drawing buffer and return the size GL actually allocated.
+   * @returns {{ width: number, height: number }}
+   */
+  _applyExportDrawingBufferSize(width, height) {
+    const w = Math.max(1, Math.round(width));
+    const h = Math.max(1, Math.round(height));
+    this.renderer.setPixelRatio(1);
+    if (typeof this.renderer.setDrawingBufferSize === 'function') {
+      this.renderer.setDrawingBufferSize(w, h, 1);
+    } else {
+      this.renderer.setSize(w, h, false);
+      this._syncRendererInternalSizeToCanvasBackingStore();
+    }
+
+    let synced = this._getActualDrawingBufferPixelSize(w, h);
+    if (synced.width !== w || synced.height !== h) {
+      this._coerceRendererToBackingStorePixels(synced);
+      synced = this._getActualDrawingBufferPixelSize(synced.width, synced.height);
+    }
+    return synced;
   }
 
   /**
@@ -380,14 +479,16 @@ export class ImageExporter {
    * @param {number} scale — 1 or 2 from the export UI
    */
   _resolveExportPixelSize(scale) {
-    const logical = fullViewportLogicalSize(this.renderer);
-    const previewDensity = Math.max(1e-6, this.renderer.getPixelRatio());
-    const s = Math.max(0.25, Number(scale) || 1);
-    const { width, height } = this._clampExportPixelSize(
-      logical.x * previewDensity * s,
-      logical.y * previewDensity * s,
+    const captureSize = resolvePngExportCaptureSize(
+      this.renderer,
+      scale,
+      this._maxExportPixelArea,
     );
-    return { width, height, density: previewDensity };
+    return {
+      width: captureSize.width,
+      height: captureSize.height,
+      density: captureSize.previewDensity,
+    };
   }
 
   /**
@@ -395,59 +496,11 @@ export class ImageExporter {
    * @param {{ x: number, y: number }} logicalSize
    */
   _pinAsciiExportReference(logicalSize) {
-    this.postPipeline?.creativeLookAscii?.pinReferenceLogicalSize?.(
-      logicalSize.x,
-      logicalSize.y,
-    );
-    this.postPipeline?.creativeLookEga?.pinReferenceLogicalSize?.(
-      logicalSize.x,
-      logicalSize.y,
-    );
-    this.postPipeline?.creativeLookC64?.pinReferenceLogicalSize?.(
-      logicalSize.x,
-      logicalSize.y,
-    );
-    this.postPipeline?.creativeLookGameBoy?.pinReferenceLogicalSize?.(
-      logicalSize.x,
-      logicalSize.y,
-    );
-    this.postPipeline?.creativeLookNes?.pinReferenceLogicalSize?.(
-      logicalSize.x,
-      logicalSize.y,
-    );
-    this.postPipeline?.creativeLookMegaDrive?.pinReferenceLogicalSize?.(
-      logicalSize.x,
-      logicalSize.y,
-    );
-    this.postPipeline?.creativeLookIntellivision?.pinReferenceLogicalSize?.(
-      logicalSize.x,
-      logicalSize.y,
-    );
-    this.postPipeline?.creativeLookGba?.pinReferenceLogicalSize?.(
-      logicalSize.x,
-      logicalSize.y,
-    );
-    this.postPipeline?.creativeLookApple2?.pinReferenceLogicalSize?.(
-      logicalSize.x,
-      logicalSize.y,
-    );
-    this.postPipeline?.creativeLookDither?.pinReferenceLogicalSize?.(
-      logicalSize.x,
-      logicalSize.y,
-    );
+    pinAsciiReferenceForCapture(this.postPipeline, logicalSize);
   }
 
   _unpinAsciiExportReference() {
-    this.postPipeline?.creativeLookAscii?.unpinReferenceLogicalSize?.();
-    this.postPipeline?.creativeLookEga?.unpinReferenceLogicalSize?.();
-    this.postPipeline?.creativeLookC64?.unpinReferenceLogicalSize?.();
-    this.postPipeline?.creativeLookGameBoy?.unpinReferenceLogicalSize?.();
-    this.postPipeline?.creativeLookNes?.unpinReferenceLogicalSize?.();
-    this.postPipeline?.creativeLookMegaDrive?.unpinReferenceLogicalSize?.();
-    this.postPipeline?.creativeLookIntellivision?.unpinReferenceLogicalSize?.();
-    this.postPipeline?.creativeLookGba?.unpinReferenceLogicalSize?.();
-    this.postPipeline?.creativeLookApple2?.unpinReferenceLogicalSize?.();
-    this.postPipeline?.creativeLookDither?.unpinReferenceLogicalSize?.();
+    unpinAsciiReferenceForCapture(this.postPipeline);
   }
 
   /**
@@ -455,18 +508,12 @@ export class ImageExporter {
    * @returns {{ lensRenderToScreen: boolean } | null}
    */
   pinLensDistortionForExportCapture() {
-    const pass = this.postPipeline?.lensDistortionPass;
-    if (!pass?.enabled) return null;
-    const snapshot = { lensRenderToScreen: pass.renderToScreen };
-    pass.renderToScreen = false;
-    return snapshot;
+    return pinLensDistortionForExportCapture(this.postPipeline);
   }
 
   /** @param {{ lensRenderToScreen: boolean } | null} snapshot */
   unpinLensDistortionForExportCapture(snapshot) {
-    if (!snapshot) return;
-    const pass = this.postPipeline?.lensDistortionPass;
-    if (pass) pass.renderToScreen = snapshot.lensRenderToScreen;
+    unpinLensDistortionForExportCapture(this.postPipeline, snapshot);
   }
 
   /**
@@ -488,39 +535,50 @@ export class ImageExporter {
     };
   }
 
+  _notifyExportSizeClamped(requested, actual, reason) {
+    if (
+      requested.width === actual.width
+      && requested.height === actual.height
+    ) {
+      return;
+    }
+    this.notifyExportSizeClamped?.({
+      requestedWidth: requested.width,
+      requestedHeight: requested.height,
+      actualWidth: actual.width,
+      actualHeight: actual.height,
+      reason,
+    });
+  }
+
   /**
    * Resize renderer + post stack for export; returns true backing-store pixels after clamp.
    * @returns {{ width: number, height: number }}
    */
   _setExportFramebufferSize(targetWidth, targetHeight) {
-    const { width, height } = this._clampExportPixelSize(targetWidth, targetHeight);
-    this.renderer.setPixelRatio(1);
-    const canvas = this.renderer.domElement;
-    const applyDrawingBuffer = () => {
-      if (typeof this.renderer.setDrawingBufferSize === 'function') {
-        // Offline 1080p/1440p/4K — bypass CSS layout; backing store must match export preset.
-        this.renderer.setDrawingBufferSize(width, height, 1);
-      } else {
-        this.renderer.setSize(width, height, false);
-        this._syncRendererInternalSizeToCanvasBackingStore();
-      }
+    const requested = {
+      width: Math.max(1, Math.round(targetWidth)),
+      height: Math.max(1, Math.round(targetHeight)),
     };
-    applyDrawingBuffer();
-    let synced = this._getActualDrawingBufferPixelSize(width, height);
-    if (synced.width !== width || synced.height !== height) {
-      // Viewport DPR can leave a larger backing store — force canvas pixels then retry.
-      if (canvas) {
-        canvas.width = width;
-        canvas.height = height;
-      }
-      this.renderer.setPixelRatio(1);
-      applyDrawingBuffer();
-      synced = this._getActualDrawingBufferPixelSize(width, height);
+    const { width, height } = this._clampExportPixelSize(
+      requested.width,
+      requested.height,
+    );
+    if (width !== requested.width || height !== requested.height) {
+      this._notifyExportSizeClamped(requested, { width, height }, 'gpu-max');
     }
+
+    let synced = this._applyExportDrawingBufferSize(width, height);
     if (synced.width !== width || synced.height !== height) {
       console.warn(
         `Export framebuffer is ${synced.width}×${synced.height} (requested ${width}×${height}).`,
       );
+      this._notifyExportSizeClamped(
+        { width, height },
+        synced,
+        'drawing-buffer',
+      );
+      this._rememberExportPixelAreaBudget(synced.width, synced.height);
     }
     this.camera.aspect = synced.width / Math.max(1e-6, synced.height);
     if (this.syncPostProcessingForLogicalSize) {
@@ -530,11 +588,6 @@ export class ImageExporter {
       this.composer.setSize(synced.width, synced.height);
     }
     this._ensureComposerMatchesDrawingBuffer({ strict: true });
-    this.backgroundController?.gradientController?.syncToDrawingBuffer?.(
-      synced.width,
-      synced.height,
-      { forceRedraw: true },
-    );
     return synced;
   }
 
@@ -554,62 +607,50 @@ export class ImageExporter {
   }
 
   /**
-   * Read the composer's final ping-pong buffer into RGBA bytes (GL bottom-left origin).
+   * Read composer output at exact capture size (strict by default).
    * @returns {{ pixels: Uint8Array, width: number, height: number } | null}
    */
-  _readComposerOutputPixels(fallbackWidth, fallbackHeight) {
-    const r = this.renderer;
+  _readComposerOutputPixels(fallbackWidth, fallbackHeight, opts = {}) {
     const composer = this.composer;
     if (!composer) return null;
-    this._ensureComposerMatchesDrawingBuffer({ strict: true });
-    const outputRT = getComposerOutputRenderTarget(composer);
-    const targetWidth = Math.max(1, outputRT?.width ?? fallbackWidth ?? 1);
-    const targetHeight = Math.max(1, outputRT?.height ?? fallbackHeight ?? 1);
-    const fw = Math.max(1, fallbackWidth ?? 1);
-    const fh = Math.max(1, fallbackHeight ?? 1);
-    if (
-      outputRT
-      && (targetWidth !== fw || targetHeight !== fh)
-    ) {
-      console.warn(
-        `PNG export: composer buffer ${targetWidth}×${targetHeight} ≠ framebuffer ${fw}×${fh}.`,
-      );
-    }
-    const byteRT = new THREE.WebGLRenderTarget(targetWidth, targetHeight, {
-      type: THREE.UnsignedByteType,
-      format: THREE.RGBAFormat,
-      minFilter: THREE.LinearFilter,
-      magFilter: THREE.LinearFilter,
-      depthBuffer: false,
-      stencilBuffer: false,
-    });
 
-    try {
-      composer.copyPass.render(r, byteRT, outputRT, 0, false);
-      const pixels = new Uint8Array(targetWidth * targetHeight * 4);
-      r.readRenderTargetPixels(byteRT, 0, 0, targetWidth, targetHeight, pixels);
-      return { pixels, width: targetWidth, height: targetHeight };
-    } finally {
-      byteRT.dispose();
-    }
+    const allowResample = opts.allowResample ?? ALLOW_CAPTURE_RESAMPLE;
+    const logDebug = opts.logDebug ?? LOG_CAPTURE_DEBUG;
+
+    return captureReadback(
+      {
+        renderer: this.renderer,
+        composer,
+        ensureComposerMatchesDrawingBuffer: (o) =>
+          this._ensureComposerMatchesDrawingBuffer(o),
+      },
+      {
+        width: fallbackWidth,
+        height: fallbackHeight,
+        allowResample,
+        retryRender: opts.retryRender,
+        logDebug,
+      },
+    );
   }
 
   _captureComposerOutputAsCanvas(
     fallbackWidth,
     fallbackHeight,
-    { cinematicLetterbox219 = false } = {},
+    {
+      cinematicLetterbox219 = false,
+      allowResample = ALLOW_CAPTURE_RESAMPLE,
+      retryRender,
+      logDebug = LOG_CAPTURE_DEBUG,
+    } = {},
   ) {
-    const capture = this._readComposerOutputPixels(fallbackWidth, fallbackHeight);
+    const capture = this._readComposerOutputPixels(fallbackWidth, fallbackHeight, {
+      allowResample,
+      retryRender,
+      logDebug,
+    });
     if (!capture) return null;
-    const fw = Math.max(1, fallbackWidth ?? 1);
-    const fh = Math.max(1, fallbackHeight ?? 1);
-    let { pixels, width, height } = capture;
-    if (width !== fw || height !== fh) {
-      // Match export preset exactly — downscale if the GL/composer buffer is still viewport-sized.
-      pixels = this._resampleRgba(pixels, width, height, fw, fh);
-      width = fw;
-      height = fh;
-    }
+    const { pixels, width, height } = capture;
     return this._pixelsToFlippedCanvas(pixels, width, height, {
       cinematicLetterbox219,
     });
@@ -618,30 +659,18 @@ export class ImageExporter {
   _captureComposerOutputAsPngDataUrl(
     fallbackWidth,
     fallbackHeight,
-    { cinematicLetterbox219 = false } = {},
+    { cinematicLetterbox219 = false, retryRender } = {},
   ) {
     const canvas = this._captureComposerOutputAsCanvas(fallbackWidth, fallbackHeight, {
       cinematicLetterbox219,
+      retryRender,
     });
     return canvas ? canvas.toDataURL('image/png') : '';
   }
 
-  /** Nearest-neighbor resize when composer RT and canvas backing store diverge. */
+  /** @deprecated Use {@link resampleRgba} from captureReadback — legacy opt-in only. */
   _resampleRgba(src, srcW, srcH, dstW, dstH) {
-    const dst = new Uint8Array(dstW * dstH * 4);
-    for (let y = 0; y < dstH; y += 1) {
-      const sy = Math.min(srcH - 1, Math.floor((y / dstH) * srcH));
-      for (let x = 0; x < dstW; x += 1) {
-        const sx = Math.min(srcW - 1, Math.floor((x / dstW) * srcW));
-        const si = (sy * srcW + sx) * 4;
-        const di = (y * dstW + x) * 4;
-        dst[di] = src[si];
-        dst[di + 1] = src[si + 1];
-        dst[di + 2] = src[si + 2];
-        dst[di + 3] = src[si + 3];
-      }
-    }
-    return dst;
+    return resampleRgba(src, srcW, srcH, dstW, dstH);
   }
 
   /**
@@ -657,6 +686,184 @@ export class ImageExporter {
     cinematicLetterbox219 = false,
     format = 'png',
   ) {
+    if (USE_CAPTURE_SESSION) {
+      return this._exportImageViaCaptureSession(
+        currentFile,
+        originalSize,
+        size,
+        cinematicLetterbox219,
+        format,
+      );
+    }
+    return this._exportImageLegacy(
+      currentFile,
+      originalSize,
+      originalPixelRatio,
+      size,
+      cinematicLetterbox219,
+      format,
+    );
+  }
+
+  async _exportImageViaCaptureSession(
+    currentFile,
+    originalSize,
+    size = 1,
+    cinematicLetterbox219 = false,
+    format = 'png',
+  ) {
+    const formatId = normalizeImageExportFormat(format);
+    const captureSize = resolvePngExportCaptureSize(
+      this.renderer,
+      size,
+      this._maxExportPixelArea,
+    );
+
+    await runOfflineCaptureSession(
+      this._captureSessionDeps(),
+      async (session) => {
+          const { width: exportW, height: exportH } = session.applyCaptureSize(captureSize);
+          session.renderFrame({ transparent: false });
+
+          const gl = this.renderer.getContext();
+          if (gl && typeof gl.finish === 'function') {
+            gl.finish();
+          }
+
+          /** @type {HTMLCanvasElement} */
+          let canvas;
+          if (this.composer) {
+            canvas = this._captureComposerOutputAsCanvas(exportW, exportH, {
+              cinematicLetterbox219,
+              retryRender: () => session.renderFrame({ transparent: false }),
+            });
+          } else {
+            canvas = this.renderer.domElement;
+            if (cinematicLetterbox219) {
+              const copy = document.createElement('canvas');
+              copy.width = exportW;
+              copy.height = exportH;
+              const ctx = copy.getContext('2d');
+              ctx.drawImage(canvas, 0, 0, exportW, exportH);
+              this._applyCinematicLetterbox219ToCanvas(copy);
+              canvas = copy;
+            }
+          }
+          if (!canvas) {
+            throw new Error('Image capture failed');
+          }
+
+          await downloadExportCanvas(canvas, currentFile, formatId, {
+            transparent: false,
+            downloadBlob: (blob, file, suffix) => this._downloadBlob(blob, file, suffix),
+          });
+        },
+    );
+  }
+
+  _captureSessionDeps() {
+    return {
+      renderer: this.renderer,
+      scene: this.scene,
+      camera: this.camera,
+      composer: this.composer,
+      imageExporter: this,
+      postPipeline: this.postPipeline,
+      composerLifecycle: this.composerLifecycle,
+      backgroundController: this.backgroundController,
+      environmentController: this.environmentController,
+      creativeLookCaptureDeps: this.creativeLookCaptureDeps,
+      syncPostProcessingForLogicalSize: this.syncPostProcessingForLogicalSize,
+      syncPerspectiveProjection: this.syncPerspectiveProjection,
+      isLensDistortionActive: this.isLensDistortionActive,
+      getHdriRotationDegrees: this.getHdriRotationDegrees,
+      onAfterRestore: this.reapplyStudioAfterCapture,
+    };
+  }
+
+  async _exportTransparentImageViaCaptureSession(
+    currentModel,
+    currentFile,
+    cameraController,
+    size = 2,
+    formatId = 'png',
+  ) {
+    const originalSize = new THREE.Vector2();
+    this.renderer.getSize(originalSize);
+    const { density: exportDensity } = this._resolveExportPixelSize(size);
+    const cropInfo = this._calculateCropRegion(
+      currentModel,
+      cameraController,
+      originalSize,
+      size,
+      exportDensity,
+    );
+    if (!cropInfo) {
+      console.warn('Could not calculate mesh bounds');
+      return false;
+    }
+
+    await runOfflineCaptureSession(this._captureSessionDeps(), async (session) => {
+        const synced = session.applyCaptureSize({
+          width: cropInfo.fullRenderWidth,
+          height: cropInfo.fullRenderHeight,
+          pixelRatio: 1,
+          cameraAspect:
+            cropInfo.fullRenderWidth / Math.max(1e-6, cropInfo.fullRenderHeight),
+        });
+        cropInfo.actualFullRenderWidth = synced.width;
+        cropInfo.actualFullRenderHeight = synced.height;
+
+        const transparentDeps = {
+          renderer: this.renderer,
+          scene: this.scene,
+          composer: this.composer,
+          backgroundController: this.backgroundController,
+          postPipeline: this.postPipeline,
+        };
+        const transparentSnap = applyTransparentCaptureSetup(transparentDeps);
+        try {
+          const gl = this.renderer.getContext();
+          const topDown = readTransparentMergedTopDownRgba({
+            renderer: this.renderer,
+            scene: this.scene,
+            camera: this.camera,
+            composer: this.composer,
+            width: synced.width,
+            height: synced.height,
+            renderFrame: () => session.renderFrame({ transparent: true }),
+            finishGpu: () => {
+              if (gl && typeof gl.finish === 'function') {
+                gl.finish();
+              }
+            },
+          });
+
+          const canvas = extractCroppedTransparentCanvas(
+            topDown,
+            synced.width,
+            synced.height,
+            cropInfo,
+          );
+          await downloadExportCanvas(canvas, currentFile, formatId, {
+            transparent: true,
+            downloadBlob: (blob, file, suffix) => this._downloadBlob(blob, file, suffix),
+          });
+        } finally {
+          restoreTransparentCaptureSetup(transparentDeps, transparentSnap);
+        }
+      });
+    return true;
+  }
+
+  async _exportImageLegacy(
+    currentFile,
+    originalSize,
+    originalPixelRatio,
+    size = 1,
+    cinematicLetterbox219 = false,
+    format = 'png',
+  ) {
     const formatId = normalizeImageExportFormat(format);
     const scale = Math.max(0.25, Number(size) || 1);
     const { width: targetWidth, height: targetHeight } =
@@ -664,14 +871,12 @@ export class ImageExporter {
 
     this._pinAsciiExportReference(originalSize);
     try {
+    this.environmentController?.beginCaptureRotationSnapshot?.(
+      this.getHdriRotationDegrees?.() ?? this.environmentController?.rotation,
+    );
     const { width: exportW, height: exportH } = this._setExportFramebufferSize(
       targetWidth,
       targetHeight,
-    );
-    this.backgroundController?.gradientController?.syncToDrawingBuffer?.(
-      exportW,
-      exportH,
-      { forceRedraw: true },
     );
     const exportFovScale = this.isLensDistortionActive?.() ? 1.06 : 1;
     if (this.syncPerspectiveProjection) {
@@ -687,6 +892,13 @@ export class ImageExporter {
     try {
       this._ensureComposerMatchesDrawingBuffer({ strict: true });
       this._setExportViewport(exportW, exportH);
+      prepareCaptureFeatures(
+        {
+          backgroundController: this.backgroundController,
+          environmentController: this.environmentController,
+        },
+        { width: exportW, height: exportH },
+      );
       if (typeof this.renderComposerPassForExport === 'function') {
         this.renderComposerPassForExport();
       } else if (this.composer) {
@@ -745,6 +957,11 @@ export class ImageExporter {
       this.syncPerspectiveProjection();
     }
 
+    restoreCaptureFeatures({
+      backgroundController: this.backgroundController,
+      environmentController: this.environmentController,
+    });
+    this.reapplyStudioAfterCapture?.();
     this._ensureFullDrawingBufferViewport();
     } finally {
       this._unpinAsciiExportReference();
@@ -811,7 +1028,17 @@ export class ImageExporter {
       }
     }
 
-    // Save current state
+    if (USE_CAPTURE_SESSION) {
+      return this._exportTransparentImageViaCaptureSession(
+        currentModel,
+        currentFile,
+        cameraController,
+        size,
+        formatId,
+      );
+    }
+
+    // Legacy transparent export (rollback when USE_CAPTURE_SESSION = false)
     const state = this._saveState();
 
     // Set up for transparent export
@@ -1580,22 +1807,19 @@ export class ImageExporter {
         gl.finish();
       }
 
-      const capture = this._readComposerOutputPixels(exportW, exportH);
-      let fullPixels = capture?.pixels ?? null;
+      const capture = this._readComposerOutputPixels(exportW, exportH, {
+        retryRender: () => {
+          if (typeof this.renderComposerPassForExport === 'function') {
+            this.renderComposerPassForExport({ transparent: true });
+          } else {
+            this.composer.render();
+            this._ensureFullDrawingBufferViewport();
+          }
+        },
+      });
+      const fullPixels = capture?.pixels ?? null;
       const captureW = capture?.width ?? exportW;
       const captureH = capture?.height ?? exportH;
-      if (
-        fullPixels
-        && (captureW !== exportW || captureH !== exportH)
-      ) {
-        fullPixels = this._resampleRgba(
-          fullPixels,
-          captureW,
-          captureH,
-          exportW,
-          exportH,
-        );
-      }
 
       // Debug: Check if we got any content
       // Sample multiple points to check for content
@@ -1867,6 +2091,10 @@ export class ImageExporter {
     exportContext.putImageData(imageData, 0, 0);
 
     return exportCanvas;
+  }
+
+  cropTransparentTopDownRgbaToCanvas(rgba, width, height, opts = {}) {
+    return cropTransparentTopDownRgbaToCanvasFn(rgba, width, height, opts);
   }
 
   /**

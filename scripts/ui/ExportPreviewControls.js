@@ -1,4 +1,5 @@
 import { ExportMovementPreview } from '../render/ExportMovementPreview.js';
+import { USE_CAPTURE_PREVIEW_ON_SCRUB } from '../constants.js';
 
 /**
  * Export movement preview transport — play/stop, scrub, reset, and time readout.
@@ -39,6 +40,15 @@ export class ExportPreviewControls {
     this.ui.dom.exportPreviewScrub?.addEventListener('pointerup', () => {
       this._scrubbing = false;
       this.ui.dom.exportPreviewScrub?.classList.remove('is-scrub-playing');
+      if (USE_CAPTURE_PREVIEW_ON_SCRUB) {
+        const t = parseFloat(this.ui.dom.exportPreviewScrub?.value ?? '0');
+        this.eventBus.emit('export:video-capture-preview', {
+          download: false,
+          previewT: t,
+          showThumbnail: true,
+          ...(this.ui.exportSettings.video || {}),
+        });
+      }
     });
     this.ui.dom.exportPreviewScrub?.addEventListener('pointercancel', () => {
       this._scrubbing = false;
@@ -87,6 +97,8 @@ export class ExportPreviewControls {
     if (playBtn) playBtn.disabled = !canPreview;
     if (resetBtn) resetBtn.disabled = !canPreview;
     if (scrub) scrub.disabled = !canPreview;
+    const captureBtn = this.ui.buttons.exportVideoCapturePreview;
+    if (captureBtn) captureBtn.disabled = !canPreview;
     this.syncPauseAll();
   }
 

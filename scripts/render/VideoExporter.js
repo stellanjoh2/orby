@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { verticalFovForAspectPreservingHorizontalFov } from '../camera/lensPresets.js';
-import { getComposerOutputRenderTarget } from './composerOutputBuffer.js';
 import {
   exportVideoMovementLabel,
   hasExportVideoMovement,
@@ -25,6 +24,17 @@ import {
   normalizeExportVideoAspectRatio,
   normalizeExportVideoResolution,
 } from './exportVideoResolution.js';
+import { renderFrameForCaptureWithPins } from './capture/renderFrameForCapture.js';
+import { CaptureFeatureSession } from './capture/captureFeatureHooks.js';
+import { applyTimedExportFrameDrives } from './capture/captureExportFrameDrives.js';
+import {
+  captureVideoExportFrameBlob,
+  resolveVideoExportFrameTiming,
+} from './capture/captureVideoExportFrame.js';
+import {
+  cropTransparentTopDownRgbaToCanvas,
+  readTransparentMergedTopDownRgba,
+} from './capture/TransparentCapture.js';
 
 export class VideoExporter {
   constructor({
@@ -34,6 +44,7 @@ export class VideoExporter {
     composer,
     imageExporter,
     backgroundController,
+    environmentController,
     stateStore,
     ui,
     syncPostProcessingForLogicalSize,
@@ -74,6 +85,7 @@ export class VideoExporter {
     getAnimationClipLabel = () => null,
     getFontTextRevealExportLabel = () => null,
     handleResize,
+    creativeLookCaptureDeps,
   } = {}) {
     this.renderer = renderer;
     this.scene = scene;
@@ -81,6 +93,7 @@ export class VideoExporter {
     this.composer = composer;
     this.imageExporter = imageExporter;
     this.backgroundController = backgroundController;
+    this.environmentController = environmentController;
     this.stateStore = stateStore;
     this.ui = ui;
     this.syncPostProcessingForLogicalSize = syncPostProcessingForLogicalSize;
@@ -116,9 +129,11 @@ export class VideoExporter {
     this.getAnimationClipLabel = getAnimationClipLabel;
     this.getFontTextRevealExportLabel = getFontTextRevealExportLabel;
     this.handleResize = handleResize;
+    this.creativeLookCaptureDeps = creativeLookCaptureDeps;
     this._exportCancelRequested = false;
     /** @type {{ width: number, height: number } | null} — PNG sequence output size from export settings */
-    this._exportCaptureSize = null;
+    /** @type {import('./capture/captureFeatureHooks.js').CaptureFeatureSession | null} */
+    this._captureFeatureSession = null;
   }
 
   requestCancelExport() {
@@ -147,6 +162,72 @@ export class VideoExporter {
       || 'orby';
     const frame = String(frameIndex + 1).padStart(4, '0');
     return `${safeBase}_${mode}_${durationSec}s_${frame}.png`;
+  }
+
+  _previewFrameFileName(baseName, modeLabel, resolutionLabel, frameIndex) {
+    const safeBase = (baseName || 'orby')
+      .replace(/\.[a-z0-9]+$/i, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      || 'orby';
+    const frame = String(frameIndex + 1).padStart(4, '0');
+    return `${safeBase}_capture_preview_${modeLabel}_${resolutionLabel}_f${frame}.png`;
+  }
+
+  /** Normalized export settings shared by full encode and single-frame capture preview. */
+  _resolveVideoExportParams(settings = {}) {
+    if (!this.getCurrentModel?.()) {
+      return null;
+    }
+    const movements = normalizeExportVideoMovements(settings);
+    if (!hasExportVideoMovement(movements)) {
+      return null;
+    }
+    const allowedDurations = [5, 10, 15];
+    const durationSec = allowedDurations.includes(settings?.durationSec)
+      ? settings.durationSec
+      : 5;
+    const fps = settings?.fps === 30 || settings?.fps === 60 ? settings.fps : 24;
+    const totalFrames = Math.max(2, Math.round(durationSec * fps));
+    const state = this.stateStore.getState();
+    const startRotationY = Number.isFinite(state.rotationY)
+      ? state.rotationY
+      : THREE.MathUtils.radToDeg(this.getCurrentModel()?.rotation?.y || 0);
+    const startLightsRotation = Number.isFinite(state.lightsRotation)
+      ? state.lightsRotation
+      : 0;
+    const startHdriRotation = Number.isFinite(this.getHdriRotation?.())
+      ? this.getHdriRotation()
+      : Number.isFinite(state.hdriRotation)
+        ? state.hdriRotation
+        : 0;
+    return {
+      movements,
+      hdriRotationSettings: normalizeExportHdriRotationSettings(settings),
+      modeLabel: exportVideoMovementLabel(movements),
+      meshAnimation: normalizeExportMeshAnimationSettings(
+        settings,
+        this.getAnimationClipCount?.() ?? 0,
+      ),
+      durationSec,
+      fps,
+      totalFrames,
+      spinSettings: normalizeExportSpinSettings(settings),
+      resolution: normalizeExportVideoResolution(settings?.resolution),
+      aspectRatio: normalizeExportVideoAspectRatio(settings?.aspectRatio),
+      outputSize: this._getVideoResolutionSize(
+        normalizeExportVideoResolution(settings?.resolution),
+        normalizeExportVideoAspectRatio(settings?.aspectRatio),
+      ),
+      baseName:
+        this.getCurrentFile?.()?.name
+        || this.getCurrentAssetMetadata?.()?.assetName
+        || 'orby',
+      startRotationY,
+      startLightsRotation,
+      startHdriRotation,
+      lightsAutoRotate: !!state.lightsAutoRotate,
+    };
   }
 
   _sequenceFolderName(
@@ -221,18 +302,29 @@ export class VideoExporter {
     if (needsExportFovDrive(movements)) {
       this.applyExportFovDriveFrame?.(t, movements.fovOffset);
     }
-    if (
-      meshAnimation?.include
-      && typeof frameIndex === 'number'
-      && typeof fps === 'number'
-    ) {
-      this.applyExportAnimationDriveFrame?.(frameIndex, fps);
-    }
-    if (typeof frameIndex === 'number' && typeof fps === 'number' && fps > 0) {
-      this.applyCreativeLookExportFrame?.(frameIndex, fps);
-      this.applyGrainExportFrame?.(frameIndex, fps);
-      this.applyFontTextRevealExportFrame?.(frameIndex, fps);
-    }
+    applyTimedExportFrameDrives(
+      { frameIndex, fps, meshAnimation },
+      {
+        applyExportAnimationDriveFrame: this.applyExportAnimationDriveFrame,
+        applyCreativeLookExportFrame: this.applyCreativeLookExportFrame,
+        applyGrainExportFrame: this.applyGrainExportFrame,
+        applyFontTextRevealExportFrame: this.applyFontTextRevealExportFrame,
+      },
+    );
+  }
+
+  _startVideoCaptureFeatureSession(referenceLogicalSize) {
+    this._captureFeatureSession = new CaptureFeatureSession({
+      backgroundController: this.backgroundController,
+      environmentController: this.environmentController,
+      postPipeline: this.imageExporter?.postPipeline,
+      creativeLookCaptureDeps: this.creativeLookCaptureDeps,
+    });
+    this._captureFeatureSession.startCapture({
+      getHdriRotationDegrees: () =>
+        typeof this.getHdriRotation === 'function' ? this.getHdriRotation() : 0,
+      referenceLogicalSize,
+    });
   }
 
   /** Rewind export-driven scene state to frame 0 before tearing down export drives. */
@@ -347,6 +439,10 @@ export class VideoExporter {
     this._restoreVideoExportSize(sizeSnapshot);
     this._repairViewportAfterExport();
     this._exportCaptureSize = null;
+
+    this._captureFeatureSession?.restore();
+    this._captureFeatureSession = null;
+
     this.handleResize?.();
   }
 
@@ -493,29 +589,23 @@ export class VideoExporter {
   } = {}) {
     const { width: targetWidth, height: targetHeight } =
       this._resolveExportCapturePixelSize(exportWidth, exportHeight);
-    this.backgroundController?.gradientController?.syncToDrawingBuffer?.(
-      targetWidth,
-      targetHeight,
-      { forceRedraw: true },
-    );
-    this.imageExporter?._ensureComposerMatchesDrawingBuffer?.({ strict: true });
-    this.imageExporter?._setExportViewport?.(targetWidth, targetHeight);
 
-    this.beforeComposerRender?.();
-    if (typeof this.renderComposerPassForExport === 'function') {
-      this.renderComposerPassForExport({ transparent });
-      return;
-    }
-    if (this.composer) {
-      this.ensureComposerBuffersMatchRenderer?.();
-      this.resetRendererViewportToCanvas?.();
-      this.prepareComposerCapture?.();
-      this.composer.render();
-      this.resetRendererViewportToCanvas?.();
-      return;
-    }
-    this.renderer.setRenderTarget(null);
-    this.renderer.render(this.scene, this.camera);
+    renderFrameForCaptureWithPins({
+      renderer: this.renderer,
+      scene: this.scene,
+      camera: this.camera,
+      composer: this.composer,
+      imageExporter: this.imageExporter,
+      postPipeline: this.imageExporter?.postPipeline,
+      renderComposerPassForExport: this.renderComposerPassForExport,
+      backgroundController: this.backgroundController,
+      environmentController: this.environmentController,
+      captureFeatureSession: this._captureFeatureSession ?? undefined,
+      creativeLookCaptureDeps: this.creativeLookCaptureDeps,
+      width: targetWidth,
+      height: targetHeight,
+      transparent,
+    });
   }
 
   _finishGpuFrame() {
@@ -533,149 +623,58 @@ export class VideoExporter {
     const { width: targetWidth, height: targetHeight } =
       this._resolveExportCapturePixelSize(exportWidth, exportHeight);
 
-    if (this.composer) {
-      const previousRenderToScreen = this.composer.renderToScreen;
-      this.composer.renderToScreen = false;
-      const lensCapturePin = this.imageExporter?.pinLensDistortionForExportCapture?.() ?? null;
-      try {
-        this._renderComposerFrameForCapture({ exportWidth: targetWidth, exportHeight: targetHeight });
-        this._finishGpuFrame();
-        return this.imageExporter._captureComposerOutputAsPngDataUrl(
-          targetWidth,
-          targetHeight,
-        );
-      } finally {
-        this.imageExporter?.unpinLensDistortionForExportCapture?.(lensCapturePin);
-        this.composer.renderToScreen = previousRenderToScreen;
-      }
-    }
-
     this._renderComposerFrameForCapture({ exportWidth: targetWidth, exportHeight: targetHeight });
     this._finishGpuFrame();
-    return this.renderer.domElement.toDataURL('image/png');
+    return this.imageExporter._captureComposerOutputAsPngDataUrl(
+      targetWidth,
+      targetHeight,
+      {
+        retryRender: () => {
+          this._renderComposerFrameForCapture({
+            exportWidth: targetWidth,
+            exportHeight: targetHeight,
+          });
+          this._finishGpuFrame();
+        },
+      },
+    );
   }
 
   _captureTransparentFramePngDataUrl(exportWidth, exportHeight) {
     const { width: targetWidth, height: targetHeight } =
       this._resolveExportCapturePixelSize(exportWidth, exportHeight);
 
-    let postPixels = null;
+    if (!this.composer) {
+      this._renderComposerFrameForCapture({
+        transparent: true,
+        exportWidth: targetWidth,
+        exportHeight: targetHeight,
+      });
+      return this.renderer.domElement.toDataURL('image/png');
+    }
 
-    if (this.composer) {
-      const previousRenderToScreen = this.composer.renderToScreen;
-      this.composer.renderToScreen = false;
-      try {
+    const topDown = readTransparentMergedTopDownRgba({
+      renderer: this.renderer,
+      scene: this.scene,
+      camera: this.camera,
+      composer: this.composer,
+      width: targetWidth,
+      height: targetHeight,
+      renderFrame: () => {
         this._renderComposerFrameForCapture({
           transparent: true,
           exportWidth: targetWidth,
           exportHeight: targetHeight,
         });
-        this._finishGpuFrame();
-
-        const byteRT = new THREE.WebGLRenderTarget(targetWidth, targetHeight, {
-          type: THREE.UnsignedByteType,
-          format: THREE.RGBAFormat,
-          minFilter: THREE.LinearFilter,
-          magFilter: THREE.LinearFilter,
-          depthBuffer: false,
-          stencilBuffer: false,
-        });
-        try {
-          postPixels = new Uint8Array(targetWidth * targetHeight * 4);
-          this.composer.copyPass.render(
-            this.renderer,
-            byteRT,
-            getComposerOutputRenderTarget(this.composer),
-            0,
-            false,
-          );
-          this.renderer.readRenderTargetPixels(
-            byteRT,
-            0,
-            0,
-            targetWidth,
-            targetHeight,
-            postPixels,
-          );
-        } finally {
-          byteRT.dispose();
-        }
-      } finally {
-        this.composer.renderToScreen = previousRenderToScreen;
-      }
-    } else {
-      this.renderer.setRenderTarget(null);
-      this.renderer.render(this.scene, this.camera);
-      return this.renderer.domElement.toDataURL('image/png');
-    }
-
-    const alphaRT = new THREE.WebGLRenderTarget(targetWidth, targetHeight, {
-      type: THREE.UnsignedByteType,
-      format: THREE.RGBAFormat,
-      minFilter: THREE.LinearFilter,
-      magFilter: THREE.LinearFilter,
-      depthBuffer: true,
-      stencilBuffer: false,
-      samples: this.renderer.capabilities?.isWebGL2 ? 4 : 0,
+      },
+      finishGpu: () => this._finishGpuFrame(),
     });
 
-    let alphaPixels = null;
-    try {
-      this.renderer.setRenderTarget(alphaRT);
-      this.renderer.setClearColor(0x000000, 0);
-      this.renderer.setClearAlpha(0);
-      this.renderer.clear();
-      this.renderer.render(this.scene, this.camera);
-      this.renderer.setRenderTarget(null);
-
-      alphaPixels = new Uint8Array(targetWidth * targetHeight * 4);
-      this.renderer.readRenderTargetPixels(
-        alphaRT,
-        0,
-        0,
-        targetWidth,
-        targetHeight,
-        alphaPixels,
-      );
-    } finally {
-      alphaRT.dispose();
-    }
-
-    const merged = new Uint8ClampedArray(targetWidth * targetHeight * 4);
-    for (let i = 0; i < merged.length; i += 4) {
-      const a = alphaPixels[i + 3];
-      merged[i + 3] = a;
-      if (a === 0) {
-        merged[i] = 0;
-        merged[i + 1] = 0;
-        merged[i + 2] = 0;
-      } else if (a < 255) {
-        // Edge pixels: use direct render RGB to avoid dark/premultiplied halos.
-        merged[i] = alphaPixels[i];
-        merged[i + 1] = alphaPixels[i + 1];
-        merged[i + 2] = alphaPixels[i + 2];
-      } else {
-        merged[i] = postPixels[i];
-        merged[i + 1] = postPixels[i + 1];
-        merged[i + 2] = postPixels[i + 2];
-      }
-    }
-
-    const flipped = new Uint8ClampedArray(targetWidth * targetHeight * 4);
-    const rowStride = targetWidth * 4;
-    for (let y = 0; y < targetHeight; y += 1) {
-      const srcRow = (targetHeight - 1 - y) * rowStride;
-      const dstRow = y * rowStride;
-      flipped.set(merged.subarray(srcRow, srcRow + rowStride), dstRow);
-    }
-
-    const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = targetWidth;
-    exportCanvas.height = targetHeight;
-    const ctx = exportCanvas.getContext('2d');
-    const imageData = ctx.createImageData(targetWidth, targetHeight);
-    imageData.data.set(flipped);
-    ctx.putImageData(imageData, 0, 0);
+    const exportCanvas = cropTransparentTopDownRgbaToCanvas(
+      topDown,
+      targetWidth,
+      targetHeight,
+    );
     return exportCanvas.toDataURL('image/png');
   }
 
@@ -729,8 +728,6 @@ export class VideoExporter {
     this.renderer.getSize(previousSize);
     const previousPixelRatio = this.renderer.getPixelRatio();
     const previousAspect = this.camera.aspect;
-
-    this.imageExporter?._pinAsciiExportReference?.(previousSize);
 
     const synced = this.imageExporter?._setExportFramebufferSize
       ? this.imageExporter._setExportFramebufferSize(width, height)
@@ -797,7 +794,6 @@ export class VideoExporter {
       snapshot.previousSize.y,
     );
     this.syncPerspectiveProjection?.();
-    this.imageExporter?._unpinAsciiExportReference?.();
   }
 
   /** Repair GL viewport / composer RT size after offline capture (passes may leave partial viewport). */
@@ -1052,65 +1048,212 @@ export class VideoExporter {
     return true;
   }
 
-  async exportVideo(settings = {}) {
-    this._exportCancelRequested = false;
-    if (!this.getCurrentModel?.()) {
-      this.ui?.showToast?.('Load a mesh before exporting video');
-      return;
+  /**
+   * Render one offline frame at video export resolution (same path as PNG sequence encode).
+   * Frame 0 uses identical capture to still PNG at matching tier + resolution + aspect.
+   *
+   * @param {object} settings — video export UI settings
+   * @param {{ download?: boolean, previewT?: number, previewFrameIndex?: number, showThumbnail?: boolean }} [opts]
+   * @returns {Promise<{ blob: Blob, dataUrl: string, frameIndex: number, width: number, height: number } | null>}
+   */
+  async capturePreviewFrame(settings = {}, opts = {}) {
+    const params = this._resolveVideoExportParams(settings);
+    if (!params) {
+      this.ui?.showToast?.('Load a mesh and enable at least one movement');
+      return null;
     }
 
-    const movements = normalizeExportVideoMovements(settings);
-    const hdriRotationSettings = normalizeExportHdriRotationSettings(settings);
-    if (!hasExportVideoMovement(movements)) {
-      this.ui?.showToast?.('Enable at least one movement to export');
-      return;
-    }
-    const modeLabel = exportVideoMovementLabel(movements);
-    const meshAnimation = normalizeExportMeshAnimationSettings(
-      settings,
-      this.getAnimationClipCount?.() ?? 0,
-    );
+    const {
+      movements,
+      hdriRotationSettings,
+      modeLabel,
+      meshAnimation,
+      durationSec,
+      fps,
+      totalFrames,
+      spinSettings,
+      resolution,
+      aspectRatio,
+      outputSize,
+      baseName,
+      startRotationY,
+      startLightsRotation,
+      startHdriRotation,
+      lightsAutoRotate,
+    } = params;
+
+    const timing = resolveVideoExportFrameTiming(totalFrames, {
+      previewT: Number.isFinite(opts.previewT) ? opts.previewT : undefined,
+      previewFrameIndex: Number.isFinite(opts.previewFrameIndex)
+        ? opts.previewFrameIndex
+        : undefined,
+    });
+    timing.fps = fps;
+    timing.durationSec = durationSec;
 
     const format = settings?.format === 'png' ? 'png' : 'mp4';
-    const allowedDurations = [5, 10, 15];
-    const durationSec = allowedDurations.includes(settings?.durationSec)
-      ? settings.durationSec
-      : 5;
+    const shouldUseTransparentFrames = format === 'png' && !!settings?.movTransparent;
+    const wasBackgroundEnabled = !!this.getHdriBackgroundEnabled?.();
+    const originalBackground = this.scene.background;
+    const originalClearAlpha = this.renderer.getClearAlpha();
+    const originalClearColor = this.renderer.getClearColor(new THREE.Color()).clone();
+    let transparentSetupSnapshot = null;
+
+    const resolutionLabel = getExportVideoResolutionPixelLabel(resolution, aspectRatio);
+    const sizeSnapshot = this._applyVideoExportSize(
+      outputSize.width,
+      outputSize.height,
+      aspectRatio,
+    );
+    this._exportCaptureSize = {
+      width: sizeSnapshot.exportWidth,
+      height: sizeSnapshot.exportHeight,
+    };
+    this._startVideoCaptureFeatureSession(sizeSnapshot.previousSize);
+
+    const exportSession = {
+      movements,
+      spinSettings,
+      hdriRotationSettings,
+      startRotationY,
+      startLightsRotation,
+      startHdriRotation,
+      lightsAutoRotate,
+      durationSec,
+      fps,
+      meshAnimation,
+      sizeSnapshot,
+    };
+
+    let blob = null;
+    try {
+      if (shouldUseTransparentFrames) {
+        transparentSetupSnapshot = this._applyTransparentFrameSetup();
+      }
+      this._beginExportSession({ movements, meshAnimation });
+      blob = captureVideoExportFrameBlob(
+        this,
+        {
+          movements,
+          t: timing.t,
+          spinSettings,
+          hdriRotationSettings,
+          startRotationY,
+          startLightsRotation,
+          startHdriRotation,
+          lightsAutoRotate,
+          durationSec,
+          frameIndex: timing.frameIndex,
+          fps,
+          meshAnimation,
+        },
+        {
+          transparent: shouldUseTransparentFrames,
+          exportWidth: sizeSnapshot.exportWidth,
+          exportHeight: sizeSnapshot.exportHeight,
+        },
+      );
+    } finally {
+      this._finishExportSession(
+        exportSession,
+        shouldUseTransparentFrames
+          ? {
+              originalBackground,
+              originalClearColor,
+              originalClearAlpha,
+              transparentSetupSnapshot,
+              wasBackgroundEnabled,
+            }
+          : null,
+      );
+    }
+
+    const download = opts.download !== false;
+    let previewDataUrl = null;
+    if (opts.showThumbnail) {
+      previewDataUrl = URL.createObjectURL(blob);
+      this.ui?.showExportCapturePreviewThumb?.(previewDataUrl, {
+        width: sizeSnapshot.exportWidth,
+        height: sizeSnapshot.exportHeight,
+        frameIndex: timing.frameIndex,
+        totalFrames,
+        transparent: shouldUseTransparentFrames,
+      });
+    }
+
+    if (download) {
+      this._downloadBlob(
+        blob,
+        this._previewFrameFileName(
+          baseName,
+          modeLabel,
+          resolutionLabel,
+          timing.frameIndex,
+        ),
+      );
+      this.ui?.uiSounds?.playRenderFinished?.();
+      const alphaNote = shouldUseTransparentFrames ? ', transparent' : '';
+      this.ui?.showToast?.(
+        `Capture preview saved (${sizeSnapshot.exportWidth}×${sizeSnapshot.exportHeight}${alphaNote}, frame ${timing.frameIndex + 1}/${totalFrames})`,
+        3600,
+        { notification: false },
+      );
+    }
+
+    return {
+      blob,
+      dataUrl: previewDataUrl,
+      frameIndex: timing.frameIndex,
+      width: sizeSnapshot.exportWidth,
+      height: sizeSnapshot.exportHeight,
+      transparent: shouldUseTransparentFrames,
+    };
+  }
+
+  async exportVideo(settings = {}) {
+    this._exportCancelRequested = false;
+    const params = this._resolveVideoExportParams(settings);
+    if (!params) {
+      if (!this.getCurrentModel?.()) {
+        this.ui?.showToast?.('Load a mesh before exporting video');
+      } else {
+        this.ui?.showToast?.('Enable at least one movement to export');
+      }
+      return;
+    }
+
+    const {
+      movements,
+      hdriRotationSettings,
+      modeLabel,
+      meshAnimation,
+      durationSec,
+      fps,
+      totalFrames,
+      spinSettings,
+      resolution,
+      aspectRatio,
+      outputSize,
+      baseName,
+      startRotationY,
+      startLightsRotation,
+      startHdriRotation,
+      lightsAutoRotate,
+    } = params;
+
+    const format = settings?.format === 'png' ? 'png' : 'mp4';
+
     const mp4Quality =
       settings?.mp4Quality === 'low' || settings?.mp4Quality === 'high'
         ? settings.mp4Quality
         : 'medium';
-    const spinSettings = normalizeExportSpinSettings(settings);
     const movTransparent = !!settings?.movTransparent;
-    const resolution = normalizeExportVideoResolution(settings?.resolution);
-    const aspectRatio = normalizeExportVideoAspectRatio(settings?.aspectRatio);
-    const fps = settings?.fps === 30 || settings?.fps === 60 ? settings.fps : 24;
-    const totalFrames = Math.max(2, Math.round(durationSec * fps));
-
-    const state = this.stateStore.getState();
-    const startRotationY = Number.isFinite(state.rotationY)
-      ? state.rotationY
-      : THREE.MathUtils.radToDeg(this.getCurrentModel()?.rotation?.y || 0);
-    const startLightsRotation = Number.isFinite(state.lightsRotation)
-      ? state.lightsRotation
-      : 0;
-    const startHdriRotation = Number.isFinite(this.getHdriRotation?.())
-      ? this.getHdriRotation()
-      : Number.isFinite(state.hdriRotation)
-        ? state.hdriRotation
-        : 0;
-    const lightsAutoRotate = !!state.lightsAutoRotate;
-    const baseName =
-      this.getCurrentFile?.()?.name
-      || this.getCurrentAssetMetadata?.()?.assetName
-      || 'orby';
 
     const wasBackgroundEnabled = !!this.getHdriBackgroundEnabled?.();
     const originalBackground = this.scene.background;
     const originalClearAlpha = this.renderer.getClearAlpha();
     const originalClearColor = this.renderer.getClearColor(new THREE.Color()).clone();
     const shouldUseTransparentFrames = format === 'png' && movTransparent;
-    const outputSize = this._getVideoResolutionSize(resolution, aspectRatio);
     const resolutionLabel = getExportVideoResolutionPixelLabel(resolution, aspectRatio);
     if (resolution === '2160p' && (fps >= 60 || mp4Quality === 'high')) {
       this.ui?.showToast?.(
@@ -1178,6 +1321,7 @@ export class VideoExporter {
       width: sizeSnapshot.exportWidth,
       height: sizeSnapshot.exportHeight,
     };
+    this._startVideoCaptureFeatureSession(sizeSnapshot.previousSize);
     const exportSession = {
       movements,
       spinSettings,
@@ -1281,26 +1425,28 @@ export class VideoExporter {
             break;
           }
           const t = i / totalFrames;
-          this._applyVideoExportFrame({
-            movements,
-            t,
-            spinSettings,
-            hdriRotationSettings,
-            startRotationY,
-            startLightsRotation,
-            startHdriRotation,
-            lightsAutoRotate,
-            durationSec,
-            frameIndex: i,
-            fps,
-            meshAnimation,
-          });
-          this._syncExportCaptureFramebuffer();
-          const blob = this._captureCurrentFramePngBlob({
-            transparent: shouldUseTransparentFrames,
-            exportWidth: this._exportCaptureSize?.width,
-            exportHeight: this._exportCaptureSize?.height,
-          });
+          const blob = captureVideoExportFrameBlob(
+            this,
+            {
+              movements,
+              t,
+              spinSettings,
+              hdriRotationSettings,
+              startRotationY,
+              startLightsRotation,
+              startHdriRotation,
+              lightsAutoRotate,
+              durationSec,
+              frameIndex: i,
+              fps,
+              meshAnimation,
+            },
+            {
+              transparent: shouldUseTransparentFrames,
+              exportWidth: this._exportCaptureSize?.width,
+              exportHeight: this._exportCaptureSize?.height,
+            },
+          );
           const fileName = this._frameNameForSequence(baseName, modeLabel, durationSec, i);
           if (useFolderExport && sequenceDirHandle) {
             await this._writeBlobToDirectory(sequenceDirHandle, fileName, blob);

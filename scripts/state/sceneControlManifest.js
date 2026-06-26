@@ -329,6 +329,7 @@ export const SCENE_CONTROL_MANIFEST = [
   { event: 'export:svg', apply: 'exportSvgSilhouette', noArg: true },
   { event: 'export:svg-color', apply: 'exportSvgColor', defaultArg: {}, mapArg: (p) => (p && typeof p === 'object' ? p : {}) },
   { event: 'export:svg-glb', apply: 'exportSvgGlb', noArg: true },
+  { event: 'export:video-capture-preview', apply: 'captureExportPreviewFrame', defaultArg: {}, mapArg: (p) => (p && typeof p === 'object' ? p : {}) },
   { event: 'export:video', apply: 'exportVideo' },
   { event: 'export:video-camera-bookmark-save', apply: 'saveExportVideoCameraBookmark', noArg: true },
   {

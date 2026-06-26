@@ -260,12 +260,12 @@ export class ComposerLifecycle {
       this.ensureComposerBuffersMatchRenderer();
       this.resetRendererViewportToCanvas();
       const db = getDrawingBufferPixels(this.renderer);
-      this.backgroundController?.gradientController?.syncToDrawingBuffer?.(
-        db.width,
-        db.height,
-        { forceRedraw: true },
-      );
       if (!transparent) {
+        this.backgroundController?.gradientController?.syncToDrawingBuffer?.(
+          db.width,
+          db.height,
+          { forceRedraw: true },
+        );
         this.syncRendererClearForSceneBackground();
       }
       this.composer.render();

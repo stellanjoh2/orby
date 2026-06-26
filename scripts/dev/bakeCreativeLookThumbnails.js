@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { CREATIVE_LOOK_PRESETS } from '../render/CreativeLookMaterials.js';
 import { encodeCanvasToBlob } from '../render/encodeImageBlob.js';
+import { renderFrameForCaptureWithPins } from '../render/capture/renderFrameForCapture.js';
+import { CaptureFeatureSession } from '../render/capture/captureFeatureHooks.js';
 
 const DEV_ENDPOINT = '/__dev__/creative-look-thumbnail';
 
@@ -43,25 +45,28 @@ async function captureViewportPngBlob(scene) {
 
   scene.controls?.update?.();
 
-  const prevComposerRenderToScreen = scene.composer?.renderToScreen;
-  if (scene.composer) {
-    scene.composer.renderToScreen = false;
-  }
-
+  const captureFeatures = new CaptureFeatureSession({
+    backgroundController: scene.backgroundController,
+    environmentController: scene.environmentController,
+  });
+  captureFeatures.startCapture(() => scene.hdriRotation ?? 0);
   try {
-    imageExporter._ensureComposerMatchesDrawingBuffer?.({ strict: true });
-    imageExporter._setExportViewport?.(width, height);
-    if (typeof scene.composerLifecycle?.renderComposerPassForExport === 'function') {
-      scene.composerLifecycle.renderComposerPassForExport();
-    } else if (scene.composer) {
-      scene.composer.render();
-    } else {
-      renderer.render(scene.scene, scene.camera);
-    }
+    renderFrameForCaptureWithPins({
+      renderer,
+      scene: scene.scene,
+      camera: scene.camera,
+      composer: scene.composer,
+      imageExporter,
+      composerLifecycle: scene.composerLifecycle,
+      backgroundController: scene.backgroundController,
+      environmentController: scene.environmentController,
+      captureFeatureSession: captureFeatures,
+      width,
+      height,
+      transparent: false,
+    });
   } finally {
-    if (scene.composer && prevComposerRenderToScreen !== undefined) {
-      scene.composer.renderToScreen = prevComposerRenderToScreen;
-    }
+    captureFeatures.restore();
   }
 
   const gl = renderer.getContext();

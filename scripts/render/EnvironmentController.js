@@ -326,6 +326,72 @@ export class EnvironmentController {
     }
   }
 
+  /**
+   * Snapshot studio rotation model once per export — before resize mutates GL state.
+   * @param {number} [rotationDegrees]
+   */
+  beginCaptureRotationSnapshot(rotationDegrees) {
+    if (this._captureRestore) return;
+    this._captureRestore = {
+      rotation: this._normalizeRotationDegrees(
+        Number.isFinite(rotationDegrees) ? rotationDegrees : this.rotation,
+      ),
+      wasLive: this._hasActiveLiveRotation(),
+    };
+  }
+
+  /**
+   * Offline capture — rotation-0 PMREM + scene.environmentRotation when live is available;
+   * otherwise baked {@link setRotation} so static PNG still matches the slider.
+   * @param {{ width?: number, height?: number, transparent?: boolean }} [ctx]
+   */
+  prepareForCapture(ctx = {}) {
+    if (!this._captureRestore) {
+      this.beginCaptureRotationSnapshot(this.rotation);
+    }
+    const degrees = this.rotation;
+    const transparent = ctx.transparent === true;
+
+    if (!this.enabled || !this.currentEnvironmentTexture) {
+      if (transparent) {
+        this.scene.background = null;
+      }
+      return;
+    }
+
+    const canLiveRotate =
+      'environmentRotation' in this.scene
+      && this.environmentRenderTarget
+      && this.currentEnvironmentTexture
+      && !this.currentLowResTexture;
+
+    if (canLiveRotate) {
+      this.setRotationLive(degrees);
+    } else {
+      this.setRotation(degrees);
+    }
+
+    if (transparent) {
+      // Keep scene.environment for mesh lighting; drop visible HDRI backdrop.
+      this.scene.background = null;
+      if ('backgroundBlurriness' in this.scene) {
+        this.scene.backgroundBlurriness = 0;
+      }
+    }
+  }
+
+  /** Restore studio HDRI rotation model after offline capture. */
+  restoreAfterCapture() {
+    const snap = this._captureRestore;
+    if (!snap) return;
+    this._captureRestore = null;
+    if (snap.wasLive) {
+      this.setRotationLive(snap.rotation);
+    } else {
+      this.setRotation(snap.rotation);
+    }
+  }
+
   /** @param {number} degrees @returns {number} 0–360, snapped near 0/360 to avoid cache flicker */
   _normalizeRotationDegrees(value) {
     const n = ((Number(value) || 0) % 360 + 360) % 360;

@@ -658,6 +658,17 @@ export class RenderControls {
     this.ui.buttons.exportVideo?.addEventListener('click', () => {
       this.eventBus.emit('export:video', { ...(this.ui.exportSettings.video || {}) });
     });
+    this.ui.buttons.exportVideoCapturePreview?.addEventListener('click', () => {
+      this.ui.uiSounds?.playSelect();
+      const scrub = this.ui.dom.exportPreviewScrub;
+      const previewT = scrub ? parseFloat(scrub.value) : undefined;
+      this.eventBus.emit('export:video-capture-preview', {
+        download: true,
+        showThumbnail: true,
+        ...(Number.isFinite(previewT) ? { previewT } : {}),
+        ...(this.ui.exportSettings.video || {}),
+      });
+    });
     this.ui.buttons.exportVideoCameraSave?.addEventListener('click', () => {
       this.eventBus.emit('export:video-camera-bookmark-save');
     });

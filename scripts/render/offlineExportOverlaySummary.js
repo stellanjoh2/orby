@@ -1,4 +1,5 @@
 import { formatCreativeLookPresetLabel } from './CreativeLookMaterials.js';
+import { getImageExportFormat, normalizeImageExportFormat } from './imageExportFormats.js';
 import {
   exportSpinToastLabel,
   exportHdriRotationToastLabel,
@@ -238,6 +239,107 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
     addRow(rows, 'Text reveal', fontTextRevealLabel);
   }
   return rows;
+}
+
+function renderQualitySummaryLabel(id) {
+  if (id === 'low') return 'Low';
+  if (id === 'medium') return 'Medium';
+  return 'Ultra';
+}
+
+/** @param {Record<string, unknown>} renderContext */
+function describeStillExportOnlyTransforms(renderContext = {}) {
+  const parts = [];
+  const scale = Number(renderContext.scale) || 1;
+  if (scale !== 1) {
+    parts.push(`${scale}× viewport backing store`);
+  }
+  if (renderContext.cinematicLetterbox219) {
+    parts.push('21∶9 letterbox mattes');
+  }
+  if (renderContext.lensDistortionActive) {
+    parts.push('Lens distortion export pin');
+  }
+  if (renderContext.transparent) {
+    parts.push('Mesh AABB + tight alpha crop');
+  }
+  return parts.length ? parts.join(' · ') : 'Matches viewport framing';
+}
+
+/**
+ * Pre-export summary for still PNG / JPEG / WebP (Chunk 6).
+ *
+ * @param {{
+ *   formatId?: string,
+ *   scale?: number,
+ *   transparent?: boolean,
+ *   assetName?: string,
+ *   renderContext?: Record<string, unknown>,
+ * }} params
+ * @returns {{ title: string, rows: Array<{ label: string, value: string }> }[]}
+ */
+export function buildStillImageExportOverlaySummary({
+  formatId = 'png',
+  scale = 1,
+  transparent = false,
+  assetName = '',
+  renderContext = {},
+} = {}) {
+  void assetName;
+  const format = getImageExportFormat(normalizeImageExportFormat(formatId));
+  const rows = [];
+  addRow(rows, 'Output', 'Download');
+  addRow(rows, 'Format', format.label);
+  addRow(rows, 'Scale', `${scale}×`);
+  addRow(
+    rows,
+    'Render quality',
+    renderQualitySummaryLabel(
+      typeof renderContext.renderQuality === 'string' ? renderContext.renderQuality : 'medium',
+    ),
+  );
+  addRow(rows, 'Background', transparent ? 'Transparent' : 'Scene background');
+  if (transparent) {
+    addRow(rows, 'Output crop', 'Mesh bounds + alpha padding');
+  } else if (renderContext.exportWidth && renderContext.exportHeight) {
+    addRow(
+      rows,
+      'Pixel size',
+      `${renderContext.exportWidth}×${renderContext.exportHeight}px`,
+    );
+  }
+  if (typeof renderContext.gpuClampNote === 'string' && renderContext.gpuClampNote) {
+    addRow(rows, 'GPU limit', renderContext.gpuClampNote);
+  }
+  addRow(
+    rows,
+    'Look',
+    describeLook(renderContext.creativeLookEnabled, renderContext.creativeLookPreset),
+  );
+  addRow(
+    rows,
+    'Lens',
+    describeLens(renderContext.postFxState ?? {}, {
+      fisheyeEnabled: renderContext.fisheyeEnabled,
+      lensDistortionActive: renderContext.lensDistortionActive,
+    }),
+  );
+  addRow(
+    rows,
+    'Post FX',
+    describePostFx(
+      renderContext.postFxState && typeof renderContext.postFxState === 'object'
+        ? renderContext.postFxState
+        : {},
+    ),
+  );
+  addRow(
+    rows,
+    'Export-only',
+    describeStillExportOnlyTransforms({ ...renderContext, transparent, scale }),
+  );
+  if (!rows.length) return [];
+  return [{ title: 'Still export', rows }];
 }
 
 /**

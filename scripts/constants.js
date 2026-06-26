@@ -635,6 +635,27 @@ export const USE_MERGED_GRADING_PASS = true;
  */
 export const USE_MERGED_BLOOM_COMPOSITE_PASS = true;
 
+/**
+ * Route opaque PNG export through `OfflineCaptureSession` + `renderFrameForCapture`.
+ * Set false to restore the legacy inline resize/restore path (rollback).
+ */
+export const USE_CAPTURE_SESSION = true;
+
+/**
+ * Allow nearest-neighbor stretch when composer RT ≠ export size (legacy rollback).
+ * Strict mode (false) throws `CaptureSizeMismatchError` after one re-render retry.
+ */
+export const ALLOW_CAPTURE_RESAMPLE = false;
+
+/** Log capture debug tuple on every successful readback (dev diagnostics). */
+export const LOG_CAPTURE_DEBUG = false;
+
+/**
+ * After export preview scrub, render one offline capture tile (same path as encode).
+ * Heavy — off by default; use Capture preview frame button for manual verification.
+ */
+export const USE_CAPTURE_PREVIEW_ON_SCRUB = false;
+
 /** @typedef {'max' | 'medium' | 'low'} RenderQualityTierId */
 
 export const RENDER_QUALITY_DEFAULT = /** @type {const} */ ('medium');

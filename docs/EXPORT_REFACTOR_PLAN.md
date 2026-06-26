@@ -106,9 +106,10 @@ Export UI / VideoExporter / Mobile / dev bake
 
 **Goal:** Know what’s broken; stop flying blind.
 
-- [ ] Add `docs/export-parity-matrix.md` — features × export modes (opaque PNG, transparent PNG, video frame); mark verified / broken / unknown / export-only. **Rows must include:** each render quality tier; PNG 1×/2×; video 1080p/1440p/4K × 16∶9/9∶16; mesh GLTF animation; each font reveal type + constant motion; export movement combos.
-- [ ] Dev-only capture debug log per export: `{ requestedW, requestedH, drawingBufferW, composerRTW, viewportLogical }`.
-- [ ] Manual smoke checklist (5 min after any export PR): load mesh → orbit → bloom → export PNG → viewport still correct.
+- [x] **Local backup before refactor** — `../meshgl-backup-pre-export-refactor-2026-06-26/` (source + `.git`; excludes `node_modules/`, `dist/`). See `BACKUP_README.txt` inside. Keep `meshgl/` as the working copy.
+- [x] Add `docs/export-parity-matrix.md` — features × export modes (opaque PNG, transparent PNG, video frame); mark verified / broken / unknown / export-only. **Rows must include:** each render quality tier; PNG 1×/2×; video 1080p/1440p/4K × 16∶9/9∶16; mesh GLTF animation; each font reveal type + constant motion; export movement combos.
+- [x] Dev-only capture debug log per export: `{ requestedW, requestedH, drawingBufferW, composerRTW, viewportLogical }` — `logCaptureDebug()` in session + readback; enable via `LOG_CAPTURE_DEBUG = true`.
+- [x] Manual smoke checklist (5 min after any export PR): load mesh → orbit → bloom → export PNG → viewport still correct — see `export-parity-matrix.md`.
 - [ ] (Optional) Playwright golden captures for 3 fixtures: opaque PNG, gradient bg, transparent PNG — defer if setup cost > 1 day.
 
 **Exit:** Matrix exists; size tuple logged on every capture.
@@ -129,11 +130,11 @@ scripts/render/capture/
   captureContext.js
 ```
 
-- [ ] `OfflineCaptureSession`: snapshot renderer, camera, composer, clear alpha, scene bg, HDRI flags, animation drives (mesh + font reveal/constant); set `SceneManager._suppressResizeForExport`; restore in `finally`.
-- [ ] `CaptureSizePolicy`: single place for tier + resolution + aspect → `{ width, height, pixelRatio, cameraAspect }`.
-- [ ] `renderFrameForCapture`: consolidate order from `ComposerLifecycle._runComposerWithCreativeLookPrep` — buffer match, viewport reset, gradient sync, clear, composer render, overlays, final viewport reset.
-- [ ] Route `ImageExporter.exportImage` through session first (feature flag `USE_CAPTURE_SESSION` until stable).
-- [ ] Point `VideoExporter._renderComposerFrameForCapture` and `bakeCreativeLookThumbnails` at same entry.
+- [x] `OfflineCaptureSession`: snapshot renderer, camera, composer, clear alpha, scene bg, HDRI flags; optional `setSuppressResizeForExport`; restore in `finally`. (Animation drive snapshot deferred — VideoExporter still owns begin/end export drives.)
+- [x] `CaptureSizePolicy`: single place for tier + resolution + aspect → `{ width, height, pixelRatio, cameraAspect }`.
+- [x] `renderFrameForCapture`: consolidate order from `ComposerLifecycle._runComposerWithCreativeLookPrep` — buffer match, viewport reset, gradient sync, clear, composer render, overlays, final viewport reset.
+- [x] Route `ImageExporter.exportImage` through session first (feature flag `USE_CAPTURE_SESSION` until stable).
+- [x] Point `VideoExporter._renderComposerFrameForCapture` and `bakeCreativeLookThumbnails` at same entry.
 
 **Exit:** Opaque PNG uses session; viewport restores after 50 consecutive exports.
 
@@ -145,10 +146,10 @@ scripts/render/capture/
 
 **Goal:** Eliminate “scaled up” silent stretch.
 
-- [ ] `captureReadback.js`: read at exact `ctx.width × ctx.height`.
-- [ ] On mismatch: retry sync once (`ensureComposerMatchesDrawingBuffer({ strict: true })` + re-render); then throw `CaptureSizeMismatchError` with debug tuple.
-- [ ] Remove default silent `_resampleRgba`; legacy fallback behind `allowResample: true` until matrix is green.
-- [ ] Toast when GPU clamp reduces requested export size (not only `console.warn`).
+- [x] `captureReadback.js`: read at exact `ctx.width × ctx.height`.
+- [x] On mismatch: retry sync once (`ensureComposerMatchesDrawingBuffer({ strict: true })` + re-render); then throw `CaptureSizeMismatchError` with debug tuple.
+- [x] Remove default silent `_resampleRgba`; legacy fallback behind `allowResample: true` (`ALLOW_CAPTURE_RESAMPLE` in constants).
+- [x] Toast when GPU clamp reduces requested export size (not only `console.warn`).
 
 **Exit:** Zero silent resamples in strict mode; golden/manual passes for Ultra DPR + 2× PNG + gradient.
 
@@ -172,7 +173,7 @@ Priority:
 |---|--------|
 | P0 | `BackgroundGradientController` |
 | P0 | `EnvironmentController` — pick one HDRI rotation model for export (recommend: always `setRotationLive` baseline; no PMREM pre-rotation + live euler combined) |
-| P1 | Creative look passes (ASCII pin, gouache/watercolour/sketch) |
+| P1 | Creative look passes (ASCII pin, gouache/watercolour/sketch) — ✅ `captureArtisticLookPrep.js` |
 | P1 | Lens distortion export pin |
 | P1 | `AnimationController` + `FontTextRevealController` + `FontTextConstantController` — export frame/time drives match preview |
 | P1 | `syncPostProcessingForLogicalSize` / render quality tier — composer + bloom scale follow tier on every resize |
@@ -181,6 +182,24 @@ Priority:
 **Product decision (once):** Pixel-art / ASCII on 2× export — keep viewport grid density (matches screen, looks “zoomed”) **or** scale grid with export (sharper, differs from viewport). Document in export UI.
 
 **Exit:** ImageExporter has no direct gradient sync or per-preset ASCII pin lists; HDRI frame 0 matches static viewport at same angle.
+
+**P0 shipped (2026-06-26):**
+
+- [x] `captureFeatureHooks.js` — `CaptureFeatureSession`, `prepareCaptureFeatures` / `restoreCaptureFeatures`
+- [x] `BackgroundGradientController.prepareForCapture` / `restoreAfterCapture` — full-frame gradient after export viewport set
+- [x] `EnvironmentController.prepareForCapture` / `restoreAfterCapture` — always `setRotationLive` baseline during capture; restore baked vs live model
+- [x] Wired in `renderFrameForCapture`, `OfflineCaptureSession`, `VideoExporter`, legacy/dev paths
+- [x] Removed direct `gradientController.syncToDrawingBuffer` from `ImageExporter._setExportFramebufferSize`
+
+**P1 shipped (2026-06-26):**
+
+- [x] `capturePostPipelinePins.js` — ASCII reference pin (viewport grid density on 2×) + lens distortion RT pin
+- [x] `captureExportFrameDrives.js` — shared mesh / creative look / grain / font typography clock (`applyTimedExportFrameDrives`)
+- [x] `CaptureFeatureSession` — ASCII pin lifecycle + HDRI/gradient (session begin/restore)
+- [x] `renderFrameForCaptureWithPins` — lens pin via shared module (not ImageExporter-only)
+- [x] Video encode + capture preview — timed frame drives deduped; lens pin on `_renderComposerFrameForCapture`
+- [x] Render quality tier — composer/bloom scale follow tier on every export resize via `syncPostProcessingForLogicalSize` in `_setExportFramebufferSize` (unchanged contract, documented)
+- [x] `captureArtisticLookPrep.js` — Gouache / Watercolour / Sketch per-frame uniforms on capture + live loop
 
 ---
 
@@ -203,9 +222,16 @@ Ship 4A first if needed; 4B when matrix is mostly green.
 
 ## Chunk 5 — Decompose ImageExporter (~1 week)
 
-- [ ] Split encode/download from capture (`TransparentCapture.js`, `encodeExportBlob.js`).
-- [ ] Consolidate transparent paths (standard crop, artistic paper key, video transparent) onto `renderFrameForCapture`.
+- [x] Split encode/download from capture (`TransparentCapture.js`, `encodeExportBlob.js`).
+- [x] Consolidate transparent paths — standard still + video transparent on `TransparentCapture` + session; artistic paper key stays legacy.
 - [ ] Target: `ImageExporter.js` orchestration only (~400–500 lines).
+
+**Shipped (2026-06-26):**
+
+- [x] `TransparentCapture.js` — setup/restore, RGB+alpha merge, tight crop, mesh AABB crop
+- [x] `encodeExportBlob.js` — shared canvas → blob + download hook
+- [x] Still transparent PNG via `OfflineCaptureSession` when `USE_CAPTURE_SESSION`
+- [x] `VideoExporter._captureTransparentFramePngDataUrl` deduped to shared readback/crop
 
 ---
 
@@ -214,13 +240,13 @@ Ship 4A first if needed; 4B when matrix is mostly green.
 **Goal:** Video capture ≈ viewport 1:1; tier / resolution / aspect switches never break.
 
 - [ ] VideoExporter: frame scheduler + drives only; dedupe `beforeComposerRender` copy from SceneManager.
-- [ ] **Preview uses capture path** — `ExportMovementPreview` scrubs via `renderFrameForCapture` at export size (or shows capture preview tiles), not live-viewport-only mutation.
-- [ ] Video frame 0 pixel-equal to still PNG at same tier + resolution + aspect (automated or manual golden).
+- [ ] **Preview uses capture path** — `ExportMovementPreview` scrubs via `renderFrameForCapture` at export size (or shows capture preview tiles), not live-viewport-only mutation. **Lite:** Capture preview frame button + optional thumb (`USE_CAPTURE_PREVIEW_ON_SCRUB` off by default).
+- [ ] Video frame 0 pixel-equal to still PNG at same tier + resolution + aspect (automated or manual golden). **Shared encode path shipped** — manual golden still open.
 - [ ] **Dimension switch tests** — matrix spot-checks: Ultra↔Medium, 1080p↔4K, 16∶9↔9∶16, each with static frame + one animated typography preset + one mesh clip.
 - [ ] Animation hooks: mesh clips, font reveal types, constant glyph motion — all use shared `CaptureFrameContext` time (`frameIndex`, `fps`, `exportTimeSec`).
 - [ ] Mobile: `apps/mobile/scripts/mobileExportImage.js` → shared session (keep `MOBILE_EXPORT_MAX_PX` in size policy).
-- [ ] **Capture preview frame** button — one offline frame at export resolution before long encode.
-- [ ] **Pre-export summary** — list export-only transforms (HDRI spin, aspect reframe, 2× semantics); confirm tier + resolution + aspect before encode.
+- [x] **Capture preview frame** button — one offline frame at export resolution before long encode.
+- [x] **Pre-export summary** — still PNG/JPEG/WebP shows tier + scale + export-only transforms via offline overlay; video PNG sequence already had summary.
 
 ---
 
@@ -262,6 +288,9 @@ Skips: session module, offscreen renderer, CI goldens, ImageExporter split.
 **Minimum (stop bleeding):** Chunk 0 → 1-day sprint items → Chunk 2 → Chunk 3 P0 only.
 
 **Trust export again:** + Chunk 1 fully + Chunk 6 lite (capture preview frame + frame 0 = PNG).
+
+- [x] **Capture preview frame** button — one offline frame at export resolution before long encode (`VideoExporter.capturePreviewFrame`, shared `captureVideoExportFrame.js`).
+- [x] **Frame 0 = PNG** — PNG sequence loop and capture preview share `captureVideoExportFrameBlob` → `_renderComposerFrameForCapture` (same as still PNG).
 
 **Never worry again:** + Chunk 4B + 5 + 6.
 

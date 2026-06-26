@@ -11,7 +11,8 @@ import {
 } from './exportVideoMovements.js';
 
 /**
- * Real-time viewport preview of export camera/mesh movement (no frame capture).
+ * Real-time viewport preview of export camera/mesh movement.
+ * Offline export pixels are verified via Capture preview frame (same path as PNG encode).
  * Supports scrubbing, play/stop, and looping playback (no pause — scrub to inspect).
  */
 export class ExportMovementPreview {

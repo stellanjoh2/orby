@@ -122,6 +122,7 @@ import { DEFAULT_GOBO_TEXTURE_ID, DEFAULT_GOBO_SOFTNESS } from './config/gobos.j
 import { DEFAULT_LIGHTS_SHADOW_SOFTNESS } from './config/shadowQuality.js';
 import { lightsAutoRotateDegreesPerSecond } from './config/lightsAutoRotate.js';
 import { ImageExporter } from './render/ImageExporter.js';
+import { CaptureSizeMismatchError } from './render/capture/captureReadback.js';
 import { normalizeGlyphFillHex } from './import/FontExtrudeImporter.js';
 import { VideoExporter } from './render/VideoExporter.js';
 import { ExportMovementPreview } from './render/ExportMovementPreview.js';
@@ -146,6 +147,11 @@ import {
   getImageExportFormat,
   normalizeImageExportFormat,
 } from './render/imageExportFormats.js';
+import { resolvePngExportCaptureSize } from './render/capture/CaptureSizePolicy.js';
+import { buildStillImageExportOverlaySummary } from './render/offlineExportOverlaySummary.js';
+import { fullViewportLogicalSize } from './render/fullViewportLogicalSize.js';
+import { deferSpinnerPaint } from './utils/viewportLoadSpinner.js';
+import { prepareArtisticCreativeLookForCapture } from './render/capture/captureArtisticLookPrep.js';
 import {
   supportsExtrudeBevel,
   runSvgExtrudeImporterMutation,
@@ -1193,12 +1199,7 @@ export class SceneManager {
             time: this.materialController?.getCreativeLookAnimationTime?.() ?? 0,
           });
         }
-        if (isCreativeLookSketchPostActive(this.stateStore.getState())) {
-          this._prepareCreativeLookSketchFrameUniforms();
-        }
-        if (isCreativeLookGouachePostActive(this.stateStore.getState())) {
-          this._prepareCreativeLookGouacheFrameUniforms();
-        }
+        prepareArtisticCreativeLookForCapture({}, this._creativeLookCaptureDeps());
         if (isCreativeLookOpticsPostActive(this.stateStore.getState())) {
           this._prepareCreativeLookOpticsFrameUniforms();
         }
@@ -1224,13 +1225,35 @@ export class SceneManager {
       isLensDistortionActive: () =>
         this.postPipeline?.lensDistortionPass?.enabled === true,
       backgroundController: this.backgroundController,
+      environmentController: this.environmentController,
       syncPostProcessingForLogicalSize: (w, h) =>
         this.syncPostProcessingForLogicalSize(w, h),
       syncPerspectiveProjection: (opts) => this.syncPerspectiveCameraFovAndLens(opts),
       renderComposerPassForExport: (opts) =>
         this.composerLifecycle.renderComposerPassForExport(opts),
+      composerLifecycle: this.composerLifecycle,
+      notifyExportSizeClamped: ({
+        requestedWidth,
+        requestedHeight,
+        actualWidth,
+        actualHeight,
+      }) => {
+        this.ui?.showToast?.(
+          `Export capped at ${actualWidth}×${actualHeight} (requested ${requestedWidth}×${requestedHeight})`,
+          4200,
+          { caution: true },
+        );
+      },
       getRenderState: () => this.stateStore.peekState(),
+      creativeLookCaptureDeps: this._creativeLookCaptureDeps(),
     });
+    this.imageExporter.getHdriRotationDegrees = () =>
+      this.hdriRotation ?? this.stateStore.getState().hdriRotation ?? 0;
+    this.imageExporter.reapplyStudioAfterCapture = () => {
+      const rot = this.hdriRotation ?? this.stateStore.getState().hdriRotation ?? 0;
+      this.setHdriRotation(rot, { updateState: false, updateUi: false });
+      this.backgroundController?.refreshAppearance?.();
+    };
 
     const szComposer = new THREE.Vector2();
     this.renderer.getSize(szComposer);
@@ -1245,6 +1268,7 @@ export class SceneManager {
       composer: this.composer,
       imageExporter: this.imageExporter,
       backgroundController: this.backgroundController,
+      environmentController: this.environmentController,
       stateStore: this.stateStore,
       ui: this.ui,
       syncPostProcessingForLogicalSize: (w, h) =>
@@ -1264,12 +1288,7 @@ export class SceneManager {
             time: this.materialController?.getCreativeLookAnimationTime?.() ?? 0,
           });
         }
-        if (isCreativeLookSketchPostActive(this.stateStore.getState())) {
-          this._prepareCreativeLookSketchFrameUniforms();
-        }
-        if (isCreativeLookGouachePostActive(this.stateStore.getState())) {
-          this._prepareCreativeLookGouacheFrameUniforms();
-        }
+        prepareArtisticCreativeLookForCapture({}, this._creativeLookCaptureDeps());
         if (isCreativeLookOpticsPostActive(this.stateStore.getState())) {
           this._prepareCreativeLookOpticsFrameUniforms();
         }
@@ -1350,6 +1369,7 @@ export class SceneManager {
         return parts.join(' · ');
       },
       handleResize: () => this.handleResize(),
+      creativeLookCaptureDeps: this._creativeLookCaptureDeps(),
     });
 
     this.exportMovementPreview = new ExportMovementPreview({
@@ -1409,6 +1429,29 @@ export class SceneManager {
     const allowed = [5, 10, 15];
     const duration = this.ui?.exportSettings?.video?.durationSec;
     return allowed.includes(duration) ? duration : 5;
+  }
+
+  /**
+   * Scrub progress for capture preview — timeline slider is source of truth when set.
+   * @param {{ previewT?: number }} [options]
+   * @returns {number} normalized 0…1
+   */
+  _resolveExportPreviewScrubT(options = {}) {
+    if (Number.isFinite(options.previewT)) {
+      return Math.max(0, Math.min(1, options.previewT));
+    }
+    const scrubEl = this.ui?.dom?.exportPreviewScrub;
+    if (scrubEl && !scrubEl.disabled) {
+      const fromSlider = parseFloat(scrubEl.value);
+      if (Number.isFinite(fromSlider)) {
+        return Math.max(0, Math.min(1, fromSlider));
+      }
+    }
+    const preview = this.exportMovementPreview;
+    if (preview?.isActive?.()) {
+      return preview.getProgress();
+    }
+    return 0;
   }
 
   /**
@@ -1843,6 +1886,18 @@ export class SceneManager {
       ...(raw && typeof raw === 'object' ? raw : {}),
     };
     this.postPipeline?.updateAnamorphicBloom(merged, { forceOff: !bloomOk });
+  }
+
+  /**
+   * Shared deps for Gouache / Watercolour / Sketch capture hooks + live viewport prep.
+   */
+  _creativeLookCaptureDeps() {
+    return {
+      postPipeline: this.postPipeline,
+      getState: () => this.stateStore.getState(),
+      getCreativeLookAnimationTime: () =>
+        this.materialController?.getCreativeLookAnimationTime?.() ?? 0,
+    };
   }
 
   /**
@@ -4849,58 +4904,6 @@ export class SceneManager {
     });
   }
 
-  /** Per-frame Gouache post uniforms — pattern scale drives ink width & chalk grain. */
-  _prepareCreativeLookGouacheFrameUniforms() {
-    if (!isCreativeLookGouachePostActive(this.stateStore.getState())) return;
-    const cl = this.stateStore.getState().creativeLook ?? {};
-    const presetId = normalizeCreativeLookPreset(cl.preset);
-    const patternScale = normalizeCreativeLookPatternScale(
-      presetId,
-      Number(cl.patternScale),
-    );
-    const gouacheInk = resolveCreativeLookInkParams(cl.presetParams, 'gouache');
-    this.postPipeline?.updateCreativeLookGouache?.({
-      time: this.materialController?.getCreativeLookAnimationTime?.() ?? 0,
-      patternScale,
-      intensity: normalizeCreativeLookIntensity(cl.intensity),
-      strokeColor: gouacheInk.strokeColor,
-      preset: presetId,
-    });
-  }
-
-  /** Per-frame Sketch post uniforms — stroke / raster must not be omitted (defaults reset ink & halftone). */
-  _prepareCreativeLookSketchFrameUniforms() {
-    if (!isCreativeLookSketchPostActive(this.stateStore.getState())) return;
-    const cl = this.stateStore.getState().creativeLook ?? {};
-    const presetId = normalizeCreativeLookPreset(cl.preset);
-    const patternScale = normalizeCreativeLookPatternScale(
-      presetId,
-      Number(cl.patternScale),
-    );
-    const sketchParams = resolveCreativeLookSketchParams(
-      cl.presetParams,
-      patternScale,
-    );
-    const sketchInk = resolveCreativeLookInkParams(
-      cl.presetParams,
-      isSketchColourCreativeLookPreset(presetId) ? 'sketch-colour' : 'sketch',
-    );
-    const frameSettings = {
-      time: this.materialController?.getCreativeLookAnimationTime?.() ?? 0,
-      strokeWidth: sketchParams.strokeWidth,
-      rasterSize: sketchParams.rasterSize,
-      intensity: normalizeCreativeLookIntensity(cl.intensity),
-      strokeColor: sketchInk.strokeColor,
-      preset: presetId,
-    };
-    if (isSketchCreativeLookPreset(presetId)) {
-      this.postPipeline?.updateCreativeLookSketch?.(frameSettings);
-    }
-    if (isSketchColourCreativeLookPreset(presetId)) {
-      this.postPipeline?.updateCreativeLookSketchColour?.(frameSettings);
-    }
-  }
-
   /**
    * Shader Lab backdrop — artistic presets use warm paper white; other presets keep studio color.
    * @param {boolean} creativeLookOn
@@ -5175,51 +5178,99 @@ export class SceneManager {
       return;
     }
 
-    this._suppressResizeForExport = true;
-    try {
-      return await withViewportLoadSpinner(this.ui, `Exporting ${formatMeta.label}`, async () => {
-        try {
-          if (transparent) {
-            const ok = await this.imageExporter.exportTransparentImage(
-              this.currentModel,
-              this.currentFile,
-              this.cameraController,
-              size,
-              formatId,
-            );
-            if (ok) {
-              this.ui?.showToast?.(
-                `Transparent ${formatMeta.label} exported`,
-                3200,
-                { notification: false },
-              );
-            } else {
-              this.ui?.showToast?.(`${formatMeta.label} export failed`);
-            }
-          } else {
-            const originalSize = new THREE.Vector2();
-            this.renderer.getSize(originalSize);
-            const originalPixelRatio = this.renderer.getPixelRatio();
+    const studioState = this.stateStore.getState();
+    const logical = fullViewportLogicalSize(this.renderer);
+    const previewDensity = Math.max(1e-6, this.renderer.getPixelRatio());
+    const rawW = Math.round(logical.x * previewDensity * size);
+    const rawH = Math.round(logical.y * previewDensity * size);
+    const captureSize = resolvePngExportCaptureSize(
+      this.renderer,
+      size,
+      this.imageExporter?._maxExportPixelArea ?? null,
+    );
+    let gpuClampNote = '';
+    if (rawW !== captureSize.width || rawH !== captureSize.height) {
+      gpuClampNote = `Requested ${rawW}×${rawH} → ${captureSize.width}×${captureSize.height}`;
+    }
 
-            const cinematicLetterbox219 = !!this.stateStore
-              .getState()
-              .camera?.cinematicLetterbox219;
-            await this.imageExporter.exportImage(
-              this.currentFile,
-              originalSize,
-              originalPixelRatio,
-              size,
-              cinematicLetterbox219,
-              formatId,
-            );
-            this.ui?.showToast?.(`${formatMeta.label} exported`, 3200, { notification: false });
-          }
-        } catch (error) {
-          console.error('Image export failed', error);
+    const assetName = (this.currentFile?.name ?? 'export').replace(/\.[^.]+$/, '');
+    const summary = buildStillImageExportOverlaySummary({
+      formatId,
+      scale: size,
+      transparent,
+      assetName,
+      renderContext: {
+        renderQuality: studioState.renderQuality,
+        exportWidth: transparent ? null : captureSize.width,
+        exportHeight: transparent ? null : captureSize.height,
+        gpuClampNote,
+        cinematicLetterbox219: !transparent && !!studioState.camera?.cinematicLetterbox219,
+        creativeLookEnabled: !!studioState.creativeLook?.enabled,
+        creativeLookPreset: studioState.creativeLook?.preset ?? null,
+        fisheyeEnabled: !!studioState.fisheye?.enabled,
+        lensDistortionActive: this.imageExporter?.isLensDistortionActive?.() === true,
+        postFxState: studioState,
+        transparent,
+        scale: size,
+      },
+    });
+
+    this._suppressResizeForExport = true;
+    this.ui?.showOfflineExportOverlay?.(summary, {
+      cancellable: false,
+      assetFilename: assetName,
+    });
+    this.ui?.updateOfflineExportOverlayProgress?.({ frameIndex: 0, totalFrames: 1 });
+    await deferSpinnerPaint();
+
+    try {
+      if (transparent) {
+        const ok = await this.imageExporter.exportTransparentImage(
+          this.currentModel,
+          this.currentFile,
+          this.cameraController,
+          size,
+          formatId,
+        );
+        if (ok) {
+          this.ui?.showToast?.(
+            `Transparent ${formatMeta.label} exported`,
+            3200,
+            { notification: false },
+          );
+        } else {
           this.ui?.showToast?.(`${formatMeta.label} export failed`);
         }
-      });
+      } else {
+        const originalSize = new THREE.Vector2();
+        this.renderer.getSize(originalSize);
+        const originalPixelRatio = this.renderer.getPixelRatio();
+        const cinematicLetterbox219 = !!studioState.camera?.cinematicLetterbox219;
+
+        await this.imageExporter.exportImage(
+          this.currentFile,
+          originalSize,
+          originalPixelRatio,
+          size,
+          cinematicLetterbox219,
+          formatId,
+        );
+        this.ui?.showToast?.(`${formatMeta.label} exported`, 3200, { notification: false });
+      }
+      this.ui?.updateOfflineExportOverlayProgress?.({ frameIndex: 1, totalFrames: 1 });
+    } catch (error) {
+      console.error('Image export failed', error);
+      if (error instanceof CaptureSizeMismatchError) {
+        this.ui?.showToast?.(
+          `Export failed — capture size mismatch (${error.debug.readbackW}×${error.debug.readbackH} vs ${error.debug.requestedW}×${error.debug.requestedH})`,
+          4800,
+          { caution: true },
+        );
+      } else {
+        this.ui?.showToast?.(`${formatMeta.label} export failed`);
+      }
     } finally {
+      this.ui?.hideOfflineExportOverlay?.();
       this._suppressResizeForExport = false;
       this.handleResize();
     }
@@ -5357,6 +5408,51 @@ export class SceneManager {
       this.handleResize();
       if (resumeRenderLoop) {
         this.renderLoop.start();
+      }
+    }
+  }
+
+  async captureExportPreviewFrame(options = {}) {
+    const { download = true, showThumbnail = false } = options;
+
+    const resolvedPreviewT = this._resolveExportPreviewScrubT(options);
+    const previewActive = this.exportMovementPreview?.isActive?.();
+    if (previewActive) {
+      this.exportMovementPreview.stop({ silent: true });
+    }
+
+    const exportSettings = this._videoExportSettingsFromUi();
+    if (
+      exportSettings.format === 'png'
+      && exportSettings.movTransparent
+      && shouldBlockFisheyePngExport(this.stateStore, { transparent: true })
+    ) {
+      showFisheyeTransparentPngExportBlockedAlert(this.ui);
+      return;
+    }
+
+    const resumeRenderLoop = this.renderLoop?.isRunning?.() === true;
+    if (resumeRenderLoop) {
+      this.renderLoop.stop();
+    }
+    this._suppressResizeForExport = true;
+
+    try {
+      return await withViewportLoadSpinner(this.ui, 'Capture preview frame', async () => {
+        return await this.videoExporter?.capturePreviewFrame(exportSettings, {
+          download,
+          previewT: resolvedPreviewT,
+          showThumbnail,
+        });
+      });
+    } finally {
+      this._suppressResizeForExport = false;
+      this.handleResize();
+      if (resumeRenderLoop) {
+        this.renderLoop.start();
+      }
+      if (resolvedPreviewT > 0) {
+        this.scrubExportVideoPreview(resolvedPreviewT);
       }
     }
   }
