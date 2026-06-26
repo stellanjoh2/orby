@@ -44,3 +44,18 @@ export function getDrawingBufferLogicalSize(renderer, target = new THREE.Vector2
   }
   return fromBuffer;
 }
+
+/**
+ * Backing-store pixels aligned with {@link getDrawingBufferLogicalSize} × pixel ratio.
+ * Use for full-frame overlays (gradients) that must match composer viewport sizing.
+ * @param {THREE.WebGLRenderer} renderer
+ * @returns {{ width: number, height: number }}
+ */
+export function getViewportBackingStorePixels(renderer) {
+  const logical = getDrawingBufferLogicalSize(renderer);
+  const pr = Math.max(1e-6, renderer.getPixelRatio());
+  return {
+    width: Math.max(1, Math.round(logical.x * pr)),
+    height: Math.max(1, Math.round(logical.y * pr)),
+  };
+}
