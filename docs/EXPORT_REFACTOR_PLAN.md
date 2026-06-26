@@ -20,6 +20,48 @@ Viewport and export share one WebGL renderer, composer, and scene state. Export 
 
 ---
 
+## Product goals
+
+These are the outcomes this refactor is for — not “export works on my machine once.”
+
+### Video (and stills) match the viewport ~1:1
+
+- **WYSIWYG:** A exported video frame at time *t* should match what you would see in the studio viewport at the same moment — same framing, lighting, post stack, background, creative look, and motion state.
+- **Preview = capture:** Movement preview and the final encode must use the **same** offline capture path (not live viewport drive for preview + separate readback for encode).
+- **Frame 0 = still PNG:** Video frame 0 at a given resolution/settings must match an opaque PNG exported at those same settings.
+
+### Seamless dimension switching
+
+You should be able to change any of these **without exports breaking or silently drifting** — mid-session, between preview and encode, and when combining options:
+
+| Dimension | Examples today |
+|-----------|----------------|
+| **Render quality tier** | Medium / Ultra (preview DPR, bloom scale, FXAA, shadow resolution) |
+| **Export resolution** | PNG 1× / 2×; video 1080p / 1440p / 4K |
+| **Aspect ratio** | Viewport shape vs video 16∶9 / 9∶16 (camera reframe) |
+
+Tier, resolution, and aspect are **independent knobs**. Changing one must re-sync composer RTs, gradient/HDR/backdrop, post pass uniforms, and camera projection — not leave stale viewport-sized buffers or resampled stretch.
+
+### All animation presets — asset + typography
+
+Export must stay in sync for **every** animation path, not just turntable/orbit:
+
+| Source | Scope |
+|--------|--------|
+| **Asset (mesh)** | GLTF clip playback, export mesh-animation include, creative-look time |
+| **Typography (font extrude)** | Per-glyph reveal presets (`scale`, `fade`, `slideUp`, `slideDown`, `drop`, `pop`, `rotate`, `elastic`, …), character/word stagger, constant/ambient glyph motion (`FontTextConstantController`) |
+| **Export movement** | Turntable, camera orbit/dolly/tilt, FOV/pitch, HDRI rotation over duration, lights auto-rotate |
+
+Preview scrub, video encode, and “Pause all” during export must agree on animation clock and restored state after export. Font extrude animation hooks stay separate from SVG extrude logic (see workspace policy).
+
+### Definition of done (product)
+
+- [ ] Pick any combo: quality tier × resolution × aspect × (asset animation | typography reveal | export movement) → first and last video frames match viewport-driven expectations.
+- [ ] Switch tier or resolution, export again — no quarter-frame gradient, scale-up, or HDRI surprise.
+- [ ] After any export, live studio returns to the pre-export viewport unchanged.
+
+---
+
 ## North star
 
 One canonical raster capture path:
@@ -37,11 +79,13 @@ Export UI / VideoExporter / Mobile / dev bake
 **Principles**
 
 1. One render path for raster capture; viewport loop stays for interaction only.
-2. Size mismatch is a bug — no silent resample in strict mode.
-3. All GL/scene mutations during export go through session with guaranteed `finally` restore.
-4. Features implement `prepareForCapture(ctx)` — not special cases in `ImageExporter`.
-5. Do not merge live + export composer prep until regression tests exist.
-6. Font extrude ≠ SVG extrude — capture hooks must not cross those pipelines.
+2. **WYSIWYG is the default** — export-only behavior (e.g. HDRI spin over duration) must be explicit in UI; everything else matches viewport.
+3. Size mismatch is a bug — no silent resample in strict mode.
+4. **Dimension changes are transactional** — tier / resolution / aspect each run through one sync path before capture.
+5. All GL/scene mutations during export go through session with guaranteed `finally` restore.
+6. Features implement `prepareForCapture(ctx)` — not special cases in `ImageExporter`.
+7. Do not merge live + export composer prep until regression tests exist.
+8. Font extrude ≠ SVG extrude — capture hooks must not cross those pipelines.
 
 ---
 
@@ -62,7 +106,7 @@ Export UI / VideoExporter / Mobile / dev bake
 
 **Goal:** Know what’s broken; stop flying blind.
 
-- [ ] Add `docs/export-parity-matrix.md` — features × export modes (opaque PNG, transparent PNG, video frame); mark verified / broken / unknown / export-only.
+- [ ] Add `docs/export-parity-matrix.md` — features × export modes (opaque PNG, transparent PNG, video frame); mark verified / broken / unknown / export-only. **Rows must include:** each render quality tier; PNG 1×/2×; video 1080p/1440p/4K × 16∶9/9∶16; mesh GLTF animation; each font reveal type + constant motion; export movement combos.
 - [ ] Dev-only capture debug log per export: `{ requestedW, requestedH, drawingBufferW, composerRTW, viewportLogical }`.
 - [ ] Manual smoke checklist (5 min after any export PR): load mesh → orbit → bloom → export PNG → viewport still correct.
 - [ ] (Optional) Playwright golden captures for 3 fixtures: opaque PNG, gradient bg, transparent PNG — defer if setup cost > 1 day.
@@ -85,7 +129,8 @@ scripts/render/capture/
   captureContext.js
 ```
 
-- [ ] `OfflineCaptureSession`: snapshot renderer, camera, composer, clear alpha, scene bg, HDRI flags; set `SceneManager._suppressResizeForExport`; restore in `finally`.
+- [ ] `OfflineCaptureSession`: snapshot renderer, camera, composer, clear alpha, scene bg, HDRI flags, animation drives (mesh + font reveal/constant); set `SceneManager._suppressResizeForExport`; restore in `finally`.
+- [ ] `CaptureSizePolicy`: single place for tier + resolution + aspect → `{ width, height, pixelRatio, cameraAspect }`.
 - [ ] `renderFrameForCapture`: consolidate order from `ComposerLifecycle._runComposerWithCreativeLookPrep` — buffer match, viewport reset, gradient sync, clear, composer render, overlays, final viewport reset.
 - [ ] Route `ImageExporter.exportImage` through session first (feature flag `USE_CAPTURE_SESSION` until stable).
 - [ ] Point `VideoExporter._renderComposerFrameForCapture` and `bakeCreativeLookThumbnails` at same entry.
@@ -129,6 +174,8 @@ Priority:
 | P0 | `EnvironmentController` — pick one HDRI rotation model for export (recommend: always `setRotationLive` baseline; no PMREM pre-rotation + live euler combined) |
 | P1 | Creative look passes (ASCII pin, gouache/watercolour/sketch) |
 | P1 | Lens distortion export pin |
+| P1 | `AnimationController` + `FontTextRevealController` + `FontTextConstantController` — export frame/time drives match preview |
+| P1 | `syncPostProcessingForLogicalSize` / render quality tier — composer + bloom scale follow tier on every resize |
 | P2 | BackgroundController / transparent edges |
 
 **Product decision (once):** Pixel-art / ASCII on 2× export — keep viewport grid density (matches screen, looks “zoomed”) **or** scale grid with export (sharper, differs from viewport). Document in export UI.
@@ -162,13 +209,18 @@ Ship 4A first if needed; 4B when matrix is mostly green.
 
 ---
 
-## Chunk 6 — Video + mobile + UX (as needed)
+## Chunk 6 — Video WYSIWYG + dimension matrix + UX
+
+**Goal:** Video capture ≈ viewport 1:1; tier / resolution / aspect switches never break.
 
 - [ ] VideoExporter: frame scheduler + drives only; dedupe `beforeComposerRender` copy from SceneManager.
-- [ ] Video frame 0 pixel-equal to still PNG at same settings (test).
+- [ ] **Preview uses capture path** — `ExportMovementPreview` scrubs via `renderFrameForCapture` at export size (or shows capture preview tiles), not live-viewport-only mutation.
+- [ ] Video frame 0 pixel-equal to still PNG at same tier + resolution + aspect (automated or manual golden).
+- [ ] **Dimension switch tests** — matrix spot-checks: Ultra↔Medium, 1080p↔4K, 16∶9↔9∶16, each with static frame + one animated typography preset + one mesh clip.
+- [ ] Animation hooks: mesh clips, font reveal types, constant glyph motion — all use shared `CaptureFrameContext` time (`frameIndex`, `fps`, `exportTimeSec`).
 - [ ] Mobile: `apps/mobile/scripts/mobileExportImage.js` → shared session (keep `MOBILE_EXPORT_MAX_PX` in size policy).
 - [ ] **Capture preview frame** button — one offline frame at export resolution before long encode.
-- [ ] **Pre-export summary** — list export-only transforms (HDRI spin, aspect reframe, 2× semantics).
+- [ ] **Pre-export summary** — list export-only transforms (HDRI spin, aspect reframe, 2× semantics); confirm tier + resolution + aspect before encode.
 
 ---
 
@@ -198,6 +250,10 @@ Skips: session module, offscreen renderer, CI goldens, ImageExporter split.
 | HDRI rotation | `scripts/render/EnvironmentController.js` |
 | Mobile export | `apps/mobile/scripts/mobileExportImage.js` |
 | Export wiring | `scripts/SceneManager.js` (`setupComposer`, export handlers) |
+| Mesh animation export | `scripts/render/AnimationController.js` |
+| Font reveal / typography animation | `scripts/scene/FontTextRevealController.js`, `FontTextConstantController.js`, `fontTextRevealTypes.js` |
+| Render quality tier | `scripts/ui/RenderControls.js`, `SceneManager.syncPostProcessingForLogicalSize` |
+| Video aspect / resolution | `scripts/render/exportVideoResolution.js`, `exportVideoMovements.js` |
 
 ---
 
@@ -205,7 +261,7 @@ Skips: session module, offscreen renderer, CI goldens, ImageExporter split.
 
 **Minimum (stop bleeding):** Chunk 0 → 1-day sprint items → Chunk 2 → Chunk 3 P0 only.
 
-**Trust export again:** + Chunk 1 fully + Chunk 7 lite (capture preview frame).
+**Trust export again:** + Chunk 1 fully + Chunk 6 lite (capture preview frame + frame 0 = PNG).
 
 **Never worry again:** + Chunk 4B + 5 + 6.
 

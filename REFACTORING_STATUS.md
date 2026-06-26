@@ -14,7 +14,7 @@ This file is a **historical snapshot**. The modular split described in `REFACTOR
 ## Not done (optional / larger scope)
 
 - **`TransformManager`** / **`ModelManager`** — logic still lives in `SceneManager` + dedicated controllers (`ModelLoader`, `TransformController`, …). Extract only if a clearer boundary is needed.
-- **Export capture parity** — viewport vs PNG/video drift (gradient quarter-frame, scaled readback, HDRI rotation). Tracked in **`docs/EXPORT_REFACTOR_PLAN.md`** (chunked plan; work incrementally).
+- **Export capture parity** — video/stills should match viewport ~1:1; seamless tier × resolution × aspect switching; all asset + typography animation presets. Tracked in **`docs/EXPORT_REFACTOR_PLAN.md`** (chunked plan; work incrementally).
 - Ongoing perf/architecture items are tracked in code review notes (e.g. DOF depth pass traverse, clay restore path).
 
 ## Conventions
