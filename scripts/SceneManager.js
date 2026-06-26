@@ -1284,6 +1284,7 @@ export class SceneManager {
       setRotationY: (value) => this.setRotationY(value),
       setLightsRotation: (value, opts) => this.setLightsRotation(value, opts),
       setHdriRotation: (value, opts) => this.setHdriRotation(value, opts),
+      getHdriRotation: () => this.hdriRotation ?? 0,
       beginExportCameraDrive: () => this.cameraController?.beginExportCameraDrive?.(),
       applyExportCameraDriveFrame: (t, options) =>
         this.cameraController?.applyExportCameraDriveFrame?.(t, options),

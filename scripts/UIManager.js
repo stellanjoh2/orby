@@ -6,6 +6,10 @@ import {
 } from './ui/effectFoldouts.js';
 import { applyCreativeLookPostFxUiBlocks, bindShaderLabBlockedClickHints } from './ui/creativeLookPostFxBlocked.js';
 import { getImageExportFormat, normalizeImageExportFormat } from './render/imageExportFormats.js';
+import {
+  applySavedExportSettings,
+  serializeExportSettings,
+} from './settings/exportSettingsPersistence.js';
 import { isBackgroundFallbackActive } from './render/backgroundFallback.js';
 import { HDRI_CUSTOM_ID } from './config/hdri.js';
 import {
@@ -251,6 +255,8 @@ export class UIManager {
           window.orby?.scene?.loadCustomBackgroundImage?.(file),
         restoreFontExtrudeSettings: (fontExtrude) =>
           this.fontExtrudeUI?.restoreFromSettings?.(fontExtrude),
+        serializeExportSettings: () => serializeExportSettings(this.exportSettings),
+        restoreExportSettings: (saved) => this.restoreExportSettings(saved),
       },
     );
 
@@ -393,6 +399,7 @@ export class UIManager {
     this.dom.exportPreviewReset = q('#exportPreviewReset');
     this.dom.exportPreviewScrub = q('#exportPreviewScrub');
     this.dom.exportPreviewTime = q('#exportPreviewTime');
+    this.dom.exportPreviewPauseAll = q('#exportPreviewPauseAll');
     this.dom.animationTimeReferenceSection = q('#animationTimeReferenceSection');
     this.dom.animationFrameNumbers = q('#animationFrameNumbers');
     this.dom.clipPlanesFoldout = q('#clipPlanesFoldout');
@@ -2383,6 +2390,12 @@ export class UIManager {
     select.value = String(clipIndex);
 
     this.syncExportMeshAnimationsUi();
+  }
+
+  restoreExportSettings(saved) {
+    applySavedExportSettings(this.exportSettings, saved);
+    this.meshControls?.syncExportSettingsUi?.();
+    this.exportSectionControls?.syncFromSettings?.();
   }
 
   syncExportMeshAnimationsUi() {

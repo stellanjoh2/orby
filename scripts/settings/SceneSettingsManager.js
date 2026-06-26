@@ -15,7 +15,9 @@ import { resolveCreativeLookPresetChoice } from '../render/CreativeLookMaterials
 import { normalizeStoredGoboScale } from '../render/GoboProjection.js';
 import { resolveDiscGlowFromState } from '../render/LensFlareController.js';
 import { emitGodRaysStudioEvents } from '../GodRaysEffect.js';
+import { normalizeBackgroundGradient } from '../render/backgroundGradient/backgroundGradientDefaults.js';
 import { deepClone } from '../utils/deepClone.js';
+import { serializeExportSettings } from './exportSettingsPersistence.js';
 import {
   arrayBufferToBase64,
   base64ToUint8Array,
@@ -64,6 +66,11 @@ export class SceneSettingsManager {
       target: cameraState?.target,
     };
     payload.svgExtrude = this._serializeSvgExtrude(state.svgExtrude);
+    const exportSettings = this.uiHelper?.serializeExportSettings?.()
+      ?? serializeExportSettings(this.uiHelper?.exportSettings);
+    if (exportSettings) {
+      payload.exportSettings = exportSettings;
+    }
     return payload;
   }
 
@@ -1390,8 +1397,9 @@ export class SceneSettingsManager {
         this.eventBus.emit('scene:background-solid-enabled', !!payload.backgroundSolidEnabled);
       }
       if (payload.backgroundGradient !== undefined) {
-        this.stateStore.set('backgroundGradient', payload.backgroundGradient);
-        this.eventBus.emit('scene:background-gradient', payload.backgroundGradient);
+        const backgroundGradient = normalizeBackgroundGradient(payload.backgroundGradient);
+        this.stateStore.set('backgroundGradient', backgroundGradient);
+        this.eventBus.emit('scene:background-gradient', backgroundGradient);
       }
       if (payload.backgroundImage !== undefined) {
         this.stateStore.set('backgroundImage', payload.backgroundImage);
@@ -1432,6 +1440,10 @@ export class SceneSettingsManager {
 
       if (this.uiHelper?.restoreFontExtrudeSettings) {
         await this.uiHelper.restoreFontExtrudeSettings(this.stateStore.getState().fontExtrude);
+      }
+
+      if (payload.exportSettings && this.uiHelper?.restoreExportSettings) {
+        this.uiHelper.restoreExportSettings(payload.exportSettings);
       }
 
       return { success: true, message: 'Scene settings applied' };

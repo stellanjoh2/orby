@@ -554,7 +554,10 @@ export class StudioControls {
       this.ui.inputs.hdriReceiveShadowsAo.checked = !!state.hdriReceiveShadowsAo;
     }
     this.ui.updateHdriReceiveShadowsAoDisabled?.();
-    this.ui.inputs.backgroundColor.value = state.background;
+    // Skip the write-back while the native color picker is open (focused) — it freezes the picker.
+    if (document.activeElement !== this.ui.inputs.backgroundColor) {
+      this.ui.inputs.backgroundColor.value = state.background;
+    }
     
     // Lens Flare
     if (this.ui.inputs.lensFlareEnabled) {

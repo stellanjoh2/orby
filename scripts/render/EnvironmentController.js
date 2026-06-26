@@ -215,7 +215,7 @@ export class EnvironmentController {
 
   setRotation(value) {
     const normalized = this._normalizeRotationDegrees(value);
-    if (this.rotation === normalized) return;
+    if (this.rotation === normalized && !this._hasActiveLiveRotation()) return;
     this.rotation = normalized;
     this._clearLiveRotation();
     this._rotatedSourceCache = null;
@@ -228,8 +228,6 @@ export class EnvironmentController {
    */
   setRotationLive(value) {
     const normalized = this._normalizeRotationDegrees(value);
-    if (this.rotation === normalized) return;
-    this.rotation = normalized;
 
     const canLiveRotate =
       'environmentRotation' in this.scene
@@ -238,20 +236,80 @@ export class EnvironmentController {
       && !this.currentLowResTexture;
 
     if (!canLiveRotate) {
+      if (this.rotation === normalized && !this._hasActiveLiveRotation()) return;
+      this.rotation = normalized;
       this._clearLiveRotation();
       this._rotatedSourceCache = null;
       this._applyEnvironment();
       return;
     }
 
+    // Live spin uses the rotation-0 PMREM + scene.environmentRotation. After a baked
+    // setRotation(), scene.environment may still point at a pre-rotated PMREM — rebind
+    // the base map before applying euler so frame 0 matches preview/export start.
+    this._ensureLiveRotationEnvironmentBase();
+
     if (!this._liveRotationEuler) {
       this._liveRotationEuler = new THREE.Euler(0, 0, 0, 'YXZ');
     }
     const radians = THREE.MathUtils.degToRad(normalized);
+    if (
+      this.rotation === normalized
+      && Math.abs(this._liveRotationEuler.y - radians) < 1e-6
+    ) {
+      return;
+    }
+
+    this.rotation = normalized;
     this._liveRotationEuler.set(0, radians, 0);
     this.scene.environmentRotation = this._liveRotationEuler;
     if ('backgroundRotation' in this.scene) {
       this.scene.backgroundRotation = this._liveRotationEuler;
+    }
+  }
+
+  /** True when export preview left a non-identity scene.environmentRotation active. */
+  _hasActiveLiveRotation() {
+    if (!('environmentRotation' in this.scene)) return false;
+    const rot = this.scene.environmentRotation;
+    if (!rot) return false;
+    return Math.abs(rot.y) > 1e-6;
+  }
+
+  /**
+   * Point scene.environment/background at the unrotated PMREM/equirect sources so
+   * {@link setRotationLive} only applies rotation via scene.environmentRotation.
+   */
+  _ensureLiveRotationEnvironmentBase() {
+    const activeTexture = this.currentEnvironmentTexture || this.currentLowResTexture;
+    if (!this.enabled || !activeTexture || !this.environmentRenderTarget) return;
+    if (this.currentLowResTexture && !this.currentEnvironmentTexture) return;
+
+    const baseEnvTexture = this.environmentRenderTarget.texture;
+    const envIntensity = this.strength;
+
+    if (this.scene.environment !== baseEnvTexture) {
+      this.scene.environment = baseEnvTexture;
+      this.scene.environmentIntensity = envIntensity;
+      this._notifyEnvironmentMapUpdated(baseEnvTexture, envIntensity);
+    }
+
+    const drawHdriBackdrop =
+      this.backgroundEnabled
+      && (typeof this.shouldDrawHdriBackdrop !== 'function' || this.shouldDrawHdriBackdrop());
+
+    if (!drawHdriBackdrop) return;
+
+    let bgTexture = activeTexture;
+    if (this.blurriness > 0 && baseEnvTexture) {
+      bgTexture = baseEnvTexture;
+    }
+    if (this.scene.background !== bgTexture) {
+      this.scene.background = bgTexture;
+      if ('backgroundBlurriness' in this.scene) {
+        this.scene.backgroundBlurriness = this.blurriness;
+        this.scene.backgroundIntensity = this.strength;
+      }
     }
   }
 

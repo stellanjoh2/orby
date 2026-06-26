@@ -72,6 +72,11 @@ export function drawBackgroundGradient(ctx, width, height, config) {
 export function drawBackgroundGradientStopStrip(ctx, width, height, config) {
   const normalized = normalizeBackgroundGradient(config);
   ctx.clearRect(0, 0, width, height);
+  if (normalized.type === 'radial') {
+    // Match viewport radial — a horizontal strip alone looked like linear never switched.
+    drawBackgroundGradient(ctx, width, height, normalized);
+    return;
+  }
   const gradient = ctx.createLinearGradient(0, 0, width, 0);
   fillCanvasGradient(ctx, width, height, normalized, gradient);
 }

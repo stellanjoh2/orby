@@ -46,11 +46,13 @@ export class BackgroundGradientControls {
     this.angleRow = document.getElementById('backgroundGradientAngleRow');
     this.centerRow = document.getElementById('backgroundGradientCenterRow');
     this.typeButtons = Array.from(
-      document.querySelectorAll('[data-bg-gradient-type]'),
+      document.getElementById('backgroundGradientFoldout')?.querySelectorAll('[data-bg-gradient-type]') ?? [],
     );
-    if (!this.preview) return;
+    if (!this.preview && this.typeButtons.length === 0) return;
 
-    this.previewCtx = this.preview.getContext('2d', { alpha: false });
+    if (this.preview) {
+      this.previewCtx = this.preview.getContext('2d', { alpha: false });
+    }
     this._mounted = true;
 
     this.ui.inputs.backgroundGradientEnabled?.addEventListener('change', (event) => {
@@ -64,9 +66,26 @@ export class BackgroundGradientControls {
       }
     });
 
+    // Defer the heavy UI sync while the native color picker is open — otherwise each
+    // `input` event reruns sync() and writes `.value` back, freezing the picker. The scene
+    // still updates live via `_commit`'s event emit; the full sync runs once it closes.
+    const endStopColorEditing = () => {
+      if (!this._stopColorEditing) return;
+      this._stopColorEditing = false;
+      this.stateStore.endDeferredNotify();
+    };
     this.ui.inputs.backgroundGradientStopColor?.addEventListener('input', (event) => {
+      if (!this._stopColorEditing) {
+        this._stopColorEditing = true;
+        this.stateStore.beginDeferredNotify();
+      }
       this._updateStop(this.selectedStopIndex, { color: event.target.value });
     });
+    this.ui.inputs.backgroundGradientStopColor?.addEventListener('change', (event) => {
+      this._updateStop(this.selectedStopIndex, { color: event.target.value });
+      endStopColorEditing();
+    });
+    this.ui.inputs.backgroundGradientStopColor?.addEventListener('blur', endStopColorEditing);
 
     this.ui.inputs.backgroundGradientAngle?.addEventListener('input', (event) => {
       const angle = parseFloat(event.target.value);
@@ -92,6 +111,7 @@ export class BackgroundGradientControls {
         if (type !== 'linear' && type !== 'radial') return;
         this.ui.uiSounds?.playSelect?.();
         this._commit({ type });
+        this.sync(this.stateStore.getState());
       });
     });
 
@@ -143,8 +163,10 @@ export class BackgroundGradientControls {
       Math.max(0, gradient.stops.length - 1),
     );
     const selectedStop = gradient.stops[this.selectedStopIndex];
-    if (this.ui.inputs.backgroundGradientStopColor && selectedStop) {
-      this.ui.inputs.backgroundGradientStopColor.value = selectedStop.color;
+    const stopColorInput = this.ui.inputs.backgroundGradientStopColor;
+    // Don't clobber the value while the user has the native picker open (focused).
+    if (stopColorInput && selectedStop && document.activeElement !== stopColorInput) {
+      stopColorInput.value = selectedStop.color;
     }
 
     const detailDisabled = !gradientOn || !fallbackActive;
@@ -179,10 +201,21 @@ export class BackgroundGradientControls {
   _commit(patch, { deferNotify = false } = {}) {
     if (deferNotify) this.stateStore.beginDeferredNotify();
     const current = this.stateStore.getState().backgroundGradient ?? DEFAULT_BACKGROUND_GRADIENT;
-    const next = normalizeBackgroundGradient({ ...current, ...patch });
+    const merged = { ...current, ...patch };
+    const mode = getBackgroundMode({
+      ...this.stateStore.getState(),
+      backgroundGradient: merged,
+    });
+    const next = normalizeBackgroundGradient({
+      ...merged,
+      enabled: mode === 'gradient',
+    });
     this.stateStore.set('backgroundGradient', next);
     this.eventBus.emit('scene:background-gradient', next);
     if (deferNotify) this.stateStore.endDeferredNotify();
+    if (mode === 'gradient') {
+      this._drawPreview(next);
+    }
   }
 
   _addStopAt(position) {

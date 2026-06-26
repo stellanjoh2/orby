@@ -49,6 +49,7 @@ export class VideoExporter {
     setRotationY,
     setLightsRotation,
     setHdriRotation,
+    getHdriRotation = () => 0,
     beginExportCameraDrive = () => {},
     applyExportCameraDriveFrame = () => {},
     endExportCameraDrive = () => {},
@@ -92,6 +93,7 @@ export class VideoExporter {
     this.setRotationY = setRotationY;
     this.setLightsRotation = setLightsRotation;
     this.setHdriRotation = setHdriRotation;
+    this.getHdriRotation = getHdriRotation;
     this.beginExportCameraDrive = beginExportCameraDrive;
     this.applyExportCameraDriveFrame = applyExportCameraDriveFrame;
     this.endExportCameraDrive = endExportCameraDrive;
@@ -115,6 +117,8 @@ export class VideoExporter {
     this.getFontTextRevealExportLabel = getFontTextRevealExportLabel;
     this.handleResize = handleResize;
     this._exportCancelRequested = false;
+    /** @type {{ width: number, height: number } | null} — PNG sequence output size from export settings */
+    this._exportCaptureSize = null;
   }
 
   requestCancelExport() {
@@ -192,12 +196,15 @@ export class VideoExporter {
       );
       this.setLightsRotation(lightsRotation, { updateUi: false, updateState: false });
     }
-    if (
-      hdriRotationSettings?.degrees > 0
-      && typeof this.setHdriRotation === 'function'
-    ) {
-      const hdriRotation = startHdriRotation + hdriRotationSettings.signedDegrees * t;
-      this.setHdriRotation(hdriRotation, { updateState: false, updateUi: false });
+    if (typeof this.setHdriRotation === 'function') {
+      const hdriRotation = hdriRotationSettings?.degrees > 0
+        ? startHdriRotation + hdriRotationSettings.signedDegrees * t
+        : startHdriRotation;
+      this.setHdriRotation(hdriRotation, {
+        updateState: false,
+        updateUi: false,
+        live: true,
+      });
     }
     if (needsExportCameraDrive(movements)) {
       this.applyExportCameraDriveFrame?.(t, {
@@ -339,6 +346,7 @@ export class VideoExporter {
 
     this._restoreVideoExportSize(sizeSnapshot);
     this._repairViewportAfterExport();
+    this._exportCaptureSize = null;
     this.handleResize?.();
   }
 
@@ -440,21 +448,51 @@ export class VideoExporter {
     return new Blob([bytes], { type: mime });
   }
 
-  _captureCurrentFramePngBlob({ transparent = false } = {}) {
+  _captureCurrentFramePngBlob({ transparent = false, exportWidth, exportHeight } = {}) {
     const dataUrl = transparent
-      ? this._captureTransparentFramePngDataUrl()
-      : this._renderAndCaptureCurrentFramePng();
+      ? this._captureTransparentFramePngDataUrl(exportWidth, exportHeight)
+      : this._renderAndCaptureCurrentFramePng(exportWidth, exportHeight);
     return this._dataUrlToBlob(dataUrl);
+  }
+
+  /** Keep the GL backing store locked to the export preset (not viewport × DPR). */
+  _syncExportCaptureFramebuffer() {
+    const size = this._exportCaptureSize;
+    if (!size?.width || !size?.height) return;
+    const actual = getDrawingBufferPixels(this.renderer);
+    if (
+      Math.abs(actual.width - size.width) <= 2
+      && Math.abs(actual.height - size.height) <= 2
+    ) {
+      return;
+    }
+    this.imageExporter?._setExportFramebufferSize?.(size.width, size.height);
+  }
+
+  _resolveExportCapturePixelSize(exportWidth, exportHeight) {
+    const fromSettings = this._exportCaptureSize;
+    const width = Math.max(
+      1,
+      Math.round(exportWidth ?? fromSettings?.width ?? 1),
+    );
+    const height = Math.max(
+      1,
+      Math.round(exportHeight ?? fromSettings?.height ?? 1),
+    );
+    return { width, height };
   }
 
   /**
    * Offline frame render — matches still PNG export (composer pass + viewport repair).
    * @param {{ transparent?: boolean }} [opts]
    */
-  _renderComposerFrameForCapture({ transparent = false } = {}) {
-    const db = getDrawingBufferPixels(this.renderer);
-    const targetWidth = Math.max(1, db.width);
-    const targetHeight = Math.max(1, db.height);
+  _renderComposerFrameForCapture({
+    transparent = false,
+    exportWidth,
+    exportHeight,
+  } = {}) {
+    const { width: targetWidth, height: targetHeight } =
+      this._resolveExportCapturePixelSize(exportWidth, exportHeight);
     this.backgroundController?.gradientController?.syncToDrawingBuffer?.(
       targetWidth,
       targetHeight,
@@ -491,18 +529,16 @@ export class VideoExporter {
     this._renderComposerFrameForCapture();
   }
 
-  _renderAndCaptureCurrentFramePng() {
-    const db = new THREE.Vector2();
-    this.renderer.getDrawingBufferSize(db);
-    const targetWidth = Math.max(1, Math.round(db.x));
-    const targetHeight = Math.max(1, Math.round(db.y));
+  _renderAndCaptureCurrentFramePng(exportWidth, exportHeight) {
+    const { width: targetWidth, height: targetHeight } =
+      this._resolveExportCapturePixelSize(exportWidth, exportHeight);
 
     if (this.composer) {
       const previousRenderToScreen = this.composer.renderToScreen;
       this.composer.renderToScreen = false;
       const lensCapturePin = this.imageExporter?.pinLensDistortionForExportCapture?.() ?? null;
       try {
-        this._renderComposerFrameForCapture();
+        this._renderComposerFrameForCapture({ exportWidth: targetWidth, exportHeight: targetHeight });
         this._finishGpuFrame();
         return this.imageExporter._captureComposerOutputAsPngDataUrl(
           targetWidth,
@@ -514,16 +550,14 @@ export class VideoExporter {
       }
     }
 
-    this._renderComposerFrameForCapture();
+    this._renderComposerFrameForCapture({ exportWidth: targetWidth, exportHeight: targetHeight });
     this._finishGpuFrame();
     return this.renderer.domElement.toDataURL('image/png');
   }
 
-  _captureTransparentFramePngDataUrl() {
-    const db = new THREE.Vector2();
-    this.renderer.getDrawingBufferSize(db);
-    const targetWidth = Math.max(1, Math.round(db.x));
-    const targetHeight = Math.max(1, Math.round(db.y));
+  _captureTransparentFramePngDataUrl(exportWidth, exportHeight) {
+    const { width: targetWidth, height: targetHeight } =
+      this._resolveExportCapturePixelSize(exportWidth, exportHeight);
 
     let postPixels = null;
 
@@ -531,7 +565,11 @@ export class VideoExporter {
       const previousRenderToScreen = this.composer.renderToScreen;
       this.composer.renderToScreen = false;
       try {
-        this._renderComposerFrameForCapture({ transparent: true });
+        this._renderComposerFrameForCapture({
+          transparent: true,
+          exportWidth: targetWidth,
+          exportHeight: targetHeight,
+        });
         this._finishGpuFrame();
 
         const byteRT = new THREE.WebGLRenderTarget(targetWidth, targetHeight, {
@@ -1056,9 +1094,11 @@ export class VideoExporter {
     const startLightsRotation = Number.isFinite(state.lightsRotation)
       ? state.lightsRotation
       : 0;
-    const startHdriRotation = Number.isFinite(state.hdriRotation)
-      ? state.hdriRotation
-      : 0;
+    const startHdriRotation = Number.isFinite(this.getHdriRotation?.())
+      ? this.getHdriRotation()
+      : Number.isFinite(state.hdriRotation)
+        ? state.hdriRotation
+        : 0;
     const lightsAutoRotate = !!state.lightsAutoRotate;
     const baseName =
       this.getCurrentFile?.()?.name
@@ -1134,6 +1174,10 @@ export class VideoExporter {
       outputSize.height,
       aspectRatio,
     );
+    this._exportCaptureSize = {
+      width: sizeSnapshot.exportWidth,
+      height: sizeSnapshot.exportHeight,
+    };
     const exportSession = {
       movements,
       spinSettings,
@@ -1251,8 +1295,11 @@ export class VideoExporter {
             fps,
             meshAnimation,
           });
+          this._syncExportCaptureFramebuffer();
           const blob = this._captureCurrentFramePngBlob({
             transparent: shouldUseTransparentFrames,
+            exportWidth: this._exportCaptureSize?.width,
+            exportHeight: this._exportCaptureSize?.height,
           });
           const fileName = this._frameNameForSequence(baseName, modeLabel, durationSec, i);
           if (useFolderExport && sequenceDirHandle) {

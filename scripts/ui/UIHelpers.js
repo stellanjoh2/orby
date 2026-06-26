@@ -884,10 +884,28 @@ export class UIHelpers {
     const input = this.ui.inputs[inputId];
     if (!input) return;
 
+    // Native <input type=color> fires `input` continuously while the OS picker is open.
+    // Defer UI sync until the picker closes (`change`/`blur`) so syncControls doesn't write
+    // `.value` back mid-drag — that write-back makes the picker appear frozen/unresponsive.
+    let editing = false;
+    const endEditing = () => {
+      if (!editing) return;
+      editing = false;
+      this.stateStore.endDeferredNotify();
+    };
+
     input.addEventListener('input', (event) => {
-      const value = event.target.value;
-      this.writeStateAndEmit(statePath, eventName, value);
+      if (!editing) {
+        editing = true;
+        this.stateStore.beginDeferredNotify();
+      }
+      this.writeStateAndEmit(statePath, eventName, event.target.value);
     });
+    input.addEventListener('change', (event) => {
+      this.writeStateAndEmit(statePath, eventName, event.target.value);
+      endEditing();
+    });
+    input.addEventListener('blur', endEditing);
   }
 
   /**

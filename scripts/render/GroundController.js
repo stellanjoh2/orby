@@ -20,7 +20,7 @@ import {
   ORBY_LIME,
 } from '../constants.js';
 import { BaseGlassSeparableBlur } from './BaseGlassSeparableBlur.js';
-import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
+import { resetRendererFullViewport } from './resetRendererFullViewport.js';
 import { STUDIO_BACKDROP_SHADOW_REACH_PADDING } from '../config/shadowQuality.js';
 import {
   applySvgExtrudeSurfaceToMaterial,
@@ -629,14 +629,9 @@ export class GroundController {
     const originalBeforeRender = reflector.onBeforeRender;
     reflector.onBeforeRender = function podiumGlassOnBeforeRender(renderer, scene, camera) {
       originalBeforeRender.call(reflector, renderer, scene, camera);
-      // Reflector restores the framebuffer via setRenderTarget but does not align Three's
-      // logical viewport with the full canvas. Use GL drawing-buffer dims — cached getDrawingBufferSize
-      // can drift during export resize (partial viewport → black bands).
-      const v = fullViewportLogicalSize(renderer);
-      renderer.setViewport(0, 0, v.x, v.y);
-      if (typeof renderer.setScissorTest === 'function') {
-        renderer.setScissorTest(false);
-      }
+      // Reflector restores the framebuffer via setRenderTarget but can leave a preview-sized
+      // logical viewport on export buffers — use the bound RT's full pixel dimensions.
+      resetRendererFullViewport(renderer);
 
       const sharpTex = reflector.getRenderTarget().texture;
       const b = scope.podiumGlassBlur;

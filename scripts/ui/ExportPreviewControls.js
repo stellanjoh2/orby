@@ -53,6 +53,19 @@ export class ExportPreviewControls {
       });
     });
 
+    this.ui.dom.exportPreviewPauseAll?.addEventListener('click', () => {
+      this.ui.uiSounds?.playSelect();
+      const store = this.ui.stateStore;
+      const next = !store?.getState()?.fontExtrude?.pauseAllAnimations;
+      store?.set('fontExtrude.pauseAllAnimations', next);
+      this._applyPauseAll(next);
+      this.syncPauseAll(store?.getState());
+    });
+
+    this._pauseAllUnsub = this.ui.stateStore?.subscribe?.((state) => {
+      this.syncPauseAll(state);
+    });
+
     this.eventBus.on('scene:model-load-complete', () => {
       this.syncAvailability(true);
     });
@@ -74,6 +87,48 @@ export class ExportPreviewControls {
     if (playBtn) playBtn.disabled = !canPreview;
     if (resetBtn) resetBtn.disabled = !canPreview;
     if (scrub) scrub.disabled = !canPreview;
+    this.syncPauseAll();
+  }
+
+  /**
+   * Shortcut to freeze/resume font 3D-type reveal + constant animations from the
+   * Export tab. Mirrors the Object tab "Pause all" control via the shared
+   * `fontExtrude.pauseAllAnimations` flag so both stay in sync.
+   * @param {object} [state]
+   */
+  syncPauseAll(state) {
+    const button = this.ui.dom.exportPreviewPauseAll;
+    if (!button) return;
+    const current = state ?? this.ui.stateStore?.getState();
+    const paused = !!current?.fontExtrude?.pauseAllAnimations;
+    button.disabled = !this._pauseAllAvailable();
+    button.classList.toggle('active', paused);
+    button.textContent = paused ? 'Resume all animations' : 'Pause all animations';
+  }
+
+  _hasFontMesh() {
+    const scene = window.orby?.scene;
+    const model = scene?.currentModel;
+    return !!(
+      model?.userData?.orbyFontGenerated ||
+      scene?.materialController?._isFontExtrudeModel?.(model)
+    );
+  }
+
+  _pauseAllAvailable() {
+    const scene = window.orby?.scene;
+    const reveal = scene?.fontTextRevealController;
+    const constant = scene?.fontTextConstantController;
+    return (
+      this._hasFontMesh() &&
+      !!(reveal?.isEnabled?.() || constant?.isEnabled?.())
+    );
+  }
+
+  _applyPauseAll(active) {
+    const scene = window.orby?.scene;
+    const reveal = scene?.fontTextRevealController;
+    reveal?.applyPauseAll?.(active, scene?.currentModel ?? null);
   }
 
   setPlaying(playing) {

@@ -14,6 +14,7 @@ import {
   cameraShadowsUiToShader,
 } from '../constants.js';
 import { getBackgroundMode } from '../render/backgroundMode.js';
+import { normalizeBackgroundGradient } from '../render/backgroundGradient/backgroundGradientDefaults.js';
 
 /**
  * Ordered registry that replays a full StateStore snapshot onto SceneManager.
@@ -320,7 +321,9 @@ function createStateApplySteps() {
       apply: (s, state) => {
         s.backgroundController?.setColor(state.background);
         s.backgroundController?.setSolidEnabled(getBackgroundMode(state) === 'solid');
-        s.backgroundGradientController?.setConfig(state.backgroundGradient ?? {});
+        s.backgroundGradientController?.setConfig(
+          normalizeBackgroundGradient(state.backgroundGradient ?? {}),
+        );
         s.backgroundImageController?.setConfig(state.backgroundImage ?? {});
         s.postPipeline?.setToneMapping(state.toneMapping ?? 'aces-filmic');
         s.setHdriStrength(state.hdriStrength ?? 2);

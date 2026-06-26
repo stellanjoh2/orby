@@ -1185,6 +1185,20 @@ export class MeshControls {
     updatePngTransparentUi();
     updateMp4Ui();
     this.ui.syncExportPngFolderUi();
+
+    this.syncExportSettingsUi = () => {
+      syncExportVideoResolutionUi();
+      syncExportMovementButtons();
+      updatePngTransparentUi();
+      updateMp4Ui();
+      document.querySelectorAll('[data-video-aspect-ratio]').forEach((btn) => {
+        btn.classList.toggle(
+          'active',
+          btn.dataset.videoAspectRatio
+            === normalizeExportVideoAspectRatio(this.ui.exportSettings.video?.aspectRatio),
+        );
+      });
+    };
   }
 
   refreshAdvancedGlassControls(state) {

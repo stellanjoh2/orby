@@ -495,17 +495,31 @@ export class ImageExporter {
   _setExportFramebufferSize(targetWidth, targetHeight) {
     const { width, height } = this._clampExportPixelSize(targetWidth, targetHeight);
     this.renderer.setPixelRatio(1);
-    if (typeof this.renderer.setDrawingBufferSize === 'function') {
-      // Offline 1080p/1440p/4K — do not shrink to on-screen canvas.width (CSS caps ≠ export res).
-      this.renderer.setDrawingBufferSize(width, height, 1);
-    } else {
-      this.renderer.setSize(width, height, false);
-      this._syncRendererInternalSizeToCanvasBackingStore();
+    const canvas = this.renderer.domElement;
+    const applyDrawingBuffer = () => {
+      if (typeof this.renderer.setDrawingBufferSize === 'function') {
+        // Offline 1080p/1440p/4K — bypass CSS layout; backing store must match export preset.
+        this.renderer.setDrawingBufferSize(width, height, 1);
+      } else {
+        this.renderer.setSize(width, height, false);
+        this._syncRendererInternalSizeToCanvasBackingStore();
+      }
+    };
+    applyDrawingBuffer();
+    let synced = this._getActualDrawingBufferPixelSize(width, height);
+    if (synced.width !== width || synced.height !== height) {
+      // Viewport DPR can leave a larger backing store — force canvas pixels then retry.
+      if (canvas) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+      this.renderer.setPixelRatio(1);
+      applyDrawingBuffer();
+      synced = this._getActualDrawingBufferPixelSize(width, height);
     }
-    const synced = this._getActualDrawingBufferPixelSize(width, height);
-    if (synced.width < width - 2 || synced.height < height - 2) {
+    if (synced.width !== width || synced.height !== height) {
       console.warn(
-        `Export framebuffer clamped to ${synced.width}×${synced.height} (requested ${width}×${height}).`,
+        `Export framebuffer is ${synced.width}×${synced.height} (requested ${width}×${height}).`,
       );
     }
     this.camera.aspect = synced.width / Math.max(1e-6, synced.height);
@@ -591,6 +605,7 @@ export class ImageExporter {
     const fh = Math.max(1, fallbackHeight ?? 1);
     let { pixels, width, height } = capture;
     if (width !== fw || height !== fh) {
+      // Match export preset exactly — downscale if the GL/composer buffer is still viewport-sized.
       pixels = this._resampleRgba(pixels, width, height, fw, fh);
       width = fw;
       height = fh;

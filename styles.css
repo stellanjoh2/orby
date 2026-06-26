@@ -7102,6 +7102,15 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   margin-bottom: 0;
 }
 
+.export-preview-pause-all-row {
+  display: flex;
+  margin-top: var(--shelf-section-gap, 0.5rem);
+}
+
+.export-preview-pause-all-row .export-preview-pause-all-btn {
+  margin-top: 0;
+}
+
 .animation-time-reference-foldout.effect-foldout--expanded {
   overflow: visible;
   padding-bottom: 0;

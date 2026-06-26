@@ -267,6 +267,24 @@ export class FontTextRevealController {
     return duration + decaySec;
   }
 
+  /**
+   * Map export timeline seconds to reveal elapsed.
+   * Export plays reveal once, then holds the settled pose for the rest of the clip
+   * (export duration may exceed reveal duration). Viewport Loop toggle is ignored here.
+   * @param {number} exportTimeSec
+   */
+  _resolveExportRevealElapsed(exportTimeSec) {
+    const duration = this.getDurationSec();
+    if (duration <= 0) return 0;
+    const decaySec = this._revealEmissiveDecaySec();
+    const endTime = duration + decaySec;
+    const t = Math.max(0, exportTimeSec);
+    if (decaySec > 0) {
+      return Math.min(t, endTime);
+    }
+    return Math.min(t, duration);
+  }
+
   _areRevealEmissiveSlamMaterialsSettled(elapsedSec = this._elapsed) {
     if (!this.isEmissiveSlamEnabled() || this.getEmissiveSlamStrength() <= 0) return true;
     const duration = this.getDurationSec();
@@ -1193,8 +1211,7 @@ export class FontTextRevealController {
     }
     this._exportDriveActive = true;
     this._previewMode = 'idle';
-    this._elapsed = 0;
-    this.applyAtTime(0);
+    // Pose is driven each tick by applyExportTime / applyExportFrame.
     this._requestRender();
   }
 
@@ -1220,8 +1237,10 @@ export class FontTextRevealController {
     this._exportDriveActive = true;
     const elapsed = Math.max(0, exportTimeSec);
     this._constantController?.setExportElapsed?.(elapsed);
-    this._elapsed = elapsed;
-    this.applyAtTime(elapsed);
+    this._elapsed = revealActive
+      ? this._resolveExportRevealElapsed(elapsed)
+      : elapsed;
+    this.applyAtTime(this._elapsed);
     this._requestRender();
   }
 

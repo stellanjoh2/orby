@@ -38,4 +38,13 @@ export class ExportSectionControls {
     foldout.classList.toggle('effect-foldout--expanded', open);
     foldout.setAttribute('aria-hidden', open ? 'false' : 'true');
   }
+
+  syncFromSettings() {
+    EXPORT_SECTIONS.forEach(({ key, inputId }) => {
+      const input = document.getElementById(inputId);
+      const open = !!this.ui.exportSettings.sections?.[key];
+      if (input) input.checked = open;
+      this.setSectionOpen(key, open);
+    });
+  }
 }
