@@ -66,6 +66,7 @@ import {
   CREATIVE_CRYSTAL_GEM_ENV_MAP_MUL,
   syncCreativeLookCrystalGemUniforms,
   applyCreativeLookCrystalGemPerformanceTuning,
+  retuneCreativeCrystalGemMaterials,
 } from './creativeLookCrystalGem.js';
 import {
   creativeGouacheMergeFactor,
@@ -2610,6 +2611,7 @@ export class MaterialController {
             this.stateStore?.getState()?.svgExtrude?.surfaceStrength ?? 1,
             computeExtrudeSurfaceMappingBounds(child),
           ),
+          renderQuality: state?.renderQuality,
         });
       };
 
@@ -3633,7 +3635,7 @@ export class MaterialController {
       || (
         nextPreset !== prevPreset
         && patch.intensity === undefined
-        && (nextPreset === 'scanline-hologram' || nextPreset === 'vectrex' || nextPreset === 'wire-pulse' || nextPreset === 'vertex-points' || nextPreset === 'dust-field' || isDitherPixelCreativeLookPreset(nextPreset))
+        && (nextPreset === 'scanline-hologram' || nextPreset === 'vectrex' || nextPreset === 'wire-pulse' || nextPreset === 'dust-field' || isDitherPixelCreativeLookPreset(nextPreset))
       )
     ) {
       this.creativeLookSettings.intensity = creativeLookDefaultIntensity(nextPreset);
@@ -3922,6 +3924,14 @@ export class MaterialController {
     }
 
     this._syncCreativeLookLiveUniforms(cl);
+  }
+
+  /** Re-apply crystal-gem transmission tier when viewport render quality changes. */
+  retuneCreativeCrystalGemPerformance() {
+    retuneCreativeCrystalGemMaterials(
+      this.currentModel,
+      this.stateStore?.getState()?.renderQuality,
+    );
   }
 
   _syncCreativeLookToonLightUniforms() {
@@ -5481,7 +5491,10 @@ export class MaterialController {
           material.thickness = thickness;
           material.roughness = roughness;
           material.attenuationDistance = attenuationDistance;
-          applyCreativeLookCrystalGemPerformanceTuning(material);
+          applyCreativeLookCrystalGemPerformanceTuning(
+            material,
+            state?.renderQuality,
+          );
           material.transparent = true;
           material.opacity = 1;
           material.depthWrite = false;

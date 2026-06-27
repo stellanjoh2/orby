@@ -312,6 +312,7 @@ export function createBlankCanvasPreset() {
     grain: {
       enabled: false,
       intensity: 0.03,
+      scale: 1,
       color: '#ffffff',
     },
     aberration: {

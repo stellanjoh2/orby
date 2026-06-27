@@ -3,11 +3,32 @@ import * as THREE from 'three';
 /** Shader Lab crystal-gem — HDRI reflection scale (transmission carries the backdrop). */
 export const CREATIVE_CRYSTAL_GEM_ENV_MAP_MUL = 0.54;
 
-/** Transmission samples — Three default is 10; lower = faster refraction pass. */
-export const CREATIVE_CRYSTAL_GEM_TRANSMISSION_SAMPLES = 4;
+/** @typedef {'max' | 'medium' | 'low'} CreativeCrystalGemTransmissionTierId */
 
-/** Transmission RT scale — 1 = full res; 0.5–0.75 is usually enough for gems. */
-export const CREATIVE_CRYSTAL_GEM_TRANSMISSION_RES_SCALE = 0.65;
+/** Transmission cost dominates crystal-gem FPS (Three default is 10 samples @ full res). */
+export const CREATIVE_CRYSTAL_GEM_TRANSMISSION = {
+  max: { samples: 4, resolutionScale: 0.65 },
+  medium: { samples: 3, resolutionScale: 0.5 },
+  low: { samples: 2, resolutionScale: 0.4 },
+};
+
+/** @deprecated Use CREATIVE_CRYSTAL_GEM_TRANSMISSION.max */
+export const CREATIVE_CRYSTAL_GEM_TRANSMISSION_SAMPLES =
+  CREATIVE_CRYSTAL_GEM_TRANSMISSION.max.samples;
+
+/** @deprecated Use CREATIVE_CRYSTAL_GEM_TRANSMISSION.max */
+export const CREATIVE_CRYSTAL_GEM_TRANSMISSION_RES_SCALE =
+  CREATIVE_CRYSTAL_GEM_TRANSMISSION.max.resolutionScale;
+
+/**
+ * @param {string | undefined} renderQuality
+ * @returns {typeof CREATIVE_CRYSTAL_GEM_TRANSMISSION['max']}
+ */
+export function resolveCreativeCrystalGemTransmission(renderQuality) {
+  if (renderQuality === 'low') return CREATIVE_CRYSTAL_GEM_TRANSMISSION.low;
+  if (renderQuality === 'medium') return CREATIVE_CRYSTAL_GEM_TRANSMISSION.medium;
+  return CREATIVE_CRYSTAL_GEM_TRANSMISSION.max;
+}
 
 const OPAQUE_FRAGMENT = '#include <opaque_fragment>';
 const COMMON_INCLUDE = '#include <common>';
@@ -58,9 +79,7 @@ float orbyCrystalInclusion(vec2 p) {
 }
 
 float orbyCrystalFbm2(vec2 p) {
-  float v = orbyCrystalInclusion(p);
-  v += orbyCrystalInclusion(p * 2.03 + vec2(17.0, 31.0)) * 0.5;
-  return v;
+  return orbyCrystalInclusion(p);
 }
 
 vec3 orbyCrystalGemVolume(vec3 worldPos, vec3 worldNormal, vec3 viewDir) {
@@ -115,12 +134,12 @@ vec3 orbyCrystalGemVolume(vec3 worldPos, vec3 worldNormal, vec3 viewDir) {
 
   vec3 H = normalize(L + V);
   float nh = max(dot(N, H), 0.0);
-  float sparkTight = exp2(-280.0 * (1.0 - nh));
-  float sparkWide = exp2(-22.0 * (1.0 - nh));
+  float sparkTight = pow(nh, 128.0);
+  float sparkWide = pow(nh, 18.0);
   float spark =
     sparkTight * (1.15 + up * 0.45) +
     sparkWide * 0.22 +
-    facetEdge * exp2(-14.0 * (1.0 - nh)) * 0.65;
+    facetEdge * pow(nh, 12.0) * 0.65;
 
   vec3 gem = body * (0.42 + path * 0.58);
   gem += prism * F * (0.32 + inten * 0.28 - down * 0.12);
@@ -265,7 +284,7 @@ export function creativeCrystalGemParamsForMesh(patternScale, hdriBlurriness, me
 
 /**
  * @param {THREE.MeshPhysicalMaterial} mat
- * @param {{ time?: number, patternScale?: number, intensity?: number }} opts
+ * @param {{ time?: number, patternScale?: number, intensity?: number, renderQuality?: string }} opts
  */
 export function attachCreativeLookCrystalGemShader(mat, opts = {}) {
   if (!mat?.isMeshPhysicalMaterial) return;
@@ -312,7 +331,7 @@ export function attachCreativeLookCrystalGemShader(mat, opts = {}) {
   mat.userData.orbyCrystalGemOnBeforeCompile = crystalCompile;
   mat.onBeforeCompile = crystalCompile;
 
-  applyCreativeLookCrystalGemPerformanceTuning(mat);
+  applyCreativeLookCrystalGemPerformanceTuning(mat, opts.renderQuality);
 
   const prevKey = mat.customProgramCacheKey?.bind(mat);
   mat.customProgramCacheKey = function orbyCrystalGemCacheKey() {
@@ -353,10 +372,28 @@ export function applyCreativeLookCrystalGemPhysicalParams(mat, patternScale, hdr
 }
 
 /** Lower transmission RT cost — biggest win after mesh complexity. */
-export function applyCreativeLookCrystalGemPerformanceTuning(mat) {
+export function applyCreativeLookCrystalGemPerformanceTuning(mat, renderQuality) {
   if (!mat?.isMeshPhysicalMaterial) return;
-  mat.samples = CREATIVE_CRYSTAL_GEM_TRANSMISSION_SAMPLES;
+  const tier = resolveCreativeCrystalGemTransmission(renderQuality);
+  mat.samples = tier.samples;
   if ('transmissionResolutionScale' in mat) {
-    mat.transmissionResolutionScale = CREATIVE_CRYSTAL_GEM_TRANSMISSION_RES_SCALE;
+    mat.transmissionResolutionScale = tier.resolutionScale;
   }
+}
+
+/**
+ * Re-apply transmission tier when viewport render quality changes.
+ * @param {THREE.Object3D | null | undefined} root
+ * @param {string | undefined} renderQuality
+ */
+export function retuneCreativeCrystalGemMaterials(root, renderQuality) {
+  if (!root) return;
+  root.traverse((child) => {
+    if (!child.isMesh) return;
+    const mats = Array.isArray(child.material) ? child.material : [child.material];
+    for (const mat of mats) {
+      if (mat?.userData?.orbyCreativeLook !== 'crystal-gem' || !mat.isMeshPhysicalMaterial) continue;
+      applyCreativeLookCrystalGemPerformanceTuning(mat, renderQuality);
+    }
+  });
 }

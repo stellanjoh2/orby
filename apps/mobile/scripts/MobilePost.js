@@ -449,6 +449,9 @@ export class MobilePost {
       if (this.grainTintPass.uniforms?.intensity) {
         this.grainTintPass.uniforms.intensity.value = effectiveIntensity;
       }
+      if (this.grainTintPass.uniforms?.scale) {
+        this.grainTintPass.uniforms.scale.value = settings.scale ?? 1;
+      }
       if (this.grainTintPass.uniforms?.tint) {
         this.grainTintPass.uniforms.tint.value.set(settings.color ?? '#ffffff');
       }

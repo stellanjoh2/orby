@@ -1941,6 +1941,7 @@ export class SceneManager {
     this.updateBloom(state.bloom);
     this.updateAmbientOcclusion(state.ambientOcclusion);
     this.applyRenderQualityVisualOverrides();
+    this.materialController?.retuneCreativeCrystalGemPerformance?.();
     if (this.fxaaPass) {
       this.fxaaPass.enabled =
         !tier.forceFxaaOff && (state.antiAliasing ?? 'none') === 'fxaa';

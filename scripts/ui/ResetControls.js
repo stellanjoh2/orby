@@ -721,7 +721,7 @@ export class ResetControls {
         !defaults.bloom.enabled,
       );
       this.eventBus.emit('render:grain', defaults.grain);
-      this.ui.setEffectControlsDisabled(['grainIntensity'], !defaults.grain.enabled);
+      this.ui.setEffectControlsDisabled(['grainIntensity', 'grainScale'], !defaults.grain.enabled);
       this.eventBus.emit('render:aberration', defaults.aberration);
       this.ui.setEffectControlsDisabled(
         ['aberrationAmount'],
@@ -1149,7 +1149,7 @@ export class ResetControls {
               this.stateStore.resetSlice(RESET_DIRTY_PATHS.grain);
             });
             this.eventBus.emit('render:grain', defaults.grain);
-            this.ui.setEffectControlsDisabled(['grainIntensity'], !defaults.grain.enabled);
+            this.ui.setEffectControlsDisabled(['grainIntensity', 'grainScale'], !defaults.grain.enabled);
             this.ui.syncUIFromState();
             break;
             

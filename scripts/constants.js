@@ -892,6 +892,22 @@ export const GRAIN_LUMINANCE_MIN = 0.3;
 export const GRAIN_LUMINANCE_MAX = 1.0;
 export const GRAIN_LUMINANCE_THRESHOLD = 0.5;
 export const GRAIN_INTENSITY_THRESHOLD = 0.0001;
+/** Desktop `#grainIntensity` UI value → stored `grain.intensity` (UI 1.0 = 0.15 stored). */
+export const GRAIN_INTENSITY_UI_FACTOR = 0.15;
+export const GRAIN_INTENSITY_UI_MAX = 5;
+export const GRAIN_SCALE_DEFAULT = 1;
+export const GRAIN_SCALE_MIN = 1;
+export const GRAIN_SCALE_MAX = 3;
+
+/** @param {number} stored */
+export function grainIntensityStoredToUi(stored) {
+  return stored / GRAIN_INTENSITY_UI_FACTOR;
+}
+
+/** @param {number} ui */
+export function grainIntensityUiToStored(ui) {
+  return ui * GRAIN_INTENSITY_UI_FACTOR;
+}
 
 export const ACES_FILMIC_MULTIPLIER = 0.6;
 export const ACES_FILMIC_A = 2.51;

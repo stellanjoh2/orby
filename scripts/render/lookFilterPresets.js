@@ -78,7 +78,7 @@ export const LOOK_FILTER_CATALOG = [
  * Per-preset overrides (merged on top of app defaults, except "none" which restores defaults for these keys).
  * Only include fields that differ from defaults; nested objects are shallow-merged with defaults for that key.
  *
- * Film grain: `grain.intensity` is the stored value (UI slider 0–1 maps ×0.15, so 0.15 = slider max / “1.0” strength).
+ * Film grain: `grain.intensity` is the stored value (UI slider 0–5 maps ×0.15, so 0.75 = slider max).
  * Chromatic aberration: `aberration` merges with defaults; set `enabled: false` for none. When on, `amount` is the radial channel-separation magnitude (0..0.02 typical).
  */
 const PRESET_SPECS = {
@@ -108,7 +108,7 @@ const PRESET_SPECS = {
       vignetteColor: '#080808',
     },
     bloom: { enabled: false },
-    /* Slider max: UI 1.0 → stored intensity 0.15 (see grainIntensity × 0.15) */
+    /* Slider max: UI 5.0 → stored intensity 0.75 (see grainIntensity × 0.15) */
     grain: { enabled: true, intensity: 0.15, color: '#a0a0a0' },
     toneCurve: {
       p1: { x: 0.24, y: 0.17 },

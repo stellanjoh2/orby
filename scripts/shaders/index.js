@@ -191,6 +191,7 @@ varying vec2 vUv;
 uniform sampler2D tDiffuse;
 uniform float time;
 uniform float intensity;
+uniform float scale;
 uniform vec3 tint;
 
 float rand(vec2 co) {
@@ -205,7 +206,7 @@ void main() {
     return;
   }
   
-  vec2 grainUv = vUv * 800.0 + time * 0.05;
+  vec2 grainUv = vUv * (800.0 * scale) + time * 0.05;
   float noise = rand(grainUv) * 2.0 - 1.0;
   
   float luminance = dot(base.rgb, vec3(0.299, 0.587, 0.114));
@@ -341,6 +342,7 @@ export const GrainTintShader = {
     tDiffuse: { value: null },
     time: { value: 0 },
     intensity: { value: 0.2 },
+    scale: { value: 1 },
     tint: { value: new THREE.Color('#ffffff') },
   },
   vertexShader: grainTintVertex,

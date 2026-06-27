@@ -1137,8 +1137,8 @@
                     <button type="button" data-creative-look="wire-pulse" class="hdri-icon" data-tooltip="Wire Pulse — holographic wireframe with emissive light pulses. Intensity = line thickness. Scale = pulse spacing">
                       <img src="./assets/images/creative-look-wire-pulse.png" alt="Wire Pulse" width="128" height="128" />
                     </button>
-                    <button type="button" data-creative-look="vertex-points" class="hdri-icon" data-tooltip="Vertex Points — holographic mesh vertices only; emissive pulses travel through the point cloud. Intensity = point size. Scale = pulse spacing">
-                      <img src="./assets/images/creative-look-vertex-points.png" alt="Vertex Points" width="128" height="128" />
+                    <button type="button" data-creative-look="fractal-storm" class="hdri-icon" data-tooltip="Fractal Storm — domain-warped height map with glowing topographic contour lines. Intensity = line glow. Scale = contour density">
+                      <img src="./assets/images/creative-look-fractal-storm.png" alt="Fractal Storm" width="128" height="128" />
                     </button>
                     <button type="button" data-creative-look="flow-field" class="hdri-icon" data-tooltip="Flow Field — animated color drift in world space">
                       <img src="./assets/images/creative-look-flow-field.png" alt="Flow Field" width="128" height="128" />
@@ -1299,7 +1299,7 @@
                     <span class="value" data-output="creativeLookMasterHue">0°</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Pushes each preset's signature effect. 1 = default. Wire Pulse: line thickness. Vertex Points / Dust Field: point size. Neon Edge, Holographic, Scanline Hologram, and Spectral Storm also respond.">Intensity</span>
+                    <span data-tooltip="Pushes each preset's signature effect. 1 = default. Wire Pulse: line thickness. Dust Field: point size. Fractal Storm, Neon Edge, Holographic, Scanline Hologram, and Spectral Storm also respond.">Intensity</span>
                     <input
                       type="range"
                       id="creativeLookIntensity"
@@ -1323,7 +1323,7 @@
                     <span class="value" data-output="creativeLookLiftCrush">0.00</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Speed for animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Dust Field, Spectral Storm). True Chrome / Glass ignore. Pause freezes motion.">Anim Speed</span>
+                    <span data-tooltip="Speed for animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Fractal Storm, Dust Field, Spectral Storm). True Chrome / Glass ignore. Pause freezes motion.">Anim Speed</span>
                     <input
                       type="range"
                       id="creativeLookShaderAnimationSpeed"
@@ -1335,7 +1335,7 @@
                     <span class="value" data-output="creativeLookShaderAnimationSpeed">0.40</span>
                   </label>
                   <label class="slider-line" id="creativeLookPatternScaleRow">
-                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Dust Field, Spectral Storm). Voxel HD: fixed at 0.50×. EGA / C64 / Game Boy / NES / etc.: fixed grid. True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2×. PSX: fixed at 2.5×. VGA/DOS 3D: fixed at 2.2× (decimation runs once at apply). Watercolour: brush size &amp; wobble. Sketch uses Stroke Width / Raster Size instead.">Scale</span>
+                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Fractal Storm, Dust Field, Spectral Storm). Voxel HD: fixed at 0.50×. EGA / C64 / Game Boy / NES / etc.: fixed grid. True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2×. PSX: fixed at 2.5×. VGA/DOS 3D: fixed at 2.2× (decimation runs once at apply). Watercolour: brush size &amp; wobble. Sketch uses Stroke Width / Raster Size instead.">Scale</span>
                     <input
                       type="range"
                       id="creativeLookPatternScale"
@@ -1409,7 +1409,7 @@
                     type="button"
                     id="creativeLookPauseAnimations"
                     class="ghost-btn small creative-look-pause-btn"
-                    data-tooltip="Freeze animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Dust Field, Spectral Storm). True Chrome and Toon keep following the scene / HDRI."
+                    data-tooltip="Freeze animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Fractal Storm, Dust Field, Spectral Storm). True Chrome and Toon keep following the scene / HDRI."
                   >
                     Pause shader animations
                   </button>
@@ -4720,16 +4720,28 @@
                     aria-hidden="true"
                   >
                   <label class="slider-line">
-                    <span>Strength</span>
+                    <span>Intensity</span>
                     <input
                       id="grainIntensity"
                       type="range"
                       min="0"
-                      max="1"
+                      max="5"
                       value="0.20"
                       step="0.02"
                     />
                     <span class="value" data-output="grainIntensity">0.20</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Scale</span>
+                    <input
+                      id="grainScale"
+                      type="range"
+                      min="1"
+                      max="3"
+                      value="1"
+                      step="0.05"
+                    />
+                    <span class="value" data-output="grainScale" data-format="multiplier">1.00×</span>
                   </label>
                   </div>
                 </div>

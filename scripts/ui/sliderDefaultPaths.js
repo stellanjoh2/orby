@@ -1,4 +1,5 @@
 import { DEFAULT_EXTRUDE_DEPTH } from '../import/extrudeDefaults.js';
+import { grainIntensityStoredToUi } from '../constants.js';
 
 /**
  * Maps `UIManager.inputs` keys (and `data-output` keys) to StateStore dot paths.
@@ -74,6 +75,7 @@ export const SLIDER_DEFAULT_PATHS = {
   anamorphicBloomSoften: 'lensFlare.anamorphicBloom.soften',
   lensDirtStrength: 'lensDirt.strength',
   grainIntensity: 'grain.intensity',
+  grainScale: 'grain.scale',
   aberrationAmount: 'aberration.amount',
   ambientOcclusionIntensity: 'ambientOcclusion.intensity',
   ambientOcclusionRadius: 'ambientOcclusion.radius',
@@ -186,7 +188,9 @@ export function resolveSliderDefaultValue(slider, inputKey, defaults) {
   if (!path) return undefined;
 
   const value = getAtPath(defaults, path);
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  if (inputKey === 'grainIntensity') return grainIntensityStoredToUi(value);
+  return value;
 }
 
 /** True when `clientX` is over the slider thumb (not the track). */

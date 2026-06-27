@@ -1289,7 +1289,7 @@ export class SceneSettingsManager {
         this.stateStore.set('grain', payload.grain);
         this.eventBus.emit('render:grain', payload.grain);
         if (this.uiHelper?.setEffectControlsDisabled) {
-          this.uiHelper.setEffectControlsDisabled(['grainIntensity'], !payload.grain.enabled);
+          this.uiHelper.setEffectControlsDisabled(['grainIntensity', 'grainScale'], !payload.grain.enabled);
         }
       }
       if (payload.aberration) {

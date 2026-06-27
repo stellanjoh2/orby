@@ -81,7 +81,7 @@ export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
       ],
       !isBloomTuningActive(b),
     );
-    ui.setEffectControlsDisabled(['grainIntensity'], !b.grain.enabled);
+    ui.setEffectControlsDisabled(['grainIntensity', 'grainScale'], !b.grain.enabled);
     ui.setEffectControlsDisabled(
       ['aberrationAmount'],
       !b.aberration.enabled,

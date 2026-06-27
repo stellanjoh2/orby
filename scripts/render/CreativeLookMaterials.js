@@ -171,7 +171,7 @@ export { creativeLookUsesVoxelGeometry, isVoxelCreativeLookPreset } from './crea
 /**
  * Animated presets read `uTime` as one shared timeline: MaterialController sets
  * `uTime = elapsedSeconds * creativeLook.shaderAnimationSpeed` (after pause freeze).
- * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, chrome-plasma, voronoi, scanline-hologram, wire-pulse, vertex-points, dust-field, vectrex, ps2-crush, psx, holo-glass, crystal-gem). EGA Pixel uses a fixed 640×350 screen grid (no time scroll).
+ * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, chrome-plasma, voronoi, scanline-hologram, wire-pulse, fractal-storm, dust-field, vectrex, ps2-crush, psx, holo-glass, crystal-gem). EGA Pixel uses a fixed 640×350 screen grid (no time scroll).
  *
  * The chrome preset uses MeshPhysicalMaterial so PMREM / CubeUV environment maps match the rest of the viewer.
  * The glass preset uses MeshPhysicalMaterial.transmission for real refraction (Three.js transmission pipeline).
@@ -180,7 +180,7 @@ export { creativeLookUsesVoxelGeometry, isVoxelCreativeLookPreset } from './crea
  * in the transmission prepass — not other transmissive/transparent meshes (Three.js renderer design).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome-plasma' | 'chrome' | 'glass' | 'holo-glass' | 'crystal-gem' | 'thermal' | 'thermal-extreme' | 'thermal-acid'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'fractal-storm' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome-plasma' | 'chrome' | 'glass' | 'holo-glass' | 'crystal-gem' | 'thermal' | 'thermal-extreme' | 'thermal-acid'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
@@ -207,7 +207,7 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'voronoi',
   'scanline-hologram',
   'wire-pulse',
-  'vertex-points',
+  'fractal-storm',
   'dust-field',
   'ps2-crush',
   'psx',
@@ -259,8 +259,11 @@ export const VECTREX_DEFAULT_INTENSITY = 0.25;
 /** Default Shader Lab intensity for Wire Pulse (line thickness). */
 export const WIRE_PULSE_DEFAULT_INTENSITY = 0.25;
 
-/** Default Shader Lab intensity for Vertex Points (point size). */
-export const VERTEX_POINTS_DEFAULT_INTENSITY = 2;
+/** Default Shader Lab intensity for Fractal Storm (contour line glow). */
+export const FRACTAL_STORM_DEFAULT_INTENSITY = 1;
+
+/** Default Shader Lab scale for Fractal Storm (contour density). */
+export const FRACTAL_STORM_DEFAULT_PATTERN_SCALE = 1;
 
 export {
   DUST_FIELD_PARTICLE_COUNT,
@@ -278,6 +281,12 @@ export const VECTREX_DEFAULT_PATTERN_SCALE = 0.5;
 /** Default Shader Lab scale for Flow Field (world-space color drift density). */
 export const FLOW_FIELD_DEFAULT_PATTERN_SCALE = 0.1;
 
+/** Default Shader Lab scale for Plasma (world-space wave density). */
+export const PLASMA_DEFAULT_PATTERN_SCALE = 1;
+
+/** Default Shader Lab scale for Spectral Storm (world-space plasma density). */
+export const SPECTRAL_STORM_DEFAULT_PATTERN_SCALE = 1;
+
 /** Fixed creative Scale for PS2 Crush — decimation runs once at apply (not live). */
 export const CREATIVE_PS2_CRUSH_PATTERN_SCALE = 2;
 
@@ -287,16 +296,16 @@ export const CREATIVE_PSX_PATTERN_SCALE = 2.5;
 /** Fixed creative Scale for VGA/DOS 3D — moderate decimation between PS2 and PSX. */
 export const CREATIVE_VGA_DOS_3D_PATTERN_SCALE = 2.2;
 
-/** Wire Pulse / Vertex Points / Vectrex need per-triangle barycentrics (non-indexed triangle soup). */
+/** Wire Pulse / Vectrex need per-triangle barycentrics (non-indexed triangle soup). */
 export function creativeLookUsesWirePulseGeometry(preset) {
   const id = normalizeCreativeLookPreset(preset);
-  return id === 'wire-pulse' || id === 'vertex-points' || id === 'vectrex';
+  return id === 'wire-pulse' || id === 'vectrex';
 }
 
-/** Wire Pulse, Vertex Points, Dust Field, and Vectrex draw in the transparent pass. */
+/** Wire Pulse, Dust Field, and Vectrex draw in the transparent pass. */
 export function creativeLookForceTransparentDraw(preset) {
   const id = normalizeCreativeLookPreset(preset);
-  return id === 'wire-pulse' || id === 'vertex-points' || id === 'dust-field' || id === 'vectrex';
+  return id === 'wire-pulse' || id === 'dust-field' || id === 'vectrex';
 }
 
 /** @param {CreativeLookPreset | string | undefined} preset */
@@ -354,7 +363,7 @@ export function creativeLookDustFieldMaterialOpts(shaderAlpha) {
   };
 }
 
-/** Wire Pulse / Vertex Points / Vectrex — no hidden-line removal; vectors draw through like CRT / x-ray wireframe. */
+/** Wire Pulse / Vectrex — no hidden-line removal; vectors draw through like CRT / x-ray wireframe. */
 export function creativeLookWireVectorMaterialOpts(shaderAlpha) {
   return {
     transparent: true,
@@ -428,7 +437,6 @@ export const CREATIVE_LOOK_TRANSPARENT_PRESETS = /** @type {const} */ ([
   'ascii-art-4',
   'scanline-hologram',
   'wire-pulse',
-  'vertex-points',
   'dust-field',
   'vectrex',
   'watercolour',
@@ -709,7 +717,7 @@ export function creativeLookDefaultIntensity(preset) {
   if (id === 'scanline-hologram') return SCANLINE_HOLOGRAM_DEFAULT_INTENSITY;
   if (id === 'vectrex') return VECTREX_DEFAULT_INTENSITY;
   if (id === 'wire-pulse') return WIRE_PULSE_DEFAULT_INTENSITY;
-  if (id === 'vertex-points') return VERTEX_POINTS_DEFAULT_INTENSITY;
+  if (id === 'fractal-storm') return FRACTAL_STORM_DEFAULT_INTENSITY;
   if (id === 'dust-field') return DUST_FIELD_DEFAULT_INTENSITY;
   if (id === 'dither-neutral') return DITHER_NEUTRAL_DEFAULT_INTENSITY;
   if (id === 'dither-tritone') return DITHER_TRITONE_DEFAULT_INTENSITY;
@@ -725,8 +733,11 @@ export function creativeLookDefaultIntensity(preset) {
 export function creativeLookDefaultPatternScale(preset) {
   const id = normalizeCreativeLookPreset(preset);
   if (id === 'flow-field') return FLOW_FIELD_DEFAULT_PATTERN_SCALE;
+  if (id === 'plasma') return PLASMA_DEFAULT_PATTERN_SCALE;
+  if (id === 'spectral-storm') return SPECTRAL_STORM_DEFAULT_PATTERN_SCALE;
   if (id === 'vectrex') return VECTREX_DEFAULT_PATTERN_SCALE;
   if (id === 'dust-field') return DUST_FIELD_DEFAULT_PATTERN_SCALE;
+  if (id === 'fractal-storm') return FRACTAL_STORM_DEFAULT_PATTERN_SCALE;
   if (id === 'dither-neutral') return DITHER_NEUTRAL_DEFAULT_PATTERN_SCALE;
   if (id === 'dither-tritone') return DITHER_TRITONE_DEFAULT_PATTERN_SCALE;
   if (id === 'dither-crosshatch') return DITHER_CROSSHATCH_DEFAULT_PATTERN_SCALE;
@@ -1052,6 +1063,7 @@ export function applyCreativeLookPhysicalMasterHue(mat, degrees, brightness) {
 export function resolveCreativeLookPresetChoice(preset) {
   let p = typeof preset === 'string' ? preset : '';
   if (p === 'matcap' || p === 'halftone') p = 'spectral-storm';
+  if (p === 'vertex-points') p = 'fractal-storm';
   if (p === 'glass-holo') p = 'holographic';
   if (p === 'ordered-dither') p = 'dither-neutral';
   if (p === 'pixel-art') p = 'ega-pixel';
@@ -1134,7 +1146,7 @@ export function creativeLookPresetUsesShaderAnimation(preset) {
     id === 'voronoi' ||
     id === 'scanline-hologram' ||
     id === 'wire-pulse' ||
-    id === 'vertex-points' ||
+    id === 'fractal-storm' ||
     id === 'dust-field' ||
     id === 'vectrex' ||
     id === 'ps2-crush' ||
@@ -1207,7 +1219,7 @@ export function formatCreativeLookPresetLabel(preset) {
     voronoi: 'Voronoi',
     'scanline-hologram': 'Scanline Hologram',
     'wire-pulse': 'Wire Pulse',
-    'vertex-points': 'Vertex Points',
+    'fractal-storm': 'Fractal Storm',
     'dust-field': 'Dust Field',
     'ps2-crush': 'PS2 Crush',
     psx: 'PSX',
@@ -2694,9 +2706,8 @@ void main() {
 }
 `;
 
-/** Holographic vertex points + traveling emissive pulse (`uIntensity` scales point size). */
-const VERTEX_POINTS_FRAGMENT = /* glsl */ `
-varying vec3 vBarycentric;
+/** Fractal Storm — domain-warped FBM height field with glowing topographic contour lines. */
+const FRACTAL_STORM_FRAGMENT = /* glsl */ `
 varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
 uniform float uTime;
@@ -2704,53 +2715,105 @@ uniform float uPatternScale;
 uniform float uIntensity;
 uniform float uOpacity;
 
+const vec3 FS_BASE = vec3(0.03137, 0.03137, 0.03137);
+
+float fsHash(vec3 p) {
+  p = fract(p * vec3(0.1031, 0.1030, 0.0973));
+  p += dot(p, p.yxz + 33.33);
+  return fract((p.x + p.y) * p.z);
+}
+
+float fsNoise(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float n000 = fsHash(i);
+  float n100 = fsHash(i + vec3(1.0, 0.0, 0.0));
+  float n010 = fsHash(i + vec3(0.0, 1.0, 0.0));
+  float n110 = fsHash(i + vec3(1.0, 1.0, 0.0));
+  float n001 = fsHash(i + vec3(0.0, 0.0, 1.0));
+  float n101 = fsHash(i + vec3(1.0, 0.0, 1.0));
+  float n011 = fsHash(i + vec3(0.0, 1.0, 1.0));
+  float n111 = fsHash(i + vec3(1.0, 1.0, 1.0));
+  float nx00 = mix(n000, n100, f.x);
+  float nx10 = mix(n010, n110, f.x);
+  float nx01 = mix(n001, n101, f.x);
+  float nx11 = mix(n011, n111, f.x);
+  float nxy0 = mix(nx00, nx10, f.y);
+  float nxy1 = mix(nx01, nx11, f.y);
+  return mix(nxy0, nxy1, f.z);
+}
+
+float fsFbm(vec3 p) {
+  float v = fsNoise(p);
+  p = p * 2.03 + 1.7;
+  v += 0.5 * fsNoise(p);
+  p = p * 2.03 + 1.7;
+  v += 0.25 * fsNoise(p);
+  p = p * 2.03 + 1.7;
+  return v + 0.125 * fsNoise(p);
+}
+
 void main() {
-  vec3 N = normalize(vWorldNormal);
-  vec3 V = normalize(cameraPosition - vWorldPosition);
-  float ndv = max(dot(N, V), 0.0);
-  float fresnel = pow(1.0 - ndv, 2.35);
-  float fresnelTight = pow(1.0 - ndv, 5.5);
-
-  float inten = clamp(uIntensity, 0.0, 2.0);
-
-  vec3 bary = vBarycentric;
-  vec3 dBary = fwidth(bary);
-  float db = max(max(dBary.x, dBary.y), dBary.z);
-  float cornerReach = mix(0.05, 0.55, inten * 0.5) * max(db * 6.0, 1e-5);
-  float va = smoothstep(1.0 - cornerReach, 1.0, bary.x);
-  float vb = smoothstep(1.0 - cornerReach, 1.0, bary.y);
-  float vc = smoothstep(1.0 - cornerReach, 1.0, bary.z);
-  float pointMask = max(va, max(vb, vc));
-  pointMask = pow(clamp(pointMask, 0.0, 1.0), mix(1.85, 1.05, inten * 0.5));
-
-  float sc = max(uPatternScale, 0.02);
-  float waveFreq = 2.15 / sc;
+  vec3 N = orbyCreativeSurfaceNormal(
+    normalize(vWorldNormal),
+    vWorldPosition,
+    vOrbyLocalPos,
+    vOrbyLocalNormal,
+    mat3(vOrbyWm0, vOrbyWm1, vOrbyWm2)
+  );
+  vec3 p = vWorldPosition * (1.65 / max(uPatternScale, 0.001));
   float t = uTime;
-  vec3 marchDir = normalize(vec3(0.58, 0.28, 0.76));
-  float phase = dot(vWorldPosition, marchDir) * waveFreq - t * 2.75;
+  float inten = clamp(uIntensity, 0.0, 2.0);
+  float d = inten - 1.0;
+  float up = max(d, 0.0);
+  float down = max(-d, 0.0);
 
-  float bandPos = fract(phase * 0.19);
-  float band = smoothstep(0.0, 0.045, bandPos) * smoothstep(0.15, 0.045, bandPos);
-  float trail = pow(clamp(sin(phase * 6.28318) * 0.5 + 0.5, 0.0, 1.0), 2.8);
-  float pulse = max(band, trail * 0.42);
+  vec3 warp = vec3(
+    fsFbm(p * 0.52 + vec3(t * 0.11, t * 0.07, 0.0)),
+    fsFbm(p * 0.52 + vec3(4.1, t * 0.09, 1.2)),
+    fsFbm(p * 0.52 + vec3(1.6, 2.8, t * 0.1))
+  );
+  vec3 q = p + (warp - 0.5) * mix(1.45, 2.35, up * 0.5);
 
-  float phase2 = dot(vWorldPosition, vec3(-0.32, 0.88, 0.34)) * waveFreq * 0.82 - t * 1.85;
-  pulse = clamp(pulse + smoothstep(0.7, 0.98, sin(phase2 * 5.2) * 0.5 + 0.5) * 0.5, 0.0, 1.55);
+  float height = fsFbm(q * 1.28 + vec3(0.0, 0.0, t * 0.16));
+  height += 0.44 * fsFbm(q * 2.62 + vec3(t * 0.2, 0.0, 0.0));
+  height += 0.22 * fsFbm(q * 5.15 - vec3(t * 0.14, t * 0.08, 0.0));
 
-  vec3 pointIdle = mix(vec3(0.0, 0.36, 0.46), vec3(0.46, 0.08, 0.4), fresnel * 0.55) * 0.32;
-  vec3 pointHot = mix(vec3(0.32, 1.0, 0.92), vec3(1.0, 0.4, 0.86), fresnel) * 1.35;
+  float contourFreq = mix(7.5, 22.0, inten * 0.5);
+  float v = height * contourFreq;
+  float fw = max(fwidth(v), 1e-4);
+  float iso = abs(fract(v) - 0.5) * 2.0;
 
-  vec3 col = vec3(0.008, 0.012, 0.018);
-  col += pointIdle * pointMask;
-  col += pointHot * pulse * pointMask;
+  // Screen-space minimum width — stops sub-pixel dotted dashes on curved surfaces.
+  float linePx = mix(2.6, 4.4, inten * 0.5);
+  float lineW = max(linePx * fw, fw * 2.1);
 
-  col += vec3(0.04, 0.15, 0.21) * fresnel * 0.1;
-  col += vec3(0.52, 0.1, 0.42) * fresnelTight * 0.06;
+  float line = 1.0 - smoothstep(0.0, lineW, iso);
+  float lineCore = 1.0 - smoothstep(lineW * 0.22, lineW * 0.95, iso);
+  float glow = exp(-iso * iso / (lineW * lineW * 9.0 + 1e-5)) * line * 0.55;
 
-  float alpha = pointMask * (0.58 + pulse * 0.42) + fresnel * 0.05;
-  alpha = clamp(alpha, 0.0, 1.0) * uOpacity;
+  float grad = dot(normalize(vWorldPosition.xz + vec2(0.001)), vec2(0.92, 0.38)) * 0.5 + 0.5;
+  grad = clamp(grad + sin(t * 0.28 + height * 2.4) * 0.06, 0.0, 1.0);
+  vec3 lineColA = vec3(0.48, 0.14, 1.0);
+  vec3 lineColB = vec3(0.12, 1.0, 0.95);
+  vec3 lineCol = mix(lineColA, lineColB, grad);
 
-  gl_FragColor = vec4(col, alpha);
+  vec3 lines = lineCol * lineCore * (2.65 + up * 1.45 - down * 0.55);
+  lines += lineCol * glow * (1.55 + up * 0.95 - down * 0.35);
+
+  vec3 V = normalize(cameraPosition - vWorldPosition);
+  float fresnel = pow(1.0 - max(dot(N, V), 0.0), 2.6);
+  lines += mix(lineColA, lineColB, fresnel) * fresnel * line * (0.62 + up * 0.38 - down * 0.22);
+
+  float film = orbyCreativeSurfaceFilmMod(vWorldPosition, vOrbyLocalPos, vOrbyLocalNormal);
+  lines *= film;
+
+  vec3 col = FS_BASE + lines;
+  col += vec3(0.04, 0.34, 0.42) * pow(fresnel, 3.1) * (0.14 + up * 0.05 - down * 0.04);
+  col = min(col, vec3(3.2));
+
+  gl_FragColor = vec4(col, uOpacity);
 }
 `;
 
@@ -4056,20 +4119,21 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     return finish(mat);
   }
 
-  if (id === 'vertex-points') {
+  if (id === 'fractal-storm') {
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: time },
         uPatternScale: { value: patternScale },
         uOpacity: { value: shaderAlpha },
+        ...surfaceUniformSpread,
         ...gradeUniforms,
         ...intensityUniform,
       },
-      vertexShader: WIRE_PULSE_VERTEX,
-      fragmentShader: lookFrag(VERTEX_POINTS_FRAGMENT),
-      ...creativeLookWireVectorMaterialOpts(shaderAlpha),
+      vertexShader: WORLD_SURFACE_VERTEX,
+      fragmentShader: lookFragWithSurface(FRACTAL_STORM_FRAGMENT),
+      ...commonMatOpts,
     });
-    mat.userData.orbyCreativeLook = 'vertex-points';
+    mat.userData.orbyCreativeLook = 'fractal-storm';
     return finish(mat);
   }
 
@@ -4231,7 +4295,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       patternScale,
       intensity,
     });
-    applyCreativeLookCrystalGemPerformanceTuning(mat);
+    applyCreativeLookCrystalGemPerformanceTuning(mat, opts.renderQuality);
     return finishPhysical(mat, 'crystal-gem');
   }
 

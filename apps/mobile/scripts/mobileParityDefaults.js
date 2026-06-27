@@ -38,8 +38,8 @@ export const MOBILE_BLOOM_RESOLUTION_SCALE =
 export const MOBILE_ABERRATION_AMOUNT_MAX = 0.02;
 export const MOBILE_ABERRATION_AMOUNT_STEP = 0.0001;
 
-/** Desktop `#grainIntensity` UI 0–1 → stored 0–0.15; mobile slider uses stored values directly. */
-export const MOBILE_GRAIN_INTENSITY_MAX = 0.15;
+/** Desktop `#grainIntensity` UI 0–5 → stored 0–0.75; mobile slider uses stored values directly. */
+export const MOBILE_GRAIN_INTENSITY_MAX = 0.75;
 export const MOBILE_GRAIN_INTENSITY_STEP = 0.001;
 
 /**

@@ -24,7 +24,7 @@ export function createRenderDefaults() {
       /** Multiplies lens dirt texture; #ffffff keeps the texture’s original colour. */
       tintColor: '#ffffff',
     },
-    grain: { enabled: false, intensity: 0.03, color: '#ffffff' },
+    grain: { enabled: false, intensity: 0.03, scale: 1, color: '#ffffff' },
     aberration: { ...defaultAberration },
     /** Screen-space AO (N8AO); off by default — GPU-heavy when enabled. */
     ambientOcclusion: {

@@ -600,7 +600,6 @@ export class MeshControls {
             || normalizeCreativeLookPreset(preset) === 'scanline-hologram'
             || normalizeCreativeLookPreset(preset) === 'vectrex'
             || normalizeCreativeLookPreset(preset) === 'wire-pulse'
-            || normalizeCreativeLookPreset(preset) === 'vertex-points'
             || normalizeCreativeLookPreset(preset) === 'dust-field'
             || isDitherPixelCreativeLookPreset(preset)
           ) {

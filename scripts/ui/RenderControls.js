@@ -14,6 +14,9 @@ import {
   isVignetteUiEnabled,
   ANAMORPHIC_BLOOM_SPREAD_MAX,
   foldAnamorphicStreakAngleDeg,
+  grainIntensityStoredToUi,
+  grainIntensityUiToStored,
+  GRAIN_SCALE_DEFAULT,
   normalizeAnamorphicBloomQualityId,
   normalizeDofFocusMode,
   normalizeDofQualityId,
@@ -279,7 +282,7 @@ export class RenderControls {
       commitLookFilterTouchWith(() => {
         this.stateStore.set('grain.enabled', enabled);
       });
-      this.ui.setEffectControlsDisabled(['grainIntensity'], !enabled);
+      this.ui.setEffectControlsDisabled(['grainIntensity', 'grainScale'], !enabled);
       emitGrain();
     });
     this.ui.inputs.grainIntensity.addEventListener('input', (event) => {
@@ -287,10 +290,21 @@ export class RenderControls {
         this.helpers.canonicalizeRangeInputValue(event.target).toFixed(2),
       );
       event.target.value = String(uiValue);
-      const value = uiValue * 0.15;
+      const value = grainIntensityUiToStored(uiValue);
       this.helpers.updateValueLabel('grainIntensity', uiValue, 'decimal');
       commitLookFilterTouchWith(() => {
         this.stateStore.set('grain.intensity', value);
+      });
+      emitGrain();
+    });
+    this.ui.inputs.grainScale.addEventListener('input', (event) => {
+      const uiValue = parseFloat(
+        this.helpers.canonicalizeRangeInputValue(event.target).toFixed(2),
+      );
+      event.target.value = String(uiValue);
+      this.helpers.updateValueLabel('grainScale', uiValue, 'multiplier');
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('grain.scale', uiValue);
       });
       emitGrain();
     });
@@ -938,11 +952,14 @@ export class RenderControls {
     this.ui.setClipPlanesFoldoutOpen(!!clip.manual);
 
     // Grain
-    const grainUi = parseFloat((state.grain.intensity / 0.15).toFixed(2));
+    const grainUi = parseFloat(grainIntensityStoredToUi(state.grain.intensity).toFixed(2));
     this.helpers.syncRangeFromState(this.ui.inputs.grainIntensity, grainUi);
     this.helpers.updateValueLabel('grainIntensity', grainUi, 'decimal');
+    const grainScale = state.grain.scale ?? GRAIN_SCALE_DEFAULT;
+    this.helpers.syncRangeFromState(this.ui.inputs.grainScale, grainScale);
+    this.helpers.updateValueLabel('grainScale', grainScale, 'multiplier');
     this.ui.inputs.toggleGrain.checked = !!state.grain.enabled;
-    this.ui.setEffectControlsDisabled(['grainIntensity'], !state.grain.enabled);
+    this.ui.setEffectControlsDisabled(['grainIntensity', 'grainScale'], !state.grain.enabled);
     
     // Aberration
     this.ui.inputs.aberrationAmount.value = state.aberration.amount;

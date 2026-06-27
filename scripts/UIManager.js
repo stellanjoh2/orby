@@ -627,6 +627,7 @@ export class UIManager {
       lensDirtStrength: q('#lensDirtStrength'),
       lensDirtTintColor: q('#lensDirtTintColor'),
       grainIntensity: q('#grainIntensity'),
+      grainScale: q('#grainScale'),
       toggleGrain: q('#toggleGrain'),
       aberrationAmount: q('#aberrationAmount'),
       toggleAberration: q('#toggleAberration'),
@@ -1700,7 +1701,7 @@ export class UIManager {
       if (payload.grain) {
         this.stateStore.set('grain', payload.grain);
         this.eventBus.emit('render:grain', payload.grain);
-        this.setEffectControlsDisabled(['grainIntensity'], !payload.grain.enabled);
+        this.setEffectControlsDisabled(['grainIntensity', 'grainScale'], !payload.grain.enabled);
       }
 
       // Apply Aberration settings

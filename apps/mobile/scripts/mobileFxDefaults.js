@@ -27,7 +27,7 @@ export const MOBILE_FX_DEFAULTS = {
     radius: 0.2,
     color: '#ffe9cc',
   },
-  grain: { enabled: false, intensity: 0, color: '#ffffff' },
+  grain: { enabled: false, intensity: 0, scale: 1, color: '#ffffff' },
   aberration: { enabled: false, amount: 0 },
   dof: { enabled: false },
   toneCurve: {

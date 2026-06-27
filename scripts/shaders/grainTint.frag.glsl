@@ -2,6 +2,7 @@ varying vec2 vUv;
 uniform sampler2D tDiffuse;
 uniform float time;
 uniform float intensity;
+uniform float scale;
 uniform vec3 tint;
 
 // Better noise function - smoother and less glitchy
@@ -21,7 +22,7 @@ void main() {
   
   // Use screen-space UV for better grain distribution
   // Scale UV to create fine grain pattern
-  vec2 grainUv = vUv * 800.0 + time * 0.05;
+  vec2 grainUv = vUv * (800.0 * scale) + time * 0.05;
   float noise = rand(grainUv) * 2.0 - 1.0;
   
   // Calculate luminance for adaptive grain

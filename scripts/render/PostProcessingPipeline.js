@@ -61,6 +61,9 @@ import {
   USE_MERGED_BLOOM_COMPOSITE_PASS,
   isAnamorphicBloomPipelineActive,
   isBloomPipelineActive,
+  GRAIN_SCALE_DEFAULT,
+  GRAIN_SCALE_MAX,
+  GRAIN_SCALE_MIN,
 } from '../constants.js';
 
 /** Cam/FX grading stack keys — exposure always runs; color ops bypass at defaults. */
@@ -1694,6 +1697,14 @@ export class PostProcessingPipeline {
       this.grainTintPass.enabled = active;
       if (this.grainTintPass.uniforms?.intensity) {
         this.grainTintPass.uniforms.intensity.value = intensity;
+      }
+      if (this.grainTintPass.uniforms?.scale) {
+        const scale = THREE.MathUtils.clamp(
+          Number(settings.scale ?? GRAIN_SCALE_DEFAULT),
+          GRAIN_SCALE_MIN,
+          GRAIN_SCALE_MAX,
+        );
+        this.grainTintPass.uniforms.scale.value = scale;
       }
       if (this.grainTintPass.uniforms?.tint) {
         this.grainTintPass.uniforms.tint.value = new THREE.Color(

@@ -63,7 +63,7 @@ const ANAMORPHIC_INPUTS = [
   'anamorphicBloomQuality',
 ];
 
-const GRAIN_INPUTS = ['toggleGrain', 'grainIntensity'];
+const GRAIN_INPUTS = ['toggleGrain', 'grainIntensity', 'grainScale'];
 
 const LENS_DIRT_INPUTS = ['lensDirtEnabled', 'lensDirtStrength', 'lensDirtTintColor'];
 
@@ -397,7 +397,7 @@ export function applyCreativeLookPostFxUiBlocks(state, api) {
   api.setControlsDisabled(bloomSliders, !bloomTuningActive);
   api.setControlsDisabled(EXPOSURE_INPUTS, false);
   api.setControlsDisabled(['toggleGrain'], false);
-  api.setControlsDisabled(['grainIntensity'], !state?.grain?.enabled);
+  api.setControlsDisabled(['grainIntensity', 'grainScale'], !state?.grain?.enabled);
 
   if (creativeLookPresetAllowsAmbientOcclusion(state.creativeLook?.preset)) {
     const aoOn = !!state?.ambientOcclusion?.enabled;

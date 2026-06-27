@@ -936,12 +936,14 @@ export function creativeLookPresetSupportsSurfaceDetail(preset) {
   let p = typeof preset === 'string' ? preset.trim() : '';
   if (p === 'glass-holo') p = 'holographic';
   if (p === 'night-vision') p = 'thermal-acid';
+  if (p === 'vertex-points') p = 'fractal-storm';
   return (
     p === 'holographic' ||
     p === 'holo-glass' ||
     p === 'crystal-gem' ||
     p === 'scanline-hologram' ||
     p === 'spectral-storm' ||
+    p === 'fractal-storm' ||
     p === 'thermal-acid' ||
     p === 'chrome-plasma' ||
     p === 'plasma' ||
