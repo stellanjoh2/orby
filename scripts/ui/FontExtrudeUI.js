@@ -792,7 +792,7 @@ export class FontExtrudeUI {
     }
     this.syncRevealPreviewControls({
       elapsed: controller.getPreviewElapsed?.() ?? 0,
-      duration: controller.getDurationSec?.() ?? 0,
+      duration: controller.getPreviewDurationSec?.() ?? controller.getDurationSec?.() ?? 0,
       playing: controller.isPreviewPlaying?.() ?? false,
     });
   }

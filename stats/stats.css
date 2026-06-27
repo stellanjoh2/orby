@@ -3,7 +3,7 @@
  */
 
 body.legal-doc--stats .legal-wrap--stats > h1 {
-  margin-bottom: 2rem;
+  margin-bottom: 5.125rem;
 }
 
 .legal-stats__totals,
@@ -142,7 +142,7 @@ body.legal-doc--stats h2.legal-stats__formats-title {
 
 @media (min-width: 2561px) {
   body.legal-doc--stats .legal-wrap--stats > h1 {
-    margin-bottom: calc(2rem * var(--legal-ultra-scale, 1));
+    margin-bottom: calc(5.125rem * var(--legal-ultra-scale, 1));
   }
 }
 

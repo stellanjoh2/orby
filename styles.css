@@ -6826,6 +6826,171 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   animation: demoLogotypeFadeOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Watermark Overlay - logo on the chosen side, credit on the opposite side */
+.watermark-overlay {
+  position: absolute;
+  bottom: var(--viewport-chrome-inset-y, clamp(1rem, 4vw, 4.5rem));
+  left: var(--viewport-chrome-inset-x, clamp(1rem, 4vw, 4.5rem));
+  right: var(--viewport-chrome-inset-x, clamp(1rem, 4vw, 4.5rem));
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: clamp(1rem, 4vw, 3rem);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.watermark-overlay.is-visible {
+  opacity: 1;
+}
+
+/* Watermark replaces the legacy demo logotype — never show both. */
+.viewport:has(.watermark-overlay.is-visible) #demoLogotype {
+  opacity: 0 !important;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.watermark-overlay[data-placement='right'] {
+  flex-direction: row-reverse;
+}
+
+.watermark-overlay__logo {
+  position: relative;
+  flex: 0 0 auto;
+  width: min(220px, calc(100vw - 2rem), 34vw);
+  max-width: 220px;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.2));
+  transform: scale(var(--watermark-logo-scale, 1));
+  transform-origin: left bottom;
+}
+
+.watermark-overlay[data-placement='right'] .watermark-overlay__logo {
+  transform-origin: right bottom;
+}
+
+/* Exactly one logo layer — never stack Orby + custom vertically. */
+.watermark-overlay[data-logo='orby'] .watermark-overlay__custom,
+.watermark-overlay[data-logo='custom'] .watermark-overlay__orby {
+  display: none !important;
+}
+
+.watermark-overlay__orby,
+.watermark-overlay__custom {
+  width: 100%;
+}
+
+.watermark-overlay__orby[hidden],
+.watermark-overlay__custom[hidden] {
+  display: none !important;
+}
+
+.watermark-overlay__orby svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Uploaded custom SVG. By default it renders in its own colors (we never
+ * change someone's brand colors unasked). Only once the user picks a Logotype
+ * Color do we flatten it to a single tint via a CSS mask.
+ * The animated Orby Lottie mark keeps its own brand colors (not recolorable). */
+.watermark-overlay__custom {
+  aspect-ratio: var(--watermark-custom-aspect, 1.6);
+  display: block;
+  background: var(--watermark-custom-mask, none);
+}
+
+.watermark-overlay[data-logo-tint='on'] .watermark-overlay__custom {
+  background: var(--watermark-logo-color, #c4ff00);
+  -webkit-mask: var(--watermark-custom-mask, none);
+  mask: var(--watermark-custom-mask, none);
+}
+
+.watermark-overlay__credit {
+  flex: 1 1 auto;
+  min-width: 0;
+  align-self: flex-end;
+  font-family: var(
+    --brand-font-mattone-regular,
+    'Mattone Regular',
+    'Cal Sans',
+    'Geist',
+    system-ui,
+    sans-serif
+  );
+  font-size: calc(16px * var(--watermark-credit-scale, 1));
+  line-height: 1.35;
+  color: var(--watermark-credit-color, #fff);
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 0 24px rgba(0, 0, 0, 0.35);
+  text-align: right;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.watermark-overlay[data-placement='right'] .watermark-overlay__credit {
+  text-align: left;
+}
+
+.watermark-custom-btn {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Bare slider/color rows in the watermark controls — let the .export-controls
+ * flex gap own vertical rhythm (matches .export-option-group convention) so
+ * row margins don't stack on top of the gap. */
+[data-export-section='watermark'] .export-controls > :is(.slider-line, .color-line) {
+  margin-bottom: 0;
+}
+
+/* Credit input + scale + color rows share the foldout with even section-gap
+ * rhythm. The parent .export-controls flex already supplies one section gap
+ * above the foldout, so zero the foldout's own padding-top to avoid a doubled
+ * gap between the "Credit" toggle row and the input field. */
+.watermark-credit-foldout.effect-foldout--expanded {
+  display: flex;
+  flex-direction: column;
+  gap: var(--shelf-section-gap);
+  padding-top: 0;
+}
+
+.watermark-credit-foldout > :is(.slider-line, .color-line) {
+  margin-bottom: 0;
+}
+
+.watermark-credit-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--stroke, rgba(255, 255, 255, 0.12));
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text, #fff);
+  font-family: inherit;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.watermark-credit-input::placeholder {
+  color: var(--text-dim, rgba(255, 255, 255, 0.45));
+}
+
+.watermark-credit-input:focus-visible {
+  outline: none;
+  border-color: var(--accent, #c4ff00);
+  background: color-mix(in srgb, var(--accent, #c4ff00) 8%, transparent);
+}
+
 .rotation-notch {
   border: none;
   background: rgba(255, 255, 255, 0.15);

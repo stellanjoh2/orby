@@ -4,6 +4,7 @@ const EXPORT_SECTIONS = /** @type {const} */ ([
   { key: 'svg', inputId: 'exportSvgSectionOpen', foldout: 'svg', size: 'md' },
   { key: 'glb', inputId: 'exportGlbSectionOpen', foldout: 'glb', size: 'md' },
   { key: 'video', inputId: 'exportVideoSectionOpen', foldout: 'video', size: 'xl' },
+  { key: 'watermark', inputId: 'exportWatermarkSectionOpen', foldout: 'watermark', size: 'md' },
 ]);
 
 export class ExportSectionControls {
@@ -26,7 +27,7 @@ export class ExportSectionControls {
     });
   }
 
-  /** @param {'image' | 'svg' | 'glb' | 'video'} key */
+  /** @param {'image' | 'svg' | 'glb' | 'video' | 'watermark'} key */
   setSectionOpen(key, open) {
     const config = EXPORT_SECTIONS.find((section) => section.key === key);
     if (!config) return;

@@ -61,6 +61,7 @@ import {
   OFFLINE_EXPORT_OVERLAY_PREVIEW_JOB,
 } from './render/offlineExportOverlaySummary.js';
 import { DemoLogotypeController } from './ui/DemoLogotypeController.js';
+import { WatermarkController } from './ui/WatermarkController.js';
 import { BugReportController } from './ui/BugReportController.js';
 import { ShelfOverlaySuppression } from './ui/ShelfOverlaySuppression.js';
 import { UISounds } from './ui/UISounds.js';
@@ -145,9 +146,11 @@ export class UIManager {
     this.modalOverlays = new UIManagerModalOverlays(this);
     this.startMenuController = new StartMenuController(this.eventBus, this);
     this.demoLogotype = new DemoLogotypeController();
+    this.watermark = new WatermarkController(this);
     this.bugReport = new BugReportController(this);
     this.startMenuController.init();
     this.demoLogotype.init();
+    this.watermark.init();
     this.bugReport.init();
   }
 
@@ -766,6 +769,18 @@ export class UIManager {
         svg: false,
         glb: false,
         video: false,
+        watermark: false,
+      },
+      watermark: {
+        logo: 'orby',
+        placement: 'left',
+        credit: 'Lorem Ipsu',
+        creditEnabled: true,
+        logoScale: 100,
+        creditScale: 100,
+        logoColor: '#c4ff00',
+        logoColorOverride: false,
+        creditColor: '#ffffff',
       },
       video: {
         turntable: true,
@@ -841,6 +856,7 @@ export class UIManager {
     this.animationControls.bind();
     this.exportPreviewControls.bind();
     this.exportSectionControls.bind();
+    this.watermark.bind();
     this.resetControls.bind();
     
     // Setup slider utilities
@@ -876,6 +892,9 @@ export class UIManager {
     const toggle = this.dom.uiSoundsEnabled;
     const volumeSlider = this.dom.uiSoundsVolume;
     if (toggle) {
+      // Reflect the actual (on-by-default) preference — the early initShell sync can run
+      // before the Information-tab markup is ready, leaving the toggle visually off.
+      if (this.uiSounds) toggle.checked = this.uiSounds.enabled;
       toggle.addEventListener('change', () => {
         this.uiSounds?.setEnabled(!!toggle.checked);
       });
@@ -2401,6 +2420,7 @@ export class UIManager {
     applySavedExportSettings(this.exportSettings, saved);
     this.meshControls?.syncExportSettingsUi?.();
     this.exportSectionControls?.syncFromSettings?.();
+    this.watermark?.syncFromSettings?.();
   }
 
   syncExportMeshAnimationsUi() {

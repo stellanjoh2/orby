@@ -630,9 +630,9 @@ body.legal-doc--support .legal-support-section > .legal-callout {
   }
 }
 
-/* Space under “Last updated” before quick nav */
+/* Space under “Last updated” before quick nav — matches subpage headline→content gap (82px) */
 body.legal-doc--support p.legal-meta {
-  margin-bottom: 1.25rem;
+  margin-bottom: 5.125rem;
 }
 
 .legal-support-export-callout {

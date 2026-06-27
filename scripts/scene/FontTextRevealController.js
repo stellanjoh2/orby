@@ -152,6 +152,37 @@ export class FontTextRevealController {
     return clampFontRevealDurationSec(raw ?? DEFAULT_FONT_REVEAL_DURATION_SEC);
   }
 
+  /** One full loop cycle of the active constant motion, or 0 when none is active. */
+  _activeConstantCycleSec() {
+    const constant = this._constantController;
+    if (!constant?.isEnabled?.()) return 0;
+    const sec = constant.getLoopCycleSec?.() ?? 0;
+    return Number.isFinite(sec) && sec > 0 ? sec : 0;
+  }
+
+  /**
+   * Length of the combined preview timeline (scrub / loop / time label), chosen
+   * so the preview always loops cleanly regardless of settings:
+   * - Reveal runs to its fully settled pose, including any emissive-slam fade,
+   *   before the window ends (so the glow is never cut off mid-fade).
+   * - When a constant loop is active, the window is the smallest whole number of
+   *   constant cycles that still covers the settled reveal, so the constant
+   *   spin lands exactly on a cycle boundary at the seam (no pop).
+   */
+  getPreviewDurationSec() {
+    const revealLen = this.isEnabled() ? this._revealFullySettledElapsedSec() : 0;
+    const constLen = this._activeConstantCycleSec();
+    if (constLen <= 0) return revealLen || this.getDurationSec();
+    const base = Math.max(revealLen, constLen);
+    const cycles = Math.max(1, Math.ceil(base / constLen - 1e-6));
+    return cycles * constLen;
+  }
+
+  /** Re-emit preview timeline length/elapsed (e.g. after a constant settings change). */
+  refreshPreviewTimeline() {
+    this._notifyPreviewTime();
+  }
+
   getRevealType() {
     return normalizeFontRevealType(this.stateStore?.getState()?.fontExtrude?.revealType);
   }
@@ -817,12 +848,16 @@ export class FontTextRevealController {
     const target = model ?? this._boundModel;
     if (!this.ensureBoundToModel(target)) return false;
     if (this.isPauseAll()) return false;
-    const duration = this.getDurationSec();
+    const duration = this.getPreviewDurationSec();
 
     if (this._previewMode === 'idle' || this._elapsed >= Math.max(0, duration - 1e-4)) {
       this._elapsed = 0;
       this.applyAtTime(0);
     }
+
+    // Keep the constant loop phase locked to the reveal timeline so the
+    // composite preview is coherent across play / pause / resume.
+    this._constantController?.setPreviewElapsed?.(this._elapsed);
 
     this._previewMode = 'playing';
     this._startPreviewLoop();
@@ -914,11 +949,12 @@ export class FontTextRevealController {
     const target = model ?? this._boundModel;
     if (!this.ensureBoundToModel(target)) return false;
 
-    const duration = this.getDurationSec();
+    const duration = this.getPreviewDurationSec();
     const p = Math.max(0, Math.min(1, Number(progress) || 0));
     this._previewMode = 'paused';
     this._stopPreviewLoop();
     this._elapsed = p * duration;
+    this._constantController?.setPreviewElapsed?.(this._elapsed);
     this.applyAtTime(this._elapsed);
     this._notifyPreviewTime();
     this._requestRender();
@@ -1051,10 +1087,9 @@ export class FontTextRevealController {
   }
 
   _notifyPreviewTime() {
-    const duration = this.getDurationSec();
     this.onPreviewTimeUpdate?.({
       elapsed: this._elapsed,
-      duration,
+      duration: this.getPreviewDurationSec(),
       playing: this._previewMode === 'playing',
     });
   }
@@ -1099,23 +1134,22 @@ export class FontTextRevealController {
     if (this.isPauseAll()) return;
     if (this._previewMode !== 'playing' || !this.isEnabled()) return;
 
-    const duration = this.getDurationSec();
-    const decaySec =
-      this.isEmissiveSlamEnabled() && this.getEmissiveSlamStrength() > 0
-        ? this.getEmissiveSlamDecaySec()
-        : 0;
-    const endTime = duration + decaySec;
+    // Single rule for every combination of settings: advance the reveal and the
+    // constant together, then wrap (or stop, if Loop is off) at the composite
+    // window. The window always covers the full settled reveal plus whole
+    // constant cycles, so nothing is ever cut off mid-fade or mid-spin.
+    const previewLen = this.getPreviewDurationSec();
     const d = typeof delta === 'number' && Number.isFinite(delta) ? delta : 0;
     this._elapsed += d;
     this._constantController?.advance(d);
-    if (this._elapsed >= duration) {
+
+    if (this._elapsed >= previewLen) {
       if (this.isLoopEnabled()) {
         this._elapsed = 0;
+        this._constantController?.setPreviewElapsed?.(0);
         this.applyAtTime(0);
-      } else if (decaySec > 0 && this._elapsed < endTime) {
-        this.applyAtTime(this._elapsed);
       } else {
-        this._elapsed = decaySec > 0 ? endTime : duration;
+        this._elapsed = previewLen;
         this._previewMode = 'paused';
         this._stopPreviewLoop();
         this.applyAtTime(this._elapsed);
@@ -1160,7 +1194,6 @@ export class FontTextRevealController {
    */
   _applySettingsChange(model) {
     this.ensureBoundToModel(model ?? this._boundModel);
-    const duration = this.getDurationSec();
     if (this._glyphStates.length && !this.isEmissiveSlamEnabled()) {
       this._restoreAllGlyphEmissive();
     }
@@ -1186,7 +1219,9 @@ export class FontTextRevealController {
       return;
     }
     if (this._previewMode === 'playing' || this._previewMode === 'paused') {
-      this._elapsed = Math.min(this._elapsed, duration);
+      // Clamp to the composite window so an active constant loop isn't yanked
+      // back when only the reveal duration is being nudged mid-preview.
+      this._elapsed = Math.min(this._elapsed, this.getPreviewDurationSec());
       this.applyAtTime(this._elapsed);
     } else {
       this._elapsed = this._revealFullySettledElapsedSec();

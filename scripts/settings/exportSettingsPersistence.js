@@ -50,6 +50,43 @@ export function applySavedExportSettings(target, saved) {
     };
   }
 
+  if (saved.watermark && typeof saved.watermark === 'object') {
+    if (!target.watermark || typeof target.watermark !== 'object') {
+      target.watermark = {};
+    }
+    if (saved.watermark.logo === 'orby' || saved.watermark.logo === 'custom') {
+      // A custom SVG is a session-only upload; restore to Orby when reloading.
+      target.watermark.logo = 'orby';
+    }
+    if (saved.watermark.placement === 'left' || saved.watermark.placement === 'right') {
+      target.watermark.placement = saved.watermark.placement;
+    }
+    if (typeof saved.watermark.credit === 'string') {
+      target.watermark.credit = saved.watermark.credit;
+    }
+    if (typeof saved.watermark.creditEnabled === 'boolean') {
+      target.watermark.creditEnabled = saved.watermark.creditEnabled;
+    }
+    const logoScale = Number(saved.watermark.logoScale);
+    if (Number.isFinite(logoScale) && logoScale >= 50 && logoScale <= 200) {
+      target.watermark.logoScale = logoScale;
+    }
+    const creditScale = Number(saved.watermark.creditScale);
+    if (Number.isFinite(creditScale) && creditScale >= 50 && creditScale <= 200) {
+      target.watermark.creditScale = creditScale;
+    }
+    if (typeof saved.watermark.logoColorOverride === 'boolean') {
+      target.watermark.logoColorOverride = saved.watermark.logoColorOverride;
+    }
+    const hex = /^#[0-9a-fA-F]{6}$/;
+    if (hex.test(saved.watermark.logoColor)) {
+      target.watermark.logoColor = saved.watermark.logoColor.toLowerCase();
+    }
+    if (hex.test(saved.watermark.creditColor)) {
+      target.watermark.creditColor = saved.watermark.creditColor.toLowerCase();
+    }
+  }
+
   const video = saved.video;
   if (!video || typeof video !== 'object') return;
 

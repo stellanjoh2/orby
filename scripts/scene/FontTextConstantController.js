@@ -3,11 +3,13 @@ import {
   clampFontConstantIntensityForType,
   clampFontConstantSpeedSec,
   clampFontConstantSpread,
+  computeConstantSpinStaggerDelaySec,
   DEFAULT_FONT_CONSTANT_INTENSITY,
   DEFAULT_FONT_CONSTANT_SPEED_SEC,
   DEFAULT_FONT_CONSTANT_SPREAD,
   DEFAULT_FONT_CONSTANT_TYPE,
   isFontConstantAnimationActive,
+  isFontConstantSpinType,
   isFontConstantTypeEnabled,
   normalizeFontConstantType,
 } from './fontTextConstantTypes.js';
@@ -86,6 +88,23 @@ export class FontTextConstantController {
 
   isEnabled() {
     return isFontConstantTypeEnabled(this.getType(), this.getIntensity());
+  }
+
+  /**
+   * True loop period of the active constant motion, in seconds, or 0 when none
+   * is active. Sine-based motions (float/wave/breathe/sway) repeat every Speed
+   * seconds — the per-letter spread is only a phase offset. Spin shares one
+   * sequence across the whole string, so when letters are staggered the string
+   * doesn't return to rest until the last letter has finished: its period is
+   * `(glyphCount - 1) * staggerDelay + Speed`.
+   */
+  getLoopCycleSec() {
+    if (!this.isEnabled()) return 0;
+    const speedSec = this.getSpeedSec();
+    if (!isFontConstantSpinType(this.getType())) return speedSec;
+    const staggerDelaySec = computeConstantSpinStaggerDelaySec(this.getIntensity());
+    const count = Math.max(1, this._revealController?.getGlyphCount?.() ?? 1);
+    return (count - 1) * staggerDelaySec + speedSec;
   }
 
   /** @param {number} delta */
@@ -179,6 +198,9 @@ export class FontTextConstantController {
     } else {
       this._reapplyComposite();
     }
+    // Speed / type / intensity changes resize the composite preview window, so
+    // refresh the reveal preview timeline (scrub + time label) to match.
+    reveal.refreshPreviewTimeline?.();
     this.onNeedRender?.();
   }
 
@@ -210,6 +232,17 @@ export class FontTextConstantController {
   /** @param {number} exportTimeSec */
   setExportElapsed(exportTimeSec) {
     this._elapsed = Math.max(0, exportTimeSec);
+  }
+
+  /**
+   * Align the constant loop phase with the reveal preview timeline (play /
+   * pause / scrub / loop seam). Explicit set — bypasses the live-update suspend
+   * guard, since the reveal preview owns the phase while it drives playback.
+   * @param {number} sec
+   */
+  setPreviewElapsed(sec) {
+    const v = Number(sec);
+    this._elapsed = Number.isFinite(v) && v > 0 ? v : 0;
   }
 
   endExportDrive() {

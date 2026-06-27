@@ -139,6 +139,7 @@ import { RenderLoopController } from './scene/RenderLoopController.js';
 import { ComposerLifecycle } from './scene/ComposerLifecycle.js';
 import { SceneStateApplier } from './scene/SceneStateApplier.js';
 import { ModelLifecycleManager } from './scene/ModelLifecycleManager.js';
+import { createBlankCanvasPreset } from './state/blankCanvasPreset.js';
 import {
   shouldBlockFisheyePngExport,
   showFisheyeTransparentPngExportBlockedAlert,
@@ -256,6 +257,16 @@ export class SceneManager {
     this.ui.setDropzoneVisible(false);
     await this.syncViewportSize();
     this.startRenderLoop();
+    // Apply the minimal "blank canvas" snapshot (HDRI panorama hidden → solid
+    // black void, lights off, ground wireframe on). Routed through the canonical
+    // settings-restore path so every scene controller stays in sync.
+    try {
+      await this.ui.sceneSettingsManager?.loadFromText(
+        JSON.stringify(createBlankCanvasPreset()),
+      );
+    } catch (error) {
+      console.error('Failed to apply blank canvas preset', error);
+    }
     this.ui.updateTitle('Blank canvas');
     this.ui.updateTopBarDetail('No model — generate text or import a file');
     this.ui.revealShelf({ skipSound: options.skipSound !== false });

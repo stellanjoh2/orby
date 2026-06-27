@@ -445,11 +445,11 @@ export class GlobalControls {
         input.dispatchEvent(new Event('change', { bubbles: true }));
       }
 
-      // O - Toggle demo logotype (Orby branded screensaver)
+      // O - Toggle watermark overlay (Orby logo / custom + credit)
       if (key === 'o') {
         event.preventDefault();
-        if (this.ui.demoLogotype) {
-          this.ui.demoLogotype.toggle();
+        if (this.ui.watermark) {
+          this.ui.watermark.toggle();
         }
       }
 
