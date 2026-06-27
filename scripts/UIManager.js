@@ -402,6 +402,7 @@ export class UIManager {
     this.dom.exportPreviewPauseAll = q('#exportPreviewPauseAll');
     this.dom.exportCapturePreviewThumbWrap = q('#exportCapturePreviewThumbWrap');
     this.dom.exportCapturePreviewThumb = q('#exportCapturePreviewThumb');
+    this.dom.exportCapturePreviewThumbEmpty = q('#exportCapturePreviewThumbEmpty');
     this.dom.exportCapturePreviewThumbLabel = q('#exportCapturePreviewThumbLabel');
     this.dom.animationTimeReferenceSection = q('#animationTimeReferenceSection');
     this.dom.animationFrameNumbers = q('#animationFrameNumbers');
@@ -2545,6 +2546,7 @@ export class UIManager {
   showExportCapturePreviewThumb(objectUrl, meta = {}) {
     const wrap = this.dom.exportCapturePreviewThumbWrap;
     const img = this.dom.exportCapturePreviewThumb;
+    const empty = this.dom.exportCapturePreviewThumbEmpty;
     const label = this.dom.exportCapturePreviewThumbLabel;
     wrap?.classList.toggle('export-capture-preview-thumb--transparent', !!meta.transparent);
     if (img) {
@@ -2553,7 +2555,9 @@ export class UIManager {
       }
       img.src = objectUrl;
       img.dataset.objectUrl = objectUrl;
+      img.removeAttribute('hidden');
     }
+    empty?.setAttribute('hidden', '');
     if (label && meta.width && meta.height) {
       const frame = Number.isFinite(meta.frameIndex) ? meta.frameIndex + 1 : 1;
       const total = meta.totalFrames ?? '?';

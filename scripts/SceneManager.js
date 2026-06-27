@@ -148,7 +148,6 @@ import {
   normalizeImageExportFormat,
 } from './render/imageExportFormats.js';
 import { resolvePngExportCaptureSize } from './render/capture/CaptureSizePolicy.js';
-import { buildStillImageExportOverlaySummary } from './render/offlineExportOverlaySummary.js';
 import { fullViewportLogicalSize } from './render/fullViewportLogicalSize.js';
 import { deferSpinnerPaint } from './utils/viewportLoadSpinner.js';
 import { prepareArtisticCreativeLookForCapture } from './render/capture/captureArtisticLookPrep.js';
@@ -1338,6 +1337,8 @@ export class SceneManager {
         this.fontTextRevealController?.applyExportFrame?.(frameIndex, fps, this.currentModel),
       endFontTextRevealExportDrive: () =>
         this.fontTextRevealController?.endExportDrive?.(),
+      setDustFieldCaptureScale: (scale) =>
+        this.materialController?.setDustFieldCaptureScale?.(scale),
       getCurrentModel: () => this.currentModel,
       getCurrentFile: () => this.currentFile,
       getCurrentAssetMetadata: () => this.currentAssetMetadata,
@@ -5184,47 +5185,25 @@ export class SceneManager {
     const studioState = this.stateStore.getState();
     const logical = fullViewportLogicalSize(this.renderer);
     const previewDensity = Math.max(1e-6, this.renderer.getPixelRatio());
-    const rawW = Math.round(logical.x * previewDensity * size);
-    const rawH = Math.round(logical.y * previewDensity * size);
     const captureSize = resolvePngExportCaptureSize(
       this.renderer,
       size,
       this.imageExporter?._maxExportPixelArea ?? null,
     );
-    let gpuClampNote = '';
-    if (rawW !== captureSize.width || rawH !== captureSize.height) {
-      gpuClampNote = `Requested ${rawW}×${rawH} → ${captureSize.width}×${captureSize.height}`;
-    }
 
-    const assetName = (this.currentFile?.name ?? 'export').replace(/\.[^.]+$/, '');
-    const summary = buildStillImageExportOverlaySummary({
-      formatId,
-      scale: size,
-      transparent,
-      assetName,
-      renderContext: {
-        renderQuality: studioState.renderQuality,
-        exportWidth: transparent ? null : captureSize.width,
-        exportHeight: transparent ? null : captureSize.height,
-        gpuClampNote,
-        cinematicLetterbox219: !transparent && !!studioState.camera?.cinematicLetterbox219,
-        creativeLookEnabled: !!studioState.creativeLook?.enabled,
-        creativeLookPreset: studioState.creativeLook?.preset ?? null,
-        fisheyeEnabled: !!studioState.fisheye?.enabled,
-        lensDistortionActive: this.imageExporter?.isLensDistortionActive?.() === true,
-        postFxState: studioState,
-        transparent,
-        scale: size,
-      },
-    });
-
+    // Still-image export uses the lightweight bottom-left load spinner (not the full black video
+    // export overlay) so the viewport stays visible for debugging during capture.
     this._suppressResizeForExport = true;
-    this.ui?.showOfflineExportOverlay?.(summary, {
-      cancellable: false,
-      assetFilename: assetName,
-    });
-    this.ui?.updateOfflineExportOverlayProgress?.({ frameIndex: 0, totalFrames: 1 });
+    this.ui?.setLoadSpinnerStatusPrefix?.(`Capturing .${formatId.toUpperCase()}`);
+    this.ui?.beginLoadSpinner?.();
+    this.ui?.beginLoadSpinnerElapsed?.();
     await deferSpinnerPaint();
+
+    // Dust Field point sprites are sized in absolute framebuffer pixels — keep their on-screen
+    // fraction stable by scaling for the export vs viewport framebuffer height (see setter docs).
+    const viewportFbHeight = Math.max(1, logical.y * previewDensity);
+    const dustCaptureScale = captureSize.height / viewportFbHeight;
+    this.materialController?.setDustFieldCaptureScale?.(dustCaptureScale);
 
     try {
       if (transparent) {
@@ -5260,7 +5239,6 @@ export class SceneManager {
         );
         this.ui?.showToast?.(`${formatMeta.label} exported`, 3200, { notification: false });
       }
-      this.ui?.updateOfflineExportOverlayProgress?.({ frameIndex: 1, totalFrames: 1 });
     } catch (error) {
       console.error('Image export failed', error);
       if (error instanceof CaptureSizeMismatchError) {
@@ -5273,7 +5251,8 @@ export class SceneManager {
         this.ui?.showToast?.(`${formatMeta.label} export failed`);
       }
     } finally {
-      this.ui?.hideOfflineExportOverlay?.();
+      this.materialController?.setDustFieldCaptureScale?.(1);
+      this.ui?.endLoadSpinner?.();
       this._suppressResizeForExport = false;
       this.handleResize();
     }

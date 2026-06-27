@@ -153,6 +153,16 @@ if (!isMobileLanding()) {
     .catch((err) => {
       console.warn('[Orby dev] Thumbnail bake module failed to load', err);
     });
+
+  void import('./dev/exportDimensionSpotChecks.js')
+    .then(({ runExportDimensionSpotChecks, logCaptureSizeMatrix }) => {
+      window.orby.dev.runExportDimensionSpotChecks = (opts) =>
+        runExportDimensionSpotChecks(scene, opts);
+      window.orby.dev.logCaptureSizeMatrix = () => logCaptureSizeMatrix(scene);
+    })
+    .catch((err) => {
+      console.warn('[Orby dev] Export dimension spot checks failed to load', err);
+    });
 }
 
 /** Dev: ?exportOverlayDebug=1 — open PNG export overlay on the dropzone for layout QA */

@@ -55,11 +55,11 @@ body.legal-doc--stats .legal-wrap--stats > h1 {
 
 .legal-doc p.legal-stats__label {
   margin: 0;
-  font-size: clamp(0.9375rem, 2vw, 1.0625rem);
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--legal-muted);
+  font-family: var(--legal-brand-headline-bold);
+  font-size: clamp(1.125rem, 2.5vw, 1.375rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: #fff;
 }
 
 .legal-doc p.legal-stats__meta {
@@ -112,7 +112,7 @@ body.legal-doc--stats h2.legal-stats__formats-title {
 
 .legal-stats__formats-name {
   font-family: var(--legal-brand-headline-bold);
-  font-size: clamp(0.9375rem, 2vw, 1.0625rem);
+  font-size: clamp(1.125rem, 2.5vw, 1.375rem);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;

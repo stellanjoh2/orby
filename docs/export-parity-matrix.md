@@ -1,7 +1,7 @@
 # Export parity matrix
 
-**Last updated:** 2026-06-26 (Gouache/Watercolour/Sketch @ 1× verified; fisheye + ASCII; transparent @ 1×)  
-**Capture stack:** Chunks 1–2 shipped (`OfflineCaptureSession`, `renderFrameForCapture`, `captureReadback`, strict size contract, GPU clamp coerce + toast).  
+**Last updated:** 2026-06-27 (creative shaders + MP4 animation verified; font reveals @ 1080p/1440p)  
+**Capture stack:** Chunks 1–3 P0 shipped (`OfflineCaptureSession`, `renderFrameForCapture`, `captureReadback`, strict size contract, `captureGradientComposite.js`, composer viewport pin during capture). **Dimension tests:** [export-dimension-switch-tests.md](./export-dimension-switch-tests.md).  
 **Related:** [EXPORT_REFACTOR_PLAN.md](./EXPORT_REFACTOR_PLAN.md)
 
 Track whether exported pixels match studio viewport expectations. Update this doc after manual smoke or when fixing a row.
@@ -29,10 +29,11 @@ Track whether exported pixels match studio viewport expectations. Update this do
 | Video frame encode (`VideoExporter._renderComposerFrameForCapture`) | `renderFrameForCapture` → `captureReadback` | ✅ |
 | Dev creative-look thumbnails (`bakeCreativeLookThumbnails`) | `renderFrameForCaptureWithPins` → `captureReadback` | ✅ |
 | Transparent PNG (standard crop) | Session → `TransparentCapture` + `OfflineCaptureSession` | ✅ 1× verified 2026-06-26 |
-| Transparent PNG (artistic paper key) | Legacy path | ❓ |
+| Transparent PNG (artistic paper key) | Session → `OfflineCaptureSession` + `keyArtisticPaperBackdrop.js` | ✅ 1×/2× verified 2026-06-27 |
 | Transparent video PNG sequence | `VideoExporter` + transparent setup + HDRI hook | ✅ 1080p / 4K verified 2026-06-26 |
 | Mobile export (`mobileExportImage.js`) | Own resize/readback | ❓ |
-| Export movement **preview** (live viewport scrub) | Live loop; verify via **Capture preview frame** button | 🟡 Live scrub ≠ encode; offline preview frame at export resolution ✅ |
+| Export movement **preview** (live viewport scrub) | Live loop while dragging; debounced offline thumb on settle (`USE_CAPTURE_PREVIEW_ON_SCRUB`) | 🟡 Play + drag still live; encode path verified via **Capture preview frame** + scrub thumb ✅ |
+| Gradient bg offline composite | `captureGradientComposite.js` — post RGB + scene alpha merged under 2D gradient canvas | ✅ Still PNG, video frame, capture preview — Max/Medium/Low + 1080p/4K verified 2026-06-27 |
 
 ---
 
@@ -42,9 +43,9 @@ Preview DPR / bloom scale / FXAA / shadows differ by tier. Opaque export uses pr
 
 | Tier | PNG 1× | PNG 2× | Notes |
 |------|--------|--------|-------|
-| **Max (Ultra)** | ✅ | ✅ | 2× on very large viewports may hit **browser pixel budget** → capped size + toast (e.g. 10240×5760 → 7680×4320). No WebGL copy overflow after clamp coerce fix. |
-| **Medium** | ✅ | ❓ | Opaque PNG smoke-tested 2026-06-26 — beach HDRI bg, bloom, FXAA, PBR mesh; viewport restore OK. 2× not re-tested on Medium yet. |
-| **Low** | ❓ | ❓ | Same capture path; not re-tested post-refactor |
+| **Max (Ultra)** | ✅ | ✅ | 2× on very large viewports may hit **browser pixel budget** → capped size + toast (e.g. 10240×5760 → 7680×4320). Gradient export ✅ 2026-06-27. |
+| **Medium** | ✅ | ❓ | Opaque PNG smoke-tested 2026-06-26 — beach HDRI bg, bloom, FXAA, PBR mesh; gradient export ✅ 2026-06-27. 2× not re-tested on Medium yet. |
+| **Low** | ❓ | ❓ | Gradient export ✅ 2026-06-27; opaque PNG not re-tested post-refactor |
 
 **Post-export viewport restore:** ✅ (opaque PNG, repeated exports)
 
@@ -55,14 +56,14 @@ Preview DPR / bloom scale / FXAA / shadows differ by tier. Opaque export uses pr
 | Feature | PNG 1× | PNG 2× | Notes |
 |---------|--------|--------|-------|
 | Solid / HDRI background | ✅ | ✅ | Medium tier + beach HDRI verified opaque 2026-06-26 |
-| **Gradient background** | 🟡 | 🟡 | `prepareForCapture` after export viewport — verify quarter-frame fixed |
+| **Gradient background** | ✅ | ✅ | CPU composite (`captureGradientComposite.js`) — full-frame gradient at export size; quarter-frame GL bug fixed 2026-06-27 |
 | Bloom + grading stack | ✅ | ✅ | Smoke-tested |
-| Lens distortion | ✅ | ❓ | Fisheye + ASCII stack verified opaque still 2026-06-26 (`capturePostPipelinePins`) |
-| Fisheye | ✅ | ❓ | Opaque still verified 2026-06-26 (combined with ASCII creative look) |
-| Creative look (Shader Lab) | ✅ | ❓ | Gouache / Watercolour / Sketch @ 1× verified 2026-06-26 (`captureArtisticLookPrep.js`); ASCII ✅ |
-| ASCII / pixel presets | ✅ | ❓ | Reference pin via `CaptureFeatureSession`; 2× grid semantics unchanged (viewport density) |
-| Cinematic 21∶9 letterbox overlay | ❓ | ❓ | |
-| Ground grid / gizmos | ❓ | ❓ | Gizmos typically off during export |
+| Lens distortion | ✅ | 🟡 | Fisheye + ASCII stack verified opaque still 2026-06-26 (`capturePostPipelinePins`); 2× lens RT pin covered by unit tests |
+| Fisheye | ✅ | 🟡 | Opaque still verified 2026-06-26 (combined with ASCII creative look); 2× via session + lens pin |
+| Creative look (Shader Lab) | ✅ | ✅ | Gouache / Watercolour / Sketch opaque + transparent @ 1×/2× verified 2026-06-27 (`captureArtisticLookPrep.js`, paper key) |
+| ASCII / pixel presets | ✅ | ✅ | Reference pin + grid composite on byte RT; linewidth scales with export scale — verified 2026-06-27 |
+| Cinematic 21∶9 letterbox overlay | ✅ | ✅ | CPU mattes in `_captureComposerOutputAsCanvas` (`cinematicLetterbox219.js`); geometry matches CSS overlay — unit tests. **Video: MP4 via GL scissor mattes (`fillCinematicLetterbox219MattesGl`), PNG sequence + gradient via CPU mattes — fixed 2026-06-27** |
+| Ground grid / gizmos | ✅ | ✅ | ASCII/flat-post: grid composited on byte readback RT (`capturePostStackOverlays.js`); linewidth from slider × export scale |
 
 ---
 
@@ -71,14 +72,14 @@ Preview DPR / bloom scale / FXAA / shadows differ by tier. Opaque export uses pr
 | Variant | PNG 1× | PNG 2× | Notes |
 |---------|--------|--------|-------|
 | Standard (mesh crop + alpha) | ✅ | ❓ | Session path verified 2026-06-26 — tight crop, clean alpha, viewport restore OK |
-| Artistic (gouache / watercolour / sketch paper key) | ❓ | ❓ | Strict readback + retry; not session-wrapped |
+| Artistic (gouache / watercolour / sketch paper key) | ✅ | ✅ | Session + `keyArtisticPaperBackdrop.js` — manual verify 2026-06-27 |
 | Fisheye + transparent | 🔧 | 🔧 | Blocked in UI (`shouldBlockFisheyePngExport`) |
 
 ---
 
 ## Video export
 
-Movement preview uses **live viewport** for scrub/play; **Capture preview frame** renders offline at export resolution (same `captureVideoExportFrameBlob` path as PNG sequence). Frame 0 shares encode path with still PNG — manual golden not run yet.
+Movement preview uses **live viewport** for scrub/play; on scrub settle (`USE_CAPTURE_PREVIEW_ON_SCRUB`, 450ms debounce) an offline thumb renders at export resolution (same `captureVideoExportFrameBlob` path as encode). **Capture preview frame** button uses the same path. Frame 0 shares encode path with still PNG — manual golden not run yet. Gradient bg verified at 1080p + 4K encode/preview 2026-06-27. **Creative look (Shader Lab) animated MP4** — functionally OK 2026-06-27 (`applyCreativeLookExportFrame` / `uTime`).
 
 ### Resolution × aspect (movement enabled)
 
@@ -86,15 +87,15 @@ Portrait **9∶16** UI is disabled (`normalizeExportVideoAspectRatio` → always
 
 | Resolution | 16∶9 MP4 | 16∶9 PNG opaque | 16∶9 PNG transparent | Notes |
 |------------|----------|-----------------|----------------------|-------|
-| 1080p | ✅ | ✅ | ✅ | PNG opaque + transparent verified 2026-06-26 (Medium tier, beach HDRI) |
-| 1440p | ❓ | ❓ | ❓ | |
-| 2160p (4K) | 🟡 | ✅ | ✅ | PNG opaque + transparent verified 2026-06-26; MP4 may use fallback encoding |
+| 1080p | ✅ | ✅ | ✅ | PNG opaque + transparent verified 2026-06-26; gradient bg encode + preview ✅ 2026-06-27 |
+| 1440p | ✅ | ✅ | ❓ | **MP4 + PNG sequence @ Ultra (Max) ✅** 2026-06-27; transparent sequence not re-tested |
+| 2160p (4K) | 🟡 | ✅ | ✅ | PNG opaque + transparent verified 2026-06-26; gradient bg encode + preview ✅ 2026-06-27; MP4 may use fallback encoding. **4K MP4 clamps to drawing-buffer budget on ≤1440p hardware** — encode succeeds at coerced max (expected, `_setExportFramebufferSize` + capped toast); MP4 ceiling = canvas drawing buffer (captureStream), so can't exceed what the GPU grants the canvas |
 
 ### Export movements (mesh / camera)
 
 | Movement | Video | Preview vs encode | Notes |
 |----------|-------|---------------------|-------|
-| Turntable | ✅ | 🔧 | Preview live; encode offline — Chunk 6 |
+| Turntable | ✅ | 🟡 | Encode offline ✅; scrub thumb + capture preview frame ✅; live play/drag still ≠ encode — Chunk 6 full WYSIWYG open |
 | Orbit | ❓ | 🔧 | |
 | Zoom in / out | ❓ | 🔧 | |
 | Tilt left / right | ❓ | 🔧 | |
@@ -110,18 +111,18 @@ Portrait **9∶16** UI is disabled (`normalizeExportVideoAspectRatio` → always
 | Source | Status | Notes |
 |--------|--------|-------|
 | GLTF mesh clip (include in export) | ❓ | `AnimationController` export drive |
-| Creative look `uTime` | ❓ | `applyCreativeLookExportFrame` |
+| Creative look `uTime` | ✅ | Animated Shader Lab looks in MP4 — functionally OK 2026-06-27 (`applyCreativeLookExportFrame`) |
 | Film grain time | ❓ | `applyGrainExportFrame` |
-| Font reveal — **scale** | ❓ | |
-| Font reveal — **fade** | ❓ | |
-| Font reveal — **slideUp** | ❓ | |
-| Font reveal — **slideDown** | ❓ | |
-| Font reveal — **drop** | ❓ | |
-| Font reveal — **pop** | ❓ | |
-| Font reveal — **rotate** | ❓ | |
-| Font reveal — **elastic** | ❓ | |
-| Font reveal — word stagger | ❓ | |
-| Font constant / ambient motion | ❓ | `FontTextConstantController` |
+| Font reveal — **scale** | ✅ | 1080p/1440p — functionally OK 2026-06-27 (broad reveal + cam animation sweep) |
+| Font reveal — **fade** | ✅ | 1080p/1440p — functionally OK 2026-06-27 |
+| Font reveal — **slideUp** | ✅ | 1080p/1440p — functionally OK 2026-06-27 |
+| Font reveal — **slideDown** | ✅ | 1080p/1440p — functionally OK 2026-06-27 |
+| Font reveal — **drop** | ✅ | 1080p/1440p — functionally OK 2026-06-27 |
+| Font reveal — **pop** | ✅ | 1080p/1440p — functionally OK 2026-06-27 |
+| Font reveal — **rotate** | ✅ | 1080p/1440p — functionally OK 2026-06-27 |
+| Font reveal — **elastic** | ✅ | 1080p/1440p — functionally OK 2026-06-27 |
+| Font reveal — word stagger | ✅ | 1080p/1440p — functionally OK 2026-06-27 |
+| Font constant / ambient motion | ✅ | `FontTextConstantController` — 1080p/1440p functionally OK 2026-06-27 |
 
 ---
 
@@ -129,9 +130,9 @@ Portrait **9∶16** UI is disabled (`normalizeExportVideoAspectRatio` → always
 
 | Switch | Opaque PNG | Video frame | Notes |
 |--------|------------|-------------|-------|
-| Max ↔ Medium ↔ Low, then export | ❓ | ❓ | `syncPostProcessingForLogicalSize` on resize |
-| PNG 1× ↔ 2× | ✅ | — | Includes GPU budget learn + pre-clamp (`_maxExportPixelArea`) |
-| 1080p ↔ 1440p ↔ 4K video | — | ✅ | PNG opaque + transparent at 1080p and 4K verified 2026-06-26 |
+| Max ↔ Medium ↔ Low, then export | 🟡 | 🟡 | **Size contract ✅** — `npm test` + Playwright/`orby.dev.runExportDimensionSpotChecks()` (tier × PNG 1× × video 1080p/1440p). Manual visual WYSIWYG open — [export-dimension-switch-tests.md](./export-dimension-switch-tests.md) |
+| PNG 1× ↔ 2× | ✅ | — | Includes GPU budget learn + pre-clamp (`_maxExportPixelArea`); 1×↔2× aspect math in `npm test` |
+| 1080p ↔ 1440p ↔ 4K video | — | 🟡 | 1080p animated reveals ✅ 2026-06-27; **1440p MP4 + PNG sequence @ Ultra ✅** 2026-06-27; 4K animated video + mid-session switch sequence still open |
 | 16∶9 studio viewport → 16∶9 video reframe | ❓ | ❓ | Horizontal FOV preserved on wide viewports |
 | After export → live studio unchanged | ✅ | ❓ | Opaque PNG ✅; long video encode ❓ |
 
@@ -167,7 +168,7 @@ Run after any export PR touching capture:
 2. [ ] Export opaque PNG 1× → file looks correct
 3. [ ] Export opaque PNG 2× (Max tier if available) → no scale-up stretch; toast only if GPU caps
 4. [ ] Live viewport unchanged after export (orbit, gradient/HDR if enabled)
-5. [ ] Optional: gradient bg + 2× PNG (watch for quarter-frame — flag matrix if broken)
+5. [x] Optional: gradient bg + 2× PNG — CPU composite path verified 2026-06-27
 6. [ ] Optional: rotate HDRI in studio → export PNG → same angle in file
 7. [ ] Optional: video turntable 1080p short clip → frame 0 vs still PNG same settings
 
@@ -186,8 +187,8 @@ Run after any export PR touching capture:
 
 | Symptom in matrix | Next chunk |
 |-------------------|------------|
-| Gradient quarter-frame 🟡 | Manual verify → mark ✅ |
 | HDRI angle 🟡 | Manual verify (rotate slider → export PNG) → mark ✅ |
 | Transparent PNG ❓ | 2× still transparent on session path |
-| Preview ≠ encode 🔧 | Chunk 6 — preview uses `renderFrameForCapture` |
+| Preview ≠ encode 🟡 | Chunk 6 lite shipped (scrub thumb + capture preview frame); full scrub/play → capture path still open |
+| Dimension switch rows 🟡 | Automated size probes ✅ (`npm test`, `npm run test:e2e:dimension`); manual visual — [export-dimension-switch-tests.md](./export-dimension-switch-tests.md) |
 | Font / mesh animation rows ❓ | Chunk 3 P1 + Chunk 6 animation clock |

@@ -2768,6 +2768,9 @@ varying float vRevealAlpha;
 uniform float uTime;
 uniform float uPatternScale;
 uniform float uIntensity;
+// Export parity: gl_PointSize is absolute framebuffer pixels. Scale by the export/viewport
+// framebuffer-height ratio so particles keep the same on-screen fraction at any output size.
+uniform float uPointSizeScale;
 
 float dustSineInOut(float x) {
   return -0.5 * (cos(x) - 1.0);
@@ -2809,6 +2812,7 @@ void main() {
   gl_PointSize = sizeBase + mix(2.0, 10.0, inten * 0.5) * sizePulse + 2.5 * sizeBreath;
   gl_PointSize *= clamp(320.0 / max(-mvPosition.z, 0.35), 0.35, 2.8);
   gl_PointSize *= vRevealAlpha;
+  gl_PointSize *= uPointSizeScale;
 }
 `;
 
@@ -4075,6 +4079,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uTime: { value: time },
         uPatternScale: { value: patternScale },
         uOpacity: { value: shaderAlpha },
+        uPointSizeScale: { value: 1 },
         ...gradeUniforms,
         ...intensityUniform,
       },

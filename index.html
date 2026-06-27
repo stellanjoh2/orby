@@ -5363,8 +5363,14 @@
                     <i class="fa-solid fa-camera"></i>
                     Capture preview frame
                   </button>
-                  <div class="export-capture-preview-thumb" id="exportCapturePreviewThumbWrap" hidden>
-                    <img id="exportCapturePreviewThumb" alt="Last export capture preview" width="320" height="180" />
+                  <div class="export-capture-preview-thumb" id="exportCapturePreviewThumbWrap">
+                    <div class="export-capture-preview-thumb-frame">
+                      <img id="exportCapturePreviewThumb" alt="Last export capture preview" width="320" height="180" hidden />
+                      <div class="export-capture-preview-thumb-empty" id="exportCapturePreviewThumbEmpty">
+                        <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                        <span>Capture a preview frame to see it here</span>
+                      </div>
+                    </div>
                     <span class="export-capture-preview-thumb-label" id="exportCapturePreviewThumbLabel"></span>
                   </div>
                   <button id="exportVideoButton" class="accent-action-btn" data-tooltip="Export MP4 or PNG sequence. For long PNG exports, choose an output folder to write frames directly to disk.">

@@ -3,6 +3,10 @@ import { getComposerOutputRenderTarget } from '../composerOutputBuffer.js';
 import { getDrawingBufferPixels } from '../drawingBufferSize.js';
 import { fullViewportLogicalSize } from '../fullViewportLogicalSize.js';
 import { LOG_CAPTURE_DEBUG } from '../../constants.js';
+import {
+  compositeAsciiGroundGridOnByteTarget,
+  shouldCompositeAsciiGroundGridForCapture,
+} from './capturePostStackOverlays.js';
 
 /**
  * Thrown when composer readback size ≠ requested capture size after one retry.
@@ -105,6 +109,11 @@ export function resampleRgba(src, srcW, srcH, dstW, dstH) {
  * @param {{
  *   renderer: import('three').WebGLRenderer,
  *   composer: import('three/examples/jsm/postprocessing/EffectComposer.js').EffectComposer,
+ *   camera?: import('three').Camera,
+ *   getGroundGrid?: () => import('three').Object3D | null | undefined,
+ *   getCreativeLookAsciiActive?: () => boolean,
+ *   getGridLineWidth?: () => number,
+ *   exportScale?: number,
  *   ensureComposerMatchesDrawingBuffer?: (opts?: { strict?: boolean }) => void,
  * }} deps
  * @param {number} requestedW
@@ -130,6 +139,12 @@ function readComposerPixelsOnce(deps, requestedW, requestedH) {
 
   try {
     composer.copyPass.render(renderer, byteRT, outputRT, 0, false);
+    if (
+      deps.camera
+      && shouldCompositeAsciiGroundGridForCapture(deps)
+    ) {
+      compositeAsciiGroundGridOnByteTarget(deps, byteRT);
+    }
     const pixels = new Uint8Array(readW * readH * 4);
     renderer.readRenderTargetPixels(byteRT, 0, 0, readW, readH, pixels);
     return { pixels, width: readW, height: readH };
@@ -144,6 +159,11 @@ function readComposerPixelsOnce(deps, requestedW, requestedH) {
  * @param {{
  *   renderer: import('three').WebGLRenderer,
  *   composer: import('three/examples/jsm/postprocessing/EffectComposer.js').EffectComposer,
+ *   camera?: import('three').Camera,
+ *   getGroundGrid?: () => import('three').Object3D | null | undefined,
+ *   getCreativeLookAsciiActive?: () => boolean,
+ *   getGridLineWidth?: () => number,
+ *   exportScale?: number,
  *   ensureComposerMatchesDrawingBuffer?: (opts?: { strict?: boolean }) => void,
  * }} deps
  * @param {{

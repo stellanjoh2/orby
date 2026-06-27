@@ -25,6 +25,7 @@ import {
   normalizeExportVideoResolution,
 } from './exportVideoResolution.js';
 import { renderFrameForCaptureWithPins } from './capture/renderFrameForCapture.js';
+import { fillCinematicLetterbox219MattesGl } from './capture/cinematicLetterbox219.js';
 import { CaptureFeatureSession } from './capture/captureFeatureHooks.js';
 import { applyTimedExportFrameDrives } from './capture/captureExportFrameDrives.js';
 import {
@@ -58,7 +59,7 @@ export class VideoExporter {
     prepareComposerCapture,
     /** Lens flare / god rays prep — must run before each offline capture frame. */
     beforeComposerRender,
-    /** Same pass sequence as still PNG export (`ImageExporter.exportPng`). */
+    /** Same pass sequence as still PNG export (`ImageExporter.exportImage`). */
     renderComposerPassForExport,
     setRotationY,
     setLightsRotation,
@@ -80,6 +81,8 @@ export class VideoExporter {
     beginFontTextRevealExportDrive = () => {},
     applyFontTextRevealExportFrame = () => {},
     endFontTextRevealExportDrive = () => {},
+    /** Dust Field point sprites are sized in absolute framebuffer pixels — scale for export size. */
+    setDustFieldCaptureScale = () => {},
     getCurrentModel,
     getCurrentFile,
     getCurrentAssetMetadata,
@@ -124,6 +127,7 @@ export class VideoExporter {
     this.beginFontTextRevealExportDrive = beginFontTextRevealExportDrive;
     this.applyFontTextRevealExportFrame = applyFontTextRevealExportFrame;
     this.endFontTextRevealExportDrive = endFontTextRevealExportDrive;
+    this.setDustFieldCaptureScale = setDustFieldCaptureScale;
     this.getCurrentModel = getCurrentModel;
     this.getCurrentFile = getCurrentFile;
     this.getCurrentAssetMetadata = getCurrentAssetMetadata;
@@ -618,13 +622,47 @@ export class VideoExporter {
     }
   }
 
+  /**
+   * Present the current export frame on `renderer.domElement` for MediaRecorder.captureStream.
+   * PNG sequence uses {@link _renderComposerFrameForCapture} (composer RT readback) instead.
+   */
   _renderCurrentFrameToCanvas() {
-    this._renderComposerFrameForCapture();
+    this._syncExportCaptureFramebuffer();
+
+    const size = this._exportCaptureSize;
+    if (this._captureFeatureSession && size?.width && size?.height) {
+      this._captureFeatureSession.prepareFrame({
+        width: size.width,
+        height: size.height,
+        transparent: false,
+      });
+    }
+
+    if (typeof this.renderComposerPassForExport === 'function') {
+      this.renderComposerPassForExport({ transparent: false });
+    } else if (this.composerLifecycle?.renderVideoPreviewPass) {
+      this.beforeComposerRender?.();
+      this.composerLifecycle.renderVideoPreviewPass();
+    } else if (this.composer) {
+      this.beforeComposerRender?.();
+      this.composer.render();
+    }
+    // MediaRecorder samples the GL drawing buffer, so paint mattes into GL (not a 2D overlay).
+    if (this._resolveCinematicLetterbox219()) {
+      fillCinematicLetterbox219MattesGl(this.renderer);
+    }
+    this._finishGpuFrame();
+  }
+
+  /** True when the studio 21∶9 cinematic letterbox overlay is enabled (export should bake it in). */
+  _resolveCinematicLetterbox219() {
+    return this.stateStore?.getState?.()?.camera?.cinematicLetterbox219 === true;
   }
 
   _renderAndCaptureCurrentFramePng(exportWidth, exportHeight) {
     const { width: targetWidth, height: targetHeight } =
       this._resolveExportCapturePixelSize(exportWidth, exportHeight);
+    const cinematicLetterbox219 = this._resolveCinematicLetterbox219();
 
     const gradient = this.backgroundController?.gradientController;
     if (gradient?.shouldBlitForCapture?.()) {
@@ -637,6 +675,7 @@ export class VideoExporter {
       targetWidth,
       targetHeight,
       {
+        cinematicLetterbox219,
         retryRender: () => {
           this._renderComposerFrameForCapture({
             exportWidth: targetWidth,
@@ -671,7 +710,9 @@ export class VideoExporter {
         },
         finishGpu: () => this._finishGpuFrame(),
       });
-      const canvas = this.imageExporter._pixelsTopDownToCanvas(topDown, width, height);
+      const canvas = this.imageExporter._pixelsTopDownToCanvas(topDown, width, height, {
+        cinematicLetterbox219: this._resolveCinematicLetterbox219(),
+      });
       return canvas.toDataURL('image/png');
     } finally {
       restoreTransparentCaptureSetup(
@@ -821,6 +862,11 @@ export class VideoExporter {
       // 9∶16 center crop — keep vertical FOV (no adjustment on typical wide viewports).
     }
 
+    // Dust Field point sprites use absolute framebuffer pixels — keep their on-screen fraction
+    // stable by scaling for the export vs viewport framebuffer height (see MaterialController setter).
+    const viewportFbHeight = Math.max(1, previousSize.y * previousPixelRatio);
+    this.setDustFieldCaptureScale?.(synced.height / viewportFbHeight);
+
     return {
       previousSize,
       previousPixelRatio,
@@ -832,6 +878,7 @@ export class VideoExporter {
 
   _restoreVideoExportSize(snapshot) {
     if (!snapshot) return;
+    this.setDustFieldCaptureScale?.(1);
     this.renderer.setPixelRatio(snapshot.previousPixelRatio);
     this.renderer.setSize(snapshot.previousSize.x, snapshot.previousSize.y, false);
     this.camera.aspect = snapshot.previousAspect;

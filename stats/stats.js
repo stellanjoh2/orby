@@ -2,6 +2,10 @@
  * Orby — public statistics page (anonymous aggregate counters).
  */
 
+import { gsap, prefersReducedMotion } from '../scripts/marketing/marketingMotion.js';
+
+const COUNT_UP_DURATION_S = 2;
+
 const apiMeta = document.querySelector('meta[name="orby-stats-api"]');
 const apiUrl = apiMeta?.getAttribute('content')?.trim() || '';
 
@@ -33,11 +37,37 @@ function formatCount(value) {
   return new Intl.NumberFormat('en-US').format(value);
 }
 
+function parseCount(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+}
+
+function animateCount(el, endValue, { delay = 0 } = {}) {
+  if (!el) return;
+  const target = parseCount(endValue);
+  if (prefersReducedMotion() || target === 0) {
+    el.textContent = formatCount(target);
+    return;
+  }
+
+  const counter = { value: 0 };
+  gsap.to(counter, {
+    value: target,
+    duration: COUNT_UP_DURATION_S,
+    delay,
+    ease: 'power2.out',
+    snap: { value: 1 },
+    onUpdate: () => {
+      el.textContent = formatCount(Math.round(counter.value));
+    },
+  });
+}
+
 function formatLabel(format) {
   return FORMAT_LABELS[format] ?? String(format || '').toUpperCase();
 }
 
-function renderTopFormats(rows) {
+function renderTopFormats(rows, { animate = false } = {}) {
   if (!formatsListEl) return;
   formatsListEl.replaceChildren();
 
@@ -55,7 +85,11 @@ function renderTopFormats(rows) {
 
     const count = document.createElement('span');
     count.className = 'legal-stats__formats-count';
-    count.textContent = formatCount(row.count);
+    if (animate) {
+      animateCount(count, row.count, { delay: index * 0.08 });
+    } else {
+      count.textContent = formatCount(row.count);
+    }
 
     item.append(rank, name, count);
     formatsListEl.append(item);
@@ -84,13 +118,13 @@ async function loadStats() {
       if (metaEl) metaEl.textContent = 'Counts unavailable in this environment';
       return;
     }
-    if (pageEl) pageEl.textContent = formatCount(data.pageViews);
-    if (assetEl) assetEl.textContent = formatCount(data.assetsLoaded);
+    animateCount(pageEl, data.pageViews);
+    animateCount(assetEl, data.assetsLoaded, { delay: 0.08 });
     const topFormats =
       Array.isArray(data.topFormats) && data.topFormats.length > 0
         ? data.topFormats.slice(0, 5)
         : PLACEHOLDER_TOP_FORMATS;
-    renderTopFormats(topFormats);
+    renderTopFormats(topFormats, { animate: true });
     if (metaEl) metaEl.textContent = 'All time · Counts update as people use Orby';
   } catch {
     setPlaceholderCounts();

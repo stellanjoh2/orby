@@ -1,6 +1,6 @@
 # Export refactor plan
 
-**Status:** Planned — work in chunks; do not big-bang.  
+**Status:** In progress — Chunks 0–3 P0/P1 + gradient composite + dimension size probes shipped; Chunk 6 lite partial (visual WYSIWYG open).  
 **Related:** `POST_PROCESSING_EXPORT_ANALYSIS.md` (older post-processing notes), `scripts/render/ImageExporter.js` (~3k lines), `ComposerLifecycle.renderComposerPassForExport`.
 
 ## Problem
@@ -12,7 +12,7 @@ Viewport and export share one WebGL renderer, composer, and scene state. Export 
 | Symptom | Likely cause |
 |---------|----------------|
 | Visuals scaled up | Composer buffer ≠ export size → silent `_resampleRgba` stretch |
-| Gradient bg covers ~¼ of frame | Partial GL viewport after post passes; background drawn before full viewport repair |
+| Gradient bg covers ~¼ of frame | Partial GL viewport after post passes; **fixed 2026-06-27** via CPU composite (`captureGradientComposite.js`) — do not rely on `scene.background` during offline capture |
 | HDRI rotated in file, fine in viewport | Dual rotation models (baked PMREM vs `setRotationLive`); export-only HDRI spin toggles |
 | “Random” after export | Failed or partial restore of renderer/camera/composer state |
 
@@ -111,8 +111,9 @@ Export UI / VideoExporter / Mobile / dev bake
 - [x] Dev-only capture debug log per export: `{ requestedW, requestedH, drawingBufferW, composerRTW, viewportLogical }` — `logCaptureDebug()` in session + readback; enable via `LOG_CAPTURE_DEBUG = true`.
 - [x] Manual smoke checklist (5 min after any export PR): load mesh → orbit → bloom → export PNG → viewport still correct — see `export-parity-matrix.md`.
 - [ ] (Optional) Playwright golden captures for 3 fixtures: opaque PNG, gradient bg, transparent PNG — defer if setup cost > 1 day.
+- [x] **Dimension switch size probes (2026-06-27)** — unit + Playwright + dev console; not pixel golden yet. See [export-dimension-switch-tests.md](./export-dimension-switch-tests.md).
 
-**Exit:** Matrix exists; size tuple logged on every capture.
+**Exit:** Matrix exists; size tuple logged on every capture. Dimension **size contract** regressions caught by `npm run test:all`.
 
 ---
 
@@ -151,7 +152,7 @@ scripts/render/capture/
 - [x] Remove default silent `_resampleRgba`; legacy fallback behind `allowResample: true` (`ALLOW_CAPTURE_RESAMPLE` in constants).
 - [x] Toast when GPU clamp reduces requested export size (not only `console.warn`).
 
-**Exit:** Zero silent resamples in strict mode; golden/manual passes for Ultra DPR + 2× PNG + gradient.
+**Exit:** Zero silent resamples in strict mode; golden/manual passes for Ultra DPR + 2× PNG + gradient ✅ (gradient CPU composite verified 2026-06-27).
 
 ---
 
@@ -186,10 +187,18 @@ Priority:
 **P0 shipped (2026-06-26):**
 
 - [x] `captureFeatureHooks.js` — `CaptureFeatureSession`, `prepareCaptureFeatures` / `restoreCaptureFeatures`
-- [x] `BackgroundGradientController.prepareForCapture` / `restoreAfterCapture` — full-frame gradient after export viewport set
+- [x] `BackgroundGradientController.prepareForCapture` / `restoreAfterCapture` — sync gradient canvas at export size; CPU composite during readback (not GL `scene.background`)
 - [x] `EnvironmentController.prepareForCapture` / `restoreAfterCapture` — always `setRotationLive` baseline during capture; restore baked vs live model
 - [x] Wired in `renderFrameForCapture`, `OfflineCaptureSession`, `VideoExporter`, legacy/dev paths
 - [x] Removed direct `gradientController.syncToDrawingBuffer` from `ImageExporter._setExportFramebufferSize`
+
+**P0 gradient composite (2026-06-27):**
+
+- [x] `captureGradientComposite.js` — CPU merge: composer post RGB + scene alpha pass + 2D gradient canvas at export size (same pattern as transparent export)
+- [x] `BackgroundGradientController.getCaptureGradientRgba()` / `shouldBlitForCapture()` — capture session uses CPU composite, not GL `scene.background`
+- [x] `MeshglEffectComposer.setExportCaptureViewportPin()` — all passes pinned to export resolution during capture
+- [x] Wired in `ImageExporter`, `VideoExporter`, `MeshglRenderPass`, `ComposerLifecycle.renderComposerPassForExport`
+- [x] Manual verify: gradient still PNG + video encode + capture preview at Max/Medium/Low × 1080p/4K
 
 **P1 shipped (2026-06-26):**
 
@@ -233,6 +242,11 @@ Ship 4A first if needed; 4B when matrix is mostly green.
 - [x] Still transparent PNG via `OfflineCaptureSession` when `USE_CAPTURE_SESSION`
 - [x] `VideoExporter._captureTransparentFramePngDataUrl` deduped to shared readback/crop
 
+**Shipped (2026-06-27):**
+
+- [x] Removed dead deprecated shims from `ImageExporter` (`_resampleRgba`, `exportPng`, `exportTransparentPng`).
+- [x] `SvgVectorizer.js` — extracted the full image-data → SVG tracing pipeline (silhouette / color / pixel-grid + ImageTracer load) out of `ImageExporter`. Pure (no renderer/scene/composer); `ImageExporter` delegates via `this.svgVectorizer`. `ImageExporter.js` 3343 → ~2050 lines.
+
 ---
 
 ## Chunk 6 — Video WYSIWYG + dimension matrix + UX
@@ -240,13 +254,27 @@ Ship 4A first if needed; 4B when matrix is mostly green.
 **Goal:** Video capture ≈ viewport 1:1; tier / resolution / aspect switches never break.
 
 - [ ] VideoExporter: frame scheduler + drives only; dedupe `beforeComposerRender` copy from SceneManager.
-- [ ] **Preview uses capture path** — `ExportMovementPreview` scrubs via `renderFrameForCapture` at export size (or shows capture preview tiles), not live-viewport-only mutation. **Lite:** Capture preview frame button + optional thumb (`USE_CAPTURE_PREVIEW_ON_SCRUB` off by default).
+- [ ] **Preview uses capture path (full WYSIWYG)** — replace live viewport during scrub/play with `renderFrameForCapture` at export size (or full-size capture tiles).
+- [x] **Preview capture lite** — Capture preview frame button + debounced scrub thumb (`USE_CAPTURE_PREVIEW_ON_SCRUB = true`, `SCRUB_CAPTURE_DEBOUNCE_MS = 450`); live play/drag unchanged; preview session restore + in-flight guard in `SceneManager.captureExportPreviewFrame`.
 - [ ] Video frame 0 pixel-equal to still PNG at same tier + resolution + aspect (automated or manual golden). **Shared encode path shipped** — manual golden still open.
-- [ ] **Dimension switch tests** — matrix spot-checks: Ultra↔Medium, 1080p↔4K, 16∶9↔9∶16, each with static frame + one animated typography preset + one mesh clip.
-- [ ] Animation hooks: mesh clips, font reveal types, constant glyph motion — all use shared `CaptureFrameContext` time (`frameIndex`, `fps`, `exportTimeSec`).
+- [x] **Dimension switch tests (size contract)** — automated probes for tier × PNG scale × video resolution; manual visual WYSIWYG still open.
+- [ ] **Dimension switch tests (visual + animation)** — manual matrix rows: typography preset, mesh clip, 9∶16 when UI returns. **Font reveal + cam animation @ 1080p/1440p ✅** 2026-06-27.
+- [x] **Animation hooks (font typography + creative look `uTime`)** — `applyTimedExportFrameDrives`; font reveal / constant motion + Shader Lab animated MP4 manually verified OK 2026-06-27. Mesh clip / film grain still ❓ in parity matrix.
 - [ ] Mobile: `apps/mobile/scripts/mobileExportImage.js` → shared session (keep `MOBILE_EXPORT_MAX_PX` in size policy).
 - [x] **Capture preview frame** button — one offline frame at export resolution before long encode.
 - [x] **Pre-export summary** — still PNG/JPEG/WebP shows tier + scale + export-only transforms via offline overlay; video PNG sequence already had summary.
+
+**Dimension switch tests shipped (2026-06-27):**
+
+| Layer | Command / entry | What it verifies |
+|-------|-----------------|------------------|
+| Unit | `npm test` | Video preset sizes (1080p/1440p/4K), PNG 1×/2×, bloom RT per tier, pixel/GPU clamp (`exportDimensionSync.test.mjs`) |
+| E2E | `npm run test:e2e:dimension` | Playwright loads `404.glb`, runs probes across Max/Medium/Low × PNG 1× × video 1080p/1440p (`e2e/export-dimension-spot-checks.spec.mjs`) |
+| All | `npm run test:all` | Unit then E2E (starts/reuses dev server on `:8000`) |
+| Dev console | `await orby.dev.runExportDimensionSpotChecks()` | Same probes as E2E; optional `{ gradient: true }`; requires mesh loaded |
+| Dev console | `orby.dev.logCaptureSizeMatrix()` | Size table only, no GL capture |
+
+Modules: `scripts/dev/exportDimensionSpotChecks.js`, `playwright.config.mjs`. Protocol + manual visual checklist: [export-dimension-switch-tests.md](./export-dimension-switch-tests.md). Parity matrix **Dimension switching** rows updated (size contract ✅, visual 🟡).
 
 ---
 
@@ -255,7 +283,7 @@ Ship 4A first if needed; 4B when matrix is mostly green.
 No architecture — export-scoped patches only:
 
 1. Capture debug logging (30 min)
-2. Gradient: `syncToDrawingBuffer(exportW, exportH, forceRedraw)` + full viewport reset on every capture path (1–2 hr)
+2. Gradient: ~~`syncToDrawingBuffer(exportW, exportH, forceRedraw)` + full viewport reset~~ → **CPU composite** (`captureGradientComposite.js`) shipped 2026-06-27
 3. Stop silent resample; retry once then fail (1–2 hr)
 4. HDRI: normalize rotation mode at export start + restore (1 hr)
 5. Manual smoke: opaque PNG, gradient, HDRI rotated, 2×, transparent, video frame 0 (1 hr)
@@ -273,6 +301,8 @@ Skips: session module, offscreen renderer, CI goldens, ImageExporter split.
 | Shared composer export pass | `scripts/scene/ComposerLifecycle.js` → `renderComposerPassForExport` |
 | Viewport repair | `scripts/render/resetRendererFullViewport.js`, `MeshglEffectComposer.js` |
 | Gradient | `scripts/render/backgroundGradient/BackgroundGradientController.js` |
+| Gradient capture composite | `scripts/render/capture/captureGradientComposite.js` |
+| Export preview scrub | `scripts/ui/ExportPreviewControls.js` |
 | HDRI rotation | `scripts/render/EnvironmentController.js` |
 | Mobile export | `apps/mobile/scripts/mobileExportImage.js` |
 | Export wiring | `scripts/SceneManager.js` (`setupComposer`, export handlers) |
@@ -280,6 +310,10 @@ Skips: session module, offscreen renderer, CI goldens, ImageExporter split.
 | Font reveal / typography animation | `scripts/scene/FontTextRevealController.js`, `FontTextConstantController.js`, `fontTextRevealTypes.js` |
 | Render quality tier | `scripts/ui/RenderControls.js`, `SceneManager.syncPostProcessingForLogicalSize` |
 | Video aspect / resolution | `scripts/render/exportVideoResolution.js`, `exportVideoMovements.js` |
+| Dimension switch unit tests | `scripts/render/capture/exportDimensionSync.test.mjs` |
+| Dimension switch dev probes | `scripts/dev/exportDimensionSpotChecks.js` |
+| Dimension switch E2E | `e2e/export-dimension-spot-checks.spec.mjs`, `playwright.config.mjs` |
+| Test protocol doc | `docs/export-dimension-switch-tests.md` |
 
 ---
 
@@ -287,11 +321,14 @@ Skips: session module, offscreen renderer, CI goldens, ImageExporter split.
 
 **Minimum (stop bleeding):** Chunk 0 → 1-day sprint items → Chunk 2 → Chunk 3 P0 only.
 
-**Trust export again:** + Chunk 1 fully + Chunk 6 lite (capture preview frame + frame 0 = PNG).
+**Trust export again:** + Chunk 1 fully + Chunk 6 lite (capture preview frame + frame 0 = PNG + scrub capture thumb).
 
 - [x] **Capture preview frame** button — one offline frame at export resolution before long encode (`VideoExporter.capturePreviewFrame`, shared `captureVideoExportFrame.js`).
-- [x] **Frame 0 = PNG** — PNG sequence loop and capture preview share `captureVideoExportFrameBlob` → `_renderComposerFrameForCapture` (same as still PNG).
+- [x] **Scrub capture preview lite** — debounced offline thumb on scrub settle (`ExportPreviewControls`, `USE_CAPTURE_PREVIEW_ON_SCRUB`).
+- [x] **Gradient export** — CPU composite path; quarter-frame GL bug fixed (2026-06-27).
+- [x] **Frame 0 = PNG** — PNG sequence loop and capture preview share `captureVideoExportFrameBlob` → `_renderComposerFrameForCapture` (same as still PNG). Manual golden still open.
+- [x] **Dimension switch size probes** — `npm run test:all` (unit + Playwright); dev `orby.dev.runExportDimensionSpotChecks()`.
 
-**Never worry again:** + Chunk 4B + 5 + 6.
+**Never worry again:** + Chunk 4B + 5 + 6 (full preview WYSIWYG, visual dimension matrix, mobile session).
 
 Track progress by checking boxes in this doc and linking PRs in the GitHub issue.

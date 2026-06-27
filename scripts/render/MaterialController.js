@@ -3483,6 +3483,24 @@ export class MaterialController {
    * @param {string} preset
    * @param {number} patternScale
    */
+  /**
+   * Export parity: `gl_PointSize` is absolute framebuffer pixels, so dust particles drift in
+   * apparent size whenever the export framebuffer height differs from the viewport's (2× scale
+   * or GPU-budget clamp). Pin `uPointSizeScale = exportFbHeight / viewportFbHeight` during capture
+   * so particles keep the same on-screen fraction; reset to 1 after. No effect when not exporting.
+   * @param {number} scale
+   */
+  setDustFieldCaptureScale(scale) {
+    const points = this._getDustFieldPoints();
+    const mat = points?.material;
+    const uniform = mat?.uniforms?.uPointSizeScale;
+    if (!uniform || mat.userData?.orbyCreativeLook !== 'dust-field') return;
+    const next = Number(scale);
+    uniform.value = Number.isFinite(next) && next > 0
+      ? THREE.MathUtils.clamp(next, 0.05, 20)
+      : 1;
+  }
+
   _applyDustFieldMaterial(preset, patternScale) {
     const points = this._getDustFieldPoints();
     if (!points) return;

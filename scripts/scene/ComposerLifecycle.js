@@ -346,10 +346,13 @@ export class ComposerLifecycle {
 
   /** Ground grid on top of ASCII terminal post — normal line art, not glyphs. */
   _renderGroundGridOverlay() {
+    // Offline capture composites grid on the byte readback RT (captureReadback.js).
+    if (this.composer?.renderToScreen === false) return;
     renderGroundGridOverlay({
       renderer: this.renderer,
       camera: this.camera,
       grid: this.getGroundGrid?.(),
+      renderTarget: null,
     });
   }
 

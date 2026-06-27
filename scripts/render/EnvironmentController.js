@@ -253,9 +253,15 @@ export class EnvironmentController {
       this._liveRotationEuler = new THREE.Euler(0, 0, 0, 'YXZ');
     }
     const radians = THREE.MathUtils.degToRad(normalized);
+    // `_ensureLiveRotationEnvironmentBase()` above just rebound scene.environment to the
+    // rotation-0 base PMREM, so the euler MUST be (re)applied unless it is already the active
+    // scene rotation. After a prior baked setRotation() + _clearLiveRotation(), `this.rotation`
+    // and `_liveRotationEuler.y` can still match `normalized` while scene.environmentRotation
+    // points at the identity euler — early-returning there leaves the export/viewport at 0°.
     if (
       this.rotation === normalized
       && Math.abs(this._liveRotationEuler.y - radians) < 1e-6
+      && this.scene.environmentRotation === this._liveRotationEuler
     ) {
       return;
     }

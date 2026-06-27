@@ -91,19 +91,59 @@ export function restoreGroundGridFromPass(snapshot) {
  *   renderer: import('three').WebGLRenderer,
  *   camera: import('three').Camera,
  *   grid: import('three').Object3D | null | undefined,
+ *   renderTarget?: import('three').WebGLRenderTarget | null,
  * }} ctx
  */
-export function renderGroundGridOverlay({ renderer, camera, grid }) {
+export function renderGroundGridOverlay({ renderer, camera, grid, renderTarget = null }) {
   if (!renderer || !camera || !grid?.visible) return;
 
+  const material = grid.material;
+  /** @type {import('three').Material[]} */
+  const mats = material
+    ? (Array.isArray(material) ? material : [material])
+    : [];
+  /** @type {Array<{ mat: import('three').Material, depthTest: boolean, depthWrite: boolean }>} */
+  const depthSnapshots = [];
+
   const prevAutoClear = renderer.autoClear;
+  const prevRenderTarget = renderer.getRenderTarget();
   renderer.autoClear = false;
-  renderer.setRenderTarget(null);
-  resetRendererFullViewport(renderer);
+  renderer.setRenderTarget(renderTarget);
 
-  grid.updateMatrixWorld(true);
-  renderer.render(grid, camera);
+  if (renderTarget) {
+    renderer.setViewport(0, 0, renderTarget.width, renderTarget.height);
+    if (typeof renderer.setScissor === 'function') {
+      renderer.setScissor(0, 0, renderTarget.width, renderTarget.height);
+    }
+    if (typeof renderer.setScissorTest === 'function') {
+      renderer.setScissorTest(false);
+    }
+    // Composer RTs keep RenderPass depth; post is color-only — clear depth so grid isn't occluded.
+    renderer.clearDepth();
+    for (const mat of mats) {
+      if (!mat) continue;
+      depthSnapshots.push({
+        mat,
+        depthTest: mat.depthTest,
+        depthWrite: mat.depthWrite,
+      });
+      mat.depthTest = false;
+      mat.depthWrite = false;
+    }
+  } else {
+    resetRendererFullViewport(renderer);
+  }
 
-  renderer.autoClear = prevAutoClear;
-  resetRendererFullViewport(renderer);
+  try {
+    grid.updateMatrixWorld(true);
+    renderer.render(grid, camera);
+  } finally {
+    for (const { mat, depthTest, depthWrite } of depthSnapshots) {
+      mat.depthTest = depthTest;
+      mat.depthWrite = depthWrite;
+    }
+    renderer.autoClear = prevAutoClear;
+    renderer.setRenderTarget(prevRenderTarget);
+    resetRendererFullViewport(renderer);
+  }
 }
