@@ -2,9 +2,16 @@
  * Orby — public statistics page (anonymous aggregate counters).
  */
 
-import { gsap, prefersReducedMotion } from '../scripts/marketing/marketingMotion.js';
+import gsap from 'gsap';
 
 const COUNT_UP_DURATION_S = 2;
+
+function prefersReducedMotion() {
+  return (
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
 
 const apiMeta = document.querySelector('meta[name="orby-stats-api"]');
 const apiUrl = apiMeta?.getAttribute('content')?.trim() || '';
