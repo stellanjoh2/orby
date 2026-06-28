@@ -1,6 +1,6 @@
 import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/EffectComposer.js';
 import { MaskPass, ClearMaskPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/MaskPass.js';
-import { resetRendererFullViewport } from './resetRendererFullViewport.js';
+import { pinRendererViewportLogical, resetRendererFullViewport } from './resetRendererFullViewport.js';
 
 /**
  * EffectComposer that resets the GL viewport before every pass. Bloom / transmission / reflector
@@ -29,13 +29,7 @@ export class MeshglEffectComposer extends EffectComposer {
   _resetPassViewport(renderer) {
     const pin = this._exportCaptureViewportPin;
     if (pin) {
-      renderer.setViewport(0, 0, pin.width, pin.height);
-      if (typeof renderer.setScissor === 'function') {
-        renderer.setScissor(0, 0, pin.width, pin.height);
-      }
-      if (typeof renderer.setScissorTest === 'function') {
-        renderer.setScissorTest(false);
-      }
+      pinRendererViewportLogical(renderer, pin.width, pin.height);
       return;
     }
     resetRendererFullViewport(renderer);

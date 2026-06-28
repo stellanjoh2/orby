@@ -99,13 +99,11 @@ import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 import {
   applySvgExtrudeSurfaceToMaterial,
   computeExtrudeSurfaceMappingBounds,
-  ensureSvgExtrudeFresnelChain,
   resolveOrbySurfaceUniformState,
   syncCreativeLookSurfaceToModel,
   deferCreativeLookSurfaceResync,
   syncSvgExtrudeSurfaceProgramCacheKey,
   getSvgExtrudeSurfacePresetConfig,
-  isFresnelLinkedInSvgSurfaceChain,
   reapplySvgExtrudeSurfaceFromState,
   removeSvgExtrudeProceduralFromMaterial,
 } from './SvgExtrudeSurfaceShader.js';
@@ -5184,7 +5182,6 @@ export class MaterialController {
         // Invert radius: low radius (0.5) = high power (5.0) = narrow, high radius (5.0) = low power (0.5) = wide
         const radius = settings.radius || 2.0;
         uniforms.power.value = Math.max(0.1, 5.5 - radius);
-        // Ensure onBeforeCompile hook is still set (in case material was recompiled elsewhere)
         if (!material.userData.fresnelOnBeforeCompile) {
           // Stored hook ref lost but uniforms lingered: restore the base hook, drop stale uniform
           // refs, and full repatch below. Never delete originalOnBeforeCompile here — if we do, the
@@ -5195,48 +5192,13 @@ export class MaterialController {
           material.onBeforeCompile = base;
           delete material.userData.fresnelPatched;
           delete material.userData.fresnelUniforms;
-        } else if (!material.onBeforeCompile || material.onBeforeCompile !== material.userData.fresnelOnBeforeCompile) {
-          if (material.userData?.svgExtrudeProceduralPatched) {
-            if (ensureSvgExtrudeFresnelChain(material)) {
-              return;
-            }
-            if (!isFresnelLinkedInSvgSurfaceChain(material)) {
-              const preset = material.userData.svgExtrudeSurfacePresetId ?? 'none';
-              const scale = material.userData.svgExtrudeProceduralScale ?? 1;
-              const strength = material.userData.svgExtrudeSurfaceStrength;
-              removeSvgExtrudeProceduralFromMaterial(material);
-              if (getSvgExtrudeSurfacePresetConfig(preset).kind !== 'none') {
-                applySvgExtrudeSurfaceToMaterial(material, {
-                  preset,
-                  scale,
-                  strength,
-                  normalBounds: material.userData?.svgExtrudeNormalBounds ?? null,
-                });
-              }
-            }
-            if (needsFresnelShaderRecompile(material)) {
-              markFresnelShaderInjectCurrent(material);
-              material.needsUpdate = true;
-            }
-            return;
-          }
-          material.onBeforeCompile = material.userData.fresnelOnBeforeCompile;
-          material.needsUpdate = true;
-          return;
-        } else if (material.userData?.svgExtrudeProceduralPatched) {
-          if (ensureSvgExtrudeFresnelChain(material)) {
-            return;
-          }
+        } else {
+          // Live uniform tweak only. Shadow tint, SVG surface, and gobo legitimately wrap Fresnel
+          // as the outer onBeforeCompile — never demote them here or sliders stop updating the rim.
           if (needsFresnelShaderRecompile(material)) {
             markFresnelShaderInjectCurrent(material);
             material.needsUpdate = true;
           }
-          return;
-        } else if (needsFresnelShaderRecompile(material)) {
-          markFresnelShaderInjectCurrent(material);
-          material.needsUpdate = true;
-          return;
-        } else {
           return;
         }
       } else {

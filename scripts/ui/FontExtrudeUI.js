@@ -211,9 +211,17 @@ export class FontExtrudeUI {
             <input id="fontExtrudeLineHeight" type="range" min="0.1" max="2.5" step="0.05" value="1" />
             <span class="value" data-output="fontExtrudeLineHeight">1.00×</span>
           </label>
-          <div id="fontExtrudeFileFallback" class="font-extrude-file-fallback" hidden>
+          <div id="fontExtrudeFileFallback" class="font-extrude-file-fallback">
             <input type="file" id="fontExtrudeFile" class="sr-only" accept=".ttf,.otf,.woff,.woff2,font/*" />
-            <button type="button" id="fontExtrudeFileBtn" class="ghost-btn small">Load .ttf / .otf…</button>
+            <button
+              type="button"
+              id="fontExtrudeFileBtn"
+              class="accent-action-btn font-extrude-file-btn"
+              data-tooltip="Load a font file directly. Use this for fonts that don't show up in the list above — e.g. several styles that share one family name."
+            >
+              <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+              <span>Load .ttf / .otf…</span>
+            </button>
           </div>
           <button type="button" id="fontExtrudeGenerate" class="accent-action-btn font-extrude-generate" disabled data-tooltip="Extrude preview text into a 3D mesh">
             <i class="fa-solid fa-cube" aria-hidden="true"></i>
@@ -1287,7 +1295,6 @@ export class FontExtrudeUI {
 
     if (!this._fontFamilies.length) {
       this._fonts = [];
-      this.els.fileFallback.hidden = false;
       this.familyPicker?.populate([]);
       this.familyPicker?.setDisabled(true);
       this._setVariantOptions([]);
@@ -1320,7 +1327,6 @@ export class FontExtrudeUI {
       }
     }
 
-    this.els.fileFallback.hidden = true;
     if (this.els.systemFontsPrompt) this.els.systemFontsPrompt.hidden = true;
     this.familyPicker?.populate(this._fonts);
     this.familyPicker?.setDisabled(false);

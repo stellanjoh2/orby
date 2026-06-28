@@ -171,7 +171,7 @@ export { creativeLookUsesVoxelGeometry, isVoxelCreativeLookPreset } from './crea
 /**
  * Animated presets read `uTime` as one shared timeline: MaterialController sets
  * `uTime = elapsedSeconds * creativeLook.shaderAnimationSpeed` (after pause freeze).
- * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, chrome-plasma, voronoi, scanline-hologram, wire-pulse, fractal-storm, dust-field, vectrex, ps2-crush, psx, holo-glass, crystal-gem). EGA Pixel uses a fixed 640×350 screen grid (no time scroll).
+ * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, chrome-plasma, voronoi, scanline-hologram, wire-pulse, fractal-storm, holo-topo, dust-field, vectrex, ps2-crush, psx, holo-glass, crystal-gem). EGA Pixel uses a fixed 640×350 screen grid (no time scroll).
  *
  * The chrome preset uses MeshPhysicalMaterial so PMREM / CubeUV environment maps match the rest of the viewer.
  * The glass preset uses MeshPhysicalMaterial.transmission for real refraction (Three.js transmission pipeline).
@@ -180,7 +180,7 @@ export { creativeLookUsesVoxelGeometry, isVoxelCreativeLookPreset } from './crea
  * in the transmission prepass — not other transmissive/transparent meshes (Three.js renderer design).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'fractal-storm' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome-plasma' | 'chrome' | 'glass' | 'holo-glass' | 'crystal-gem' | 'thermal' | 'thermal-extreme' | 'thermal-acid'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'fractal-storm' | 'holo-topo' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome-plasma' | 'chrome' | 'glass' | 'holo-glass' | 'crystal-gem' | 'thermal' | 'thermal-extreme' | 'thermal-acid'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
@@ -208,6 +208,7 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'scanline-hologram',
   'wire-pulse',
   'fractal-storm',
+  'holo-topo',
   'dust-field',
   'ps2-crush',
   'psx',
@@ -259,10 +260,10 @@ export const VECTREX_DEFAULT_INTENSITY = 0.25;
 /** Default Shader Lab intensity for Wire Pulse (line thickness). */
 export const WIRE_PULSE_DEFAULT_INTENSITY = 0.25;
 
-/** Default Shader Lab intensity for Fractal Storm (contour line glow). */
+/** Default Shader Lab intensity for Topo Minimal (contour line glow). */
 export const FRACTAL_STORM_DEFAULT_INTENSITY = 1;
 
-/** Default Shader Lab scale for Fractal Storm (contour density). */
+/** Default Shader Lab scale for Topo Minimal (contour density). */
 export const FRACTAL_STORM_DEFAULT_PATTERN_SCALE = 1;
 
 export {
@@ -1147,6 +1148,7 @@ export function creativeLookPresetUsesShaderAnimation(preset) {
     id === 'scanline-hologram' ||
     id === 'wire-pulse' ||
     id === 'fractal-storm' ||
+    id === 'holo-topo' ||
     id === 'dust-field' ||
     id === 'vectrex' ||
     id === 'ps2-crush' ||
@@ -1219,7 +1221,8 @@ export function formatCreativeLookPresetLabel(preset) {
     voronoi: 'Voronoi',
     'scanline-hologram': 'Scanline Hologram',
     'wire-pulse': 'Wire Pulse',
-    'fractal-storm': 'Fractal Storm',
+    'fractal-storm': 'Topo Minimal',
+    'holo-topo': 'Holographic 2',
     'dust-field': 'Dust Field',
     'ps2-crush': 'PS2 Crush',
     psx: 'PSX',
@@ -2706,7 +2709,7 @@ void main() {
 }
 `;
 
-/** Fractal Storm — domain-warped FBM height field with glowing topographic contour lines. */
+/** Topo Minimal — domain-warped FBM height field with glowing topographic contour lines. */
 const FRACTAL_STORM_FRAGMENT = /* glsl */ `
 varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
@@ -2813,6 +2816,73 @@ void main() {
   col += vec3(0.04, 0.34, 0.42) * pow(fresnel, 3.1) * (0.14 + up * 0.05 - down * 0.04);
   col = min(col, vec3(3.2));
 
+  gl_FragColor = vec4(col, uOpacity);
+}
+`;
+
+/** Holographic 2 — Holographic's artifact-free thin-film core, remixed to full-surface thermal chrome. */
+const HOLO_TOPO_FRAGMENT = /* glsl */ `
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+uniform float uTime;
+uniform float uPatternScale;
+uniform float uIntensity;
+uniform float uOpacity;
+
+void main() {
+  vec3 N = orbyCreativeSurfaceNormal(
+    normalize(vWorldNormal),
+    vWorldPosition,
+    vOrbyLocalPos,
+    vOrbyLocalNormal,
+    mat3(vOrbyWm0, vOrbyWm1, vOrbyWm2)
+  );
+  float surfMod = orbyCreativeSurfaceFilmMod(vWorldPosition, vOrbyLocalPos, vOrbyLocalNormal);
+  vec3 V = normalize(cameraPosition - vWorldPosition);
+  float F = 1.0 - max(dot(N, V), 1e-4);
+  float fresnelWide = pow(F, 1.28);
+  float fresnel = pow(F, 2.05);
+  float fresnelTight = pow(F, 5.0);
+  float inten = clamp(uIntensity, 0.0, 2.0);
+
+  // Scale maps through log2 so equal UI steps feel even — keeps low frequencies (no aliasing).
+  float sc = clamp(uPatternScale, 0.1, 5.0);
+  float u = (log2(sc) + 3.321928094887362) / 5.643856189774724;
+  float wFreq = mix(2.923, 0.25, u);
+  vec3 pw = vWorldPosition * wFreq;
+  float t = uTime * (wFreq / 1.35);
+
+  // Smooth analytic oil-slick flow (Holographic's field) — low frequency, artifact-free.
+  float oil =
+    sin(pw.x * 0.72 + t * 0.72) * cos(pw.y * 0.78 - t * 0.62) +
+    sin(pw.z * 0.68 + t * 0.42) * 0.45 +
+    sin(dot(pw, vec3(0.72, 1.02, 0.58)) * 1.05 + t * 0.85) * 0.35;
+  oil *= surfMod;
+
+  // Thin-film phase carried across the WHOLE surface by the flow (full thermal coverage),
+  // with a gentle Fresnel shift so grazing angles still bend the rainbow. Intensity = band richness.
+  float bandRich = mix(0.72, 1.32, inten * 0.5);
+  float film = (oil * 1.95 + fresnel * 1.55 + dot(N, vec3(0.15, 0.97, 0.18)) * 0.4 + t * 0.4) * bandRich;
+
+  vec3 phase = film * vec3(3.45, 4.15, 4.95) + vec3(0.0, 2.2, 5.0);
+  vec3 holo = 0.5 + 0.5 * cos(phase);
+  holo = pow(max(holo, vec3(0.0)), vec3(0.82));
+
+  // Full-surface thermal-chrome body — bright everywhere, brighter toward grazing angles.
+  vec3 col = holo * (0.95 + fresnelWide * 0.6) * surfMod;
+
+  // Chrome specular pop.
+  vec3 L = normalize(vec3(0.42, 0.9, 0.36));
+  vec3 H = normalize(L + V);
+  float nh = max(dot(N, H), 0.0);
+  vec3 specTint = mix(vec3(0.72, 0.94, 1.05), vec3(1.05, 0.58, 0.92), fresnel);
+  col += specTint * (pow(nh, 228.0) * 1.25 + pow(nh, 68.0) * 0.38) * (0.2 + fresnel * 0.9);
+
+  // Iridescent rim accents (pink + blue) for that holographic chrome edge.
+  col += fresnelTight * vec3(1.0, 0.28, 0.82) * 0.5;
+  col += fresnel * vec3(0.1, 0.48, 1.05) * 0.4;
+
+  col = min(col, vec3(3.0));
   gl_FragColor = vec4(col, uOpacity);
 }
 `;
@@ -4134,6 +4204,24 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'fractal-storm';
+    return finish(mat);
+  }
+
+  if (id === 'holo-topo') {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: time },
+        uPatternScale: { value: patternScale },
+        uOpacity: { value: shaderAlpha },
+        ...surfaceUniformSpread,
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: WORLD_SURFACE_VERTEX,
+      fragmentShader: lookFragWithSurface(HOLO_TOPO_FRAGMENT),
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'holo-topo';
     return finish(mat);
   }
 

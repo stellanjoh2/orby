@@ -29,7 +29,6 @@ import {
   restoreTransparentCaptureSetup,
   cropTransparentTopDownRgbaToCanvas as cropTransparentTopDownRgbaToCanvasFn,
 } from './capture/TransparentCapture.js';
-import { readGradientMergedTopDownRgba } from './capture/captureGradientComposite.js';
 import {
   pinAsciiReferenceForCapture,
   unpinAsciiReferenceForCapture,
@@ -570,50 +569,6 @@ export class ImageExporter {
       logDebug = LOG_CAPTURE_DEBUG,
     } = {},
   ) {
-    const gradient = this.backgroundController?.gradientController;
-    if (gradient?.shouldBlitForCapture?.()) {
-      const transparentSetup = applyTransparentCaptureSetup({
-        renderer: this.renderer,
-        scene: this.scene,
-        composer: this.composer,
-        backgroundController: this.backgroundController,
-        postPipeline: this.postPipeline,
-      });
-      try {
-        const topDown = readGradientMergedTopDownRgba({
-          renderer: this.renderer,
-          scene: this.scene,
-          camera: this.camera,
-          composer: this.composer,
-          width: fallbackWidth,
-          height: fallbackHeight,
-          getGradientRgba: () => gradient.getCaptureGradientRgba(),
-          renderFrame: () => retryRender?.(),
-          finishGpu: () => {
-            const gl = this.renderer.getContext();
-            if (gl && typeof gl.finish === 'function') {
-              gl.finish();
-            }
-          },
-        });
-        return this._pixelsTopDownToCanvas(topDown, fallbackWidth, fallbackHeight, {
-          cinematicLetterbox219,
-          forceOpaqueAlpha: true,
-        });
-      } finally {
-        restoreTransparentCaptureSetup(
-          {
-            renderer: this.renderer,
-            scene: this.scene,
-            composer: this.composer,
-            backgroundController: this.backgroundController,
-            postPipeline: this.postPipeline,
-          },
-          transparentSetup,
-        );
-      }
-    }
-
     const capture = this._readComposerOutputPixels(fallbackWidth, fallbackHeight, {
       allowResample,
       exportScale,

@@ -116,6 +116,46 @@ function localFontVariantSortScore(entry) {
 }
 
 /**
+ * Distinguishing part of a face's full name, with the shared family prefix
+ * removed. e.g. family "OffBit" + fullName "OffBit Dot Bold" -> "Dot Bold".
+ * @param {string | undefined} fullName
+ * @param {string} family
+ * @returns {string}
+ */
+function fontFaceDistinctLabel(fullName, family) {
+  const fn = String(fullName || '').trim();
+  if (!fn) return '';
+  const fam = String(family || '').trim();
+  if (fam && fn.toLowerCase().startsWith(fam.toLowerCase())) {
+    return fn.slice(fam.length).trim() || fn;
+  }
+  return fn;
+}
+
+/**
+ * Some families pack several visually distinct cuts under one family name and
+ * reuse the standard Regular/Bold style slots (e.g. OffBit ships Regular, Dot,
+ * and 101 cuts all as "OffBit · Regular"). Those collide on weight-derived
+ * labels, so the extra cuts look missing in the weight dropdown. When labels
+ * collide, fall back to the distinguishing part of each face's full name so
+ * every cut stays pickable. No-op for well-formed families (unique labels).
+ * @param {string} family
+ * @param {Array<{ styleLabel: string, fullName?: string }>} variants
+ */
+function disambiguateVariantStyleLabels(family, variants) {
+  const labelCounts = new Map();
+  for (const variant of variants) {
+    const key = variant.styleLabel.toLowerCase();
+    labelCounts.set(key, (labelCounts.get(key) || 0) + 1);
+  }
+  for (const variant of variants) {
+    if ((labelCounts.get(variant.styleLabel.toLowerCase()) || 0) <= 1) continue;
+    const distinct = fontFaceDistinctLabel(variant.fullName, family);
+    if (distinct) variant.styleLabel = distinct;
+  }
+}
+
+/**
  * @param {Array<{ family?: string, fullName?: string, postscriptName?: string, style?: string, weight?: number | string }>} fonts
  * @returns {Array<{ family: string, defaultPostscriptName: string, variants: Array<{ postscriptName: string, fullName?: string, styleLabel: string, weight: number | null, styleRaw: string }> }>}
  */
@@ -158,7 +198,9 @@ function groupLocalFontsByFamily(fonts) {
     for (const variant of familyGroup.variants) {
       if (!deduped.has(variant.postscriptName)) deduped.set(variant.postscriptName, variant);
     }
-    const variants = [...deduped.values()].sort((a, b) => {
+    const variants = [...deduped.values()];
+    disambiguateVariantStyleLabels(familyGroup.family, variants);
+    variants.sort((a, b) => {
       const scoreA = localFontVariantSortScore(a);
       const scoreB = localFontVariantSortScore(b);
       if (scoreA !== scoreB) return scoreA - scoreB;

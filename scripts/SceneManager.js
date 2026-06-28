@@ -106,7 +106,7 @@ import { TransformController } from './render/TransformController.js';
 import { LensDirtController } from './render/LensDirtController.js';
 import { BackgroundController } from './render/BackgroundController.js';
 import { BackgroundGradientController } from './render/backgroundGradient/BackgroundGradientController.js';
-import { getDrawingBufferPixels } from './render/drawingBufferSize.js';
+import { getViewportBackingStorePixels } from './render/drawingBufferSize.js';
 import { BackgroundImageController } from './render/backgroundImage/BackgroundImageController.js';
 import { loadBackgroundImageElement } from './render/backgroundImage/backgroundImageCanvas.js';
 import { normalizeBackgroundImage } from './render/backgroundImage/backgroundImageDefaults.js';
@@ -1931,7 +1931,7 @@ export class SceneManager {
       this.syncPostProcessingForLogicalSize(szNow.x, szNow.y);
     }
     this._applyViewportSizeFromLayout();
-    const db = getDrawingBufferPixels(this.renderer);
+    const db = getViewportBackingStorePixels(this.renderer);
     this.backgroundGradientController?.syncToDrawingBuffer?.(
       db.width,
       db.height,

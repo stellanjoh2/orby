@@ -1,17 +1,10 @@
 import * as THREE from 'three';
 import { getComposerOutputRenderTarget } from '../composerOutputBuffer.js';
+import { pinRendererViewportLogical } from '../resetRendererFullViewport.js';
 
 /** @param {import('three').WebGLRenderer} renderer @param {number} width @param {number} height */
 export function pinRenderTargetViewport(renderer, width, height) {
-  const w = Math.max(1, Math.floor(width));
-  const h = Math.max(1, Math.floor(height));
-  renderer.setViewport(0, 0, w, h);
-  if (typeof renderer.setScissor === 'function') {
-    renderer.setScissor(0, 0, w, h);
-  }
-  if (typeof renderer.setScissorTest === 'function') {
-    renderer.setScissorTest(false);
-  }
+  pinRendererViewportLogical(renderer, width, height);
 }
 
 /**

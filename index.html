@@ -1076,12 +1076,23 @@
                       <span>Shader Lab</span>
                       <button
                         type="button"
+                        id="creativeLookBakeCurrentThumbBtn"
+                        class="creative-look-bake-thumbs-btn"
+                        style="text-transform: uppercase"
+                        hidden
+                        data-tooltip="Dev: bake only the selected Shader Lab preset thumbnail from the current mesh and camera (npm run dev only)"
+                      >
+                        RRC
+                      </button>
+                      <button
+                        type="button"
                         id="creativeLookBakeThumbsBtn"
                         class="creative-look-bake-thumbs-btn"
+                        style="text-transform: uppercase"
                         hidden
-                        data-tooltip="Dev: bake Shader Lab preset thumbnails from the current mesh and camera (npm run dev only)"
+                        data-tooltip="Dev: bake all Shader Lab preset thumbnails from the current mesh and camera (npm run dev only)"
                       >
-                        re-render thumbs
+                        RRA
                       </button>
                     </div>
                     <div class="creative-look-heading-actions">
@@ -1137,8 +1148,11 @@
                     <button type="button" data-creative-look="wire-pulse" class="hdri-icon" data-tooltip="Wire Pulse — holographic wireframe with emissive light pulses. Intensity = line thickness. Scale = pulse spacing">
                       <img src="./assets/images/creative-look-wire-pulse.png" alt="Wire Pulse" width="128" height="128" />
                     </button>
-                    <button type="button" data-creative-look="fractal-storm" class="hdri-icon" data-tooltip="Fractal Storm — domain-warped height map with glowing topographic contour lines. Intensity = line glow. Scale = contour density">
-                      <img src="./assets/images/creative-look-fractal-storm.png" alt="Fractal Storm" width="128" height="128" />
+                    <button type="button" data-creative-look="fractal-storm" class="hdri-icon" data-tooltip="Topo Minimal — domain-warped height map with glowing topographic contour lines. Intensity = line glow. Scale = contour density">
+                      <img src="./assets/images/creative-look-fractal-storm.png" alt="Topo Minimal" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="holo-topo" class="hdri-icon" data-tooltip="Holographic 2 — smooth liquid thermal-chrome; oil-slick rainbow iridescence shifts with view angle. Intensity = rainbow band richness. Scale = flow size">
+                      <img src="./assets/images/creative-look-holo-topo.png" alt="Holographic 2" width="128" height="128" />
                     </button>
                     <button type="button" data-creative-look="flow-field" class="hdri-icon" data-tooltip="Flow Field — animated color drift in world space">
                       <img src="./assets/images/creative-look-flow-field.png" alt="Flow Field" width="128" height="128" />
@@ -1299,7 +1313,7 @@
                     <span class="value" data-output="creativeLookMasterHue">0°</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Pushes each preset's signature effect. 1 = default. Wire Pulse: line thickness. Dust Field: point size. Fractal Storm, Neon Edge, Holographic, Scanline Hologram, and Spectral Storm also respond.">Intensity</span>
+                    <span data-tooltip="Pushes each preset's signature effect. 1 = default. Wire Pulse: line thickness. Dust Field: point size. Topo Minimal, Neon Edge, Holographic, Scanline Hologram, and Spectral Storm also respond.">Intensity</span>
                     <input
                       type="range"
                       id="creativeLookIntensity"
@@ -1323,7 +1337,7 @@
                     <span class="value" data-output="creativeLookLiftCrush">0.00</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Speed for animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Fractal Storm, Dust Field, Spectral Storm). True Chrome / Glass ignore. Pause freezes motion.">Anim Speed</span>
+                    <span data-tooltip="Speed for animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Topo Minimal, Dust Field, Spectral Storm). True Chrome / Glass ignore. Pause freezes motion.">Anim Speed</span>
                     <input
                       type="range"
                       id="creativeLookShaderAnimationSpeed"
@@ -1335,7 +1349,7 @@
                     <span class="value" data-output="creativeLookShaderAnimationSpeed">0.40</span>
                   </label>
                   <label class="slider-line" id="creativeLookPatternScaleRow">
-                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Fractal Storm, Dust Field, Spectral Storm). Voxel HD: fixed at 0.50×. EGA / C64 / Game Boy / NES / etc.: fixed grid. True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2×. PSX: fixed at 2.5×. VGA/DOS 3D: fixed at 2.2× (decimation runs once at apply). Watercolour: brush size &amp; wobble. Sketch uses Stroke Width / Raster Size instead.">Scale</span>
+                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Topo Minimal, Dust Field, Spectral Storm). Voxel HD: fixed at 0.50×. EGA / C64 / Game Boy / NES / etc.: fixed grid. True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2×. PSX: fixed at 2.5×. VGA/DOS 3D: fixed at 2.2× (decimation runs once at apply). Watercolour: brush size &amp; wobble. Sketch uses Stroke Width / Raster Size instead.">Scale</span>
                     <input
                       type="range"
                       id="creativeLookPatternScale"
@@ -1409,7 +1423,7 @@
                     type="button"
                     id="creativeLookPauseAnimations"
                     class="ghost-btn small creative-look-pause-btn"
-                    data-tooltip="Freeze animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Fractal Storm, Dust Field, Spectral Storm). True Chrome and Toon keep following the scene / HDRI."
+                    data-tooltip="Freeze animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Topo Minimal, Dust Field, Spectral Storm). True Chrome and Toon keep following the scene / HDRI."
                   >
                     Pause shader animations
                   </button>
@@ -2684,7 +2698,7 @@
                 <!-- Global Light Controls -->
                 <div class="subsection" data-subsection="globalLights">
                   <label class="slider-line">
-                    <span data-tooltip="Overall light intensity multiplier">Strength</span>
+                    <span data-tooltip="Overall light intensity multiplier">Intensity</span>
                     <input
                       id="lightsMaster"
                       type="range"
@@ -2771,12 +2785,12 @@
                     data-effect-foldout="key-light"
                     aria-hidden="true"
                   >
-                <label class="color-line light-color-row" data-light="key">
+                  <label class="color-line light-color-row" data-light="key">
                     <span>Color</span>
                   <input type="color" class="color-chip light-chip" value="#ffdfc9" />
                 </label>
                   <label class="slider-line">
-                    <span>Strength</span>
+                    <span>Intensity</span>
                     <input
                       id="keyLightStrength"
                       type="range"
@@ -2942,7 +2956,7 @@
                     <input type="color" class="color-chip light-chip" value="#b0c7ff" />
                 </label>
                 <label class="slider-line">
-                  <span>Strength</span>
+                  <span>Intensity</span>
                   <input
                       id="fillLightStrength"
                     type="range"
@@ -3016,7 +3030,7 @@
                     <input type="color" class="color-chip light-chip" value="#a0eaf9" />
                   </label>
                 <label class="slider-line">
-                    <span>Strength</span>
+                    <span>Intensity</span>
                   <input
                       id="rimLightStrength"
                       type="range"
@@ -3090,7 +3104,7 @@
                     <input type="color" class="color-chip light-chip" value="#7c8ca6" />
                   </label>
                   <label class="slider-line">
-                    <span>Strength</span>
+                    <span>Intensity</span>
                     <input
                       id="ambientLightStrength"
                       type="range"
@@ -4020,7 +4034,7 @@
                     aria-hidden="true"
                   >
                   <label class="slider-line">
-                    <span>Intensity</span>
+                    <span>Strength</span>
                     <input
                       id="ambientOcclusionIntensity"
                       type="range"
@@ -4720,7 +4734,7 @@
                     aria-hidden="true"
                   >
                   <label class="slider-line">
-                    <span>Intensity</span>
+                    <span>Strength</span>
                     <input
                       id="grainIntensity"
                       type="range"
@@ -4767,7 +4781,7 @@
                     aria-hidden="true"
                   >
                   <label class="slider-line">
-                    <span>Intensity</span>
+                    <span>Strength</span>
                     <input
                       id="vignetteIntensity"
                       type="range"

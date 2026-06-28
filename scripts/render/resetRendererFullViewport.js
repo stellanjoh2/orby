@@ -15,3 +15,17 @@ export function resetRendererFullViewport(renderer) {
     renderer.setScissorTest(false);
   }
 }
+
+/** Pin GL viewport/scissor to logical width/height (Three multiplies by pixelRatio internally). */
+export function pinRendererViewportLogical(renderer, logicalW, logicalH) {
+  if (!renderer) return;
+  const w = Math.max(1, Math.floor(logicalW));
+  const h = Math.max(1, Math.floor(logicalH));
+  renderer.setViewport(0, 0, w, h);
+  if (typeof renderer.setScissor === 'function') {
+    renderer.setScissor(0, 0, w, h);
+  }
+  if (typeof renderer.setScissorTest === 'function') {
+    renderer.setScissorTest(false);
+  }
+}

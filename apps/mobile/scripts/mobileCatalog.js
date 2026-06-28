@@ -56,7 +56,7 @@ export const MOBILE_SHADER_PRESETS_CUT = [
   { id: 'flow-field', label: 'Flow Field' },
   { id: 'voronoi', label: 'Voronoi' },
   { id: 'wire-pulse', label: 'Wire Pulse' },
-  { id: 'fractal-storm', label: 'Fractal Storm' },
+  { id: 'fractal-storm', label: 'Topo Minimal' },
   { id: 'dust-field', label: 'Dust Field' },
   { id: 'spectral-storm', label: 'Spectral Storm' },
   { id: 'dither-crosshatch', label: 'Crosshatch' },

@@ -69,16 +69,7 @@ export class MeshglRenderPass extends RenderPass {
         resetRendererFullViewport(renderer);
       }
 
-      if (useCaptureBlit) {
-        // Gradient is composited in CPU after readback — transparent GL background only.
-        if (this.clear === true) {
-          renderer.clear(
-            renderer.autoClearColor,
-            renderer.autoClearDepth,
-            renderer.autoClearStencil,
-          );
-        }
-      } else if (this.clear === true) {
+      if (this.clear === true) {
         renderer.clear(
           renderer.autoClearColor,
           renderer.autoClearDepth,

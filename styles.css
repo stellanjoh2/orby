@@ -9198,7 +9198,7 @@ body.ui-hidden .shelf {
 }
 
 .font-extrude-file-fallback {
-  margin: 0;
+  margin: var(--shelf-section-gap) 0 0;
 }
 
 .font-extrude-system-fonts-prompt {

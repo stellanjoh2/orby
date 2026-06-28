@@ -127,27 +127,44 @@ if (!isMobileLanding()) {
     .then(({ bakeCreativeLookThumbnails }) => {
       window.orby.dev.bakeCreativeLookThumbnails = bakeCreativeLookThumbnails;
 
-      const bakeBtn = document.getElementById('creativeLookBakeThumbsBtn');
-      if (bakeBtn) {
-        bakeBtn.hidden = false;
-        bakeBtn.addEventListener('click', async () => {
-          if (bakeBtn.disabled) return;
-          bakeBtn.disabled = true;
-          const prevLabel = bakeBtn.textContent;
-          bakeBtn.textContent = 'baking…';
+      /**
+       * @param {HTMLButtonElement | null} btn
+       * @param {() => object} resolveOptions
+       */
+      const wireBakeButton = (btn, resolveOptions) => {
+        if (!btn) return;
+        btn.hidden = false;
+        btn.addEventListener('click', async () => {
+          if (btn.disabled) return;
+          btn.disabled = true;
+          const prevLabel = btn.textContent;
+          btn.textContent = 'baking…';
           try {
-            await bakeCreativeLookThumbnails();
+            await bakeCreativeLookThumbnails(resolveOptions());
           } catch (err) {
             console.error('[Orby dev] Thumbnail bake failed', err);
             ui?.showToast?.(err?.message || 'Thumbnail bake failed', 3600, {
               notification: false,
             });
           } finally {
-            bakeBtn.disabled = false;
-            bakeBtn.textContent = prevLabel;
+            btn.disabled = false;
+            btn.textContent = prevLabel;
           }
         });
-      }
+      };
+
+      wireBakeButton(
+        document.getElementById('creativeLookBakeThumbsBtn'),
+        () => ({}),
+      );
+
+      wireBakeButton(document.getElementById('creativeLookBakeCurrentThumbBtn'), () => {
+        const preset = window.orby?.stateStore?.getState?.()?.creativeLook?.preset;
+        if (!preset) {
+          throw new Error('No Shader Lab preset selected — pick a look first.');
+        }
+        return { presets: [preset] };
+      });
 
     })
     .catch((err) => {

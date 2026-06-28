@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { APP_BACKGROUND } from '../constants.js';
-import { getDrawingBufferPixels } from '../render/drawingBufferSize.js';
+import { getViewportBackingStorePixels } from '../render/drawingBufferSize.js';
 import { resetRendererFullViewport } from '../render/resetRendererFullViewport.js';
 import { isSketchColourCreativeLookPreset } from '../render/CreativeLookMaterials.js';
 import {
@@ -269,9 +269,9 @@ export class ComposerLifecycle {
         if (captureBlit) {
           const { width: cw, height: ch } = gradient.getCapturePixelSize();
           gradient.syncToDrawingBuffer(cw, ch, { forceRedraw: true });
-          this.scene.background = null;
+          gradient.applyIfActive();
         } else {
-          const db = getDrawingBufferPixels(this.renderer);
+          const db = getViewportBackingStorePixels(this.renderer);
           gradient?.syncToDrawingBuffer?.(db.width, db.height, { forceRedraw: true });
         }
         this.syncRendererClearForSceneBackground();

@@ -158,11 +158,11 @@ export const MOBILE_FX_LENS_ROWS = [
   },
 ];
 
-/** Mobile Adjust — bloom intensity (0 = off) + radius as paired sliders. */
+/** Mobile Adjust — bloom strength (0 = off) + radius as paired sliders. */
 export const MOBILE_FX_BLOOM_SLIDERS = /** @type {FxSliderDef[]} */ ([
   {
     path: 'bloom.strength',
-    label: 'Bloom intensity',
+    label: 'Bloom strength',
     min: 0,
     max: MOBILE_BLOOM_STRENGTH_MAX,
     step: 0.01,
