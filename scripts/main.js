@@ -11,6 +11,7 @@ import {
   isMobileDevice,
   isMobileLanding,
 } from './orbyMobileLanding.js';
+import { ensureShelfPanelsStitched } from './stitchIndexHtmlClient.js';
 
 /**
  * Safari has heavier repaint/compositing cost for large animated blur layers.
@@ -85,135 +86,147 @@ void import('./marketing/marketingPerformanceTier.js')
   .then((mod) => mod.applyMarketingPerformanceClass())
   .catch(() => {});
 
-const eventBus = new EventBus();
-const stateStore = new StateStore();
-const ui = new UIManager(eventBus, stateStore);
-ui.initShell();
-const tooltips = new TooltipController();
-const scene = new SceneManager(eventBus, stateStore, ui);
-scene.setTooltipController(tooltips);
+async function boot() {
+  try {
+    await ensureShelfPanelsStitched();
+  } catch (err) {
+    console.error('[Orby] Shelf panel stitch failed', err);
+  }
 
-/** Gamepad poll loop — deferred until first studio entrance (see UIManager.ensureStudioUiReady). */
-let gamepad = null;
-function ensureGamepad() {
-  if (gamepad) return gamepad;
-  gamepad = new GamepadController({
-    cameraController: scene.cameraController,
-    stateStore,
-    eventBus,
-    uiManager: ui,
-    sceneManager: scene,
-  });
-  return gamepad;
-}
+  const eventBus = new EventBus();
+  const stateStore = new StateStore();
+  const ui = new UIManager(eventBus, stateStore);
+  ui.initShell();
+  const tooltips = new TooltipController();
+  const scene = new SceneManager(eventBus, stateStore, ui);
+  scene.setTooltipController(tooltips);
 
-// WebGL studio boots on first model load (see SceneManager.ensureStudioReady).
-
-window.orby = {
-  eventBus,
-  stateStore,
-  ui,
-  scene,
-  tooltips,
-  ensureGamepad,
-  dev: {},
-  get gamepad() {
+  /** Gamepad poll loop — deferred until first studio entrance (see UIManager.ensureStudioUiReady). */
+  let gamepad = null;
+  function ensureGamepad() {
+    if (gamepad) return gamepad;
+    gamepad = new GamepadController({
+      cameraController: scene.cameraController,
+      stateStore,
+      eventBus,
+      uiManager: ui,
+      sceneManager: scene,
+    });
     return gamepad;
-  },
-};
-
-if (!isMobileLanding()) {
-  void import('./dev/bakeCreativeLookThumbnails.js')
-    .then(({ bakeCreativeLookThumbnails }) => {
-      window.orby.dev.bakeCreativeLookThumbnails = bakeCreativeLookThumbnails;
-
-      /**
-       * @param {HTMLButtonElement | null} btn
-       * @param {() => object} resolveOptions
-       */
-      const wireBakeButton = (btn, resolveOptions) => {
-        if (!btn) return;
-        btn.hidden = false;
-        btn.addEventListener('click', async () => {
-          if (btn.disabled) return;
-          btn.disabled = true;
-          const prevLabel = btn.textContent;
-          btn.textContent = 'baking…';
-          try {
-            await bakeCreativeLookThumbnails(resolveOptions());
-          } catch (err) {
-            console.error('[Orby dev] Thumbnail bake failed', err);
-            ui?.showToast?.(err?.message || 'Thumbnail bake failed', 3600, {
-              notification: false,
-            });
-          } finally {
-            btn.disabled = false;
-            btn.textContent = prevLabel;
-          }
-        });
-      };
-
-      wireBakeButton(
-        document.getElementById('creativeLookBakeThumbsBtn'),
-        () => ({}),
-      );
-
-      wireBakeButton(document.getElementById('creativeLookBakeCurrentThumbBtn'), () => {
-        const preset = window.orby?.stateStore?.getState?.()?.creativeLook?.preset;
-        if (!preset) {
-          throw new Error('No Shader Lab preset selected — pick a look first.');
-        }
-        return { presets: [preset] };
-      });
-
-    })
-    .catch((err) => {
-      console.warn('[Orby dev] Thumbnail bake module failed to load', err);
-    });
-
-  void import('./dev/exportDimensionSpotChecks.js')
-    .then(({ runExportDimensionSpotChecks, logCaptureSizeMatrix }) => {
-      window.orby.dev.runExportDimensionSpotChecks = (opts) =>
-        runExportDimensionSpotChecks(scene, opts);
-      window.orby.dev.logCaptureSizeMatrix = () => logCaptureSizeMatrix(scene);
-    })
-    .catch((err) => {
-      console.warn('[Orby dev] Export dimension spot checks failed to load', err);
-    });
-}
-
-/** Dev: ?exportOverlayDebug=1 — open PNG export overlay on the dropzone for layout QA */
-try {
-  const q = new URLSearchParams(window.location.search);
-  if (q.get('exportOverlayDebug') === '1' && !isMobileLanding()) {
-    requestAnimationFrame(async () => {
-      await ui.ensureStudioUiReady();
-      ui.toggleOfflineExportOverlayPreview?.();
-    });
   }
-} catch {
-  /* URL blocked */
-}
 
-{
-  const mobileLanding = isMobileLanding();
-  const bootMarketing = () => {
-    import('./marketing/orbyMarketingPage.js')
-      .then((mod) =>
-        mod.initOrbyMarketingPage(mobileLanding ? { lazy: false } : undefined),
-      )
-      .catch((err) => {
-        console.warn('[Orby] Marketing page module failed to load', err);
-      });
+  // WebGL studio boots on first model load (see SceneManager.ensureStudioReady).
+
+  window.orby = {
+    eventBus,
+    stateStore,
+    ui,
+    scene,
+    tooltips,
+    ensureGamepad,
+    dev: {},
+    get gamepad() {
+      return gamepad;
+    },
   };
-  if (mobileLanding) {
-    bootMarketing();
-  } else {
-    const scheduleMarketing =
-      typeof window.requestIdleCallback === 'function'
-        ? window.requestIdleCallback.bind(window)
-        : (cb) => window.setTimeout(cb, 1600);
-    scheduleMarketing(bootMarketing);
+
+  if (!isMobileLanding()) {
+    void import('./dev/bakeCreativeLookThumbnails.js')
+      .then(({ bakeCreativeLookThumbnails }) => {
+        window.orby.dev.bakeCreativeLookThumbnails = bakeCreativeLookThumbnails;
+
+        /**
+         * @param {HTMLButtonElement | null} btn
+         * @param {() => object} resolveOptions
+         */
+        const wireBakeButton = (btn, resolveOptions) => {
+          if (!btn) return;
+          btn.hidden = false;
+          btn.addEventListener('click', async () => {
+            if (btn.disabled) return;
+            btn.disabled = true;
+            const prevLabel = btn.textContent;
+            btn.textContent = 'baking…';
+            try {
+              await bakeCreativeLookThumbnails(resolveOptions());
+            } catch (err) {
+              console.error('[Orby dev] Thumbnail bake failed', err);
+              ui?.showToast?.(err?.message || 'Thumbnail bake failed', 3600, {
+                notification: false,
+              });
+            } finally {
+              btn.disabled = false;
+              btn.textContent = prevLabel;
+            }
+          });
+        };
+
+        wireBakeButton(
+          document.getElementById('creativeLookBakeThumbsBtn'),
+          () => ({}),
+        );
+
+        wireBakeButton(document.getElementById('creativeLookBakeCurrentThumbBtn'), () => {
+          const preset = window.orby?.stateStore?.getState?.()?.creativeLook?.preset;
+          if (!preset) {
+            throw new Error('No Shader Lab preset selected — pick a look first.');
+          }
+          return { presets: [preset] };
+        });
+
+      })
+      .catch((err) => {
+        console.warn('[Orby dev] Thumbnail bake module failed to load', err);
+      });
+
+    void import('./dev/exportDimensionSpotChecks.js')
+      .then(({ runExportDimensionSpotChecks, logCaptureSizeMatrix }) => {
+        window.orby.dev.runExportDimensionSpotChecks = (opts) =>
+          runExportDimensionSpotChecks(scene, opts);
+        window.orby.dev.logCaptureSizeMatrix = () => logCaptureSizeMatrix(scene);
+      })
+      .catch((err) => {
+        console.warn('[Orby dev] Export dimension spot checks failed to load', err);
+      });
+  }
+
+  /** Dev: ?exportOverlayDebug=1 — open PNG export overlay on the dropzone for layout QA */
+  try {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('exportOverlayDebug') === '1' && !isMobileLanding()) {
+      requestAnimationFrame(async () => {
+        await ui.ensureStudioUiReady();
+        ui.toggleOfflineExportOverlayPreview?.();
+      });
+    }
+  } catch {
+    /* URL blocked */
+  }
+
+  {
+    const mobileLanding = isMobileLanding();
+    const bootMarketing = () => {
+      import('./marketing/orbyMarketingPage.js')
+        .then((mod) =>
+          mod.initOrbyMarketingPage(mobileLanding ? { lazy: false } : undefined),
+        )
+        .catch((err) => {
+          console.warn('[Orby] Marketing page module failed to load', err);
+        });
+    };
+    if (mobileLanding) {
+      bootMarketing();
+    } else {
+      const scheduleMarketing =
+        typeof window.requestIdleCallback === 'function'
+          ? window.requestIdleCallback.bind(window)
+          : (cb) => window.setTimeout(cb, 1600);
+      scheduleMarketing(bootMarketing);
+    }
   }
 }
+
+boot().catch((err) => {
+  console.error('[Orby] Boot failed', err);
+});
 

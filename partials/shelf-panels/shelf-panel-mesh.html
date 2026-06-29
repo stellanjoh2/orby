@@ -1,0 +1,1543 @@
+            <h2 class="panel-header-title" data-header="mesh">Object</h2>
+            <section class="panel visible" data-panel="mesh">
+
+              <div class="panel-block">
+                <div class="block-title">Display</div>
+                <div class="mode-icons" role="group">
+                  <label class="mode-icon" data-mode="shaded" data-tooltip="Shaded — Full lighting and materials">
+                    <input
+                      type="radio"
+                      name="shading"
+                      value="shaded"
+                      checked
+                    />
+                    <img src="./assets/images/modeicon-color.png" alt="Shaded" />
+                  </label>
+                  <label class="mode-icon" data-mode="textures" data-tooltip="Unlit — Textures without lighting">
+                    <input type="radio" name="shading" value="textures" />
+                    <span class="mode-icon__flat" role="img" aria-label="Unlit"></span>
+                  </label>
+                  <label class="mode-icon" data-mode="clay" data-tooltip="Clay — Uniform material preview">
+                    <input type="radio" name="shading" value="clay" />
+                    <img src="./assets/images/modeicon-clay.png" alt="Clay" />
+                  </label>
+                  <label class="mode-icon" data-mode="wireframe" data-tooltip="Wireframe — Mesh structure view">
+                    <input type="radio" name="shading" value="wireframe" />
+                    <img src="./assets/images/modeicon-wire.png" alt="Wire" />
+                  </label>
+                </div>
+              </div>
+
+              <div class="panel-block" id="mapInspectBlock" hidden>
+                <div class="block-title">Maps</div>
+                <div
+                  id="mapInspectGrid"
+                  class="map-inspect-grid"
+                  role="group"
+                  aria-label="Texture map preview"
+                ></div>
+              </div>
+
+              <div class="panel-block" id="fbxMapSlotsBlock" hidden>
+                <div class="subsection" data-subsection="fbxMapSlots" id="fbxMapSlotsSubsection">
+                  <div class="block-title">
+                    <span class="block-title-name">
+                      <span>Map Slots</span>
+                      <span class="dev-badge" data-tooltip="This feature is still under development" tabindex="0" role="img" aria-label="This feature is still under development"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
+                    </span>
+                  </div>
+                  <p class="panel-hint map-slots-hint">FBX — drop the whole folder (FBX + PNGs) to auto-assign maps named like MaterialName_BaseColor.png. To override one slot, pick a material target, then assign per part. Packed ORM: red = AO, green = roughness, blue = metallic.</p>
+                  <label class="select-line map-slot-material-line" id="fbxMapMaterialLine" hidden>
+                    <span data-tooltip="FBX files often duplicate materials per mesh; we group by material name.">Material</span>
+                    <select id="fbxMapMaterial" aria-label="Material to assign textures to"></select>
+                  </label>
+                  <input type="file" id="fbxMapFileInput" class="sr-only" accept="image/*,.png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" tabindex="-1" aria-hidden="true" />
+                  <div class="map-slot-row">
+                    <span class="map-slot-label">Albedo</span>
+                    <div class="map-slot-control" data-fbx-map-row="albedo">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="albedo">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="albedo" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="albedo" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="map-slot-row">
+                    <span class="map-slot-label">Normal</span>
+                    <div class="map-slot-control" data-fbx-map-row="normal">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="normal">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="normal" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="normal" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="map-slot-row">
+                    <span class="map-slot-label" data-tooltip="Single texture: ambient occlusion in red, roughness in green, metallic in blue">ORM Packed</span>
+                    <div class="map-slot-control" data-fbx-map-row="orm">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="orm">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="orm" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="orm" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="map-slot-row">
+                    <span class="map-slot-label">Roughness</span>
+                    <div class="map-slot-control" data-fbx-map-row="roughness">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="roughness">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="roughness" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="roughness" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="map-slot-row">
+                    <span class="map-slot-label">Metallic</span>
+                    <div class="map-slot-control" data-fbx-map-row="metallic">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="metallic">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="metallic" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="metallic" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="map-slot-row">
+                    <span class="map-slot-label">Occlusion</span>
+                    <div class="map-slot-control" data-fbx-map-row="occlusion">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="occlusion">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="occlusion" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="occlusion" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="map-slot-row">
+                    <span class="map-slot-label">Displacement</span>
+                    <div class="map-slot-control" data-fbx-map-row="displacement">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="displacement">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="displacement" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="displacement" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="map-slot-row">
+                    <span class="map-slot-label">Emissive</span>
+                    <div class="map-slot-control" data-fbx-map-row="emissive">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="emissive">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="emissive" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="emissive" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="map-slot-row">
+                    <span class="map-slot-label">Opacity</span>
+                    <div class="map-slot-control" data-fbx-map-row="opacity">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="opacity">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="opacity" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="opacity" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="panel-block-divider map-slots-tuning-divider" aria-hidden="true"></div>
+                  <p class="panel-hint map-slots-tuning-title">Map tuning</p>
+                  <label class="select-line map-slot-tuning-line">
+                    <span data-tooltip="How tangent normals are oriented. Match albedo works for most FBX folder drops; use OpenGL or DirectX when bumps look wrong.">Normal convention</span>
+                    <select id="fbxMapNormalConvention" aria-label="Normal map convention">
+                      <option value="match-albedo">Match albedo</option>
+                      <option value="opengl">OpenGL</option>
+                      <option value="directx">DirectX</option>
+                    </select>
+                  </label>
+                  <label class="select-line map-slot-tuning-line">
+                    <span data-tooltip="Roughness, metallic, AO, and ORM can use UV2 when your bake used a second set. Normal maps always use UV1.">Detail maps UV</span>
+                    <select id="fbxMapPbrUvChannel" aria-label="UV channel for detail maps">
+                      <option value="0">UV1 (first)</option>
+                      <option value="1">UV2 (second)</option>
+                    </select>
+                  </label>
+                  <label class="select-line map-slot-tuning-line">
+                    <span data-tooltip="Channel order inside packed ORM textures. glTF/Blender/Unreal: R=AO, G=roughness, B=metallic. Unity HDRP: R=metallic, G=AO, B=roughness.">ORM packing</span>
+                    <select id="fbxMapOrmPacking" aria-label="Packed ORM channel layout">
+                      <option value="gltf">glTF / Blender / Unreal</option>
+                      <option value="unity-hdrp">Unity HDRP</option>
+                    </select>
+                  </label>
+                  <div class="export-controls map-slots-action-row">
+                    <button type="button" class="accent-action-btn" id="fbxMapRescanFolder" data-tooltip="Re-match textures from the dropped folder into empty slots only.">Scan folder again</button>
+                    <button type="button" class="accent-action-btn" id="fbxMapApplyTuningAll" data-tooltip="Copy this material's tuning to every material in the FBX.">Apply tuning to all</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="subsection" data-subsection="material">
+                  <div class="block-title has-reset">
+                    <span>Material</span>
+                    <button class="block-reset-btn" data-reset="material" aria-label="Reset Material" data-tooltip="Reset Material settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                  <label class="slider-line">
+                    <span data-tooltip="Adjust overall material brightness">Brightness</span>
+                    <input
+                      id="materialBrightness"
+                      type="range"
+                      min="0"
+                      max="5"
+                      step="0.01"
+                      value="1.75"
+                    />
+                    <span class="value" data-output="materialBrightness">1.75</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Scales each material's authored metalness — 1.0 matches the file">Metalness</span>
+                    <input
+                      id="materialMetalness"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0"
+                    />
+                    <span class="value" data-output="materialMetalness">0.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Scales each material's authored roughness — 1.0 matches the file">Roughness</span>
+                    <input
+                      id="materialRoughness"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="1"
+                    />
+                    <span class="value" data-output="materialRoughness">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Add glowing emissive light to materials (great for sci-fi effects)">Emissive</span>
+                    <input
+                      id="materialEmissive"
+                      type="range"
+                      min="0"
+                      max="4"
+                      step="0.01"
+                      value="0"
+                    />
+                    <span class="value" data-output="materialEmissive">0.00</span>
+                  </label>
+                  <div class="slider-line">
+                    <span>Normal Map</span>
+                    <label class="effect-toggle" data-tooltip="Use tangent-space normal maps in Shaded and Clay (full PBR materials only)">
+                      <input type="checkbox" id="clayNormalMap" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Toggle normal maps in shaded and clay modes</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="fresnel">
+                  <div class="block-title has-toggle">
+                    <span>Fresnel</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="fresnel" aria-label="Reset Fresnel" data-tooltip="Reset Fresnel settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable edge lighting effect">
+                        <input type="checkbox" id="toggleFresnel" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Fresnel</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="fresnel"
+                    aria-hidden="true"
+                  >
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="fresnelColor"
+                      class="color-chip"
+                      value="#808080"
+                    />
+                  </label>
+                  <label class="slider-line">
+                    <span>Radius</span>
+                    <input
+                      id="fresnelRadius"
+                      type="range"
+                      min="0.5"
+                      max="5"
+                      step="0.1"
+                      value="2"
+                    />
+                    <span class="value" data-output="fresnelRadius">2.0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="fresnelStrength"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.3"
+                    />
+                    <span class="value" data-output="fresnelStrength">0.30</span>
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider" id="claySubsectionDivider" hidden></div>
+                <div class="subsection" data-subsection="clay" hidden>
+                  <div class="block-title has-reset">
+                    <span>Clay</span>
+                    <button class="block-reset-btn" data-reset="clay" aria-label="Reset Clay" data-tooltip="Reset Clay settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                  <label class="color-line">
+                    <span>Clay Color</span>
+                    <input
+                      type="color"
+                      id="clayColor"
+                      class="color-chip"
+                      value="#808080"
+                    />
+                  </label>
+                </div>
+                <!-- Subsurface: temporarily disabled — set SUBSURFACE_FEATURE_ENABLED in MaterialController.js and uncomment MeshControls / UIManager / EventManager blocks to restore.
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="subsurface">
+                  <div class="block-title has-toggle">
+                    <span>Subsurface</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="subsurface" aria-label="Reset Subsurface" data-tooltip="Reset Subsurface settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable volumetric translucency (PBR transmission — needs Studio HDRI for best results; differs from three.js SubsurfaceScatteringShader demo)">
+                        <input type="checkbox" id="toggleSubsurface" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable subsurface translucency</span>
+                      </label>
+                    </div>
+                  </div>
+                  <label class="slider-line">
+                    <span data-tooltip="Transmission strength — use Shaded or Clay mode; rotate lighting / HDRI to see light through the volume">Translucency</span>
+                    <input
+                      id="subsurfaceTranslucency"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0"
+                    />
+                    <span class="value" data-output="subsurfaceTranslucency">0.00</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Scatter tint</span>
+                    <input
+                      type="color"
+                      id="subsurfaceScatterTint"
+                      class="color-chip"
+                      value="#ffd4b8"
+                    />
+                  </label>
+                </div>
+                -->
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="wireframe">
+                  <div class="block-title has-toggle has-reset">
+                    <span>Wireframe</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="wireframe" aria-label="Reset Wireframe" data-tooltip="Reset Wireframe settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Show wireframe overlay on all display modes">
+                        <input type="checkbox" id="wireframeAlwaysOn" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable wireframe overlay</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="wireframe-settings"
+                    aria-hidden="true"
+                  >
+                  <div class="slider-line">
+                    <span>Only Visible Faces</span>
+                    <label class="effect-toggle" data-tooltip="Hide wireframe lines on back-facing surfaces">
+                      <input type="checkbox" id="wireframeOnlyVisibleFaces" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show wireframe only on visible faces</span>
+                    </label>
+                  </div>
+                  <div class="slider-line">
+                    <span>Hide Mesh</span>
+                    <label class="effect-toggle" data-tooltip="Hide the underlying mesh to show only wireframe">
+                      <input type="checkbox" id="wireframeHideMesh" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Hide mesh</span>
+                    </label>
+                  </div>
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="wireframeColor"
+                      class="color-chip"
+                      value="#c4ff00"
+                    />
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Wireframe line thickness">Thickness</span>
+                    <input
+                      id="wireframeThickness"
+                      type="range"
+                      min="0.5"
+                      max="2.5"
+                      step="0.05"
+                      value="1"
+                    />
+                    <span class="value" data-output="wireframeThickness">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Wireframe line opacity">Opacity</span>
+                    <input
+                      id="wireframeOpacity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="1"
+                    />
+                    <span class="value" data-output="wireframeOpacity">1.00</span>
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="creative-look" data-block="creative-look">
+                  <div class="block-title has-toggle creative-look-heading">
+                    <div class="creative-look-heading-start">
+                      <span>Shader Lab</span>
+                      <button
+                        type="button"
+                        id="creativeLookBakeCurrentThumbBtn"
+                        class="creative-look-bake-thumbs-btn"
+                        style="text-transform: uppercase"
+                        hidden
+                        data-tooltip="Dev: bake only the selected Shader Lab preset thumbnail from the current mesh and camera (npm run dev only)"
+                      >
+                        RRC
+                      </button>
+                      <button
+                        type="button"
+                        id="creativeLookBakeThumbsBtn"
+                        class="creative-look-bake-thumbs-btn"
+                        style="text-transform: uppercase"
+                        hidden
+                        data-tooltip="Dev: bake all Shader Lab preset thumbnails from the current mesh and camera (npm run dev only)"
+                      >
+                        RRA
+                      </button>
+                    </div>
+                    <div class="creative-look-heading-actions">
+                      <button
+                        class="block-reset-btn"
+                        data-reset="creative-look"
+                        aria-label="Reset Shader Lab"
+                        data-tooltip="Reset Shader Lab"
+                      >
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Replace mesh materials with stylized Shader Lab presets (original GLB materials return when off)">
+                        <input type="checkbox" id="creativeLookEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Shader Lab</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    id="creativeLookSectionContainer"
+                    class="creative-look-foldout creative-look-foldout--collapsed"
+                  >
+                    <div class="creative-look-foldout-body">
+                      <div class="creative-look-grid" id="creativeLookGrid">
+                    <div class="creative-look-grid-section">
+                      <p class="creative-look-grid-section-label">General</p>
+                      <div class="hdri-grid">
+                    <button type="button" data-creative-look="toon" class="hdri-icon" data-tooltip="Toon — stepped cel shading with rim">
+                      <img src="./assets/images/creative-look-toon.png" alt="Toon" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="chrome" class="hdri-icon" data-tooltip="True Chrome — PBR metal; reflections follow the current HDRI (strength, rotation, blur)">
+                      <img src="./assets/images/creative-look-chrome.png" alt="True Chrome" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="glass" class="hdri-icon" data-tooltip="Glass — physical transmission &amp; refraction (Three.js); HDRI + scene. Scale = slab thickness / frost">
+                      <img src="./assets/images/creative-look-glass.png" alt="Glass" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="holo-glass" class="hdri-icon" data-tooltip="Holo Glass — physical transmission + thin-film iridescence; animated rainbow rim bands at grazing angles. Scale = slab thickness / frost; Intensity = holo punch">
+                      <img src="./assets/images/creative-look-holo-glass.png" alt="Holo Glass" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="crystal-gem" class="hdri-icon" data-tooltip="Crystal Gem — sapphire body + prismatic dispersion + internal facet fire; physical transmission (IOR 1.77). Scale = facet / inclusion size; Intensity = dispersion &amp; body saturation. HDRI + Render Backdrop recommended.">
+                      <img src="./assets/images/creative-look-crystal-gem.png" alt="Crystal Gem" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="holographic" class="hdri-icon" data-tooltip="Holographic — thin-film rainbow shifts with view angle">
+                      <img src="./assets/images/creative-look-holographic.png" alt="Holographic" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="neon-edge" class="hdri-icon" data-tooltip="Neon Edge — dark core with cyan rim glow">
+                      <img src="./assets/images/creative-look-neon-edge.png" alt="Neon Edge" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="scanline-hologram" class="hdri-icon" data-tooltip="Scanline Hologram — RGB horizontal glitch bands, slice displacement, scrolling scanlines. Scale = line density">
+                      <img src="./assets/images/creative-look-scanline-hologram.png" alt="Scanline Hologram" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="wire-pulse" class="hdri-icon" data-tooltip="Wire Pulse — holographic wireframe with emissive light pulses. Intensity = line thickness. Scale = pulse spacing">
+                      <img src="./assets/images/creative-look-wire-pulse.png" alt="Wire Pulse" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="fractal-storm" class="hdri-icon" data-tooltip="Topo Minimal — domain-warped height map with glowing topographic contour lines. Intensity = line glow. Scale = contour density">
+                      <img src="./assets/images/creative-look-fractal-storm.png" alt="Topo Minimal" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="holo-topo" class="hdri-icon" data-tooltip="Holographic 2 — smooth liquid thermal-chrome; oil-slick rainbow iridescence shifts with view angle. Intensity = rainbow band richness. Scale = flow size">
+                      <img src="./assets/images/creative-look-holo-topo.png" alt="Holographic 2" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="flow-field" class="hdri-icon" data-tooltip="Flow Field — animated color drift in world space">
+                      <img src="./assets/images/creative-look-flow-field.png" alt="Flow Field" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="plasma" class="hdri-icon" data-tooltip="Plasma — psychedelic animated interference pattern">
+                      <img src="./assets/images/creative-look-plasma.png" alt="Plasma" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="chrome-plasma" class="hdri-icon" data-tooltip="Chrome Plasma — hyper-abstract liquid chrome marbling; neon blue, cyan, and magenta on Orby black; slow diagonal flow; Intensity = contrast &amp; chrome punch">
+                      <img src="./assets/images/creative-look-chrome-plasma.png" alt="Chrome Plasma" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="voronoi" class="hdri-icon" data-tooltip="Voronoi — stained-glass cells with dark grout; slow seed drift. Scale = cell size; mid-tone from mesh color">
+                      <img src="./assets/images/creative-look-voronoi.png" alt="Voronoi" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="spectral-storm" class="hdri-icon" data-tooltip="Spectral Storm — very slow BW plasma, extreme contrast (mostly pure black/white), strobing rim">
+                      <img src="./assets/images/creative-look-spectral-storm.png" alt="Spectral Storm" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="dust-field" class="hdri-icon" data-tooltip="Dust Field — 8,000 surface-sampled particles follow your mesh (GLB skinning &amp; morph targets). Intensity = point size. Scale = wobble. Bloom recommended." title="Dust Field">
+                      <img src="./assets/images/creative-look-dust-field.svg" alt="Dust Field" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="thermal" class="hdri-icon" data-tooltip="Thermal — full-scene false-color IR; HDRI + mesh graded together. Lit faces read hot (red/white), silhouettes cool (blue/cyan). Scale = soft ↔ hard color-band seams + halo width (low = smooth FLIR blend, high = poster steps); Intensity = contrast; Object Hue shifts palette; Material brightness = heat gain. Bloom recommended.">
+                      <img src="./assets/images/creative-look-thermal.png" alt="Thermal" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="thermal-extreme" class="hdri-icon" data-tooltip="Thermal Extreme — full-scene crushed poster IR; purple shadows, neon cyan/green mids, pure red hot zones, film grain. Scale = soft ↔ hard band seams, band count &amp; halo width (low = smooth blends, high = hard poster crush); Intensity = punch; Object Hue shifts palette. Bloom recommended.">
+                      <img src="./assets/images/creative-look-thermal-extreme.png" alt="Thermal Extreme" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="thermal-acid" class="hdri-icon" data-tooltip="Thermal Acid — full-scene expressive false-color IR (Thermal 3); cobalt cold, purple/red shadow punch, cyan mids, wide neon-green band, yellow/orange/red hot zones. Scale = soft ↔ hard color-band seams, halo width &amp; post grain (mesh crawl-waves stay fixed); halation bloom + animated sensor grain + crawling mesh heat waves (Anim Speed). Intensity = contrast &amp; hot punch; Material brightness = heat gain. Bloom recommended.">
+                      <img src="./assets/images/creative-look-thermal-acid.png" alt="Thermal Acid" width="128" height="128" />
+                    </button>
+                      </div>
+                    </div>
+                    <div class="creative-look-grid-section">
+                      <p class="creative-look-grid-section-label">Screen pixels</p>
+                      <div class="hdri-grid">
+                    <button type="button" data-creative-look="ega-pixel" class="hdri-icon" data-tooltip="EGA Pixel — 640×350 macro pixels; SCUMM / Monkey Island–inspired 16-color palette with purple/blue dither; colormap cel prepass + 2×2 Bayer; Object Hue shifts palette (Scale &amp; Intensity locked)">
+                      <img src="./assets/images/creative-look-ega-pixel.png" alt="EGA Pixel" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="c64-pixel" class="hdri-icon" data-tooltip="C64 Pixel — 320×200 macro pixels; colormap cel prepass + 16-color palette + 2×2 dither; Object Hue shifts palette (Scale &amp; Intensity locked)">
+                      <img src="./assets/images/creative-look-c64-pixel.png" alt="C64 Pixel" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="gameboy-pixel" class="hdri-icon" data-tooltip="Game Boy — original DMG 4-shade greenscale; 160×144 macro pixels; colormap → luma + Object Hue shifts palette (Scale &amp; Intensity locked)">
+                      <img src="./assets/images/creative-look-gameboy-pixel.png" alt="Game Boy" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="gba-pixel" class="hdri-icon" data-tooltip="Game Boy Advance — 15-bit high-color (32,768); 240×160 macro pixels; colormap cel prepass + 2×2 dither; Object Hue shifts output (Scale &amp; Intensity locked)">
+                      <img src="./assets/images/creative-look-gba-pixel.png" alt="Game Boy Advance" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="nes-pixel" class="hdri-icon" data-tooltip="NES — 2C02 PPU palette (55 unique / 64 indices); 256×224 NTSC macro pixels; colormap cel prepass + 2×2 dither; Object Hue shifts palette (Scale &amp; Intensity locked)">
+                      <img src="./assets/images/creative-look-nes-pixel.png" alt="NES" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="megadrive-pixel" class="hdri-icon" data-tooltip="Mega Drive — 9-bit VDP palette (512 colors); 320×224 NTSC macro pixels; colormap cel prepass + 2×2 dither; Object Hue shifts output (Scale &amp; Intensity locked)">
+                      <img src="./assets/images/creative-look-megadrive-pixel.png" alt="Mega Drive" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="intellivision-pixel" class="hdri-icon" data-tooltip="Intellivision — STIC 16-color palette (Primary + Pastel); 160×96 macro pixels; colormap cel prepass + 2×2 dither; Object Hue shifts palette (Scale &amp; Intensity locked)">
+                      <img src="./assets/images/creative-look-intellivision-pixel.png" alt="Intellivision" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="apple2-pixel" class="hdri-icon" data-tooltip="Apple II — HGR 280×192 VRAM dots; orange/green artifact fills (Oil's Well style), white on peaks only; MSB phase every 7 px; Object Hue (Scale &amp; Intensity locked)">
+                      <img src="./assets/images/creative-look-apple2-pixel.png" alt="Apple II" width="128" height="128" />
+                    </button>
+                      </div>
+                    </div>
+                    <div class="creative-look-grid-section">
+                      <p class="creative-look-grid-section-label">Dither</p>
+                      <div class="hdri-grid">
+                    <button type="button" data-creative-look="dither-neutral" class="hdri-icon" data-tooltip="Neutral — hard square pixels with 4×4 Bayer ordered dither; default Scale 0 (finest), Intensity 2; Object Hue shifts output">
+                      <img src="./assets/images/creative-look-dither-neutral.png" alt="Neutral Dither" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="dither-tritone" class="hdri-icon" data-tooltip="Tritone — hard 3-tier luminance poster (crushed shadows, lifted highlights); default Scale 0.5, Intensity 0">
+                      <img src="./assets/images/creative-look-dither-tritone.png" alt="Tritone Dither" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="dither-crosshatch" class="hdri-icon" data-tooltip="Crosshatch — extreme 8-color crush with transposed Bayer lattice; default Scale 1, Intensity 0; Object Hue shifts output">
+                      <img src="./assets/images/creative-look-dither-crosshatch.png" alt="Crosshatch Dither" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="dither-raster" class="hdri-icon" data-tooltip="Raster — amplitude halftone dots sized by luminance; default Scale 1, Intensity 0 (raise for more crush)">
+                      <img src="./assets/images/creative-look-dither-raster.png" alt="Raster Dither" width="128" height="128" />
+                    </button>
+                      </div>
+                    </div>
+                    <div class="creative-look-grid-section">
+                      <p class="creative-look-grid-section-label">
+                        <span class="block-title-name">
+                          <span>Voxel</span>
+                          <span
+                            class="dev-badge"
+                            data-tooltip="Experimental — errors will occur"
+                            tabindex="0"
+                            role="img"
+                            aria-label="Experimental — errors will occur"
+                          ><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
+                        </span>
+                      </p>
+                      <div class="hdri-grid">
+                    <button type="button" data-creative-look="voxel-hd" class="hdri-icon" data-tooltip="Voxel HD — high-resolution mesh voxelization into solid axis-aligned cubes; texture colours baked per voxel; Scale locked at 0.50× (runs once at apply)">
+                      <img src="./assets/images/creative-look-voxel-hd.png" alt="Voxel HD" width="128" height="128" />
+                    </button>
+                      </div>
+                    </div>
+                    <div class="creative-look-grid-section">
+                      <p class="creative-look-grid-section-label">Retro 3D</p>
+                      <div class="hdri-grid">
+                    <button type="button" data-creative-look="ps2-crush" class="hdri-icon" data-tooltip="PS2 Crush — mesh decimation, affine UVs, bilinear low-res textures, flat light bands (24-bit, no dither)">
+                      <img src="./assets/images/creative-look-ps2-crush.png" alt="PS2 Crush" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="psx" class="hdri-icon" data-tooltip="PSX — coarser mesh decimation, affine UVs, nearest-neighbor crushed textures, 15-bit bands + 2×2 ordered dither">
+                      <img src="./assets/images/creative-look-psx.png" alt="PSX" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="vga-dos-3d" class="hdri-icon" data-tooltip="VGA/DOS 3D — stable snap, affine UVs, nearest crushed textures, flat DOS lighting, 256-color palette (no dither)">
+                      <img src="./assets/images/creative-look-vga-dos-3d.png" alt="VGA/DOS 3D" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="vectrex" class="hdri-icon" data-tooltip="Vectrex — P31 phosphor wireframe on black; steady green CRT lines, vertex glow, analog wobble (Scale). Intensity = line brightness">
+                      <img src="./assets/images/creative-look-vectrex.png" alt="Vectrex" width="128" height="128" />
+                    </button>
+                      </div>
+                    </div>
+                    <div class="creative-look-grid-section">
+                      <p class="creative-look-grid-section-label">ASCII</p>
+                      <div class="hdri-grid">
+                    <button type="button" data-creative-look="ascii-art" class="hdri-icon" data-tooltip="ASCII Art — ORBY letters + abstract charset; VGA 4× atlas / 2× screen; lime duotone, Object Hue (Scale &amp; Intensity locked)">
+                      <img src="./assets/images/creative-look-ascii-art.png" alt="ASCII Art" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="ascii-art-2" class="hdri-icon" data-tooltip="ASCII 2 — conventional terminal charset (ASCII 1–inspired); finer 12×20 grid; 25% ink in shadows, Object Hue (Scale &amp; Intensity locked)">
+                      <img src="./assets/images/creative-look-ascii-art-3.png" alt="ASCII 2" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="ascii-art-3" class="hdri-icon" data-tooltip="ASCII 3 — braille halftone (bonus look); finer 12×20 grid; 25% ink in shadows, Object Hue (Scale &amp; Intensity locked)">
+                      <img src="./assets/images/creative-look-ascii-art-2.png" alt="ASCII 3" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="ascii-art-4" class="hdri-icon" data-tooltip="ASCII 4 — Split Block; CP437 half-blocks; fine 12×20 grid; Orby lime with 50% mid-fill; deep shadows black out; cycling glyphs; Object Hue (Scale &amp; Intensity locked, Anim Speed)">
+                      <img src="./assets/images/creative-look-ascii-art.png" alt="ASCII 4" width="128" height="128" />
+                    </button>
+                      </div>
+                    </div>
+                    <div class="creative-look-grid-section">
+                      <p class="creative-look-grid-section-label">Artistic</p>
+                      <div class="hdri-grid">
+                    <button type="button" data-creative-look="watercolour" class="hdri-icon" data-tooltip="Watercolour — clip-space mesh wobble + soft colormap + comic ink + outward paint bleed; Kuwahara post with mega-halo; Scale = brush size &amp; wobble, Intensity = paint strength">
+                      <img src="./assets/images/creative-look-watercolour.png" alt="Watercolour" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="sketch" class="hdri-icon" data-tooltip="Sketch — high-contrast B&amp;W pencil illustration; harsh toon shadow bands + manga screentone + ink outlines; paper backdrop; Stroke Width &amp; Raster Size sliders, Intensity = contrast &amp; ink">
+                      <img src="./assets/images/creative-look-sketch.png" alt="Sketch" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="sketch-colour" class="hdri-icon" data-tooltip="Sketch Colour — coloured manga illustration; watercolour-washed fills + screentone + ink outlines; paper backdrop; Stroke Width &amp; Raster Size sliders, Intensity = contrast &amp; ink">
+                      <img src="./assets/images/creative-look-sketch-colour.png" alt="Sketch Colour" width="128" height="128" />
+                    </button>
+                    <button type="button" data-creative-look="gouache" class="hdri-icon" data-tooltip="Gouache — matte poster paint; flat opaque colour blocks + chalk grain + comic ink outlines; paper backdrop; Scale = block size &amp; ink (min ≈ fine pen), Intensity = chalk &amp; opacity">
+                      <img src="./assets/images/creative-look-gouache.png" alt="Gouache" width="128" height="128" />
+                    </button>
+                      </div>
+                    </div>
+                  </div>
+                  <label class="slider-line">
+                    <span data-tooltip="Global hue shift for all Shader Lab presets (-180°…180°). Independent of Cam/FX color grading.">Object Hue</span>
+                    <input
+                      type="range"
+                      id="creativeLookMasterHue"
+                      min="-180"
+                      max="180"
+                      step="1"
+                      value="0"
+                    />
+                    <span class="value" data-output="creativeLookMasterHue">0°</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Pushes each preset's signature effect. 1 = default. Wire Pulse: line thickness. Dust Field: point size. Topo Minimal, Neon Edge, Holographic, Scanline Hologram, and Spectral Storm also respond.">Intensity</span>
+                    <input
+                      type="range"
+                      id="creativeLookIntensity"
+                      min="0"
+                      max="2"
+                      step="0.05"
+                      value="1"
+                    />
+                    <span class="value" data-output="creativeLookIntensity">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Shadow lift (+) vs black crush (−) on shader preset output. All shader looks respond; True Chrome ignores. Glass uses crush for env/specular/attenuation.">Lift/Crush</span>
+                    <input
+                      type="range"
+                      id="creativeLookLiftCrush"
+                      min="-1"
+                      max="1"
+                      step="0.05"
+                      value="0"
+                    />
+                    <span class="value" data-output="creativeLookLiftCrush">0.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Speed for animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Topo Minimal, Dust Field, Spectral Storm). True Chrome / Glass ignore. Pause freezes motion.">Anim Speed</span>
+                    <input
+                      type="range"
+                      id="creativeLookShaderAnimationSpeed"
+                      min="0"
+                      max="2"
+                      step="0.05"
+                      value="0.4"
+                    />
+                    <span class="value" data-output="creativeLookShaderAnimationSpeed">0.40</span>
+                  </label>
+                  <label class="slider-line" id="creativeLookPatternScaleRow">
+                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Topo Minimal, Dust Field, Spectral Storm). Voxel HD: fixed at 0.50×. EGA / C64 / Game Boy / NES / etc.: fixed grid. True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2×. PSX: fixed at 2.5×. VGA/DOS 3D: fixed at 2.2× (decimation runs once at apply). Watercolour: brush size &amp; wobble. Sketch uses Stroke Width / Raster Size instead.">Scale</span>
+                    <input
+                      type="range"
+                      id="creativeLookPatternScale"
+                      min="0.02"
+                      max="5"
+                      step="0.02"
+                      value="1"
+                    />
+                    <span class="value" data-output="creativeLookPatternScale">1.00×</span>
+                  </label>
+                  <div id="creativeLookTransmissionControls" class="creative-look-transmission-controls" hidden>
+                    <label class="slider-line">
+                      <span data-tooltip="Refraction sharpness for Glass, Holo-Glass, and Crystal Gem. On WebGL this maps to transmission blur via roughness (1 = softest, 10 = sharpest). Solid meshes blur more on camera-facing surfaces so refraction looks similar from all angles.">Transmission Samples</span>
+                      <input
+                        type="range"
+                        id="creativeLookTransmissionSamples"
+                        min="1"
+                        max="10"
+                        step="1"
+                        value="4"
+                      />
+                      <span class="value" data-output="creativeLookTransmissionSamples">4</span>
+                    </label>
+                    <label class="slider-line">
+                      <span data-tooltip="Subtle RGB split in refraction (chromatic dispersion). Reads premium at low values — Crystal Gem defaults higher. 0 = off.">Dispersion</span>
+                      <input
+                        type="range"
+                        id="creativeLookTransmissionDispersion"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value="0.28"
+                      />
+                      <span class="value" data-output="creativeLookTransmissionDispersion">0.28</span>
+                    </label>
+                    <div class="slider-line slider-line--toggle-only">
+                      <span data-tooltip="Closed scans (heads, statues): front faces only, stronger blur, and a best-effort cull of interior-facing facets. Turns off double-sided transmission.">Solid Mesh Glass</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="creativeLookTransmissionSolidMeshGlass" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Solid mesh glass mode</span>
+                      </label>
+                    </div>
+                    <div class="slider-line slider-line--toggle-only">
+                      <span data-tooltip="Thin hollow shells (windshields, bottles) — renders back faces for correct interior refraction. Disabled while Solid Mesh Glass is on.">Double-Sided Transmission</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="creativeLookTransmissionDoubleSide" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Double-sided transmission</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div id="creativeLookPresetSliders" class="creative-look-preset-sliders" hidden>
+                    <label class="slider-line creative-look-preset-slider" data-slider-id="creativeLookSketchStrokeWidth" hidden>
+                      <span data-tooltip="Ink outline thickness, silhouette edge dilation, and mesh wobble. Independent of screentone raster.">Stroke Width</span>
+                      <input
+                        type="range"
+                        id="creativeLookSketchStrokeWidth"
+                        min="0.2"
+                        max="2.8"
+                        step="0.02"
+                        value="1"
+                      />
+                      <span class="value" data-output="creativeLookSketchStrokeWidth">1.00×</span>
+                    </label>
+                    <label class="slider-line creative-look-preset-slider" data-slider-id="creativeLookSketchRasterSize" hidden>
+                      <span data-tooltip="0 = off. Manga screentone dot pitch and paper grain scale. Independent of stroke width.">Raster Size</span>
+                      <input
+                        type="range"
+                        id="creativeLookSketchRasterSize"
+                        min="0"
+                        max="2.8"
+                        step="0.02"
+                        value="1"
+                      />
+                      <span class="value" data-output="creativeLookSketchRasterSize">1.00×</span>
+                    </label>
+                    <label class="color-line creative-look-preset-ink" data-ink-control="strokeColor" hidden>
+                      <span data-tooltip="Ink outlines, band strokes, and screentone dots.">Stroke Colour</span>
+                      <input
+                        type="color"
+                        id="creativeLookInkStrokeColor"
+                        class="color-chip"
+                        value="#080808"
+                      />
+                    </label>
+                  </div>
+                  <div class="slider-line slider-line--toggle-only">
+                    <span class="slider-line-label">
+                      Bloom
+                      <span
+                        class="feature-info-hint"
+                        tabindex="0"
+                        aria-label="More information about Bloom"
+                        data-tooltip="Viewport bloom for Shader Lab — uses Camera &amp; FX bloom sliders (threshold, strength, radius, quality). Separate from the Cam/FX bloom toggle. Skips Cam/FX grading while on — background reads blacker and contrast jumps. Extra fullscreen pass each frame. Not in PNG exports, including transparent."
+                      ><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
+                    </span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="creativeLookBloomEnabled" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable bloom with Shader Lab</span>
+                    </label>
+                  </div>
+                  <div class="slider-line slider-line--toggle-only">
+                    <span data-tooltip="On: the HDRI is drawn behind the scene. Off: only the solid background color is shown; HDRI still lights the model. Same as Studio → HDRI → Render Backdrop (`B`).">Render Backdrop</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="creativeLookRenderBackdrop" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Render HDRI as viewport backdrop</span>
+                    </label>
+                  </div>
+                  <button
+                    type="button"
+                    id="creativeLookPauseAnimations"
+                    class="ghost-btn small creative-look-pause-btn"
+                    data-tooltip="Freeze animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Topo Minimal, Dust Field, Spectral Storm). True Chrome and Toon keep following the scene / HDRI."
+                  >
+                    Pause shader animations
+                  </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel-block" id="svgExtrudePanelBlock" hidden>
+                <div class="subsection" data-subsection="svg-extrude">
+                  <div class="block-title has-reset">
+                    <span>SVG Extrude</span>
+                    <button class="block-reset-btn" data-reset="svg-extrude" aria-label="Reset SVG Extrude" data-tooltip="Reset SVG extrusion settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                  <div id="svgExtrudeCoreControlsMount" class="svg-extrude-core-controls"></div>
+                  <div class="slider-line">
+                    <span data-tooltip="Inverts extrusion direction along the Z axis">Flip Extrude Direction</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="svgExtrudeFlipDirection" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Flip SVG extrusion direction</span>
+                    </label>
+                  </div>
+                  <div id="svgExtrudeColorDepths" data-tooltip="Per-color depth and position controls for detected SVG fills"></div>
+                  <div class="slider-line">
+                    <span data-tooltip="Replace all imported SVG fills with one chosen color">Color Override</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="svgExtrudeColorOverride" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable SVG color override</span>
+                    </label>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="svg-color-override"
+                    aria-hidden="true"
+                  >
+                  <label class="color-line">
+                    <span data-tooltip="Fill color when Color Override is enabled">Color</span>
+                    <input
+                      type="color"
+                      id="svgExtrudeColor"
+                      class="color-chip"
+                      value="#7ed321"
+                    />
+                  </label>
+                  </div>
+                  <div id="svgExtrudeSurfaceControlsMount" class="svg-extrude-surface-controls surface-controls-mount"></div>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="subsection" data-subsection="advanced">
+                  <div class="block-title has-reset">
+                    <span>Advanced</span>
+                    <button class="block-reset-btn" data-reset="advanced" aria-label="Reset Advanced" data-tooltip="Reset Advanced settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                  <div class="slider-line slider-line--toggle-only">
+                    <span data-tooltip="Reverse mesh normal direction on the current model">Reverse Normals</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="reverseNormals" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Reverse normal direction</span>
+                    </label>
+                  </div>
+                  <div class="slider-line slider-line--toggle-only">
+                    <span data-tooltip="Color surface normals as RGB to spot flipped shading or inspect tangent-space normal maps">Normal View</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="normalView" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Toggle normal view overlay</span>
+                    </label>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="normal-view"
+                    aria-hidden="true"
+                  >
+                  <label class="select-line">
+                    <span data-tooltip="Geometry shows smoothed vertex normals. Tangent samples assigned normal maps in tangent space (flat blue when none).">Normal View Mode</span>
+                    <select id="normalViewMode" aria-label="Normal View Mode">
+                      <option value="geometry">Geometry</option>
+                      <option value="tangent">Tangent (normal map)</option>
+                    </select>
+                  </label>
+                  </div>
+                  <div id="stlSmoothingControls" hidden>
+                    <div class="slider-line slider-line--toggle-only">
+                      <span data-tooltip="Recompute vertex normals from triangle facets. STL imports enable this automatically; turn on for GLB/OBJ when you want to adjust crease smoothing.">Smooth Shading</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="stlSmoothShading" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Toggle imported mesh smooth shading</span>
+                      </label>
+                    </div>
+                    <label class="slider-line">
+                      <span data-tooltip="Crease angle in degrees — lower keeps hard edges faceted, higher blends curved areas (0 = all facets, 180 = fully smooth). Only applies when Smooth Shading is on.">Smoothing Angle</span>
+                      <input
+                        id="stlSmoothingAngle"
+                        type="range"
+                        min="0"
+                        max="180"
+                        step="1"
+                        value="40"
+                      />
+                      <span class="value" data-output="stlSmoothingAngle">40°</span>
+                    </label>
+                  </div>
+                  <div class="slider-line slider-line--toggle-only">
+                    <span data-tooltip="Tile a UV checker map across the model so you can spot stretching and seams. Texture by Atlux.">UV Checker</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="uvChecker" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Toggle UV checker overlay</span>
+                    </label>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="uv-checker"
+                    aria-hidden="true"
+                  >
+                  <label class="select-line">
+                    <span data-tooltip="Pick the checker pattern. Orby is the default brand map; Classic uses Atlux's colored map; Monochrome is grayscale and reads better on already-colored meshes.">UV Checker Style</span>
+                    <select id="uvCheckerStyle" aria-label="UV Checker Style">
+                      <option value="orby">Orby</option>
+                      <option value="classic">Classic</option>
+                      <option value="monochrome">Monochrome</option>
+                    </select>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="How many times the checker pattern tiles across each UV island. 1 = one full tile per island.">UV Checker Repeat</span>
+                    <input
+                      id="uvCheckerScale"
+                      type="range"
+                      min="0"
+                      max="10"
+                      step="0.05"
+                      value="5"
+                    />
+                    <span class="value" data-output="uvCheckerScale">5.00</span>
+                  </label>
+                  </div>
+                  <div class="panel-block-divider" aria-hidden="true"></div>
+                  <div id="topologyWarningsBlock" class="topology-warnings-block">
+                    <div class="export-controls topology-warnings-actions">
+                      <button
+                        type="button"
+                        id="centerPivotBtn"
+                        class="accent-action-btn topology-warnings-scan center-pivot-btn"
+                        data-tooltip="Move the mesh pivot to the current bounding-box center. Keeps the model in place on screen; fixes off-axis turntable spin. Use again after extrude or other geometry changes."
+                        disabled
+                      >
+                        <i class="fa-solid fa-crosshairs" aria-hidden="true"></i>
+                        Center Pivot
+                      </button>
+                    </div>
+                    <div class="export-controls topology-warnings-actions">
+                      <button
+                        type="button"
+                        id="topologyWarningsScan"
+                        class="accent-action-btn topology-warnings-scan"
+                        data-tooltip="Analyze the loaded model for common topology problems"
+                        aria-pressed="false"
+                      >
+                        <i class="fa-solid fa-stethoscope" aria-hidden="true"></i>
+                        Mesh Health
+                      </button>
+                    </div>
+                    <div id="topologyWarningsResults" class="topology-warnings-results" hidden>
+                      <ul id="topologyWarningsList" class="topology-warnings-list" aria-live="polite"></ul>
+                    </div>
+                  </div>
+                  <div id="advancedAlphaControls" class="advanced-alpha-controls" hidden>
+                  <div class="panel-block-divider" aria-hidden="true"></div>
+                  <p class="panel-hint advanced-section-title">Transparency</p>
+                  <p class="panel-hint advanced-import-hint">
+                    Blended transparent surfaces are sorted per mesh in WebGL. Fine glass often needs glTF transmission or separate materials from the author.
+                    <button type="button" class="drop-link advanced-info-doc-btn" data-open-info-section="#info-transparency">Read more under Information — Transparency</button>.
+                  </p>
+                  <label class="select-line">
+                    <span
+                      data-tooltip="Auto applies viewer defaults. Other modes trade sorting vs solid surfaces—try if layers look wrong."
+                      >Transparency Mode</span>
+                    <select id="transparencyFix" aria-label="Transparency Mode">
+                      <option value="default">Auto (recommended)</option>
+                      <option value="opaqueBlend">Treat blend as solid</option>
+                      <option value="frontFace">Front faces only</option>
+                      <option value="opaqueAndFrontFace">Solid + front faces</option>
+                    </select>
+                  </label>
+                  <div class="slider-line slider-line--toggle-only">
+                    <span
+                      data-tooltip="Uses light dither so stacked blended surfaces sort more predictably (common on Sketchfab). Turn off if hair or cloth looks too grainy."
+                      >Stabilize Layered Transparency</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="blendSortingMitigation" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Stabilize Layered Transparency</span>
+                    </label>
+                  </div>
+                  <details class="advanced-import-details">
+                    <summary>
+                      <span class="block-title-name">
+                        <span>Rare Fixes — Transmission &amp; Glass</span>
+                        <span class="dev-badge" data-tooltip="This feature is still under development" aria-hidden="true"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
+                      </span>
+                    </summary>
+                    <div class="slider-line slider-line--toggle-only">
+                      <span
+                        data-tooltip="KHR transmission + named window glass use MeshPhysicalMaterial.transmission (real refraction). Reflections come from PBR roughness and the HDRI — not fake BLEND opacity. Needs Render Backdrop. Costs more GPU than Auto glass."
+                        >Physical Glass Transmission</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="physicalGlassTransmission" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Physical glass transmission</span>
+                      </label>
+                    </div>
+                    <div class="slider-line slider-line--toggle-only">
+                      <span
+                        data-tooltip="Only affects transmission or meshes/materials named like glass, window, visor… Flip if glazing looks inside-out."
+                        >Flip Glass Normal Y</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="flipGlassNormalMapY" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Flip glass normal map Y</span>
+                      </label>
+                    </div>
+                    <div class="slider-line slider-line--toggle-only">
+                      <span
+                        data-tooltip="Front-side only for those same materials—not for whole-body BLEND characters (use Transparency Mode)."
+                        >Glass: Front Faces Only</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="glassFrontFacesOnly" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Glass front faces only</span>
+                      </label>
+                    </div>
+                  </details>
+                  <div id="advancedGlassControls" class="advanced-glass-controls" hidden>
+                    <p class="panel-hint advanced-glass-hint">When windows / glass are detected from mesh or material names:</p>
+                    <label class="slider-line">
+                      <span
+                        data-tooltip="Physical glass: scales transmission strength. BLEND glass (Auto): opacity for detected windows."
+                        >Glass opacity</span>
+                      <input
+                        id="glassOpacity"
+                        type="range"
+                        min="0.02"
+                        max="1"
+                        step="0.01"
+                        value="0.45"
+                      />
+                      <span class="value" data-output="glassOpacity">0.45</span>
+                    </label>
+                    <label class="slider-line">
+                      <span
+                        data-tooltip="PBR environment reflection strength on glass (roughness blurs the HDRI lobe — not a planar mirror)."
+                        >Glass reflections</span>
+                      <input
+                        id="glassReflection"
+                        type="range"
+                        min="0"
+                        max="4"
+                        step="0.05"
+                        value="2"
+                      />
+                      <span class="value" data-output="glassReflection">2.00</span>
+                    </label>
+                    <label class="color-line">
+                      <span
+                        data-tooltip="Only when Transparency Mode is Auto. Tint for detected glass / windows."
+                        >Glass tint</span>
+                      <input
+                        type="color"
+                        id="glassTint"
+                        class="color-chip"
+                        value="#080808"
+                      />
+                    </label>
+                    <label class="slider-line">
+                      <span
+                        data-tooltip="Only when Transparency Mode is Auto. Makes heuristic glass read more solid (transmission, tint)."
+                        >Glass body</span>
+                      <input
+                        id="glassBody"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value="0"
+                      />
+                      <span class="value" data-output="glassBody">0.00</span>
+                    </label>
+                  </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="subsection" data-subsection="transform">
+                  <div class="block-title has-reset">
+                    <span>Transform</span>
+                    <button class="block-reset-btn" data-reset="transform" aria-label="Reset Transform" data-tooltip="Reset Transform settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                  <label class="slider-line">
+                    <span>Scale</span>
+                    <input
+                      id="scaleControl"
+                      type="range"
+                      min="0.1"
+                      max="4"
+                      value="1"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="scale">1.00×</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Move object along X axis">Move X</span>
+                    <input
+                      id="xOffsetControl"
+                      type="range"
+                      min="-2"
+                      max="2"
+                      value="0"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="xOffset">0.00m</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Move object along Y axis">Move Y</span>
+                    <input
+                      id="yOffsetControl"
+                      type="range"
+                      min="-2"
+                      max="2"
+                      value="0"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="yOffset">0.00m</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Move object along Z axis">Move Z</span>
+                    <input
+                      id="zOffsetControl"
+                      type="range"
+                      min="-2"
+                      max="2"
+                      value="0"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="zOffset">0.00m</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Rotate object around X axis">Rotate X</span>
+                    <input
+                      id="rotationXControl"
+                      type="range"
+                      min="-180"
+                      max="180"
+                      value="0"
+                      step="1"
+                    />
+                      <span class="value" data-output="rotationX">0°</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Rotate object around Y axis">Rotate Y</span>
+                    <input
+                      id="rotationYControl"
+                      type="range"
+                      min="-180"
+                      max="180"
+                      value="0"
+                      step="1"
+                    />
+                      <span class="value" data-output="rotationY">0°</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Rotate object around Z axis">Rotate Z</span>
+                    <input
+                      id="rotationZControl"
+                      type="range"
+                      min="-180"
+                      max="180"
+                      value="0"
+                      step="1"
+                    />
+                      <span class="value" data-output="rotationZ">0°</span>
+                  </label>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection">
+                  <div class="block-title">Turntable</div>
+                  <div class="segmented compact">
+                    <label>
+                      <input type="radio" name="autorotate" value="0" checked />
+                      OFF
+                    </label>
+                    <label>
+                      <input type="radio" name="autorotate" value="0.2" />
+                      NORMAL
+                    </label>
+                    <label>
+                      <input type="radio" name="autorotate" value="0.5" />
+                      FAST
+                    </label>
+                  </div>
+                  <label class="select-line">
+                    <span>Direction</span>
+                    <select id="autoRotateDirection" aria-label="Turntable direction">
+                      <option value="forward">Forward</option>
+                      <option value="reverse">Reverse</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="subsection" data-subsection="grid">
+                  <div class="block-title has-toggle">
+                    <span>Grid</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="grid" aria-label="Reset Grid" data-tooltip="Reset Grid settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Show/hide ground grid">
+                        <input type="checkbox" id="groundWire" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable grid</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="grid"
+                    aria-hidden="true"
+                  >
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="groundWireColor"
+                      class="color-chip"
+                      value="#c4cadd"
+                    />
+                  </label>
+                  <label class="slider-line">
+                    <span>Opacity</span>
+                    <input
+                      id="groundWireOpacity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.45"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="groundWireOpacity">0.45</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Grid line thickness">Thickness</span>
+                    <input
+                      id="gridLineWidth"
+                      type="range"
+                      min="0.5"
+                      max="2.5"
+                      step="0.05"
+                      value="1"
+                    />
+                    <span class="value" data-output="gridLineWidth">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Vertical position of the grid">Y Position</span>
+                    <input
+                      id="gridY"
+                      type="range"
+                      min="-2"
+                      max="2"
+                      step="0.01"
+                      value="0"
+                    />
+                    <span class="value" data-output="gridY">0.00m</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Scale</span>
+                    <input
+                      id="gridScale"
+                      type="range"
+                      min="0.5"
+                      max="3"
+                      step="0.01"
+                      value="1"
+                    />
+                    <span class="value" data-output="gridScale">1.00</span>
+                  </label>
+                  <button id="gridSnap" class="ghost-btn small" type="button">
+                    Snap to Mesh
+                  </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel-block stats-block">
+                <div class="block-title">Mesh Info</div>
+                <dl id="meshStats">
+                  <div><dt>Asset Name</dt><dd>—</dd></div>
+                  <div><dt>Generator</dt><dd>—</dd></div>
+                  <div><dt>Version</dt><dd>—</dd></div>
+                  <div><dt>Copyright</dt><dd>—</dd></div>
+                  <div><dt>Triangles</dt><dd>—</dd></div>
+                  <div><dt>Vertices</dt><dd>—</dd></div>
+                  <div><dt>Materials</dt><dd>—</dd></div>
+                  <div><dt>Textures</dt><dd>—</dd></div>
+                  <div><dt>File Size</dt><dd>—</dd></div>
+                  <div><dt>Bounds</dt><dd>—</dd></div>
+                </dl>
+                <button id="loadMeshButton" class="accent-action-btn" style="margin-top: 1rem;" data-tooltip="Load a new 3D model file">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i>
+                  Import New Mesh
+                </button>
+              </div>
+
+              <div class="panel-block" id="animationBlock">
+                <div class="block-title">Animation</div>
+                <div class="animation-timeline">
+                  <div class="animation-controls">
+                    <div class="animation-transport-btns">
+                      <button id="playPause" class="animation-play-btn" disabled aria-label="Play animation">
+                        <i class="fa-solid fa-play" aria-hidden="true"></i>
+                        <span class="sr-only">Play</span>
+                      </button>
+                      <button
+                        id="animationReverseBtn"
+                        type="button"
+                        class="animation-play-btn"
+                        disabled
+                        aria-pressed="false"
+                        aria-label="Reverse animation playback"
+                        data-tooltip="Play the animation clip backwards"
+                      >
+                        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                        <span class="sr-only">Reverse animation playback</span>
+                      </button>
+                    </div>
+                    <input
+                      type="range"
+                      id="animationScrub"
+                      min="0"
+                      max="1"
+                      step="0.001"
+                      value="0"
+                      disabled
+                      aria-label="Animation timeline"
+                    />
+                    <span id="animationTime">0:00</span>
+                  </div>
+                </div>
+                <label class="select-line">
+                  <span>Clip</span>
+                  <select id="animationSelect" disabled aria-label="Animation clip"></select>
+                </label>
+                <div class="slider-line slider-line--toggle-only animation-time-reference-header">
+                  <span>Frame Reference</span>
+                  <label
+                    class="effect-toggle"
+                    data-tooltip="Show frame counter and FPS grid for timing notes"
+                  >
+                    <input type="checkbox" id="animationTimeReference" disabled />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Frame Reference</span>
+                  </label>
+                </div>
+                <div
+                  id="animationTimeReferenceSection"
+                  class="effect-foldout effect-foldout--collapsed animation-time-reference-foldout"
+                  hidden
+                  aria-hidden="true"
+                >
+                  <label class="select-line animation-time-reference-line">
+                    <span id="animationFrameNumbers" class="animation-frame-numbers" aria-live="polite">001 / 060</span>
+                    <select
+                      id="animationDisplayFps"
+                      aria-label="Frame reference frame rate"
+                      disabled
+                    >
+                      <option value="24">24 fps</option>
+                      <option value="30">30 fps</option>
+                      <option value="60" selected>60 fps</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="segmented compact segmented--2" id="animationClipModeSegmented">
+                  <label>
+                    <input type="radio" name="animationClipMode" value="loop" checked disabled />
+                    Loop Selected
+                  </label>
+                  <label>
+                    <input type="radio" name="animationClipMode" value="cycle" disabled />
+                    Cycle All
+                  </label>
+                </div>
+                <div class="panel-block-divider" aria-hidden="true"></div>
+                <div class="subsection">
+                  <div class="block-title">Playback speed</div>
+                  <div class="segmented compact segmented--4" id="animationSpeedSegmented">
+                    <label>
+                      <input type="radio" name="animationPlaybackSpeed" value="0.1" disabled />
+                      0.1×
+                    </label>
+                    <label>
+                      <input type="radio" name="animationPlaybackSpeed" value="0.25" disabled />
+                      0.25×
+                    </label>
+                    <label>
+                      <input type="radio" name="animationPlaybackSpeed" value="0.5" disabled />
+                      0.5×
+                    </label>
+                    <label>
+                      <input type="radio" name="animationPlaybackSpeed" value="1" checked disabled />
+                      1.0×
+                    </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider" aria-hidden="true"></div>
+                <div class="subsection">
+                  <div class="slider-line slider-line--toggle-only">
+                    <span>Show bones</span>
+                    <label class="effect-toggle" data-tooltip="Reveal the animated skeleton rig over the mesh">
+                      <input type="checkbox" id="animationShowBones" disabled />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show animation bones</span>
+                    </label>
+                  </div>
+                  <div class="slider-line slider-line--toggle-only" id="animationShowJointNamesRow" hidden>
+                    <span>Show joint names</span>
+                    <label class="effect-toggle" data-tooltip="Always show joint name labels over the skeleton">
+                      <input type="checkbox" id="animationShowJointNames" disabled />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show joint name labels</span>
+                    </label>
+                  </div>
+                  <div class="slider-line slider-line--toggle-only" id="animationHideMeshRow" hidden>
+                    <span>Hide mesh</span>
+                    <label class="effect-toggle" data-tooltip="Hide the mesh completely and playback bones only">
+                      <input type="checkbox" id="animationHideMesh" disabled />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Hide mesh during bone playback</span>
+                    </label>
+                  </div>
+                  <label class="slider-line" id="animationBoneStrokeRow" hidden>
+                    <span>Bone stroke</span>
+                    <input
+                      id="animationBoneStrokeWidth"
+                      type="range"
+                      min="1"
+                      max="8"
+                      step="0.5"
+                      value="2"
+                      disabled
+                      aria-label="Bone line stroke width"
+                    />
+                    <span class="value" data-output="animationBoneStrokeWidth">2.0</span>
+                  </label>
+                  <label class="slider-line" id="animationJointScaleRow" hidden>
+                    <span>Joint scale</span>
+                    <input
+                      id="animationJointScale"
+                      type="range"
+                      min="0.25"
+                      max="3"
+                      step="0.05"
+                      value="0.5"
+                      disabled
+                      aria-label="Joint marker scale"
+                    />
+                    <span class="value" data-output="animationJointScale">0.50</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Scene</div>
+                <div class="export-controls">
+                  <button id="resetMeshSettings" class="accent-action-btn" data-tooltip="Reset all object settings to defaults">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    Reset Object
+              </button>
+                  <button class="copy-scene-settings accent-action-btn" data-tooltip="Copy all scene settings to clipboard">
+                    <i class="fa-solid fa-copy"></i>
+                    Copy Scene Settings
+              </button>
+                  <button class="load-scene-settings accent-action-btn" data-tooltip="Paste scene settings from clipboard into a dialog">
+                    <i class="fa-solid fa-upload"></i>
+                    Paste Scene Settings
+                  </button>
+                  <button class="save-orby-scene accent-action-btn" data-tooltip="Save entire scene and model as .orby file">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Save .orby Scene
+                  </button>
+                  <button class="load-orby-scene accent-action-btn" data-tooltip="Load entire scene and model from .orby file">
+                    <i class="fa-solid fa-file-import"></i>
+                    Load .orby Scene
+                  </button>
+                </div>
+              </div>
+              <div class="info-version-tag">v0.5.876 · 2026-06-29 15:07:13 UTC</div>
+              <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
+                <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
+              </button>
+            </section>

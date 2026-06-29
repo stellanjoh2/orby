@@ -161,8 +161,10 @@ export class UIManager {
   ensureStudioUiReady() {
     if (this._studioUiReady) return Promise.resolve();
     if (this._studioUiPromise) return this._studioUiPromise;
-    this._studioUiPromise = Promise.resolve()
+    this._studioUiPromise = import('./stitchIndexHtmlClient.js')
+      .then(({ ensureShelfPanelsStitched }) => ensureShelfPanelsStitched())
       .then(() => {
+        this.cacheDom();
         this._initStudioUi();
         this._studioUiReady = true;
         window.orby?.ensureGamepad?.();

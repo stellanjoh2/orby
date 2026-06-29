@@ -13,6 +13,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { injectAllSubpageSiteNav } from './marketing/injectSubpageSiteNav.mjs';
 import { processCreativeLookThumbnail } from './dev/processCreativeLookThumbnail.mjs';
+import { stitchIndexHtml } from './stitchIndexHtml.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -245,7 +246,10 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const body = await fs.promises.readFile(resolved);
+    let body = await fs.promises.readFile(resolved);
+    if (ext === '.html' && body.includes('@include')) {
+      body = Buffer.from(stitchIndexHtml(body.toString('utf-8'), root), 'utf-8');
+    }
     res.writeHead(200);
     res.end(body);
   } catch {

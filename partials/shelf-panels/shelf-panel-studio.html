@@ -1,0 +1,1122 @@
+            <h2 class="panel-header-title" data-header="studio">Studio</h2>
+            <section class="panel" data-panel="studio">
+
+              <div class="panel-block" data-block="hdri">
+                <div class="block-title has-toggle">
+                  <span>HDRI</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="hdri" aria-label="Reset HDRI" data-tooltip="Reset HDRI settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                    <label class="effect-toggle" data-tooltip="Enable/disable HDRI environment lighting">
+                      <input type="checkbox" id="hdriEnabled" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable HDRI Lighting</span>
+                    </label>
+                  </div>
+                </div>
+                <div
+                  class="effect-foldout effect-foldout--expanded effect-foldout--md"
+                  data-effect-foldout="hdri"
+                  aria-hidden="false"
+                >
+                <input
+                  type="file"
+                  id="hdriFileInput"
+                  class="sr-only"
+                  accept=".hdr,.hdri,.exr,image/*,.png,.jpg,.jpeg,.webp,.tif,.tiff"
+                  tabindex="-1"
+                  aria-hidden="true"
+                />
+                <div class="hdri-grid" id="hdriGrid">
+                  <button type="button" data-hdri="congress" class="hdri-icon" data-tooltip="Congress Hall environment">
+                    <img src="./assets/images/hdri-thumbnail-congress.png" alt="Congress" />
+                  </button>
+                  <button data-hdri="luminous-sky" class="hdri-icon" data-tooltip="Forest environment">
+                    <img src="./assets/images/hdri-thumbnail-forest.png" alt="Forest" />
+                  </button>
+                  <button data-hdri="sunset" class="hdri-icon" data-tooltip="Sunset environment">
+                    <img src="./assets/images/hdri-thumbnail-sunset.png" alt="Sunset" />
+                  </button>
+                  <button data-hdri="meadow" class="hdri-icon" data-tooltip="Meadow environment">
+                    <img src="./assets/images/hdri-thumbnail-meadow.png" alt="Meadow" />
+                  </button>
+                  <button data-hdri="abandoned" class="hdri-icon" data-tooltip="Abandoned building environment">
+                    <img src="./assets/images/hdri-thumbnail-abandoned.png" alt="Abandoned" />
+                  </button>
+                  <button type="button" data-hdri="beach" class="hdri-icon active" data-tooltip="Beach environment">
+                    <img src="./assets/images/hdri-thumbnail-beach.png" alt="Beach" />
+                  </button>
+                  <button type="button" data-hdri="blue-hour" class="hdri-icon" data-tooltip="Blue hour — Rangiroa">
+                    <img src="./assets/images/hdri-thumbnail-blue-hour.png" alt="Blue hour" />
+                  </button>
+                  <button type="button" data-hdri="sunny-parking" class="hdri-icon" data-tooltip="Sunny parking — urban daylight">
+                    <img src="./assets/images/hdri-thumbnail-sunny-parking.png" alt="Sunny parking" />
+                  </button>
+                  <button
+                    type="button"
+                    id="hdriUploadBtn"
+                    class="hdri-icon hdri-icon--upload"
+                    data-tooltip="Upload custom HDRI (.hdr, .exr, .jpg, .png) — 2:1 equirectangular"
+                  >
+                    <span class="hdri-icon__disc" aria-hidden="true"></span>
+                    <i class="fa-solid fa-plus hdri-icon__plus" aria-hidden="true"></i>
+                    <i class="fa-solid fa-check hdri-icon__check" aria-hidden="true"></i>
+                    <span class="sr-only">Upload custom HDRI</span>
+                  </button>
+                </div>
+                <label class="slider-line">
+                  <span data-tooltip="HDRI lighting intensity">Intensity</span>
+                  <input
+                    id="hdriStrength"
+                    type="range"
+                    min="0"
+                    max="3"
+                    value="2"
+                    step="0.1"
+                  />
+                  <span class="value" data-output="hdriStrength">2</span>
+                </label>
+                <label class="slider-line">
+                  <span data-tooltip="Blur amount for HDRI reflections">Blurriness</span>
+                  <input
+                    id="hdriBlurriness"
+                    type="range"
+                    min="0"
+                    max="1"
+                    value="0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="hdriBlurriness">0.00</span>
+                </label>
+                <label class="slider-line">
+                    <span>Rotation</span>
+                  <input
+                    id="hdriRotation"
+                    type="range"
+                    min="0"
+                    max="360"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="hdriRotation">0°</span>
+                </label>
+                <div class="slider-line">
+                  <span data-tooltip="On: the HDRI is drawn behind the scene. Off: only the solid background color is shown; HDRI still lights the model.">Render Backdrop</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="hdriBackground" checked />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Render HDRI as viewport backdrop</span>
+                  </label>
+                </div>
+                <div class="slider-line">
+                  <span data-tooltip="Invisible floor at Ground Y under the model: Ambient Occlusion for contact on the HDRI; 3-point lights + Cast Shadows for directional shadow maps. Uses Ground Y (snap to mesh if it floats).">Receive Shadows + AO</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="hdriReceiveShadowsAo" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Receive shadows and ambient occlusion on HDRI backdrop</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                class="panel-block panel-block--compact-head"
+                data-block="background"
+                id="studioBackgroundPanel"
+                hidden
+              >
+                <div class="block-title has-reset">
+                  <span data-tooltip="Solid color, image, or gradient behind the scene when Render Backdrop is off — HDRI still lights the model">Background</span>
+                  <button
+                    type="button"
+                    class="block-reset-btn"
+                    data-reset="background"
+                    aria-label="Reset Background"
+                    data-tooltip="Reset background color"
+                  >
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span class="sr-only">Reset</span>
+                  </button>
+                </div>
+                <div class="slider-line">
+                  <span data-tooltip="Flat color behind the scene when Render Backdrop is off">Solid color</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="backgroundSolidEnabled" checked />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable solid color background</span>
+                  </label>
+                </div>
+                <div
+                  id="backgroundSolidFoldout"
+                  class="effect-foldout effect-foldout--collapsed"
+                  data-effect-foldout="background-solid"
+                  aria-hidden="true"
+                >
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="backgroundColor"
+                      class="color-chip"
+                      value="#000000"
+                    />
+                  </label>
+                </div>
+                <div class="slider-line">
+                  <span data-tooltip="Multi-stop linear or radial gradient">
+                    <span class="block-title-name">
+                      <span>Gradient</span>
+                      <span
+                        class="dev-badge"
+                        data-tooltip="Currently not available for 1080p exports, 1440p and 2160p is ok"
+                        tabindex="0"
+                        role="img"
+                        aria-label="Currently not available for 1080p exports, 1440p and 2160p is ok"
+                      ><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
+                    </span>
+                  </span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="backgroundGradientEnabled" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable gradient background</span>
+                  </label>
+                </div>
+                <div
+                  id="backgroundGradientFoldout"
+                  class="effect-foldout effect-foldout--collapsed bg-gradient-foldout"
+                  data-effect-foldout="background-gradient"
+                  aria-hidden="true"
+                >
+                  <div class="export-option-group bg-gradient-controls">
+                  <div class="bg-gradient-preview-wrap">
+                    <canvas
+                      id="backgroundGradientPreview"
+                      class="bg-gradient-preview"
+                      aria-label="Gradient preview — drag stops (max 3), click empty bar to add"
+                      role="img"
+                    ></canvas>
+                  </div>
+                  <label class="color-line">
+                    <span>Stop color</span>
+                    <input
+                      type="color"
+                      id="backgroundGradientStopColor"
+                      class="color-chip"
+                      value="#000000"
+                    />
+                  </label>
+                  <div class="export-button-group">
+                    <button type="button" data-bg-gradient-type="linear" class="export-option-btn active">Linear</button>
+                    <button type="button" data-bg-gradient-type="radial" class="export-option-btn">Radial</button>
+                  </div>
+                  <label class="slider-line" id="backgroundGradientAngleRow">
+                    <span data-tooltip="Gradient direction — same convention as CSS linear-gradient (0° = up)">Angle</span>
+                    <input id="backgroundGradientAngle" type="range" min="0" max="360" step="1" value="180" />
+                    <span class="value" data-output="backgroundGradientAngle">180°</span>
+                  </label>
+                  <div id="backgroundGradientCenterRow" hidden>
+                    <label class="slider-line">
+                      <span>Center X</span>
+                      <input id="backgroundGradientCenterX" type="range" min="0" max="100" step="1" value="50" />
+                      <span class="value" data-output="backgroundGradientCenterX">50%</span>
+                    </label>
+                    <label class="slider-line">
+                      <span>Center Y</span>
+                      <input id="backgroundGradientCenterY" type="range" min="0" max="100" step="1" value="50" />
+                      <span class="value" data-output="backgroundGradientCenterY">50%</span>
+                    </label>
+                  </div>
+                  </div>
+                </div>
+                <div class="slider-line">
+                  <span data-tooltip="Custom image behind the scene">Image</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="backgroundImageEnabled" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable image background</span>
+                  </label>
+                </div>
+                <div
+                  id="backgroundImageFoldout"
+                  class="effect-foldout effect-foldout--collapsed"
+                  data-effect-foldout="background-image"
+                  aria-hidden="true"
+                >
+                  <input
+                    type="file"
+                    id="backgroundImageFileInput"
+                    class="sr-only"
+                    accept=".png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,image/*"
+                    tabindex="-1"
+                    aria-hidden="true"
+                  />
+                  <div class="export-option-group bg-image-controls">
+                    <button
+                      type="button"
+                      id="backgroundImageSelectBtn"
+                      class="export-option-btn bg-image-select-btn"
+                      data-tooltip="Upload a PNG, JPG, or WebP"
+                    >
+                      Select background image
+                    </button>
+                    <div
+                      id="backgroundImageFitPanel"
+                      class="export-button-group export-button-group--triple"
+                      hidden
+                    >
+                      <button type="button" data-bg-image-fit="cover" class="export-option-btn active">Cover</button>
+                      <button type="button" data-bg-image-fit="contain" class="export-option-btn">Contain</button>
+                      <button type="button" data-bg-image-fit="fill" class="export-option-btn">Fill</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel-block" data-block="base">
+                <div class="block-title has-toggle has-reset">
+                  <span>Base</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="base" aria-label="Reset Base" data-tooltip="Reset Base settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                    <label class="effect-toggle" data-tooltip="Show/hide solid base platform">
+                      <input type="checkbox" id="groundSolid" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable base</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="base-placement-controls">
+                <div class="slider-line">
+                  <span class="block-title-name slider-line-label">
+                    <span data-tooltip="Vertical position of the base and glass">Y Position</span>
+                    <button
+                      id="baseSnap"
+                      class="slider-snap-btn"
+                      type="button"
+                      aria-label="Snap base to mesh"
+                      data-tooltip="Align base to mesh bottom"
+                    >
+                      <i class="fa-solid fa-magnet" aria-hidden="true"></i>
+                    </button>
+                  </span>
+                  <input
+                    id="groundY"
+                    type="range"
+                    min="-2"
+                    max="2"
+                    step="0.01"
+                    value="0"
+                  />
+                  <span class="value" data-output="groundY">0.00m</span>
+                </div>
+                <label class="slider-line">
+                  <span data-tooltip="Size of the base and glass">Scale</span>
+                  <input
+                    id="baseScale"
+                    type="range"
+                    min="0.5"
+                    max="10"
+                    step="0.01"
+                    value="1"
+                  />
+                  <span class="value" data-output="baseScale">1.00</span>
+                </label>
+                </div>
+                <div
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                  data-effect-foldout="base"
+                  aria-hidden="true"
+                >
+                  <div class="subsection" data-subsection="base-material">
+                    <div class="panel-block-divider" aria-hidden="true"></div>
+                    <label class="color-line">
+                      <span>Color</span>
+                      <input
+                        type="color"
+                        id="groundSolidColor"
+                        class="color-chip"
+                        value="#808080"
+                      />
+                    </label>
+                    <label class="slider-line">
+                      <span data-tooltip="PBR metalness — higher reads more like metal">Metalness</span>
+                      <input
+                        id="baseMetalness"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value="0.08"
+                      />
+                      <span class="value" data-output="baseMetalness">0.08</span>
+                    </label>
+                    <label class="slider-line">
+                      <span data-tooltip="Lower roughness = glossier surface">Roughness</span>
+                      <input
+                        id="baseRoughness"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value="0.50"
+                      />
+                      <span class="value" data-output="baseRoughness">0.50</span>
+                    </label>
+                    <div class="panel-block-divider" aria-hidden="true"></div>
+                    <div id="baseSurfaceControlsMount" class="surface-controls-mount"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel-block" data-block="base-glass">
+                <div class="block-title has-toggle has-reset">
+                  <span>Base Glass</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="base-glass" aria-label="Reset Base Glass" data-tooltip="Reset Base Glass settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                    <label class="effect-toggle" data-tooltip="Realtime planar reflection of the loaded mesh on the base top (extra GPU). Shares placement and scale with Base.">
+                      <input type="checkbox" id="baseGlassSurface" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable planar reflection on the base top</span>
+                    </label>
+                  </div>
+                </div>
+                <div
+                  class="effect-foldout effect-foldout--collapsed"
+                  data-effect-foldout="base-glass"
+                  aria-hidden="true"
+                >
+                  <label class="slider-line">
+                    <span data-tooltip="Base tone under the reflection — black to white (mid gray is neutral).">Brightness</span>
+                    <input
+                      id="baseGlassBrightness"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.1"
+                    />
+                    <span class="value" data-output="baseGlassBrightness">0.10</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Progressive softness — blur spreads wider as you increase. Disabled when Base Glass reflection is off.">Blur</span>
+                    <input
+                      id="baseGlassBlur"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.1"
+                    />
+                    <span class="value" data-output="baseGlassBlur">0.10</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="How strong the reflection is vs the base tone (lower = subtler, less mirror-like).">Amount</span>
+                    <input
+                      id="baseGlassAmount"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.5"
+                    />
+                    <span class="value" data-output="baseGlassAmount">0.50</span>
+                  </label>
+                  <div class="panel-block-divider" aria-hidden="true"></div>
+                  <div id="baseGlassSurfaceControlsMount" class="surface-controls-mount"></div>
+                </div>
+              </div>
+
+              <div class="panel-block" data-block="backdrop">
+                <div class="block-title has-toggle has-reset">
+                  <span>Studio</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="backdrop" aria-label="Reset Studio" data-tooltip="Reset Studio settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                    <label class="effect-toggle" data-tooltip="Show/hide seamless photo backdrop wall">
+                      <input type="checkbox" id="backdropEnabled" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable seamless backdrop</span>
+                    </label>
+                  </div>
+                </div>
+                <div
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                  data-effect-foldout="backdrop"
+                  aria-hidden="true"
+                >
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="backdropColor"
+                      class="color-chip"
+                      value="#808080"
+                    />
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="PBR metalness — higher reads more like metal">Metalness</span>
+                    <input
+                      id="backdropMetalness"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.02"
+                    />
+                    <span class="value" data-output="backdropMetalness">0.02</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Lower roughness = glossier surface">Roughness</span>
+                    <input
+                      id="backdropRoughness"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.90"
+                    />
+                    <span class="value" data-output="backdropRoughness">0.90</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Uniform size of the backdrop wall">Scale</span>
+                    <input
+                      id="backdropScale"
+                      type="range"
+                      min="0.5"
+                      max="3"
+                      step="0.01"
+                      value="1"
+                    />
+                    <span class="value" data-output="backdropScale">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Width of the backdrop (left-right framing)">Width</span>
+                    <input
+                      id="backdropWidth"
+                      type="range"
+                      min="0.5"
+                      max="3"
+                      step="0.01"
+                      value="2"
+                    />
+                    <span class="value" data-output="backdropWidth">2.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Rotate backdrop around scene center">Rotation</span>
+                    <input
+                      id="backdropRotation"
+                      type="range"
+                      min="0"
+                      max="360"
+                      step="1"
+                      value="0"
+                    />
+                    <span class="value" data-output="backdropRotation">0°</span>
+                  </label>
+                  <div class="slider-line">
+                    <span class="block-title-name slider-line-label">
+                      <span data-tooltip="Vertical position of the backdrop">Y Position</span>
+                      <button
+                        id="backdropSnap"
+                        class="slider-snap-btn"
+                        type="button"
+                        aria-label="Snap backdrop to mesh"
+                        data-tooltip="Align backdrop floor to mesh base"
+                      >
+                        <i class="fa-solid fa-magnet" aria-hidden="true"></i>
+                      </button>
+                    </span>
+                    <input
+                      id="backdropY"
+                      type="range"
+                      min="-2"
+                      max="2"
+                      step="0.01"
+                      value="0"
+                    />
+                    <span class="value" data-output="backdropY">0.00m</span>
+                  </div>
+                  <div class="panel-block-divider" aria-hidden="true"></div>
+                  <div id="backdropSurfaceControlsMount" class="surface-controls-mount"></div>
+                </div>
+              </div>
+
+              <div class="panel-block lights" data-block="lights">
+                <div class="block-title has-toggle">
+                  <span id="lightsTitle">Lights</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="lights" aria-label="Reset Lights" data-tooltip="Reset all light settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                    <label class="effect-toggle" data-tooltip="Enable/disable 3-point lighting system">
+                      <input type="checkbox" id="lightsEnabled" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable 3-Point Lighting</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--xl"
+                  data-effect-foldout="lights-rig"
+                  aria-hidden="true"
+                >
+                <!-- Global Light Controls -->
+                <div class="subsection" data-subsection="globalLights">
+                  <label class="slider-line">
+                    <span data-tooltip="Overall light intensity multiplier">Intensity</span>
+                    <input
+                      id="lightsMaster"
+                      type="range"
+                      min="0"
+                      max="5"
+                      step="0.01"
+                      value="0.30"
+                    />
+                    <span class="value" data-output="lightsMaster">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Vertical position of all lights">Height</span>
+                    <input
+                      id="lightsHeight"
+                      type="range"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      value="5"
+                    />
+                    <span class="value" data-output="lightsHeight">5.0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Rotate all lights around the object">Rotate</span>
+                    <input
+                      id="lightsRotation"
+                      type="range"
+                      min="0"
+                      max="360"
+                      value="0"
+                      step="1"
+                    />
+                    <span class="value" data-output="lightsRotation">0°</span>
+                  </label>
+                  <div class="slider-line">
+                    <span>Auto Rotate</span>
+                    <label class="effect-toggle" data-tooltip="Rotate lights around the object (360° every 10s; matches 10s PNG/MP4 export when enabled)">
+                      <input type="checkbox" id="lightsAutoRotate" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Auto rotate lights</span>
+                    </label>
+                  </div>
+                  <div class="slider-line">
+                    <span data-tooltip="Show visual indicators for light positions">Show Spotlights</span>
+                    <label class="effect-toggle" data-tooltip="Display light position indicators in the viewport">
+                      <input type="checkbox" id="showLightIndicators" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show spotlights</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="panel-block-divider"></div>
+
+                <!-- Key Light -->
+                <div class="subsection" data-subsection="keyLight">
+                  <div class="block-title has-toggle has-reset">
+                    <span>Key</span>
+                    <div class="creative-look-heading-actions">
+                      <button class="block-reset-btn" data-reset="keyLight" aria-label="Reset Key Light" data-tooltip="Reset Key Light settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <button
+                        type="button"
+                        id="keyLightGoboBtn"
+                        class="gobo-panel-btn"
+                        aria-expanded="false"
+                        aria-controls="keyLightGoboFoldout"
+                        data-tooltip="Gobo — project patterned light/shadow from the key light"
+                      >
+                        <i class="fa-solid fa-tree" aria-hidden="true"></i>
+                        <span class="sr-only">Gobo textures</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable Key Light (main light)">
+                        <input type="checkbox" id="keyLightEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Key Light</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                    data-effect-foldout="key-light"
+                    aria-hidden="true"
+                  >
+                  <label class="color-line light-color-row" data-light="key">
+                    <span>Color</span>
+                  <input type="color" class="color-chip light-chip" value="#ffdfc9" />
+                </label>
+                  <label class="slider-line">
+                    <span>Intensity</span>
+                    <input
+                      id="keyLightStrength"
+                      type="range"
+                      min="0"
+                      max="5"
+                      step="0.01"
+                      value="1.28"
+                    />
+                    <span class="value" data-output="keyLightStrength">1.28</span>
+                </label>
+                  <label class="slider-line">
+                    <span>Height</span>
+                    <input
+                      id="keyLightHeight"
+                      type="range"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      value="5"
+                    />
+                    <span class="value" data-output="keyLightHeight">5.0</span>
+                </label>
+                  <label class="slider-line">
+                    <span>Rotate</span>
+                    <input
+                      id="keyLightRotate"
+                      type="range"
+                      min="0"
+                      max="360"
+                      value="0"
+                      step="1"
+                    />
+                    <span class="value" data-output="keyLightRotate">0°</span>
+                  </label>
+                  <div class="slider-line">
+                    <span>Cast Shadows</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="keyLightCastShadows" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Cast shadows</span>
+                    </label>
+                  </div>
+                  <div
+                    id="keyLightGoboFoldout"
+                    class="creative-look-foldout creative-look-foldout--collapsed"
+                  >
+                    <div class="creative-look-foldout-body">
+                      <div class="slider-line slider-line--toggle-only">
+                        <span data-tooltip="Project the selected gobo pattern from the key light">Gobo</span>
+                        <label class="effect-toggle">
+                          <input type="checkbox" id="goboEnabled" />
+                          <span class="effect-indicator" aria-hidden="true"></span>
+                          <span class="sr-only">Enable gobo projection</span>
+                        </label>
+                      </div>
+                      <div class="hdri-grid" id="goboGrid">
+                        <button
+                          type="button"
+                          data-gobo="palm"
+                          class="hdri-icon active"
+                          data-tooltip="Palm leaf gobo — dappled foliage shadows"
+                        >
+                          <img
+                            src="./assets/gobos/orby-spotlight-gobo01-palm.jpg"
+                            alt="Palm gobo"
+                            width="192"
+                            height="192"
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          data-gobo="leaf"
+                          class="hdri-icon"
+                          data-tooltip="Single leaf gobo — soft organic shadow"
+                        >
+                          <img
+                            src="./assets/gobos/orby-spotlight-gobo02-leaf.jpg"
+                            alt="Leaf gobo"
+                            width="192"
+                            height="192"
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          data-gobo="tree"
+                          class="hdri-icon"
+                          data-tooltip="Tree canopy gobo — broad branching shadows"
+                        >
+                          <img
+                            src="./assets/gobos/orby-spotlight-gobo03-tree.jpg"
+                            alt="Tree gobo"
+                            width="192"
+                            height="192"
+                          />
+                        </button>
+                      </div>
+                      <label class="slider-line">
+                        <span data-tooltip="Blur the gobo mask. Independent from cast-shadow softness — tune per texture.">Softness</span>
+                        <input
+                          id="goboSoftness"
+                          type="range"
+                          min="0"
+                          max="4"
+                          step="0.05"
+                          value="0.3"
+                        />
+                        <span class="value" data-output="goboSoftness">0.30</span>
+                      </label>
+                      <label class="slider-line">
+                        <span data-tooltip="Pattern size (0–10). Higher = smaller pattern. 5 matches the former 0.50 setting.">Scale</span>
+                        <input
+                          id="goboScale"
+                          type="range"
+                          min="0"
+                          max="10"
+                          step="0.05"
+                          value="5"
+                        />
+                        <span class="value" data-output="goboScale">5.00</span>
+                      </label>
+                      <label class="slider-line">
+                        <span data-tooltip="Rotate the projected pattern around its center">Rotation</span>
+                        <input
+                          id="goboRotation"
+                          type="range"
+                          min="0"
+                          max="360"
+                          step="1"
+                          value="0"
+                        />
+                        <span class="value" data-output="goboRotation">0°</span>
+                      </label>
+                    </div>
+                  </div>
+                  </div>
+                </div>
+
+                <div class="panel-block-divider"></div>
+
+                <!-- Fill Light -->
+                <div class="subsection" data-subsection="fillLight">
+                  <div class="block-title has-toggle has-reset">
+                    <span>Fill</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="fillLight" aria-label="Reset Fill Light" data-tooltip="Reset Fill Light settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable Fill Light (soft fill)">
+                        <input type="checkbox" id="fillLightEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Fill Light</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="fill-light"
+                    aria-hidden="true"
+                  >
+                  <label class="color-line light-color-row" data-light="fill">
+                    <span>Color</span>
+                    <input type="color" class="color-chip light-chip" value="#b0c7ff" />
+                </label>
+                <label class="slider-line">
+                  <span>Intensity</span>
+                  <input
+                      id="fillLightStrength"
+                    type="range"
+                    min="0"
+                    max="5"
+                    step="0.01"
+                      value="0.8"
+                  />
+                    <span class="value" data-output="fillLightStrength">0.80</span>
+                </label>
+                <label class="slider-line">
+                    <span>Height</span>
+                    <input
+                      id="fillLightHeight"
+                      type="range"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      value="3"
+                    />
+                    <span class="value" data-output="fillLightHeight">3.0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Rotate</span>
+                    <input
+                      id="fillLightRotate"
+                      type="range"
+                      min="0"
+                      max="360"
+                      value="0"
+                      step="1"
+                    />
+                    <span class="value" data-output="fillLightRotate">0°</span>
+                  </label>
+                  <div class="slider-line">
+                    <span>Cast Shadows</span>
+                  <label class="effect-toggle">
+                      <input type="checkbox" id="fillLightCastShadows" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Cast shadows</span>
+                  </label>
+                </div>
+                  </div>
+                </div>
+
+                <div class="panel-block-divider"></div>
+
+                <!-- Rim Light -->
+                <div class="subsection" data-subsection="rimLight">
+                  <div class="block-title has-toggle has-reset">
+                    <span>Rim</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="rimLight" aria-label="Reset Rim Light" data-tooltip="Reset Rim Light settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                  <label class="effect-toggle" data-tooltip="Enable/disable Rim Light (edge highlight)">
+                        <input type="checkbox" id="rimLightEnabled" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Rim Light</span>
+                  </label>
+                </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="rim-light"
+                    aria-hidden="true"
+                  >
+                  <label class="color-line light-color-row" data-light="rim">
+                    <span>Color</span>
+                    <input type="color" class="color-chip light-chip" value="#a0eaf9" />
+                  </label>
+                <label class="slider-line">
+                    <span>Intensity</span>
+                  <input
+                      id="rimLightStrength"
+                      type="range"
+                      min="0"
+                      max="5"
+                      step="0.01"
+                      value="0.96"
+                    />
+                    <span class="value" data-output="rimLightStrength">0.96</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Height</span>
+                    <input
+                      id="rimLightHeight"
+                      type="range"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      value="4"
+                    />
+                    <span class="value" data-output="rimLightHeight">4.0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Rotate</span>
+                    <input
+                      id="rimLightRotate"
+                    type="range"
+                    min="0"
+                    max="360"
+                    value="0"
+                    step="1"
+                  />
+                    <span class="value" data-output="rimLightRotate">0°</span>
+                  </label>
+                  <div class="slider-line">
+                    <span>Cast Shadows</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="rimLightCastShadows" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Cast shadows</span>
+                    </label>
+                </div>
+                  </div>
+              </div>
+
+                <div class="panel-block-divider"></div>
+
+                <!-- Ambient Light -->
+                <div class="subsection" data-subsection="ambientLight">
+                  <div class="block-title has-toggle has-reset">
+                    <span>Ambient</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="ambientLight" aria-label="Reset Ambient Light" data-tooltip="Reset Ambient Light settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+              </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable Ambient Light (global illumination)">
+                        <input type="checkbox" id="ambientLightEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Ambient Light</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="ambient-light"
+                    aria-hidden="true"
+                  >
+                  <label class="color-line light-color-row" data-light="ambient">
+                    <span>Color</span>
+                    <input type="color" class="color-chip light-chip" value="#7c8ca6" />
+                  </label>
+                  <label class="slider-line">
+                    <span>Intensity</span>
+                    <input
+                      id="ambientLightStrength"
+                      type="range"
+                      min="0"
+                      max="5"
+                      step="0.01"
+                      value="0.48"
+                    />
+                    <span class="value" data-output="ambientLightStrength">0.48</span>
+                  </label>
+                  </div>
+                </div>
+
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="lightsShadows">
+                  <div class="block-title has-toggle has-reset">
+                    <span>Shadows</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="lights-shadows" aria-label="Reset Shadows" data-tooltip="Reset shadow settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable shadow casting from 3-point lights">
+                        <input type="checkbox" id="lightsCastShadows" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable shadows</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                    data-effect-foldout="lights-shadows"
+                    aria-hidden="true"
+                  >
+                  <label class="select-line">
+                    <span data-tooltip="Shadow map resolution for 3-point lights">Quality</span>
+                    <select id="lightsShadowQuality" aria-label="Shadow quality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
+                  </label>
+                  <label class="color-line">
+                    <span data-tooltip="Color of shadowed areas. Black gives the darkest shadows.">Shadow Color</span>
+                    <input type="color" id="lightsShadowColor" class="color-chip" value="#080808" />
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="0 = harder shadow edge. Higher values = softer penumbra.">Softness</span>
+                    <input
+                      id="lightsShadowSoftness"
+                      type="range"
+                      min="0"
+                      max="4"
+                      step="0.05"
+                      value="0.6"
+                    />
+                    <span class="value" data-output="lightsShadowSoftness">0.6</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="How strong the shadow tint is. Lower for softer, less solid shadows.">Opacity</span>
+                    <input
+                      id="lightsShadowOpacity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.25"
+                    />
+                    <span class="value" data-output="lightsShadowOpacity">0.25</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Cast-shadow contact only — does not fix bright leaks on side faces (use Hard Edge Angle under 3D Shape). Negative pulls shadows onto surfaces.">Cast Shadow Offset</span>
+                    <input
+                      id="lightsShadowContactOffset"
+                      type="range"
+                      min="-0.002"
+                      max="0.0005"
+                      step="0.00001"
+                      value="-0.0005"
+                    />
+                    <span class="value" data-output="lightsShadowContactOffset">-0.0005</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Offsets shadow-map comparison along surface normals — reduces cast-shadow acne and terminator gaps on receiving surfaces.">Normal Bias</span>
+                    <input
+                      id="lightsShadowNormalBias"
+                      type="range"
+                      min="0"
+                      max="0.08"
+                      step="0.001"
+                      value="0.010"
+                    />
+                    <span class="value" data-output="lightsShadowNormalBias">0.010</span>
+                  </label>
+                  <div class="slider-line">
+                    <span data-tooltip="Lets both faces of a mesh receive cast shadows. Good for thin cards and foliage, and for extruded typography (inner strokes, back faces).">Two-Sided Cast</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="lightsShadowTwoSided" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable two-sided shadow casting</span>
+                    </label>
+                    <span class="value" aria-hidden="true"></span>
+                  </div>
+                  </div>
+                </div>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Scene</div>
+                <div class="scene-controls">
+                  <button id="resetStudioSettings" class="accent-action-btn" data-tooltip="Reset all studio settings to defaults">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    Reset Studio
+                  </button>
+                  <button class="copy-scene-settings accent-action-btn" data-tooltip="Copy all scene settings to clipboard">
+                    <i class="fa-solid fa-copy"></i>
+                    Copy Scene Settings
+                  </button>
+                  <button class="load-scene-settings accent-action-btn" data-tooltip="Paste scene settings from clipboard into a dialog">
+                    <i class="fa-solid fa-upload"></i>
+                    Paste Scene Settings
+                  </button>
+                  <button class="save-orby-scene accent-action-btn" data-tooltip="Save entire scene and model as .orby file">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Save .orby Scene
+                  </button>
+                  <button class="load-orby-scene accent-action-btn" data-tooltip="Load entire scene and model from .orby file">
+                    <i class="fa-solid fa-file-import"></i>
+                    Load .orby Scene
+                  </button>
+                </div>
+              </div>
+              <div class="info-version-tag">v0.5.876 · 2026-06-29 15:07:13 UTC</div>
+              <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
+                <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
+              </button>
+            </section>

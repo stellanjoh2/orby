@@ -1,0 +1,481 @@
+            <h2 class="panel-header-title" data-header="export">Export</h2>
+            <section class="panel" data-panel="export">
+              <div class="panel-block" data-export-section="image">
+                <div class="block-title has-toggle">
+                  <span>Image</span>
+                  <label class="effect-toggle" data-tooltip="Show Image export options">
+                    <input type="checkbox" id="exportImageSectionOpen" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Show Image export options</span>
+                  </label>
+                </div>
+                <div
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                  data-export-foldout="image"
+                  aria-hidden="true"
+                >
+                <p class="export-format-sub">
+                  Raster snapshot of the current view—lighting, materials, and post effects included. Choose PNG, JPEG, or WebP; toggle transparency when the format supports it. Size is relative to the viewer—1× matches your current screen resolution, 2× exports at double that (larger file, more detail).
+                </p>
+                <div class="export-controls">
+                  <div class="export-option-group">
+                    <label class="export-label">Format</label>
+                    <div class="export-button-group export-button-group--triple">
+                      <button type="button" data-export-image-format="png" class="export-option-btn active" data-tooltip="Lossless PNG with optional transparency">.PNG</button>
+                      <button type="button" data-export-image-format="jpeg" class="export-option-btn" data-tooltip="Smaller JPEG — no transparency">.JPEG</button>
+                      <button type="button" data-export-image-format="webp" class="export-option-btn" data-tooltip="WebP with optional transparency">.WEBP</button>
+                    </div>
+                  </div>
+                  <div id="exportImageTransparentSettings" class="export-option-group">
+                    <label class="export-label">Transparent</label>
+                    <div class="export-button-group">
+                      <button type="button" data-export-transparent="false" class="export-option-btn" data-tooltip="Export with solid background">NO</button>
+                      <button type="button" data-export-transparent="true" class="export-option-btn active" data-tooltip="Export with transparent background">YES</button>
+                    </div>
+                  </div>
+                  <div class="export-option-group">
+                    <label class="export-label">Size</label>
+                    <div class="export-button-group">
+                      <button data-export-size="1" class="export-option-btn" data-tooltip="Export at 1× resolution">1X</button>
+                      <button data-export-size="2" class="export-option-btn active" data-tooltip="Export at 2× resolution (higher quality)">2X</button>
+                    </div>
+                  </div>
+                  <button id="exportImageButton" class="accent-action-btn" data-tooltip="Export current view as image">
+                    <i class="fa-solid fa-download"></i>
+                    <span class="export-image-btn-label">Export .PNG</span>
+                  </button>
+                </div>
+                </div>
+              </div>
+
+              <div class="panel-block" data-export-section="svg">
+                <div class="block-title has-toggle">
+                  <span>SVG</span>
+                  <label class="effect-toggle" data-tooltip="Show SVG export options">
+                    <input type="checkbox" id="exportSvgSectionOpen" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Show SVG export options</span>
+                  </label>
+                </div>
+                <div
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                  data-export-foldout="svg"
+                  aria-hidden="true"
+                >
+                <p class="export-format-sub">
+                  Vector output derived from the current framing—great for logos, precision edges, and scaling without pixels. Silhouette traces a single outline; Color builds flat filled regions from the render.
+                </p>
+                <label class="select-line">
+                  <span data-tooltip="Low: fewer colors and coarser paths (smaller files). Medium: balanced. High: maximum colors and trace detail (larger files).">Detail Level</span>
+                  <select id="exportSvgColorDetail" aria-label="SVG export detail level">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high" selected>High</option>
+                  </select>
+                </label>
+                <div class="export-controls">
+                  <button id="exportSvgButton" class="accent-action-btn" data-tooltip="Export silhouette as vector SVG">
+                    <i class="fa-solid fa-draw-polygon"></i>
+                    Export .SVG (Silhouette)
+                  </button>
+                  <button id="exportSvgColorButton" class="accent-action-btn" data-tooltip="Export flat-color vector SVG using the detail level above">
+                    <i class="fa-solid fa-palette"></i>
+                    Export .SVG (Color)
+                  </button>
+                </div>
+                </div>
+              </div>
+
+              <div class="panel-block" data-export-section="glb">
+                <div class="block-title has-toggle">
+                  <span>GLB</span>
+                  <label class="effect-toggle" data-tooltip="Show GLB export options">
+                    <input type="checkbox" id="exportGlbSectionOpen" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Show GLB export options</span>
+                  </label>
+                </div>
+                <div
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                  data-export-foldout="glb"
+                  aria-hidden="true"
+                >
+                <p class="export-format-sub">
+                  Export a .GLB for other 3D tools and AR — from an imported SVG extrusion, or from Shader Lab <strong>Voxel HD</strong>, <strong>PS2 Crush</strong>, <strong>PSX</strong>, or <strong>VGA/DOS 3D</strong> (with the look applied). Tip: dial in extrusion or Shader Lab before exporting.
+                </p>
+                <div class="export-controls">
+                  <button id="exportSvgGlbButton" class="accent-action-btn" data-tooltip="Export .GLB — SVG extrusion, or Shader Lab Voxel HD / PS2 Crush / PSX / VGA with the look applied">
+                    <i class="fa-solid fa-cube"></i>
+                    Export .GLB
+                  </button>
+                </div>
+                </div>
+              </div>
+              <div class="panel-block" data-export-section="video">
+                <div class="block-title has-toggle">
+                  <span>Video</span>
+                  <label class="effect-toggle" data-tooltip="Show Video export options">
+                    <input type="checkbox" id="exportVideoSectionOpen" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Show Video export options</span>
+                  </label>
+                </div>
+                <div
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--xl"
+                  data-export-foldout="video"
+                  aria-hidden="true"
+                >
+                <p class="export-format-sub">
+                  Combine object turntable, camera orbit/dolly/tilt, and optional HDRI rotation. Full and subtle spins apply only when Turntable or Orbit is enabled — they rotate the mesh or camera, not the environment.
+                </p>
+                <p class="export-format-sub export-format-warning">
+                  MP4 is a real-time viewport capture, not an offline render. Heavier scenes may drop frames or fail—best for previews and lighter setups. For dependable output, export a PNG sequence.
+                </p>
+                <div class="export-controls">
+                  <div class="export-option-group">
+                    <label class="export-label">Movement</label>
+                    <div class="export-button-group">
+                      <button type="button" data-video-movement="turntable" class="export-option-btn active" data-tooltip="Object: rotate the mesh in place over the export length">TURNTABLE</button>
+                      <button type="button" data-video-movement="orbit" class="export-option-btn" data-tooltip="Camera: orbit around your current target; one full 360° per spin over export length">ORBIT</button>
+                    </div>
+                    <div class="export-button-group">
+                      <button type="button" data-video-movement="zoom-in" class="export-option-btn" data-tooltip="Camera: dolly toward the orbit target over the export length">ZOOM IN</button>
+                      <button type="button" data-video-movement="zoom-out" class="export-option-btn" data-tooltip="Camera: dolly away from the orbit target over the export length">ZOOM OUT</button>
+                    </div>
+                    <div class="export-button-group">
+                      <button type="button" data-video-movement="tilt-left" class="export-option-btn" data-tooltip="Camera: roll left (counter-clockwise) over the export length">TILT LEFT</button>
+                      <button type="button" data-video-movement="tilt-right" class="export-option-btn" data-tooltip="Camera: roll right (clockwise) over the export length">TILT RIGHT</button>
+                    </div>
+                  </div>
+                  <div class="export-option-group">
+                    <label class="export-label">Full Spins (360°) · Object &amp; camera</label>
+                    <div class="export-button-group export-button-group--triple">
+                      <button type="button" data-video-spins="0" class="export-option-btn" data-tooltip="No full 360° laps — use subtle spins below, HDRI rotation, or zoom/tilt only">0</button>
+                      <button type="button" data-video-spins="1" class="export-option-btn active" data-tooltip="One full 360° — mesh (Turntable) or camera (Orbit), depending on which movement is enabled">1</button>
+                      <button type="button" data-video-spins="2" class="export-option-btn" data-tooltip="Two full 360° laps over the same duration — mesh or camera">2</button>
+                    </div>
+                  </div>
+                  <div id="exportSubtleSpinsGroup" class="export-option-group">
+                    <label class="export-label">Subtle Spins · Object &amp; camera</label>
+                    <div class="export-button-group export-button-group--triple">
+                      <button type="button" data-video-subtle-spins="22.5" class="export-option-btn" data-tooltip="Partial 22.5° mesh or camera rotation over the export length (when full spins is 0)">22.5°</button>
+                      <button type="button" data-video-subtle-spins="45" class="export-option-btn" data-tooltip="Partial 45° mesh or camera rotation over the export length (when full spins is 0)">45°</button>
+                      <button type="button" data-video-subtle-spins="90" class="export-option-btn" data-tooltip="Partial 90° mesh or camera rotation over the export length (when full spins is 0)">90°</button>
+                    </div>
+                  </div>
+                  <div class="export-option-group">
+                    <label class="export-label">Spin Direction · Object &amp; camera</label>
+                    <div class="export-button-group">
+                      <button type="button" data-video-spin-direction="forward" class="export-option-btn active" data-tooltip="Default direction for mesh/camera spins">FORWARD</button>
+                      <button type="button" data-video-spin-direction="reverse" class="export-option-btn" data-tooltip="Opposite direction for mesh/camera spins">REVERSE</button>
+                    </div>
+                  </div>
+                  <div id="exportMovementSliders" class="export-option-group">
+                    <label id="exportZoomDistanceSettings" class="slider-line">
+                      <span data-tooltip="Camera: how far the camera dollies in or out over the export length (scene units).">Zoom distance</span>
+                      <input
+                        id="exportZoomDistance"
+                        type="range"
+                        min="0.1"
+                        max="6"
+                        value="1.5"
+                        step="0.05"
+                      />
+                      <span class="value" data-output="exportZoomDistance">1.50m</span>
+                    </label>
+                    <label id="exportTiltAngleSettings" class="slider-line">
+                      <span data-tooltip="Camera: Dutch roll angle applied over the export length (degrees).">Roll angle</span>
+                      <input
+                        id="exportTiltAngle"
+                        type="range"
+                        min="0"
+                        max="180"
+                        value="15"
+                        step="1"
+                      />
+                      <span class="value" data-output="exportTiltAngle">15°</span>
+                    </label>
+                    <label id="exportFovOffsetSettings" class="slider-line">
+                      <span data-tooltip="Camera: animate field of view linearly over the export length. Center = no change; left narrows (telephoto), right widens (wide-angle).">FOV animation</span>
+                      <input
+                        id="exportFovOffset"
+                        type="range"
+                        min="-40"
+                        max="40"
+                        value="0"
+                        step="1"
+                      />
+                      <span class="value" data-output="exportFovOffset">0°</span>
+                    </label>
+                    <label id="exportPitchOffsetSettings" class="slider-line">
+                      <span data-tooltip="Camera: pivot up or down on the orbit target over the export length — like nodding your head. Center = no change; right tilts up, left tilts down.">Pitch animation</span>
+                      <input
+                        id="exportPitchOffset"
+                        type="range"
+                        min="-90"
+                        max="90"
+                        value="0"
+                        step="1"
+                      />
+                      <span class="value" data-output="exportPitchOffset">0°</span>
+                    </label>
+                  </div>
+                  <div class="export-option-group export-preview-animation">
+                    <label class="export-label">Preview animation</label>
+                    <div class="animation-timeline">
+                      <div class="animation-controls">
+                        <div class="animation-transport-btns">
+                          <button
+                            id="exportPreviewPlayPause"
+                            type="button"
+                            class="animation-play-btn"
+                            disabled
+                            aria-label="Play export preview"
+                            data-tooltip="Play export movement preview in the viewport"
+                          >
+                            <i class="fa-solid fa-play" aria-hidden="true"></i>
+                            <span class="sr-only">Play</span>
+                          </button>
+                          <button
+                            id="exportPreviewReset"
+                            type="button"
+                            class="animation-play-btn"
+                            disabled
+                            aria-label="Stop preview and return to start"
+                            data-tooltip="End preview, return to frame 0, and restore camera orbit"
+                          >
+                            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                            <span class="sr-only">Stop preview</span>
+                          </button>
+                        </div>
+                        <input
+                          type="range"
+                          id="exportPreviewScrub"
+                          min="0"
+                          max="1"
+                          step="0.001"
+                          value="0"
+                          disabled
+                          aria-label="Export preview timeline"
+                        />
+                        <span id="exportPreviewTime">0:00</span>
+                      </div>
+                    </div>
+                    <div class="export-preview-pause-all-row">
+                      <button
+                        type="button"
+                        id="exportPreviewPauseAll"
+                        class="ghost-btn small export-preview-pause-all-btn"
+                        disabled
+                        data-tooltip="Freeze 3D type reveal and constant animations at the current pose without leaving the Export tab. Press again to resume."
+                      >
+                        Pause all animations
+                      </button>
+                    </div>
+                  </div>
+                  <div class="export-video-preview-actions scene-controls">
+                    <button
+                      type="button"
+                      id="exportVideoCameraSaveButton"
+                      class="accent-action-btn export-video-camera-btn"
+                      data-tooltip="Remember this camera framing for this session (position, target, and tilt)"
+                    >
+                      <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                      <span>Save Camera Position</span>
+                    </button>
+                    <button
+                      type="button"
+                      id="exportVideoCameraRestoreButton"
+                      class="accent-action-btn export-video-camera-btn"
+                      disabled
+                      data-tooltip="Restore the camera framing you saved this session"
+                    >
+                      <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                      <span>Restore Camera Position</span>
+                    </button>
+                  </div>
+                  <div id="exportMeshAnimationsSettings" class="export-option-group" hidden>
+                    <div class="slider-line">
+                      <span data-tooltip="Play a GLB animation clip during export and preview">Embed Animations</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="exportMeshAnimationsEmbed" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Embed GLB animations in video export</span>
+                      </label>
+                    </div>
+                    <label id="exportMeshAnimationClipWrap" class="select-line" hidden>
+                      <span class="sr-only">Export animation clip</span>
+                      <select id="exportMeshAnimationSelect" aria-label="Export animation clip" data-tooltip="Which GLB animation clip to play during export"></select>
+                    </label>
+                  </div>
+                  <div class="panel-block-divider" aria-hidden="true"></div>
+                  <div class="export-option-group">
+                    <label class="export-label">Format</label>
+                    <div class="export-button-group">
+                      <button data-video-format="mp4" class="export-option-btn active" data-tooltip="Encoded .MP4 export">.MP4</button>
+                      <button data-video-format="png" class="export-option-btn" data-tooltip="Numbered PNG sequence">.PNG</button>
+                    </div>
+                  </div>
+                  <div id="exportPngTransparentSettings" class="export-png-transparent is-muted">
+                    <div class="export-option-group">
+                      <label class="export-label">Transparent</label>
+                      <div class="export-button-group">
+                        <button type="button" data-video-mov-transparent="false" class="export-option-btn active" disabled data-tooltip="Solid background">NO</button>
+                        <button type="button" data-video-mov-transparent="true" class="export-option-btn is-disabled" disabled data-tooltip="Transparent PNG sequence for compositing">YES</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div id="exportPngFolderSettings" class="export-png-folder is-muted">
+                    <div class="export-option-group">
+                      <label class="export-label">Output folder</label>
+                      <div class="export-path-row">
+                        <button type="button" id="exportPngFolderChoose" class="export-option-btn export-path-choose" data-tooltip="Choose a folder — frames write directly to disk (Chrome / Edge; Safari and Firefox use ZIP)">Choose…</button>
+                        <span id="exportPngFolderLabel" class="export-path-label">No folder — downloads as ZIP</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div id="exportMp4Settings" class="export-video-foldout export-video-foldout--borderless">
+                    <div class="export-option-group">
+                      <label class="export-label">Quality</label>
+                      <div class="export-button-group export-button-group--triple">
+                        <button data-video-mp4-quality="low" class="export-option-btn" data-tooltip="Smaller file, lower quality">LOW</button>
+                        <button data-video-mp4-quality="medium" class="export-option-btn active" data-tooltip="Balanced quality and size">MEDIUM</button>
+                        <button data-video-mp4-quality="high" class="export-option-btn" data-tooltip="Higher quality, larger file">HIGH</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="export-option-group">
+                    <label class="export-label">Length</label>
+                    <div class="export-button-group export-button-group--triple">
+                      <button data-video-duration="5" class="export-option-btn active" data-tooltip="5 second export duration">5s</button>
+                      <button data-video-duration="10" class="export-option-btn" data-tooltip="10 second export duration">10s</button>
+                      <button data-video-duration="15" class="export-option-btn" data-tooltip="15 second export duration">15s</button>
+                    </div>
+                  </div>
+                  <div class="export-option-group">
+                    <label class="export-label">FPS</label>
+                    <div class="export-button-group export-button-group--triple">
+                      <button data-video-fps="24" class="export-option-btn active" data-tooltip="Cinematic motion">24</button>
+                      <button data-video-fps="30" class="export-option-btn" data-tooltip="Smoother standard video">30</button>
+                      <button data-video-fps="60" class="export-option-btn" data-tooltip="Very smooth motion, larger files">60</button>
+                    </div>
+                  </div>
+                  <div class="export-option-group">
+                    <label class="export-label">Resolution</label>
+                    <div class="export-button-group export-button-group--triple">
+                      <button data-video-resolution="1080p" class="export-option-btn active" data-tooltip="1920 × 1080">1080p</button>
+                      <button data-video-resolution="1440p" class="export-option-btn" data-tooltip="2560 × 1440">1440p</button>
+                      <button data-video-resolution="2160p" class="export-option-btn" data-tooltip="3840 × 2160 (4K). Heavy encode; some browsers may fall back.">2160p</button>
+                    </div>
+                  </div>
+                  <button
+                    id="exportVideoCapturePreviewButton"
+                    class="accent-action-btn"
+                    data-tooltip="Render one offline frame at export resolution (same path as PNG encode). Uses preview scrub time when preview is active."
+                  >
+                    <i class="fa-solid fa-camera"></i>
+                    Capture preview frame
+                  </button>
+                  <div class="export-capture-preview-thumb" id="exportCapturePreviewThumbWrap">
+                    <div class="export-capture-preview-thumb-frame">
+                      <img id="exportCapturePreviewThumb" alt="Last export capture preview" width="320" height="180" hidden />
+                      <div class="export-capture-preview-thumb-empty" id="exportCapturePreviewThumbEmpty">
+                        <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                        <span>Capture a preview frame to see it here</span>
+                      </div>
+                    </div>
+                    <span class="export-capture-preview-thumb-label" id="exportCapturePreviewThumbLabel"></span>
+                  </div>
+                  <button id="exportVideoButton" class="accent-action-btn" data-tooltip="Export MP4 or PNG sequence. For long PNG exports, choose an output folder to write frames directly to disk.">
+                    <i class="fa-solid fa-film"></i>
+                    Export Video
+                  </button>
+                </div>
+                </div>
+              </div>
+
+              <div class="panel-block" data-export-section="watermark">
+                <div class="block-title has-toggle">
+                  <span>Watermark</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" id="watermarkResetBtn" aria-label="Reset Watermark" data-tooltip="Reset Watermark settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                    <label class="effect-toggle" data-tooltip="Show a watermark logotype and credit in the viewport corner">
+                      <input type="checkbox" id="exportWatermarkSectionOpen" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Toggle watermark</span>
+                    </label>
+                  </div>
+                </div>
+                <div
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                  data-export-foldout="watermark"
+                  aria-hidden="true"
+                >
+                <div class="export-controls">
+                  <div class="export-option-group">
+                    <label class="export-label">Logotype</label>
+                    <div class="export-button-group">
+                      <button type="button" data-watermark-logo="orby" class="export-option-btn active" data-tooltip="Use the Orby mark">Orby</button>
+                      <button type="button" id="watermarkCustomBtn" data-watermark-logo="custom" class="export-option-btn watermark-custom-btn" data-tooltip="Upload your own SVG logotype">Custom</button>
+                    </div>
+                    <input type="file" id="watermarkCustomFile" class="sr-only" accept=".svg,image/svg+xml" />
+                  </div>
+                  <label class="slider-line">
+                    <span data-tooltip="Scale the watermark logotype up or down">Logotype Scale</span>
+                    <input id="watermarkLogoScale" type="range" min="50" max="200" step="1" value="100" />
+                    <span class="value" data-output="watermarkLogoScale">100%</span>
+                  </label>
+                  <label class="color-line">
+                    <span data-tooltip="Tint the watermark logotype">Logotype Color</span>
+                    <input type="color" id="watermarkLogoColor" class="color-chip" value="#c4ff00" />
+                  </label>
+                  <div class="export-option-group">
+                    <label class="export-label">Placement</label>
+                    <div class="export-button-group">
+                      <button type="button" data-watermark-placement="left" class="export-option-btn active" data-tooltip="Logotype bottom-left, credit bottom-right">LEFT</button>
+                      <button type="button" data-watermark-placement="right" class="export-option-btn" data-tooltip="Logotype bottom-right, credit bottom-left">RIGHT</button>
+                    </div>
+                  </div>
+                  <div class="slider-line">
+                    <span data-tooltip="Show a credit line on the opposite side of the logotype">Credit</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="watermarkCreditEnabled" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Toggle credit text</span>
+                    </label>
+                  </div>
+                  <div class="effect-foldout effect-foldout--collapsed watermark-credit-foldout" data-watermark-credit-foldout aria-hidden="true">
+                    <input
+                      type="text"
+                      id="watermarkCredit"
+                      class="watermark-credit-input"
+                      maxlength="160"
+                      placeholder="Lorem Ipsu"
+                      value="Lorem Ipsu"
+                      autocomplete="off"
+                      spellcheck="false"
+                      aria-label="Credit text"
+                      data-tooltip="Credit, name, or legal text shown opposite the logotype"
+                    />
+                    <label class="slider-line">
+                      <span data-tooltip="Scale the credit text up or down">Credit Scale</span>
+                      <input id="watermarkCreditScale" type="range" min="50" max="200" step="1" value="100" />
+                      <span class="value" data-output="watermarkCreditScale">100%</span>
+                    </label>
+                    <label class="color-line">
+                      <span data-tooltip="Credit text color">Credit Color</span>
+                      <input type="color" id="watermarkCreditColor" class="color-chip" value="#ffffff" />
+                    </label>
+                  </div>
+                </div>
+                </div>
+              </div>
+
+              <div class="info-version-tag">v0.5.876 · 2026-06-29 15:07:13 UTC</div>
+              <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
+                <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
+              </button>
+            </section>

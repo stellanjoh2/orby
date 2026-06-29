@@ -267,15 +267,22 @@ export class UIHelpers {
   }
 
   /**
-   * Setup global slider fill updates for all range inputs
-   * This ensures all sliders get the fill effect automatically
-   */
-  /**
    * While a range slider or color chip is held, state writes still apply but
    * StateStore.notify (full UI sync) waits until pointer release.
    * Tracks range drags so snap-to-center is skipped while scrubbing, and
    * restores the thumb if post-release sync overwrites the dropped value.
    */
+  /** True while a shelf range/color control is held (deferred notify scrub). */
+  isViewportScrubActive() {
+    if (this._draggingRangeSliders?.size > 0) return true;
+    if (this._deferNotifyPointerIds?.size > 0) return true;
+    return !!this.stateStore?.isNotifyDeferred?.();
+  }
+
+  requestViewportRender() {
+    this.ui?.scene?.requestRender?.();
+  }
+
   setupDeferredControlNotify() {
     if (this._deferredControlNotifyBound) return;
     this._deferredControlNotifyBound = true;
@@ -323,6 +330,7 @@ export class UIHelpers {
       if (!isDeferredControl(event.target)) return;
       this._deferNotifyPointerIds.add(event.pointerId);
       this.stateStore.beginDeferredNotify();
+      this.requestViewportRender();
     };
 
     const onPointerMove = (event) => {
@@ -898,6 +906,7 @@ export class UIHelpers {
       if (!editing) {
         editing = true;
         this.stateStore.beginDeferredNotify();
+        this.requestViewportRender();
       }
       this.writeStateAndEmit(statePath, eventName, event.target.value);
     });

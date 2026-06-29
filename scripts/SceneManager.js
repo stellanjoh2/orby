@@ -216,6 +216,7 @@ export class SceneManager {
     this.eventBus = eventBus;
     this.stateStore = stateStore;
     this.ui = uiManager;
+    if (uiManager) uiManager.scene = this;
     /** True while the settings shelf `.panels` is being scrolled (drives light FX throttling). */
     this.panelsShelfScrolling = false;
     /** Skip rAF resize while PNG/export pipeline mutates renderer size (avoids composer/canvas mismatch). */
@@ -364,7 +365,7 @@ export class SceneManager {
     this._syncAnimationControllerFromState();
     this.fontTextRevealController = new FontTextRevealController({
       stateStore: this.stateStore,
-      onNeedRender: () => this.render(),
+      onNeedRender: () => this.requestRender(),
       reapplyMaterialEmissive: () => {
         const emissive = this.stateStore.getState().material?.emissive ?? 0;
         this.materialController.materialSettings.emissive = emissive;
@@ -374,7 +375,7 @@ export class SceneManager {
     this.fontTextConstantController = new FontTextConstantController({
       stateStore: this.stateStore,
       revealController: this.fontTextRevealController,
-      onNeedRender: () => this.render(),
+      onNeedRender: () => this.requestRender(),
     });
     this.fontTextRevealController.setConstantController(this.fontTextConstantController);
 
@@ -513,6 +514,7 @@ export class SceneManager {
       onPoseChanged: (pose) => {
         this.eventBus.emit('camera:pose-changed', pose);
       },
+      onNeedRender: () => this.requestRender(),
     });
     this.controls = this.cameraController.getControls();
     this.camera.position.set(0, 1.5, 6);
@@ -4467,7 +4469,10 @@ export class SceneManager {
           !!clips?.length,
         );
       },
-      onPlayStateChanged: (playing) => this.ui.setAnimationPlaying(playing),
+      onPlayStateChanged: (playing) => {
+        this.ui.setAnimationPlaying(playing);
+        if (playing) this.requestRender();
+      },
       onTimeUpdate: (current, duration) =>
         this.ui.updateAnimationTime(current, duration),
       onClipIndexChanged: (index) => this.ui.syncAnimationClipSelect(index),
@@ -4537,7 +4542,7 @@ export class SceneManager {
       });
     }
 
-    this.render();
+    this.requestRender();
     return next;
   }
 
@@ -4559,7 +4564,7 @@ export class SceneManager {
       this.jointNameLabelsController?.setVisible(false);
     }
 
-    this.render();
+    this.requestRender();
     return next;
   }
 
@@ -4573,7 +4578,7 @@ export class SceneManager {
       this.ui.syncAnimationJointScale({ value: next });
     }
 
-    this.render();
+    this.requestRender();
     return next;
   }
 
@@ -4587,7 +4592,7 @@ export class SceneManager {
       this.ui.syncAnimationBoneStroke({ value: next });
     }
 
-    this.render();
+    this.requestRender();
     return next;
   }
 
@@ -4604,7 +4609,7 @@ export class SceneManager {
       this.ui.syncAnimationHideMesh({ checked: next });
     }
 
-    this.render();
+    this.requestRender();
     return next;
   }
 
@@ -5096,6 +5101,16 @@ export class SceneManager {
     });
   }
 
+  /** Wake the idle-aware render loop, or paint once if the loop is not armed. */
+  requestRender() {
+    if (!this.isStudioReady) return;
+    if (this.renderLoop?.isLoopActive?.()) {
+      this.renderLoop.requestFrame();
+      return;
+    }
+    this.render();
+  }
+
   render() {
     if (!this.isStudioReady || !this.renderer) return;
     if (this.unlitMode) {
@@ -5185,6 +5200,7 @@ export class SceneManager {
     this.syncPostProcessingForLogicalSize(finalWidth, finalHeight);
     this.backgroundGradientController?.handleResize?.();
     this.backgroundImageController?.handleResize?.();
+    this.requestRender();
   }
 
   async exportImage(settings = {}) {
@@ -5515,14 +5531,17 @@ export class SceneManager {
 
   scrubExportVideoPreview(t, settings = {}) {
     this.exportMovementPreview?.scrub(t, this._videoExportSettingsFromUi(settings));
+    this.requestRender();
   }
 
   resetExportVideoPreview(settings = {}) {
     this.exportMovementPreview?.resetToStart(this._videoExportSettingsFromUi(settings));
+    this.requestRender();
   }
 
   toggleExportVideoPreviewPlay(settings = {}) {
     this.exportMovementPreview?.togglePlay(this._videoExportSettingsFromUi(settings));
+    this.requestRender();
   }
 
   syncExportVideoPreviewSettings(settings = {}) {

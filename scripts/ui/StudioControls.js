@@ -123,20 +123,20 @@ export class StudioControls {
       this.ui.setHdriActive(HDRI_CUSTOM_ID);
       this.eventBus.emit('studio:hdri-upload', file);
     });
-    this.ui.inputs.hdriEnabled.addEventListener('change', (event) => {
+    this.ui.inputs.hdriEnabled?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('hdriEnabled', enabled);
       this.eventBus.emit('studio:hdri-enabled', enabled);
       this.ui.toggleHdriControls(enabled);
     });
-    this.ui.inputs.hdriStrength.addEventListener('input', (event) => {
+    this.ui.inputs.hdriStrength?.addEventListener('input', (event) => {
       const normalized = Math.min(3, Math.max(0, parseFloat(event.target.value)));
       const actual = normalized * HDRI_STRENGTH_UNIT;
       this.helpers.updateValueLabel('hdriStrength', normalized, 'decimal');
       this.stateStore.set('hdriStrength', actual);
       this.eventBus.emit('studio:hdri-strength', actual);
     });
-    this.ui.inputs.hdriBackground.addEventListener('change', (event) => {
+    this.ui.inputs.hdriBackground?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('hdriBackground', enabled);
       this.eventBus.emit('studio:hdri-background', enabled);
@@ -250,7 +250,7 @@ export class StudioControls {
     });
 
     // Ground/Podium
-    this.ui.inputs.groundSolid.addEventListener('change', (event) => {
+    this.ui.inputs.groundSolid?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       if (enabled) this.ui.uiSounds?.playShelfShow();
       else this.ui.uiSounds?.playShelfHide();

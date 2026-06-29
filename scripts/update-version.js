@@ -5,7 +5,8 @@
  * Increments patch version (0.5.0 -> 0.5.1 -> 0.5.2, etc.) on each run
  */
 
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync } from 'fs';
+import { join } from 'path';
 import { execSync } from 'child_process';
 
 try {
@@ -123,78 +124,66 @@ try {
     console.warn('⚠ Could not get commit message for changelog:', error.message);
   }
   
-  // Read index.html
-  const htmlPath = './index.html';
-  let html = readFileSync(htmlPath, 'utf-8');
+  const htmlPaths = ['./index.html', './partials/info-panel-prose.html'];
+  const shelfPanelDir = './partials/shelf-panels';
+  try {
+    for (const name of readdirSync(shelfPanelDir)) {
+      if (name.endsWith('.html')) htmlPaths.push(join(shelfPanelDir, name));
+    }
+  } catch {
+    // shelf partials optional until first split
+  }
 
-  // Replace version tags (shelf footers on every tab + dropzone if present)
   const infoVersionPattern = /<div class="info-version-tag">[^<]+<\/div>/g;
   const dropzoneVersionRegex = /<div class="dropzone-version-tag">[^<]+<\/div>/;
   const newInfoVersionTag = `<div class="info-version-tag">${versionString}</div>`;
   const newDropzoneVersionTag = `<div class="dropzone-version-tag">${versionString}</div>`;
-  
+
   let foundInfo = false;
   let foundDropzone = false;
-  
-  if (/<div class="info-version-tag">/.test(html)) {
-    html = html.replace(infoVersionPattern, newInfoVersionTag);
-    foundInfo = true;
+
+  const latestChangesTitleRegex = /(<div class="panel-block" id="info-changelog">\s*<div class="block-title"><i class="fa-solid fa-code"[^>]*><\/i>)Latest Changes(?: \([^)]*\))?:?(<\/div>)/;
+  const changelogRegex = /(<div class="panel-block" id="info-changelog">\s*<div class="block-title"><i class="fa-solid fa-code"[^>]*><\/i>Latest Changes(?: \([^)]*\))?:?<\/div>\s*<div class="about-content">\s*<div style="color: var\(--text-dim\); font-size: 0\.9rem; line-height: 1\.5;">)[\s\S]*?(<\/div>\s*<\/div>\s*<\/div>)/;
+
+  for (const htmlPath of htmlPaths) {
+    let html = readFileSync(htmlPath, 'utf-8');
+
+    if (/<div class="info-version-tag">/.test(html)) {
+      html = html.replace(infoVersionPattern, newInfoVersionTag);
+      foundInfo = true;
+    }
+
+    if (dropzoneVersionRegex.test(html)) {
+      html = html.replace(dropzoneVersionRegex, newDropzoneVersionTag);
+      foundDropzone = true;
+    }
+
+    if (latestChangesTitleRegex.test(html)) {
+      html = html.replace(
+        latestChangesTitleRegex,
+        `$1Latest Changes (${changelogDateLabel}):$2`,
+      );
+    }
+
+    if (changelogRegex.test(html)) {
+      html = html.replace(changelogRegex, `$1${changelogText}$2`);
+    }
+
+    writeFileSync(htmlPath, html, 'utf-8');
   }
-  
-  if (dropzoneVersionRegex.test(html)) {
-    html = html.replace(dropzoneVersionRegex, newDropzoneVersionTag);
-    foundDropzone = true;
-  }
-  
+
   if (!foundInfo && !foundDropzone) {
-    console.error('✗ Could not find version tags in index.html');
+    console.error('✗ Could not find version tags in HTML sources');
     process.exit(1);
   }
-  
+
   if (!foundInfo) {
     console.warn('⚠ Could not find info version tag');
   }
-  
+
   if (!foundDropzone) {
     console.warn('⚠ Could not find dropzone version tag');
   }
-  
-  // Latest Changes heading — date suffix like "Latest Changes (May 30):"
-  const latestChangesTitleRegex = /(<div class="panel-block" id="info-changelog">\s*<div class="block-title"><i class="fa-solid fa-code"[^>]*><\/i>)Latest Changes(?: \([^)]*\))?:?(<\/div>)/;
-  if (latestChangesTitleRegex.test(html)) {
-    html = html.replace(
-      latestChangesTitleRegex,
-      `$1Latest Changes (${changelogDateLabel}):$2`,
-    );
-  }
-
-  // Update changelog in its own "Latest Changes" section
-  // Find and replace the content inside the existing "Latest Changes" panel-block
-  // Inner body may include <strong> etc.; [^<]* wrongly skipped updates when markup was present.
-  const changelogRegex = /(<div class="panel-block" id="info-changelog">\s*<div class="block-title"><i class="fa-solid fa-code"[^>]*><\/i>Latest Changes(?: \([^)]*\))?:?<\/div>\s*<div class="about-content">\s*<div style="color: var\(--text-dim\); font-size: 0\.9rem; line-height: 1\.5;">)[\s\S]*?(<\/div>\s*<\/div>\s*<\/div>)/;
-
-  if (changelogRegex.test(html)) {
-    html = html.replace(changelogRegex, `$1${changelogText}$2`);
-  } else {
-    // If the section doesn't exist, try to add it after Credits
-    const creditsEndRegex = /(<\/ul>\s*<\/div>\s*<\/div>\s*<\/div>)(\s*<div class="info-version-tag">)/;
-    if (creditsEndRegex.test(html)) {
-      html = html.replace(creditsEndRegex, `$1
-
-              <div class="panel-block" id="info-changelog">
-                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes (${changelogDateLabel}):</div>
-                <div class="about-content">
-                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">${changelogText}</div>
-                </div>
-              </div>
-
-              $2`);
-    } else {
-      console.warn('⚠ Could not find location to add changelog section');
-    }
-  }
-  
-  writeFileSync(htmlPath, html, 'utf-8');
   console.log(`✓ Updated version to: ${versionString}`);
   console.log(`✓ Updated changelog: ${changelogText.substring(0, 50)}...`);
 } catch (error) {

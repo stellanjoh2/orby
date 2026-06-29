@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url';
 import { bundleMarketingCss } from './scripts/marketing/bundleMarketingCss.mjs';
 import { buildFontAwesomeSubset } from './scripts/buildFontAwesomeSubset.mjs';
 import { injectAllSubpageSiteNav } from './scripts/marketing/injectSubpageSiteNav.mjs';
+import { readStitchedIndexHtml } from './scripts/stitchIndexHtml.mjs';
+import { stampStitchedHtmlBanner } from './scripts/stitchIndexInclude.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -199,10 +201,12 @@ await esbuild.build({
   },
 });
 
-// Copy HTML (refresh version banners from VERSION for deterministic deploys)
-const indexHtml = readFileSync('index.html', 'utf-8');
-const updatedHtml = injectTurnstileSiteKey(
-  injectStatsApiUrl(injectBugReportApiUrl(injectVersionIntoHtml(indexHtml))),
+// Copy HTML (stitch shelf partials, then refresh version banners for deterministic deploys)
+const indexHtml = readStitchedIndexHtml(join(__dirname, 'index.html'));
+const updatedHtml = stampStitchedHtmlBanner(
+  injectTurnstileSiteKey(
+    injectStatsApiUrl(injectBugReportApiUrl(injectVersionIntoHtml(indexHtml))),
+  ),
 );
 writeFileSync(join(distDir, 'index.html'), updatedHtml);
 // GitHub Pages SPA fallback: serve app shell for unknown paths so route-aware

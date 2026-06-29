@@ -1,53 +1,16 @@
 /**
  * Owns the interactive viewport rAF loop: per-frame updates, render, post-render.
+ * Pauses between frames when the scene is static to save CPU/GPU; wakes on orbit,
+ * state changes, and other motion sources.
  */
 
 import { dofNeedsLiveUpdate } from '../constants.js';
+import {
+  buildRenderLoopFrameContext,
+  needsContinuousFrames,
+} from './renderLoopIdle.js';
 
-/** @param {ReturnType<import('./toggleScaleAnimation.js').createToggleScaleContext>} ctx */
-function toggleScaleAnimActive(ctx) {
-  return ctx?.phase === 'in' || ctx?.phase === 'out';
-}
-
-/**
- * Snapshot of feature flags for one frame (avoids repeated stateStore reads per step).
- * @param {import('../SceneManager.js').SceneManager} scene
- */
-function buildFrameContext(scene) {
-  const state = scene.stateStore.peekState();
-  return {
-    panelsShelfScrolling: !!scene.panelsShelfScrolling,
-    histogramEnabled:
-      !!state.histogramEnabled &&
-      !!scene.histogramController?.enabled &&
-      !scene.unlitMode,
-    grainActive:
-      !!state.grain?.enabled && !!scene.postPipeline?.grainTintPass?.enabled,
-    creativeLookEnabled: !!scene.materialController?.creativeLookSettings?.enabled,
-    /** Root always exists; pose step must run while scale-out after `enabled` flips off. */
-    colorCheckerActive:
-      !!scene.colorCheckerRoot || toggleScaleAnimActive(scene._ccToggleCtx),
-    /** Run while mesh exists so scale-out still runs after state flips off (same frame). */
-    baseAppearActive:
-      !!scene.groundController?.podiumRoot ||
-      toggleScaleAnimActive(scene._baseToggleCtx),
-    baseGlassAppearActive:
-      !!scene.groundController?.podiumReflector ||
-      toggleScaleAnimActive(scene._baseGlassToggleCtx),
-    backdropAppearActive:
-      !!scene.groundController?.backdrop ||
-      toggleScaleAnimActive(scene._backdropToggleCtx),
-    diagnosticsActive: !!scene.diagnosticsController?.hasActiveDiagnostics?.(),
-    wireframeOverlayActive:
-      (scene.materialController?.wireframeOverlayMeshes?.length ?? 0) > 0,
-    uvCheckerActive: !!scene.materialController?.uvCheckerOverlay?.enabled,
-    normalViewActive: !!scene.materialController?.normalViewOverlay?.enabled,
-    topologyWarningsActive: !!scene.topologyWarningsOverlay?.enabled,
-    backgroundSphereActive:
-      !!scene.backgroundController?.backgroundSphere &&
-      !!scene.postPipeline?.bokehPass?.enabled,
-  };
-}
+const HISTOGRAM_IDLE_WAKE_MS = 300;
 
 export class RenderLoopController {
   /**
@@ -55,14 +18,20 @@ export class RenderLoopController {
    */
   constructor(scene) {
     this.scene = scene;
-    this._running = false;
+    /** Studio loop armed (startRenderLoop); distinct from whether a frame is scheduled. */
+    this._active = false;
     this._frameId = 0;
     this._pausedByVisibility = false;
+    this._wakeSourcesAttached = false;
+    this._histogramWakeTimer = 0;
+    this._stateStoreUnsub = null;
+    this._inTick = false;
+    this._queuedWake = false;
 
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
-          if (this._running) {
+          if (this._active || this._frameId) {
             this._pausedByVisibility = true;
             this.stop();
           }
@@ -75,7 +44,7 @@ export class RenderLoopController {
       });
     }
 
-    /** @type {Array<{ id: string, when?: (ctx: ReturnType<typeof buildFrameContext>, scene: import('../SceneManager.js').SceneManager) => boolean, run: (delta: number, scene: import('../SceneManager.js').SceneManager) => void }>} */
+    /** @type {Array<{ id: string, when?: (ctx: ReturnType<typeof buildRenderLoopFrameContext>, scene: import('../SceneManager.js').SceneManager) => boolean, run: (delta: number, scene: import('../SceneManager.js').SceneManager) => void }>} */
     this._updateSteps = [
       {
         id: 'export-movement-preview',
@@ -249,7 +218,7 @@ export class RenderLoopController {
       },
     ];
 
-    /** @type {Array<{ id: string, when?: (ctx: ReturnType<typeof buildFrameContext>, scene: import('../SceneManager.js').SceneManager) => boolean, run: (delta: number, scene: import('../SceneManager.js').SceneManager) => void }>} */
+    /** @type {Array<{ id: string, when?: (ctx: ReturnType<typeof buildRenderLoopFrameContext>, scene: import('../SceneManager.js').SceneManager) => boolean, run: (delta: number, scene: import('../SceneManager.js').SceneManager) => void }>} */
     this._postRenderSteps = [
       {
         id: 'histogram',
@@ -261,35 +230,118 @@ export class RenderLoopController {
     ];
   }
 
+  /** True while a frame is scheduled or in flight (export pause/resume). */
   isRunning() {
-    return this._running;
+    return this._active && this._frameId !== 0;
+  }
+
+  /** True after `startRenderLoop` until `stop` (export, visibility, teardown). */
+  isLoopActive() {
+    return this._active;
   }
 
   start() {
-    if (this._running) return;
-    this._running = true;
-    this._scheduleFrame();
+    this._active = true;
+    this.attachWakeSources();
+    this.requestFrame();
   }
 
   stop() {
-    this._running = false;
-    if (this._frameId) {
-      cancelAnimationFrame(this._frameId);
-      this._frameId = 0;
-    }
+    this._active = false;
+    this._clearHistogramWake();
+    this._cancelFrame();
   }
 
-  _scheduleFrame() {
+  /** Schedule at least one frame while the studio loop is armed. */
+  requestFrame() {
+    if (!this._active || !this.scene?.isStudioReady) return;
+    if (this._inTick) {
+      this._queuedWake = true;
+      return;
+    }
+    this._clearHistogramWake();
+    this._scheduleFrameIfNeeded();
+  }
+
+  attachWakeSources() {
+    if (this._wakeSourcesAttached) return;
+    this._wakeSourcesAttached = true;
+
+    const wake = () => this.requestFrame();
+
+    const controls = this.scene.cameraController?.getControls?.();
+    controls?.addEventListener('start', wake);
+    controls?.addEventListener('change', wake);
+
+    for (const transformControl of [
+      this.scene.transformControlsTranslate,
+      this.scene.transformControlsRotate,
+      this.scene.transformControlsScale,
+    ]) {
+      transformControl?.addEventListener('change', wake);
+      transformControl?.addEventListener('dragging-changed', (event) => {
+        if (event.value) wake();
+      });
+    }
+
+    this._stateStoreUnsub = this.scene.stateStore?.subscribe?.(() => wake());
+  }
+
+  detachWakeSources() {
+    this._stateStoreUnsub?.();
+    this._stateStoreUnsub = null;
+    this._wakeSourcesAttached = false;
+  }
+
+  _scheduleFrameIfNeeded() {
+    if (this._frameId || !this._active || !this.scene?.isStudioReady) return;
+    // Drop stale delta accumulated while idle so motion/easing stays seamless.
+    this.scene.clock?.getDelta();
     this._frameId = requestAnimationFrame(() => this._tick());
   }
 
+  _cancelFrame() {
+    if (!this._frameId) return;
+    cancelAnimationFrame(this._frameId);
+    this._frameId = 0;
+  }
+
+  _clearHistogramWake() {
+    if (!this._histogramWakeTimer) return;
+    clearTimeout(this._histogramWakeTimer);
+    this._histogramWakeTimer = 0;
+  }
+
+  _scheduleHistogramIdleWake() {
+    this._clearHistogramWake();
+    this._histogramWakeTimer = setTimeout(() => {
+      this._histogramWakeTimer = 0;
+      if (this._active && !this._frameId) {
+        this.requestFrame();
+      }
+    }, HISTOGRAM_IDLE_WAKE_MS);
+  }
+
+  _shouldContinue(ctx) {
+    if (needsContinuousFrames(this.scene, ctx)) return true;
+    if (ctx.histogramEnabled && !ctx.panelsShelfScrolling) {
+      this._scheduleHistogramIdleWake();
+    }
+    return false;
+  }
+
   _tick() {
-    if (!this._running || !this.scene?.isStudioReady) return;
-    this._scheduleFrame();
+    if (!this._active || !this.scene?.isStudioReady) {
+      this._frameId = 0;
+      return;
+    }
+
+    this._frameId = 0;
+    this._inTick = true;
 
     const scene = this.scene;
     const delta = scene.clock.getDelta();
-    const ctx = buildFrameContext(scene);
+    const ctx = buildRenderLoopFrameContext(scene);
 
     for (const step of this._updateSteps) {
       if (step.when && !step.when(ctx, scene)) continue;
@@ -301,6 +353,16 @@ export class RenderLoopController {
     for (const step of this._postRenderSteps) {
       if (step.when && !step.when(ctx, scene)) continue;
       step.run(delta, scene);
+    }
+
+    this._inTick = false;
+
+    if (
+      this._active
+      && (this._queuedWake || this._shouldContinue(ctx))
+    ) {
+      this._queuedWake = false;
+      this._scheduleFrameIfNeeded();
     }
   }
 }

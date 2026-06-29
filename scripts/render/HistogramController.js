@@ -10,10 +10,17 @@ const HIST_BG = ORBY_BLACK;
 const HIST_BAR = ORBY_LIME;
 const HIST_BAR_WARN = '#ff9632';
 const HIST_BAR_SEVERE = ORBY_PINK;
-/** Panoramic shelf strip — full panel width, fixed height (not 16:9 video aspect). */
-const HIST_CSS_HEIGHT = 80;
+/** Min ms between GPU readPixels — readback stalls the pipeline. */
+const HISTOGRAM_UPDATE_INTERVAL_MS = 300;
+const HIST_ASPECT = 16 / 9;
 
 export class HistogramController {
+  /**
+   * @param {THREE.WebGLRenderer} renderer
+   * @param {HTMLCanvasElement} canvas
+   * @param {HTMLElement | null} containerElement
+   * @param {import('three/examples/jsm/postprocessing/EffectComposer.js').EffectComposer | null} [composer]
+   */
   constructor(renderer, canvas, containerElement, composer = null) {
     this.renderer = renderer;
     this.canvas = canvas;
@@ -24,12 +31,12 @@ export class HistogramController {
     this._resizeObserver = null;
     this._lastWarningLevel = 0;
 
-    // Create canvas — full-width panoramic strip; bitmap tracks DPR
+    // Create canvas — layout 16:9 in CSS; bitmap tracks DPR
     this.histogramCanvas = document.createElement('canvas');
     this.histogramCanvas.width = 320;
-    this.histogramCanvas.height = HIST_CSS_HEIGHT;
+    this.histogramCanvas.height = 180;
     this.histogramCanvas.style.width = '100%';
-    this.histogramCanvas.style.height = `${HIST_CSS_HEIGHT}px`;
+    this.histogramCanvas.style.height = 'auto';
     this.histogramCanvas.style.display = 'block';
     this.histogramCtx = this.histogramCanvas.getContext('2d', { alpha: false });
     
@@ -55,9 +62,9 @@ export class HistogramController {
     this.luminanceSevereThreshold = 0.95;
     this.luminanceWarnThreshold = 0.88;
     this.overexposedThreshold = 0.93; // legacy bar tint (very hot single channel)
-    this.updateInterval = 60; // Update every 60ms (~16fps)
+    this.updateInterval = HISTOGRAM_UPDATE_INTERVAL_MS;
     this.lastUpdate = 0;
-    
+
     // Sample size for performance (read every Nth pixel)
     this.sampleRate = 8; // Increased sampling for better performance
 
@@ -110,10 +117,13 @@ export class HistogramController {
   _syncHistogramCanvasSize() {
     const el = this.histogramCanvas;
     if (!el) return;
-    const rect = (this.containerElement ?? el).getBoundingClientRect();
-    const cssW = rect.width;
+    const rect = el.getBoundingClientRect();
+    let cssW = rect.width;
+    let cssH = rect.height;
     if (cssW < 8) return;
-    const cssH = HIST_CSS_HEIGHT;
+    if (cssH < 4) {
+      cssH = cssW / HIST_ASPECT;
+    }
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const bw = Math.max(1, Math.floor(cssW * dpr));
     const bh = Math.max(1, Math.floor(cssH * dpr));
@@ -133,6 +143,7 @@ export class HistogramController {
     }
     if (on) {
       this.mountUi();
+      this.lastUpdate = 0;
       requestAnimationFrame(() => this._syncHistogramCanvasSize());
       return;
     }
@@ -156,9 +167,7 @@ export class HistogramController {
   update() {
     if (!this.enabled) return;
     const now = performance.now();
-    if (now - this.lastUpdate < this.updateInterval) {
-      return;
-    }
+    if (now - this.lastUpdate < this.updateInterval) return;
     this.lastUpdate = now;
     
     if (!this.canvas || !this.renderer) return;

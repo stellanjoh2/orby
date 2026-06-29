@@ -78,6 +78,7 @@ export class BackgroundGradientControls {
       if (!this._stopColorEditing) {
         this._stopColorEditing = true;
         this.stateStore.beginDeferredNotify();
+        this.helpers.requestViewportRender();
       }
       this._updateStop(this.selectedStopIndex, { color: event.target.value });
     });
@@ -294,6 +295,7 @@ export class BackgroundGradientControls {
       this.selectedStopIndex = hitIndex;
       this.drag = { index: hitIndex };
       this.stateStore.beginDeferredNotify();
+      this.helpers.requestViewportRender();
       this.preview.setPointerCapture?.(event.pointerId);
       this._applyDragPosition(event);
       return;

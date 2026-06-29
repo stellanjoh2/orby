@@ -1,0 +1,64 @@
+            <section class="panel" data-panel="info">
+              <!-- Logotype Animation -->
+              <div class="info-logotype-container">
+                <div id="infoLogotypeAnimation" class="info-logotype"></div>
+              </div>
+
+              <div class="panel-block info-panel-block info-panel-block--compact bug-report-panel-block" id="info-bug-report">
+                <div class="block-title">
+                  <i class="fa-solid fa-circle-exclamation" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>
+                  Report An Issue
+                </div>
+                <p class="bug-report-panel-description">
+                  Spotted something wrong? Use the quick form here or the full
+                  <a href="./support/#report-issue" class="about-highlight">Support page</a>
+                  for troubleshooting and reports. We can’t reply, but we read everything you send.
+                </p>
+                <button type="button" class="bug-report-panel-open accent-action-btn" data-bug-report-open>
+                  <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                  Tell us what happened
+                </button>
+              </div>
+
+              <div class="panel-block info-panel-block info-panel-block--compact" id="info-sounds">
+                <div class="block-title has-toggle">
+                  <span>
+                    <i class="fa-solid fa-volume-high" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>
+                    UI Sounds
+                  </span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="uiSoundsEnabled" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">UI sounds on</span>
+                    </label>
+                  </div>
+                </div>
+                <label class="slider-line">
+                  <span>Volume</span>
+                  <input
+                    id="uiSoundsVolume"
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value="100"
+                  />
+                  <span class="value" data-output="uiSoundsVolume">100%</span>
+                </label>
+              </div>
+
+              <div
+                id="infoPanelProseMount"
+                class="info-panel-prose-mount"
+                hidden
+                aria-busy="true"
+                aria-live="polite"
+              ></div>
+
+
+              <div class="info-version-tag">v0.5.876 · 2026-06-29 15:07:13 UTC</div>
+              <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
+                <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
+              </button>
+            </section>

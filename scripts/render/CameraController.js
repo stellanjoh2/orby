@@ -47,6 +47,7 @@ export class CameraController {
       altLightHeightSensitivity = 0.1,
       onModelBoundsChanged = null,
       onPoseChanged = null,
+      onNeedRender = null,
     } = {},
   ) {
     this.camera = camera;
@@ -61,6 +62,7 @@ export class CameraController {
       onShiftHdriRotateEnd,
       onModelBoundsChanged,
       onPoseChanged,
+      onNeedRender,
     };
     this.altLightRotateSensitivity = altLightRotateSensitivity;
     this.altLightHeightSensitivity = altLightHeightSensitivity ?? 0.15;
@@ -147,6 +149,22 @@ export class CameraController {
 
   getControls() {
     return this.controls;
+  }
+
+  isFocusAnimating() {
+    return !!this._focusTimeline?.isActive?.();
+  }
+
+  hasViewportInteraction() {
+    return (
+      this.shiftRightDragging ||
+      this.altRightDragging ||
+      this.altLeftDragging
+    );
+  }
+
+  _wakeRender() {
+    this.callbacks.onNeedRender?.();
   }
 
   getPose() {
@@ -1124,6 +1142,7 @@ export class CameraController {
         this._emitPoseChanged();
       },
     });
+    this._wakeRender();
 
     this._focusTimeline.to(
       positionObj,
@@ -1135,6 +1154,7 @@ export class CameraController {
         ease: 'power2.inOut',
         onUpdate: () => {
           this.camera.position.set(positionObj.x, positionObj.y, positionObj.z);
+          this._wakeRender();
         },
       },
       0,
@@ -1151,6 +1171,7 @@ export class CameraController {
         onUpdate: () => {
           this.controls.target.set(targetObj.x, targetObj.y, targetObj.z);
           this._applyTilt();
+          this._wakeRender();
         },
       },
       0,
@@ -1220,6 +1241,7 @@ export class CameraController {
         this._storeControlState();
         this.controls.enablePan = false;
         this.controls.enableRotate = false;
+        this._wakeRender();
         return;
       }
 
@@ -1234,12 +1256,14 @@ export class CameraController {
         this._storeControlState();
         this.controls.enablePan = false;
         this.controls.enableRotate = false;
+        this._wakeRender();
       } else if (event.button === 0) {
         event.preventDefault();
         event.stopPropagation();
         this.altLeftDragging = true;
         this.altLeftTargetSet = false;
         this._focusOnModelCenter(true);
+        this._wakeRender();
       }
     };
 

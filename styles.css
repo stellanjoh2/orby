@@ -8285,11 +8285,23 @@ body.ui-hidden .shelf {
 }
 
 .histogram-container--expanded {
-  /* Panoramic 80px canvas + fold-out inset */
-  max-height: calc(80px + var(--shelf-section-gap) + 0.5rem);
+  /* Tall enough for 16:9 canvas at full panel width (column layout shelf = 100% vw);
+   * fixed 320px used to clip the canvas bottom when width × 9/16 > 320. */
+  max-height: min(60vh, 640px);
   opacity: 1;
   padding-top: var(--shelf-section-gap);
   padding-bottom: 0.5rem;
+}
+
+@supports (container-type: inline-size) {
+  .histogram-container {
+    container-type: inline-size;
+  }
+
+  .histogram-container--expanded {
+    /* Match canvas aspect-ratio + a few px for rounding; vh cap for very short viewports */
+    max-height: min(calc((100cqw * 9) / 16 + 8px), 92vh);
+  }
 }
 
 .histogram-container--collapsed {
@@ -9100,7 +9112,8 @@ body.ui-hidden .shelf {
 .histogram-container canvas {
   display: block;
   width: 100%;
-  height: 80px;
+  height: auto;
+  aspect-ratio: 16 / 9;
   border-radius: 4px;
   background: var(--orby-black);
 }

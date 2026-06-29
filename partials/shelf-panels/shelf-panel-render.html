@@ -1,0 +1,1779 @@
+            <h2 class="panel-header-title" data-header="render">Camera</h2>
+            <section class="panel" data-panel="render">
+
+              <div class="panel-block">
+                <div class="subsection">
+                <div class="block-title has-reset">
+                  <span>Basic</span>
+                    <button class="block-reset-btn" data-reset="camera" aria-label="Reset Camera" data-tooltip="Reset Camera settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                </div>
+                <label class="slider-line">
+                  <span data-tooltip="Camera tilt angle">Tilt</span>
+                  <input
+                    id="cameraTilt"
+                    type="range"
+                    min="-45"
+                    max="45"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraTilt">0°</span>
+                </label>
+                <label class="slider-line">
+                  <span data-tooltip="Camera world position along X axis">Position X</span>
+                  <input
+                    id="cameraPosX"
+                    type="range"
+                    min="-20"
+                    max="20"
+                    value="0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraPosX">0.00m</span>
+                </label>
+                <label class="slider-line">
+                  <span data-tooltip="Camera world position along Y axis">Position Y</span>
+                  <input
+                    id="cameraPosY"
+                    type="range"
+                    min="-20"
+                    max="20"
+                    value="1.5"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraPosY">1.50m</span>
+                </label>
+                <label class="slider-line">
+                  <span data-tooltip="Camera world position along Z axis">Position Z</span>
+                  <input
+                    id="cameraPosZ"
+                    type="range"
+                    min="-20"
+                    max="20"
+                    value="6"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraPosZ">6.00m</span>
+                </label>
+                <label class="slider-line">
+                  <span data-tooltip="Distance from camera to orbit target">Distance</span>
+                  <input
+                    id="cameraDistance"
+                    type="range"
+                    min="0.5"
+                    max="50"
+                    value="6.02"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraDistance">6.02m</span>
+                </label>
+                <div
+                  class="effect-foldout effect-foldout--expanded"
+                  data-effect-foldout="manual-exposure"
+                  aria-hidden="false"
+                >
+                <label class="slider-line">
+                  <span data-tooltip="Overall scene brightness">Exposure</span>
+                  <input
+                    id="exposure"
+                    type="range"
+                    min="0"
+                    max="2"
+                    value="1.0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="exposure">1.00</span>
+                </label>
+                </div>
+                <div class="slider-line">
+                  <span>Auto Exposure</span>
+                  <label class="effect-toggle" data-tooltip="Automatically adjust exposure for optimal brightness">
+                    <input type="checkbox" id="autoExposure" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable auto exposure</span>
+                  </label>
+                </div>
+                <div class="slider-line">
+                  <span>Manual Render Distance</span>
+                  <label class="effect-toggle" data-tooltip="Rare override — set near/far manually for telephoto or isometric shots when AO banding appears on the backdrop">
+                    <input type="checkbox" id="manualClipPlanes" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable manual render distance</span>
+                  </label>
+                </div>
+                <div
+                  id="clipPlanesFoldout"
+                  class="clip-planes-foldout clip-planes-foldout--collapsed"
+                  aria-hidden="true"
+                >
+                <label class="slider-line">
+                  <span data-tooltip="Near clip plane — geometry closer than this is not rendered">Near Clip</span>
+                  <input
+                    id="cameraClipNear"
+                    type="range"
+                    min="0.01"
+                    max="50"
+                    value="0.1"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraClipNear">0.10</span>
+                </label>
+                <label class="slider-line">
+                  <span data-tooltip="Far clip plane — geometry farther than this is not rendered">Far Clip</span>
+                  <input
+                    id="cameraClipFar"
+                    type="range"
+                    min="1"
+                    max="500"
+                    value="100"
+                    step="0.5"
+                  />
+                  <span class="value" data-output="cameraClipFar">100</span>
+                </label>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="view-presets">
+                  <div class="block-title">View Presets</div>
+                  <div
+                    class="view-preset-grid"
+                    role="group"
+                    aria-label="View presets"
+                  >
+                    <button type="button" class="lens-preset-btn" data-view-preset="front" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">Front</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-view-preset="left" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">Left</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-view-preset="right" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">Right</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-view-preset="top" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">Top</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="lens">
+                  <div class="block-title has-reset">
+                    <span>Lens</span>
+                    <button
+                      class="block-reset-btn"
+                      data-reset="lens"
+                      aria-label="Reset Lens"
+                      data-tooltip="Reset Lens settings"
+                    >
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                  <div
+                    class="lens-preset-grid"
+                    role="group"
+                    aria-label="Focal length presets"
+                  >
+                    <button type="button" class="lens-preset-btn" data-lens-focal="14" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">14mm</span>
+                      <span class="lens-preset-btn__label">Ultra wide</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-lens-focal="24" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">24mm</span>
+                      <span class="lens-preset-btn__label">Wide</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-lens-focal="35" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">35mm</span>
+                      <span class="lens-preset-btn__label">Wide</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-lens-focal="50" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">50mm</span>
+                      <span class="lens-preset-btn__label">Standard</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-lens-focal="85" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">85mm</span>
+                      <span class="lens-preset-btn__label">Portrait</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-lens-focal="100" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">100mm</span>
+                      <span class="lens-preset-btn__label">Macro</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-lens-focal="135" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">135mm</span>
+                      <span class="lens-preset-btn__label">Tele</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-lens-focal="200" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">200mm</span>
+                      <span class="lens-preset-btn__label">Tele</span>
+                    </button>
+                  </div>
+                  <label class="select-line">
+                    <span data-tooltip="Sensor size used to convert focal length to field of view">Sensor</span>
+                    <select id="lensSensor" aria-label="Camera sensor format">
+                      <option value="full-frame">Full frame (36mm)</option>
+                      <option value="aps-c" selected>APS-C (23.5mm)</option>
+                      <option value="m43">Micro Four Thirds (17.3mm)</option>
+                      <option value="super-35">Super 35 (24.9mm)</option>
+                    </select>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Vertical field of view — fine-tune after choosing a focal length preset">Manual FOV</span>
+                    <input
+                      id="cameraFov"
+                      type="range"
+                      min="2"
+                      max="120"
+                      value="45"
+                      step="0.1"
+                    />
+                    <span class="value" data-output="cameraFov">45°</span>
+                  </label>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="isometric">
+                  <div class="block-title has-toggle has-reset">
+                    <span data-tooltip="RTS isometric view — locks orbit; pan optional via Unlock. Zoom and focal length still work. Tilt and fisheye are disabled until turned off.">Isometric Camera</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button
+                        class="block-reset-btn"
+                        data-reset="isometric"
+                        aria-label="Reset Isometric Camera"
+                        data-tooltip="Reset Isometric Camera settings"
+                      >
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable isometric camera (orbit/pan locked; focal length still adjustable)">
+                        <input type="checkbox" id="isometricEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable isometric camera</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                    data-effect-foldout="isometric"
+                    aria-hidden="true"
+                  >
+                  <div
+                    class="iso-controls-stack"
+                    role="group"
+                    aria-label="Isometric Camera presets"
+                  >
+                    <div class="iso-preset-grid">
+                    <button type="button" class="iso-preset-btn" data-iso-preset="true-isometric" aria-pressed="false">
+                      <span class="iso-preset-btn__title">True iso</span>
+                      <span class="iso-preset-btn__subtitle">45° / 35.26°</span>
+                    </button>
+                    <button type="button" class="iso-preset-btn" data-iso-preset="dimetric" aria-pressed="false">
+                      <span class="iso-preset-btn__title">Dimetric</span>
+                      <span class="iso-preset-btn__subtitle">45° / 30° — RTS</span>
+                    </button>
+                    <button type="button" class="iso-preset-btn" data-iso-preset="high-oblique" aria-pressed="false">
+                      <span class="iso-preset-btn__title">High Oblique</span>
+                      <span class="iso-preset-btn__subtitle">45° / 60° — City Builder</span>
+                    </button>
+                    <button type="button" class="iso-preset-btn" data-iso-preset="pixel-2-1" aria-pressed="false">
+                      <span class="iso-preset-btn__title">2:1 pixel</span>
+                      <span class="iso-preset-btn__subtitle">Pixel-perfect</span>
+                    </button>
+                    </div>
+                    <div class="iso-action-row">
+                    <button
+                      id="isoOrbitStep"
+                      class="ghost-btn small"
+                      type="button"
+                      data-tooltip="Rotate the isometric camera 45° around the model (repeats)"
+                    >
+                      Rotate camera 45
+                    </button>
+                    <button
+                      id="isoAssetRotateStep"
+                      class="ghost-btn small"
+                      type="button"
+                      data-tooltip="Rotate the asset 45° on Y — shortcut for Object → Rotate Y when batching isometric renders"
+                    >
+                      Rotate asset 45
+                    </button>
+                  </div>
+                  </div>
+                  <button
+                    id="isoPanUnlock"
+                    class="ghost-btn small"
+                    type="button"
+                    aria-pressed="false"
+                    data-tooltip="Allow right-drag to pan the orbit target while isometric angles stay locked"
+                  >
+                    Unlock Camera Pan
+                  </button>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="fisheye">
+                  <div class="block-title has-toggle">
+                    <span data-tooltip="Post-process barrel / fisheye (Giliam de Carpentier). Renders after full grading stack.">Fisheye Lens</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button
+                        type="button"
+                        class="block-reset-btn"
+                        data-reset="fisheye"
+                        aria-label="Reset Fisheye Lens"
+                        data-tooltip="Reset Fisheye Lens to defaults"
+                      >
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable lens distortion (uses Horizontal + strength + cylindrical ratio)">
+                        <input type="checkbox" id="fisheyeEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Fisheye Lens</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="fisheye"
+                    aria-hidden="true"
+                  >
+                  <label class="slider-line">
+                    <span data-tooltip="Target horizontal field of view; vertical FOV is derived so the shader matches the projection (avoids black edges)">Horizontal</span>
+                    <input
+                      id="fisheyeHorizontalFOV"
+                      type="range"
+                      min="5"
+                      max="160"
+                      value="131"
+                      step="1"
+                    />
+                    <span class="value" data-output="fisheyeHorizontalFOV">131°</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="0 = no distortion, 1 = full stereographic-style remapping">Strength</span>
+                    <input
+                      id="fisheyeStrength"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.37"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="fisheyeStrength">0.37</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="1 = spherical; higher bends verticals less (anamorphic-like)">Cylindrical</span>
+                    <input
+                      id="fisheyeCylindricalRatio"
+                      type="range"
+                      min="0.25"
+                      max="4"
+                      value="4"
+                      step="0.025"
+                    />
+                    <span class="value" data-output="fisheyeCylindricalRatio">4.00</span>
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="auto-orbit">
+                  <div class="block-title">Auto Orbit</div>
+                  <div class="segmented compact">
+                    <label>
+                      <input type="radio" name="cameraAutoOrbit" value="off" checked />
+                      OFF
+                    </label>
+                    <label>
+                      <input type="radio" name="cameraAutoOrbit" value="slow" />
+                      SLOW
+                    </label>
+                    <label>
+                      <input type="radio" name="cameraAutoOrbit" value="fast" />
+                      FAST
+                    </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="handheld">
+                  <div class="block-title" data-tooltip="Procedural shake on top of orbit; does not affect controls. Not visible in PNG exports.">Handheld</div>
+                  <div class="segmented compact">
+                    <label>
+                      <input type="radio" name="cameraHandheld" value="off" checked />
+                      OFF
+                    </label>
+                    <label>
+                      <input type="radio" name="cameraHandheld" value="low" />
+                      SUBTLE
+                    </label>
+                    <label>
+                      <input type="radio" name="cameraHandheld" value="high" />
+                      STRONG
+                    </label>
+                  </div>
+                </div>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="subsection" data-subsection="color-tone">
+                  <div class="block-title has-reset">
+                    <span>Color & Tone</span>
+                    <button class="block-reset-btn" data-reset="color-correction" aria-label="Reset Color & Tone" data-tooltip="Reset Color & Tone settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                <label class="slider-line slider-line--temperature">
+                  <span>Temperature</span>
+                  <input
+                    id="cameraTemperature"
+                    type="range"
+                    min="2000"
+                    max="10000"
+                    value="6000"
+                    step="50"
+                  />
+                  <span class="value" data-output="cameraTemperature">6000K</span>
+                </label>
+                <label class="slider-line slider-line--tint">
+                  <span>Tint</span>
+                  <input
+                    id="cameraTint"
+                    type="range"
+                    min="-100"
+                    max="100"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraTint">0</span>
+                </label>
+                <label class="slider-line slider-line--saturation">
+                  <span>Saturation</span>
+                  <input
+                    id="cameraSaturation"
+                    type="range"
+                    min="0"
+                    max="2"
+                    value="1.0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraSaturation">1.00</span>
+                </label>
+                <label class="slider-line">
+                  <span>Contrast</span>
+                  <input
+                    id="cameraContrast"
+                    type="range"
+                    min="0"
+                    max="2"
+                    value="1.0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraContrast">1.00</span>
+                </label>
+                <label class="slider-line">
+                  <span>Highlights</span>
+                  <input
+                    id="cameraHighlights"
+                    type="range"
+                    min="-100"
+                    max="100"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraHighlights">0</span>
+                </label>
+                <label class="slider-line">
+                  <span>Shadows</span>
+                  <input
+                    id="cameraShadows"
+                    type="range"
+                    min="-50"
+                    max="50"
+                    value="0"
+                    step="1"
+                  />
+                    <span class="value" data-output="cameraShadows">0</span>
+                </label>
+                <label class="slider-line">
+                  <span>Clarity</span>
+                  <input
+                    id="cameraClarity"
+                    type="range"
+                    min="-100"
+                    max="100"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraClarity">0</span>
+                </label>
+                <label class="slider-line">
+                  <span>Fade</span>
+                  <input
+                    id="cameraFade"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraFade">0</span>
+                </label>
+                <label class="slider-line">
+                  <span>Sharpness</span>
+                  <input
+                    id="cameraSharpness"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraSharpness">0</span>
+                </label>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="histogram">
+                  <div class="block-title has-toggle">
+                    <span>Histogram</span>
+                    <label class="effect-toggle" data-tooltip="Show/hide exposure histogram">
+                      <input type="checkbox" id="histogramEnabled" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable Histogram</span>
+                    </label>
+                  </div>
+                  <div id="histogramContainer" class="histogram-container histogram-container--collapsed"></div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection tone-curve-sub" data-subsection="tone-curve">
+                  <div class="block-title has-toggle has-reset">
+                    <span>Curve</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button
+                        class="block-reset-btn"
+                        data-reset="tone-curve"
+                        aria-label="Reset curve"
+                        data-tooltip="Reset"
+                      >
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Show or hide the Tone Curve">
+                        <input type="checkbox" id="toneCurveOpen" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Show Tone Curve</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    id="toneCurveContainer"
+                    class="tone-curve-foldout tone-curve-foldout--collapsed"
+                  >
+                    <div class="tone-curve-canvas-wrap">
+                      <canvas
+                        id="toneCurveCanvas"
+                        class="tone-curve-canvas"
+                        width="400"
+                        height="400"
+                        aria-label="Tone Curve"
+                      ></canvas>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="look-filters">
+                  <div class="block-title has-toggle">
+                    <span>Look Filters</span>
+                    <label class="effect-toggle" data-tooltip="Show Look Filter presets">
+                      <input type="checkbox" id="lookFilterPresetsOpen" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show Look Filters</span>
+                    </label>
+                  </div>
+                  <div
+                    id="lookFilterPresetsContainer"
+                    class="look-filter-presets-container look-filter-presets-container--collapsed"
+                  >
+                    <div class="look-filter-grid" role="list" aria-label="Look Filters">
+                      <button
+                        type="button"
+                        class="look-filter-tile look-filter-tile--clear"
+                        data-look-filter="none"
+                        role="listitem"
+                        aria-pressed="false"
+                        aria-label="Clear look filter"
+                      >
+                        <span class="look-filter-tile__thumb look-filter-tile__thumb--clear" aria-hidden="true">
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                          </svg>
+                        </span>
+                        <span class="look-filter-tile__label">None</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="studio"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          data-src="./assets/images/look-filters/studio.png"
+                          alt=""
+                          width="96"
+                          height="96"
+                          decoding="async"
+                        />
+                        <span class="look-filter-tile__label">Studio</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="noir"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          data-src="./assets/images/look-filters/noir.png"
+                          alt=""
+                          width="96"
+                          height="96"
+                          decoding="async"
+                        />
+                        <span class="look-filter-tile__label">Noir</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="mood"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          data-src="./assets/images/look-filters/mood.png"
+                          alt=""
+                          width="96"
+                          height="96"
+                          decoding="async"
+                        />
+                        <span class="look-filter-tile__label">Mood</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="vintage"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          data-src="./assets/images/look-filters/vintage.png"
+                          alt=""
+                          width="96"
+                          height="96"
+                          decoding="async"
+                        />
+                        <span class="look-filter-tile__label">Vintage</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="cinema"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          data-src="./assets/images/look-filters/cinema.png"
+                          alt=""
+                          width="96"
+                          height="96"
+                          decoding="async"
+                        />
+                        <span class="look-filter-tile__label">Cinema</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="frost"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          data-src="./assets/images/look-filters/frost.png"
+                          alt=""
+                          width="96"
+                          height="96"
+                          decoding="async"
+                        />
+                        <span class="look-filter-tile__label">Frost</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="golden"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          data-src="./assets/images/look-filters/golden.png"
+                          alt=""
+                          width="96"
+                          height="96"
+                          decoding="async"
+                        />
+                        <span class="look-filter-tile__label">Golden</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="dream"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          data-src="./assets/images/look-filters/dream.png"
+                          alt=""
+                          width="96"
+                          height="96"
+                          decoding="async"
+                        />
+                        <span class="look-filter-tile__label">Dream</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="neon"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          data-src="./assets/images/look-filters/neon.png"
+                          alt=""
+                          width="96"
+                          height="96"
+                          decoding="async"
+                        />
+                        <span class="look-filter-tile__label">Neon</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="ambient-occlusion">
+                  <div class="block-title has-toggle">
+                    <span>Ambient Occlusion</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="ambient-occlusion" aria-label="Reset Ambient Occlusion" data-tooltip="Reset ambient occlusion settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Screen-space AO (N8AO). Uses WebGL post-processing; off by default. Turn off Render Quality → Low if this stays disabled there.">
+                        <input type="checkbox" id="toggleAmbientOcclusion" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Ambient Occlusion</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                    data-effect-foldout="ambient-occlusion"
+                    aria-hidden="true"
+                  >
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="ambientOcclusionIntensity"
+                      type="range"
+                      min="0.25"
+                      max="20"
+                      value="3"
+                      step="0.25"
+                    />
+                    <span class="value" data-output="ambientOcclusionIntensity">3.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Radius</span>
+                    <input
+                      id="ambientOcclusionRadius"
+                      type="range"
+                      min="0.1"
+                      max="12"
+                      value="1"
+                      step="0.05"
+                    />
+                    <span class="value" data-output="ambientOcclusionRadius">1.00</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Colour</span>
+                    <input
+                      type="color"
+                      id="ambientOcclusionColor"
+                      class="color-chip"
+                      value="#080808"
+                    />
+                  </label>
+                  <label class="select-line">
+                    <span data-tooltip="Low: half-res buffer + lighter N8AO samples. Medium: half-res + balanced denoise (default). Ultra: full resolution + Ultra N8AO preset.">AO Quality</span>
+                    <select id="ambientOcclusionQuality" aria-label="Ambient Occlusion quality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="max">Ultra</option>
+                    </select>
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="dof">
+                  <div class="block-title has-toggle">
+                    <span class="block-title-name">
+                      <span>Depth of Field</span>
+                      <span class="dev-badge" data-tooltip="This feature is still under development" tabindex="0" role="img" aria-label="This feature is still under development"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
+                    </span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="dof" aria-label="Reset Depth of Field" data-tooltip="Reset Depth of Field settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable depth of field blur effect">
+                        <input type="checkbox" id="toggleDof" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Depth of Field</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="dof"
+                    aria-hidden="true"
+                  >
+                  <label class="select-line">
+                    <span>Focus mode</span>
+                    <select id="dofFocusMode" aria-label="Depth of field focus mode" data-tooltip="Auto tracks the screen center on the model. Manual locks focus to the distance slider.">
+                      <option value="auto" selected>Auto</option>
+                      <option value="manual">Manual</option>
+                    </select>
+                  </label>
+                  <div class="slider-line slider-line--toggle-only">
+                    <span class="slider-line-label">Focus plane</span>
+                    <label
+                      class="effect-toggle"
+                      data-tooltip="View-depth focal plane used by the DOF shader (purple = in focus here). If blur seams sit in front of or behind this plane, that is a DOF bug — not wrong slider use."
+                    >
+                      <input type="checkbox" id="toggleDofFocusPlane" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show focus plane</span>
+                    </label>
+                  </div>
+                  <label class="slider-line">
+                    <span>Focus distance</span>
+                    <input
+                      id="dofFocus"
+                      type="range"
+                      min="0.1"
+                      max="10"
+                      value="1.5"
+                      step="0.1"
+                    />
+                    <span class="value" data-output="dofFocus">1.5m</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Blur on geometry nearer than the focal plane (nose, front wings). Keep low to avoid artifacts.">Near blur</span>
+                    <input
+                      id="dofForegroundBlur"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="1"
+                      step="0.05"
+                    />
+                    <span class="value" data-output="dofForegroundBlur">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Blur on geometry farther than the focal plane (rear wings, background).">Far blur</span>
+                    <input
+                      id="dofBackgroundBlur"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="1"
+                      step="0.05"
+                    />
+                    <span class="value" data-output="dofBackgroundBlur">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Lens aperture — lower f-stop values yield a shallower depth of field.">F-stop</span>
+                    <input
+                      id="dofAperture"
+                      type="range"
+                      min="0.001"
+                      max="0.01"
+                      value="0.003"
+                      step="0.0001"
+                    />
+                    <span class="value" data-output="dofAperture">f/4</span>
+                  </label>
+                  <div class="slider-line slider-line--toggle-only">
+                    <span class="slider-line-label">Compensate zoom</span>
+                    <label
+                      class="effect-toggle"
+                      data-tooltip="Reduce depth of field when the camera pulls back to a wide framing."
+                    >
+                      <input type="checkbox" id="toggleDofZoomAttenuation" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Compensate zoom</span>
+                    </label>
+                  </div>
+                  <label class="select-line">
+                    <span>Quality</span>
+                    <select id="dofQuality" aria-label="Depth of field quality" data-tooltip="Martins Upitis bokeh (three.js dof2). Quality sets ring × sample count — High matches the official example defaults.">
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high" selected>High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="bloom">
+                  <div class="block-title has-toggle">
+                    <span>Bloom</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="bloom" aria-label="Reset Bloom" data-tooltip="Reset Bloom settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable bloom glow effect">
+                        <input type="checkbox" id="toggleBloom" checked />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Bloom</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--expanded effect-foldout--md"
+                    data-effect-foldout="bloom"
+                    aria-hidden="false"
+                  >
+                  <label class="slider-line">
+                    <span>Threshold</span>
+                    <input
+                      id="bloomThreshold"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="1"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="bloomThreshold">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="bloomStrength"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="0.2"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="bloomStrength">0.20</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Radius</span>
+                    <input
+                      id="bloomRadius"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.2"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="bloomRadius">0.20</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input type="color" id="bloomColor" class="color-chip" value="#ffe9cc" />
+                  </label>
+                  <label class="select-line">
+                    <span>Quality</span>
+                    <select id="bloomQuality" aria-label="Bloom quality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="anamorphic-lens-flare">
+                  <div class="block-title has-toggle">
+                    <span>Anamorphic Bloom</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="anamorphic-bloom" aria-label="Reset Anamorphic Bloom" data-tooltip="Reset Anamorphic Bloom settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Streak on bright areas; angle control below (requires Bloom on)">
+                        <input type="checkbox" id="anamorphicBloomEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Anamorphic Bloom</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                    data-effect-foldout="anamorphic-lens-flare"
+                    aria-hidden="true"
+                  >
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="anamorphicBloomStrength"
+                      type="range"
+                      min="0"
+                      max="3"
+                      value="1"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="anamorphicBloomStrength">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Spread</span>
+                    <input
+                      id="anamorphicBloomSpread"
+                      type="range"
+                      min="0"
+                      max="1.68"
+                      value="0.2"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="anamorphicBloomSpread">0.20</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="0° = horizontal (classic anamorphic); 180° flips the streak axis — enough for lens / flare direction">Streak angle</span>
+                    <input
+                      id="anamorphicBloomStreakAngle"
+                      type="range"
+                      min="0"
+                      max="180"
+                      value="0"
+                      step="1"
+                    />
+                    <span class="value" data-output="anamorphicBloomStreakAngle">0°</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Linear luminance after bloom. Max (2) targets only the brightest pixels; small frame-to-frame swings there can strobe — the engine widens soften automatically above 1.0, or lower threshold.">Threshold</span>
+                    <input
+                      id="anamorphicBloomThreshold"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="0.7"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="anamorphicBloomThreshold">0.70</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Soften</span>
+                    <input
+                      id="anamorphicBloomSoften"
+                      type="range"
+                      min="0.01"
+                      max="0.6"
+                      value="0.12"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="anamorphicBloomSoften">0.12</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Tint</span>
+                    <input type="color" id="anamorphicBloomStreakTint" class="color-chip" value="#7ec8ff" />
+                  </label>
+                  <label class="select-line">
+                    <span>Quality</span>
+                    <select id="anamorphicBloomQuality" aria-label="Anamorphic bloom quality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="lens-flare">
+                  <div class="block-title has-toggle">
+                    <span>Lens Flare</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="lens-flare" aria-label="Reset Lens Flare" data-tooltip="Reset Lens Flare settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable lens flare effect">
+                        <input type="checkbox" id="lensFlareEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable lens flare</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--lg"
+                    data-effect-foldout="lens-flare"
+                    aria-hidden="true"
+                  >
+                  <label class="slider-line">
+                    <span>Rotation</span>
+                    <input
+                      id="lensFlareRotation"
+                      type="range"
+                      min="0"
+                      max="360"
+                      value="0"
+                      step="1"
+                    />
+                    <span class="value" data-output="lensFlareRotation">0°</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Height</span>
+                    <input
+                      id="lensFlareHeight"
+                      type="range"
+                      min="0"
+                      max="90"
+                      value="15"
+                      step="1"
+                    />
+                    <span class="value" data-output="lensFlareHeight">15°</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Push the rainbow halo brighter and wider">
+                    <span>Halo</span>
+                    <input
+                      id="lensFlareHalo"
+                      type="range"
+                      min="0"
+                      max="5"
+                      value="1"
+                      step="0.05"
+                    />
+                    <span class="value" data-output="lensFlareHalo">1.00×</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Shorten or lengthen the star rays from the flare">
+                    <span>Streak Length</span>
+                    <input
+                      id="lensFlareStreakLength"
+                      type="range"
+                      min="0"
+                      max="10"
+                      value="5"
+                      step="0.1"
+                    />
+                    <span class="value" data-output="lensFlareStreakLength">5.0</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="lensFlareColor"
+                      class="color-chip"
+                      value="#d28756"
+                    />
+                  </label>
+                  <label class="slider-line" data-tooltip="Sun disc at the light source — eases out when occluded">
+                    <span>Sun Disc Size</span>
+                    <input
+                      id="lensFlareSunDiscScale"
+                      type="range"
+                      min="0"
+                      max="10"
+                      value="1.5"
+                      step="0.1"
+                    />
+                    <span class="value" data-output="lensFlareSunDiscScale">1.5</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="0 = solid sharp disc, 5 = soft diffuse glow">
+                    <span>Sun Disc Blur</span>
+                    <input
+                      id="lensFlareSunDiscBlur"
+                      type="range"
+                      min="0"
+                      max="5"
+                      value="1.25"
+                      step="0.1"
+                    />
+                    <span class="value" data-output="lensFlareSunDiscBlur">1.25</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Sun Disc Color</span>
+                    <input
+                      type="color"
+                      id="lensFlareSunDiscColor"
+                      class="color-chip"
+                      value="#fff0c8"
+                    />
+                  </label>
+                  <label class="slider-line" data-tooltip="Brightness of the soft glow around the sun">
+                    <span>Glow Intensity</span>
+                    <input
+                      id="lensFlareDiscGlowIntensity"
+                      type="range"
+                      min="0"
+                      max="10"
+                      value="0"
+                      step="0.1"
+                    />
+                    <span class="value" data-output="lensFlareDiscGlowIntensity">0</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="How far the glow extends from the sun">
+                    <span>Glow Size</span>
+                    <input
+                      id="lensFlareDiscGlowSize"
+                      type="range"
+                      min="0"
+                      max="10"
+                      value="5"
+                      step="0.1"
+                    />
+                    <span class="value" data-output="lensFlareDiscGlowSize">5</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Glow Color</span>
+                    <input
+                      type="color"
+                      id="lensFlareDiscGlowColor"
+                      class="color-chip"
+                      value="#ff8844"
+                    />
+                  </label>
+                  <label class="select-line">
+                    <span>Quality</span>
+                    <select id="lensFlareQuality" aria-label="Lens flare quality" data-tooltip="Lowers ghost/dirt sample counts — same look, less GPU work (not feature cutoffs)">
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high" selected>High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
+                  </label>
+                  <div
+                    class="slider-line"
+                    data-tooltip="Animate flare streaks with iTime — only while camera auto-orbit is on (off by default)"
+                  >
+                    <span>Spin during orbit</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="lensFlareSpinDuringOrbit" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Animate lens flare streaks during camera auto-orbit</span>
+                    </label>
+                  </div>
+                  <button
+                    id="lensFlareKeyLightConnect"
+                    class="ghost-btn small"
+                    type="button"
+                    aria-pressed="false"
+                    data-tooltip="Match key-light direction to lens flare rotation and height"
+                  >
+                    Connect Key Light Position
+                  </button>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="volumetric-scattering">
+                  <div class="block-title has-toggle">
+                    <span data-tooltip="Volumetric light rays — follows Lens Flare rotation and height (virtual sun mesh)">Light Rays</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="volumetric-scattering" aria-label="Reset Light Rays" data-tooltip="Reset Light Rays settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable light rays from the sun">
+                        <input type="checkbox" id="godRaysEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Light Rays</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--lg"
+                    data-effect-foldout="volumetric-scattering"
+                    aria-hidden="true"
+                  >
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="godRaysColor"
+                      class="color-chip"
+                      value="#ffe8c4"
+                    />
+                  </label>
+                  <label
+                    class="slider-line"
+                    data-tooltip="Size of the virtual sun mesh that casts rays (1 = full default disc)"
+                  >
+                    <span>Sun size</span>
+                    <input
+                      id="godRaysLightScale"
+                      type="range"
+                      min="0.08"
+                      max="1.25"
+                      value="0.4"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysLightScale">0.4</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Overall opacity of the light rays composite">
+                    <span>Opacity</span>
+                    <input
+                      id="godRaysOpacity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="1"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysOpacity">1</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Ray density — higher reaches farther across the frame">
+                    <span>Density</span>
+                    <input
+                      id="godRaysDensity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.96"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysDensity">0.96</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Illumination decay along each ray sample (lower = faster falloff)">
+                    <span>Decay</span>
+                    <input
+                      id="godRaysDecay"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.92"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysDecay">0.92</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Weight of each ray sample">
+                    <span>Weight</span>
+                    <input
+                      id="godRaysWeight"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.4"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysWeight">0.4</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Exposure multiplier after radial blur">
+                    <span>Exposure</span>
+                    <input
+                      id="godRaysExposure"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="0.6"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysExposure">0.6</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Maximum output intensity clamp">
+                    <span>Clamp Max</span>
+                    <input
+                      id="godRaysClampMax"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="1"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysClampMax">1</span>
+                  </label>
+                  <div
+                    class="slider-line"
+                    data-tooltip="Blur the sun mask before radial blur (reduces artifacts)"
+                  >
+                    <span>Blur mask</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="godRaysBlur" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Blur sun mask before radial blur</span>
+                    </label>
+                  </div>
+                  <label class="select-line" data-tooltip="Resolution scale and sample count preset">
+                    <span>Quality</span>
+                    <select id="godRaysQuality" aria-label="God rays quality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="lens-dirt">
+                  <div class="block-title has-toggle">
+                    <span>Lens Dirt</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="lens-dirt" aria-label="Reset Lens Dirt" data-tooltip="Reset Lens Dirt settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable lens dirt overlay">
+                        <input type="checkbox" id="lensDirtEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Lens Dirt</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="lens-dirt"
+                    aria-hidden="true"
+                  >
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="lensDirtStrength"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.8"
+                    />
+                    <span class="value" data-output="lensDirtStrength">0.80</span>
+                  </label>
+                  <label
+                    class="color-line"
+                    data-tooltip="Multiplies the lens dirt texture. White keeps the original texture; pick a colour to match bright lights (e.g. cool blue)."
+                  >
+                    <span>Dirt tint</span>
+                    <input type="color" id="lensDirtTintColor" class="color-chip" value="#ffffff" />
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="grain">
+                  <div class="block-title has-toggle">
+                    <span>Grain</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="grain" aria-label="Reset Grain" data-tooltip="Reset Grain settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable grain effect">
+                        <input type="checkbox" id="toggleGrain" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Grain</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="grain"
+                    aria-hidden="true"
+                  >
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="grainIntensity"
+                      type="range"
+                      min="0"
+                      max="5"
+                      value="0.20"
+                      step="0.02"
+                    />
+                    <span class="value" data-output="grainIntensity">0.20</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Scale</span>
+                    <input
+                      id="grainScale"
+                      type="range"
+                      min="1"
+                      max="3"
+                      value="1"
+                      step="0.05"
+                    />
+                    <span class="value" data-output="grainScale" data-format="multiplier">1.00×</span>
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="vignette">
+                  <div class="block-title has-toggle">
+                    <span>Vignette</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="vignette" aria-label="Reset Vignette" data-tooltip="Reset Vignette settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable vignette darkening at frame edges">
+                        <input type="checkbox" id="toggleVignette" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Vignette</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="vignette"
+                    aria-hidden="true"
+                  >
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="vignetteIntensity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.5"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="vignetteIntensity">0.50</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="vignetteColor"
+                      class="color-chip"
+                      value="#080808"
+                    />
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="aberration">
+                  <div class="block-title has-toggle">
+                    <span>Chromatic Aberration</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="aberration" aria-label="Reset Chromatic Aberration" data-tooltip="Reset Chromatic Aberration settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable chromatic aberration effect">
+                        <input type="checkbox" id="toggleAberration" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Chromatic Aberration</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="aberration"
+                    aria-hidden="true"
+                  >
+                  <label class="slider-line">
+                    <span data-tooltip="Overall radial red/blue channel separation magnitude.">Amount</span>
+                    <input
+                      id="aberrationAmount"
+                      type="range"
+                      min="0"
+                      max="0.02"
+                      value="0.0006"
+                      step="0.0001"
+                    />
+                    <span class="value" data-output="aberrationAmount">0.0006</span>
+                  </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="subsection" data-subsection="color-checker">
+                  <div class="block-title has-toggle">
+                    <span>ColorChecker</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button type="button" class="block-reset-btn" data-reset="color-checker" aria-label="Reset ColorChecker" data-tooltip="Reset ColorChecker placement">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Show or hide the ColorChecker chart in the viewport">
+                        <input type="checkbox" id="colorCheckerEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Show ColorChecker chart</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                    data-effect-foldout="color-checker"
+                    aria-hidden="true"
+                  >
+                  <button
+                    type="button"
+                    id="colorCheckerRawToggle"
+                    class="accent-action-btn color-checker-raw-toggle"
+                    aria-pressed="false"
+                    data-tooltip="Same as Display → Unlit on the Object tab: neutral mesh view for comparing grade + chart. Toggle off restores your previous display mode."
+                  >
+                    <i class="fa-solid fa-palette" aria-hidden="true"></i>
+                    <span class="color-checker-raw-toggle__label">Reference colors — Off</span>
+                  </button>
+                  <label class="slider-line">
+                    <span data-tooltip="Radius of the orbit around the orbit target in the horizontal plane (scene units).">Distance</span>
+                    <input
+                      id="colorCheckerDistance"
+                      type="range"
+                      min="0.1"
+                      max="6"
+                      value="2"
+                      step="0.05"
+                    />
+                    <span class="value" data-output="colorCheckerDistance">2.00m</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Yaw around the vertical axis through the target — independent of Studio Lights and HDRI dome rotation.">Rotate</span>
+                    <input
+                      id="colorCheckerRotate"
+                      type="range"
+                      min="0"
+                      max="360"
+                      value="333"
+                      step="1"
+                    />
+                    <span class="value" data-output="colorCheckerRotate">333°</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Vertical offset from the orbit target (same as directional light height).">Height</span>
+                    <input
+                      id="colorCheckerHeight"
+                      type="range"
+                      min="-3"
+                      max="10"
+                      value="-0.5"
+                      step="0.1"
+                    />
+                    <span class="value" data-output="colorCheckerHeight">-0.50m</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Uniform size of the chart. Default matches a real ColorChecker (~356 mm) on import-normalized models (~2 m).">Scale</span>
+                    <input
+                      id="colorCheckerScale"
+                      type="range"
+                      min="0.02"
+                      max="4"
+                      value="0.055"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="colorCheckerScale">0.06×</span>
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="composition-guides">
+                  <div class="block-title has-toggle">
+                    <span data-tooltip="Rule of thirds, center cross, diagonals, center circle, and 90% action safe — fitted to 16×9 in the viewport">Composition Guides</span>
+                    <label class="effect-toggle" data-tooltip="Show composition overlays in the viewport">
+                      <input type="checkbox" id="compositionGridEnabled" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show composition guides</span>
+                    </label>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="composition-guides"
+                    aria-hidden="true"
+                  >
+                  <label class="select-line">
+                    <span data-tooltip="Light lines suit dark footage; dark lines suit bright scenes.">Colour</span>
+                    <select id="compositionGuidesColor" aria-label="Composition guides colour">
+                      <option value="light">Light</option>
+                      <option value="dark">Dark</option>
+                    </select>
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="cinematic-letterbox">
+                  <div class="block-title has-toggle">
+                    <span data-tooltip="Black bars matting the viewport to a 21∶9 picture area (common on 16∶9 displays). Opaque PNG exports include these mattes when enabled; export pixel size is unchanged.">21∶9 Letterbox</span>
+                    <label class="effect-toggle" data-tooltip="Show cinematic widescreen mattes in the viewport">
+                      <input type="checkbox" id="cinematicLetterbox219" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show 21∶9 Letterbox</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel-block panel-block--compact-head">
+                <div class="block-title">
+                  <span>Quality</span>
+                </div>
+                <label class="select-line">
+                  <span data-tooltip="Low: no bloom, no depth of field, no FXAA, plus 1K shadows and 1× DPR — your settings stay saved. Medium: lower DPR, 1K shadows, half-res bloom (depth of field still works if on). Ultra: full quality.">Render Quality</span>
+                  <select id="renderQuality" aria-label="Render Quality">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="max">Ultra</option>
+                  </select>
+                </label>
+                <label class="select-line">
+                  <span>Anti-Aliasing</span>
+                  <select id="antiAliasing" aria-label="Anti-aliasing">
+                    <option value="none">None</option>
+                    <option value="fxaa" selected>FXAA</option>
+                  </select>
+                </label>
+                <label class="select-line">
+                  <span>Tone Mapping</span>
+                  <select id="toneMapping" aria-label="Tone mapping">
+                    <option value="none">None</option>
+                    <option value="reinhard">Reinhard</option>
+                    <option value="aces-filmic" selected>ACES Filmic</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="panel-block export-block" style="display: none;">
+                <button id="exportImageLegacy" class="accent-action-btn" data-tooltip="Export current view as image">
+                  <i class="fa-solid fa-download"></i>
+                  Export image
+                </button>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Scene</div>
+                <div class="export-controls">
+                  <button id="resetRenderSettings" class="accent-action-btn" data-tooltip="Reset all camera settings to defaults">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    Reset Camera
+              </button>
+                  <button class="copy-scene-settings accent-action-btn" data-tooltip="Copy all scene settings to clipboard">
+                    <i class="fa-solid fa-copy"></i>
+                    Copy Scene Settings
+              </button>
+                  <button class="load-scene-settings accent-action-btn" data-tooltip="Paste scene settings from clipboard into a dialog">
+                    <i class="fa-solid fa-upload"></i>
+                    Paste Scene Settings
+                  </button>
+                  <button class="save-orby-scene accent-action-btn" data-tooltip="Save entire scene and model as .orby file">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Save .orby Scene
+                  </button>
+                  <button class="load-orby-scene accent-action-btn" data-tooltip="Load entire scene and model from .orby file">
+                    <i class="fa-solid fa-file-import"></i>
+                    Load .orby Scene
+                  </button>
+                </div>
+              </div>
+              <div class="info-version-tag">v0.5.876 · 2026-06-29 15:07:13 UTC</div>
+              <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
+                <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
+              </button>
+            </section>
