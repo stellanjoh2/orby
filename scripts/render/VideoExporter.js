@@ -802,8 +802,8 @@ export class VideoExporter {
         );
         this.camera.fov = adjusted * exportFovScale;
         this.camera.updateProjectionMatrix();
-      } else if (!portraitExport) {
-        // 16∶9 export — preserve horizontal FOV on wide studio viewports.
+      } else if (!portraitExport && previousAspect > newAspect) {
+        // Wide studio viewport — preserve horizontal FOV when reframing to 16∶9.
         const adjusted = verticalFovForAspectPreservingHorizontalFov(
           baseVfov,
           previousAspect,
@@ -812,6 +812,7 @@ export class VideoExporter {
         this.camera.fov = adjusted * exportFovScale;
         this.camera.updateProjectionMatrix();
       }
+      // Narrower/taller viewport → keep vertical FOV (matches live preview; 16∶9 adds horizontal extent).
       // 9∶16 center crop — keep vertical FOV (no adjustment on typical wide viewports).
     }
 
@@ -1495,6 +1496,7 @@ export class VideoExporter {
             },
           );
           const fileName = this._frameNameForSequence(baseName, modeLabel, durationSec, i);
+          this.ui?.setOfflineExportPreviewFrame?.(blob);
           if (useFolderExport && sequenceDirHandle) {
             await this._writeBlobToDirectory(sequenceDirHandle, fileName, blob);
             framesWritten += 1;

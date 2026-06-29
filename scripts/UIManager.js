@@ -349,6 +349,8 @@ export class UIManager {
     this.dom.offlineExportElapsedValue = q('#viewportOfflineExportElapsedValue');
     this.dom.offlineExportFilename = q('#viewportOfflineExportFilename');
     this.dom.offlineExportFilenameValue = q('#viewportOfflineExportFilenameValue');
+    this.dom.offlineExportPreview = q('#viewportOfflineExportPreview');
+    this.dom.offlineExportPreviewCanvas = q('#viewportOfflineExportPreviewCanvas');
     this.dom.fullscreenToggle = q('#fullscreenToggle');
     this.dom.loadSpinner = q('#viewportLoadSpinner');
     this.dom.loadSpinnerElapsed = q('#viewportLoadSpinnerElapsed');
@@ -2186,6 +2188,7 @@ export class UIManager {
 
     this.beginShelfOverlaySuppression();
     this.dom.viewport?.classList.add('is-offline-export-capture');
+    this._resetOfflineExportPreview();
     const overlay = this.dom.offlineExportOverlay;
     if (overlay) {
       overlay.hidden = false;
@@ -2252,10 +2255,83 @@ export class UIManager {
     this._syncOfflineExportElapsed();
   }
 
+  /**
+   * Paint the most-recently captured export frame into the side preview.
+   * Throttled to one in-flight decode — extra frames are dropped, never queued,
+   * so the encode loop is never blocked waiting on the preview.
+   * @param {Blob | null | undefined} blob — PNG blob from the capture loop
+   */
+  setOfflineExportPreviewFrame(blob) {
+    const canvas = this.dom.offlineExportPreviewCanvas;
+    if (!canvas || !blob) return;
+    if (this.dom.viewport?.classList.contains('is-offline-export-capture') !== true) return;
+    if (this._offlineExportPreviewBusy) return;
+    if (typeof createImageBitmap !== 'function') return;
+    this._offlineExportPreviewBusy = true;
+    this._offlineExportPreviewToken = (this._offlineExportPreviewToken || 0) + 1;
+    const token = this._offlineExportPreviewToken;
+    createImageBitmap(blob)
+      .then((bitmap) => {
+        this._offlineExportPreviewBusy = false;
+        if (
+          token !== this._offlineExportPreviewToken
+          || this.dom.viewport?.classList.contains('is-offline-export-capture') !== true
+        ) {
+          bitmap.close?.();
+          return;
+        }
+        this._drawOfflineExportPreviewBitmap(bitmap);
+        bitmap.close?.();
+      })
+      .catch(() => {
+        this._offlineExportPreviewBusy = false;
+      });
+  }
+
+  /** Downscale the captured frame to a modest preview size, preserving aspect. */
+  _drawOfflineExportPreviewBitmap(bitmap) {
+    const canvas = this.dom.offlineExportPreviewCanvas;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    const srcW = Math.max(1, bitmap.width);
+    const srcH = Math.max(1, bitmap.height);
+    const maxEdge = 960;
+    const scale = Math.min(1, maxEdge / Math.max(srcW, srcH));
+    const dstW = Math.max(1, Math.round(srcW * scale));
+    const dstH = Math.max(1, Math.round(srcH * scale));
+    if (canvas.width !== dstW || canvas.height !== dstH) {
+      canvas.width = dstW;
+      canvas.height = dstH;
+    }
+    ctx.clearRect(0, 0, dstW, dstH);
+    ctx.drawImage(bitmap, 0, 0, dstW, dstH);
+    const preview = this.dom.offlineExportPreview;
+    if (preview && preview.hidden) {
+      preview.hidden = false;
+      preview.setAttribute('aria-hidden', 'false');
+    }
+  }
+
+  _resetOfflineExportPreview() {
+    this._offlineExportPreviewBusy = false;
+    this._offlineExportPreviewToken = (this._offlineExportPreviewToken || 0) + 1;
+    const preview = this.dom.offlineExportPreview;
+    if (preview) {
+      preview.hidden = true;
+      preview.setAttribute('aria-hidden', 'true');
+    }
+    const canvas = this.dom.offlineExportPreviewCanvas;
+    const ctx = canvas?.getContext('2d');
+    if (canvas && ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+
   hideOfflineExportOverlay() {
     this._stopOfflineExportElapsedTick();
     this.endShelfOverlaySuppression();
     this.dom.viewport?.classList.remove('is-offline-export-capture');
+    this._resetOfflineExportPreview();
     const overlay = this.dom.offlineExportOverlay;
     if (overlay) {
       overlay.hidden = true;

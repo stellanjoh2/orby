@@ -2694,9 +2694,10 @@ html.orby-dropzone-shell-pending .workspace {
   inset: 0;
   z-index: 15;
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  flex-direction: row;
+  align-items: flex-start;
   justify-content: flex-start;
+  gap: clamp(1.5rem, 6vw, 6rem);
   padding: clamp(1rem, 4vw, 4.5rem);
   box-sizing: border-box;
   background: var(--orby-app-bg);
@@ -2717,7 +2718,8 @@ body.export-overlay-debug #dropzone {
   gap: var(--viewport-offline-export-section-gap);
   flex: 1 1 auto;
   min-height: 0;
-  width: min(100%, 54rem);
+  width: auto;
+  max-width: min(60rem, 58%);
   max-height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
@@ -2725,6 +2727,69 @@ body.export-overlay-debug #dropzone {
   padding-right: 0.25rem;
   padding-bottom: 0.5rem;
   pointer-events: auto;
+}
+
+.viewport-offline-export__preview {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: clamp(20rem, 38vw, 52rem);
+  max-width: 100%;
+  max-height: 100%;
+  pointer-events: none;
+}
+
+.viewport-offline-export__preview[hidden] {
+  display: none !important;
+}
+
+.viewport-offline-export__preview-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--orby-black);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 64px color-mix(in srgb, var(--orby-black) 60%, transparent);
+}
+
+.viewport-offline-export__preview-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: auto;
+}
+
+.viewport-offline-export__preview-caption {
+  margin: 0;
+  font-family: var(--brand-font-mattone-regular);
+  font-size: var(--viewport-offline-export-info-font-size);
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* Narrow viewports: drop the side preview, let the info box reclaim the width */
+@media (max-width: 720px) {
+  .viewport-offline-export {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--viewport-offline-export-section-gap);
+  }
+
+  .viewport-offline-export__center {
+    max-width: 100%;
+    width: min(100%, 54rem);
+  }
+
+  .viewport-offline-export__preview {
+    display: none !important;
+  }
 }
 
 .viewport-offline-export__footer {
