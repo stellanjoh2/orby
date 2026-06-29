@@ -43,7 +43,7 @@ import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
 import { GroundController } from './render/GroundController.js';
 import { EnvironmentController } from './render/EnvironmentController.js';
-import { syncTransmissionBackdropForCreativeLook, needsTransmissionBackdropForCreativeLook, isSolidStudioBackdropActive, resolveSolidStudioBackdropColor } from './render/backgroundFallback.js';
+import { syncTransmissionBackdrop, needsTransmissionBackdrop, isSolidStudioBackdropActive, resolveSolidStudioBackdropColor } from './render/backgroundFallback.js';
 import { HdriMoodController } from './render/HdriMoodController.js';
 import { CameraController } from './render/CameraController.js';
 import { ModelLoader } from './render/ModelLoader.js';
@@ -106,7 +106,8 @@ import { TransformController } from './render/TransformController.js';
 import { LensDirtController } from './render/LensDirtController.js';
 import { BackgroundController } from './render/BackgroundController.js';
 import { BackgroundGradientController } from './render/backgroundGradient/BackgroundGradientController.js';
-import { getViewportBackingStorePixels } from './render/drawingBufferSize.js';
+import { getViewportBackingStorePixels, coerceRendererLogicalSize } from './render/drawingBufferSize.js';
+import { repairInteractiveViewportAfterCapture } from './render/capture/repairInteractiveViewportAfterCapture.js';
 import { BackgroundImageController } from './render/backgroundImage/BackgroundImageController.js';
 import { loadBackgroundImageElement } from './render/backgroundImage/backgroundImageCanvas.js';
 import { normalizeBackgroundImage } from './render/backgroundImage/backgroundImageDefaults.js';
@@ -1931,12 +1932,7 @@ export class SceneManager {
       this.syncPostProcessingForLogicalSize(szNow.x, szNow.y);
     }
     this._applyViewportSizeFromLayout();
-    const db = getViewportBackingStorePixels(this.renderer);
-    this.backgroundGradientController?.syncToDrawingBuffer?.(
-      db.width,
-      db.height,
-      { forceRedraw: true },
-    );
+    this.backgroundGradientController?.applyIfActive?.();
     this.updateDof(state.dof);
     this.updateBloom(state.bloom);
     this.updateAmbientOcclusion(state.ambientOcclusion);
@@ -2183,7 +2179,7 @@ export class SceneManager {
   syncCreativeLookTransmissionBackdrop() {
     if (!this.stateStore) return false;
     const state = this.stateStore.getState();
-    if (!needsTransmissionBackdropForCreativeLook(state)) return false;
+    if (!needsTransmissionBackdrop(state)) return false;
     if (!state.hdriBackground) {
       this.stateStore.set('hdriBackground', true);
     }
@@ -4129,6 +4125,7 @@ export class SceneManager {
   applyTransparencyFixFromState() {
     if (!this.currentModel) return;
     try {
+      this.syncCreativeLookTransmissionBackdrop();
       this.materialController.reapplyTransparencyPipeline();
       this.refreshMaterialSidesForReverseNormals();
       if (this.scene.environment) {
@@ -4161,6 +4158,7 @@ export class SceneManager {
   /** Advanced glass opacity + HDRI reflection multiplier (heuristic glass/window meshes). */
   applyGlassAppearanceFromState() {
     if (!this.currentModel) return;
+    this.syncCreativeLookTransmissionBackdrop();
     this.materialController.applyGlassAppearanceFromState(this.currentModel);
     this.materialController.applyGlassOrientationFromState(this.currentModel);
     this.refreshMaterialSidesForReverseNormals();
@@ -5132,10 +5130,8 @@ export class SceneManager {
     requestAnimationFrame(() => this._applyViewportSizeFromLayout());
   }
 
-  _applyViewportSizeFromLayout() {
-    if (this._suppressResizeForExport || !this.isStudioReady || !this.renderer) {
-      return;
-    }
+  /** Layout pixels for the studio canvas (not export preset size). */
+  _getStudioViewportLayoutSize() {
     const container = this.viewport || this.canvas?.parentElement;
     const containerRect = container?.getBoundingClientRect?.() ?? null;
     const canvasRect = this.canvas?.getBoundingClientRect?.() ?? null;
@@ -5147,10 +5143,6 @@ export class SceneManager {
       ? Math.floor(containerRect.height)
       : Math.floor(canvasRect?.height) || window.innerHeight;
 
-    if (width <= 0 || height <= 0) {
-      return;
-    }
-
     const isFullscreen = !!(
       document.fullscreenElement ||
       document.webkitFullscreenElement ||
@@ -5158,10 +5150,21 @@ export class SceneManager {
       document.msFullscreenElement
     );
 
-    const finalWidth = isFullscreen ? window.innerWidth : width;
-    const finalHeight = isFullscreen ? window.innerHeight : height;
+    return {
+      width: Math.max(1, isFullscreen ? window.innerWidth : width),
+      height: Math.max(1, isFullscreen ? window.innerHeight : height),
+    };
+  }
 
-    this.renderer.setSize(finalWidth, finalHeight, false);
+  _applyViewportSizeFromLayout() {
+    if (this._suppressResizeForExport || !this.isStudioReady || !this.renderer) {
+      return;
+    }
+    const { width: finalWidth, height: finalHeight } = this._getStudioViewportLayoutSize();
+
+    if (finalWidth <= 0 || finalHeight <= 0) {
+      return;
+    }
 
     if (
       this.canvas &&
@@ -5170,6 +5173,12 @@ export class SceneManager {
       this.canvas.style.width = '100%';
       this.canvas.style.height = '100%';
     }
+
+    const pr = Math.min(
+      window.devicePixelRatio,
+      resolveRenderQualityTier(this.stateStore.getState().renderQuality).maxPixelRatio,
+    );
+    coerceRendererLogicalSize(this.renderer, finalWidth, finalHeight, pr);
 
     this.camera.aspect = finalWidth / Math.max(1, finalHeight);
     this.syncPerspectiveCameraFovAndLens();
@@ -5406,6 +5415,41 @@ export class SceneManager {
     }
   }
 
+  _repairInteractiveViewportAfterCapture() {
+    if (!this.renderer) return;
+    const { width, height } = this._getStudioViewportLayoutSize();
+    const tier = resolveRenderQualityTier(this.stateStore.getState().renderQuality);
+    const pixelRatio = Math.min(window.devicePixelRatio, tier.maxPixelRatio);
+    repairInteractiveViewportAfterCapture({
+      renderer: this.renderer,
+      composer: this.composer,
+      logicalWidth: width,
+      logicalHeight: height,
+      pixelRatio,
+      syncPostProcessingForLogicalSize: (w, h) =>
+        this.syncPostProcessingForLogicalSize(w, h),
+      ensureComposerBuffersMatchRenderer: () =>
+        this.composerLifecycle?.ensureComposerBuffersMatchRenderer?.(),
+      backgroundController: this.backgroundController,
+    });
+    this._applyViewportSizeFromLayout();
+  }
+
+  _releaseStuckExportCaptureState() {
+    this._capturePreviewInFlight = false;
+    this._suppressResizeForExport = false;
+    this.ui?.forceClearLoadSpinner?.();
+    this.stateStore?.flushDeferredNotify?.();
+    this.composer?.clearExportCaptureViewportPin?.();
+    if (this.videoExporter?._captureFeatureSession) {
+      this.videoExporter._captureFeatureSession.restore?.();
+      this.videoExporter._captureFeatureSession = null;
+    }
+    if (this.videoExporter) {
+      this.videoExporter._exportCaptureSize = null;
+    }
+  }
+
   async captureExportPreviewFrame(options = {}) {
     const {
       download = true,
@@ -5456,6 +5500,9 @@ export class SceneManager {
     } finally {
       this._capturePreviewInFlight = false;
       this._suppressResizeForExport = false;
+      this._releaseStuckExportCaptureState();
+      this.applyRenderQualitySettings?.();
+      this._repairInteractiveViewportAfterCapture();
       this.handleResize();
       if (resumeRenderLoop) {
         this.renderLoop.start();

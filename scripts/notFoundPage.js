@@ -72,6 +72,7 @@ const NOT_FOUND_PRESET = {
     blendSortingMitigation: true,
     flipGlassNormalMapY: false,
     glassFrontFacesOnly: false,
+    physicalGlassTransmission: false,
   },
   hdri: 'congress',
   hdriEnabled: false,

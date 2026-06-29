@@ -1,6 +1,11 @@
 import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/EffectComposer.js';
 import { MaskPass, ClearMaskPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/MaskPass.js';
-import { pinRendererViewportLogical, resetRendererFullViewport } from './resetRendererFullViewport.js';
+import { ensureExportCapturePixelRatio } from './capture/forceExportCaptureFramebuffer.js';
+import {
+  pinRenderTargetPhysicalViewport,
+  resetRendererFullViewport,
+} from './resetRendererFullViewport.js';
+import { getDrawingBufferPixels } from './drawingBufferSize.js';
 
 /**
  * EffectComposer that resets the GL viewport before every pass. Bloom / transmission / reflector
@@ -14,7 +19,7 @@ export class MeshglEffectComposer extends EffectComposer {
     this._exportCaptureViewportPin = null;
   }
 
-  /** Pin every pass viewport to export resolution (not studio canvas logical size). */
+  /** @deprecated Export capture resizes the drawing buffer — full RT viewport is used instead. */
   setExportCaptureViewportPin(width, height) {
     this._exportCaptureViewportPin = {
       width: Math.max(1, Math.floor(width)),
@@ -26,10 +31,21 @@ export class MeshglEffectComposer extends EffectComposer {
     this._exportCaptureViewportPin = null;
   }
 
+  /** Pin every pass to full RT pixels @ DPR 1 (1080p export from Ultra studio). */
+  setExportCapturePhysicalViewport(active) {
+    this._exportCapturePhysicalViewport = active === true;
+  }
+
   _resetPassViewport(renderer) {
-    const pin = this._exportCaptureViewportPin;
-    if (pin) {
-      pinRendererViewportLogical(renderer, pin.width, pin.height);
+    if (this._exportCapturePhysicalViewport) {
+      ensureExportCapturePixelRatio({ renderer, composer: this });
+      const rt = renderer.getRenderTarget();
+      if (rt?.width > 0 && rt?.height > 0) {
+        pinRenderTargetPhysicalViewport(renderer, rt.width, rt.height);
+      } else {
+        const { width, height } = getDrawingBufferPixels(renderer);
+        pinRenderTargetPhysicalViewport(renderer, width, height);
+      }
       return;
     }
     resetRendererFullViewport(renderer);
@@ -48,10 +64,9 @@ export class MeshglEffectComposer extends EffectComposer {
       if (pass.enabled === false) continue;
 
       this._resetPassViewport(this.renderer);
-      pass._keepExportCaptureViewport = !!this._exportCaptureViewportPin;
+      pass._keepExportCaptureViewport = false;
       pass.renderToScreen = this.renderToScreen && this.isLastEnabledPass(i);
       pass.render(this.renderer, this.writeBuffer, this.readBuffer, deltaTime, maskActive);
-      pass._keepExportCaptureViewport = false;
 
       if (pass.needsSwap) {
         if (maskActive) {

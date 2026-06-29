@@ -23,7 +23,7 @@ const DEFAULT_WATERMARK = {
   logo: 'orby',
   placement: 'left',
   credit: DEFAULT_CREDIT,
-  creditEnabled: true,
+  creditEnabled: false,
   logoScale: DEFAULT_LOGO_SCALE,
   creditScale: DEFAULT_CREDIT_SCALE,
   logoColor: DEFAULT_LOGO_COLOR,
@@ -106,7 +106,7 @@ export class WatermarkController {
     if (wm.logo !== 'orby' && wm.logo !== 'custom') wm.logo = 'orby';
     if (wm.placement !== 'left' && wm.placement !== 'right') wm.placement = 'left';
     if (typeof wm.credit !== 'string') wm.credit = DEFAULT_CREDIT;
-    if (typeof wm.creditEnabled !== 'boolean') wm.creditEnabled = true;
+    if (typeof wm.creditEnabled !== 'boolean') wm.creditEnabled = false;
     if (!Number.isFinite(wm.logoScale)) wm.logoScale = DEFAULT_LOGO_SCALE;
     if (!Number.isFinite(wm.creditScale)) wm.creditScale = DEFAULT_CREDIT_SCALE;
     if (typeof wm.logoColorOverride !== 'boolean') wm.logoColorOverride = false;

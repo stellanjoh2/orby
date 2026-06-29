@@ -497,6 +497,7 @@ export class UIManager {
       blendSortingMitigation: q('#blendSortingMitigation'),
       flipGlassNormalMapY: q('#flipGlassNormalMapY'),
       glassFrontFacesOnly: q('#glassFrontFacesOnly'),
+      physicalGlassTransmission: q('#physicalGlassTransmission'),
       glassOpacity: q('#glassOpacity'),
       glassReflection: q('#glassReflection'),
       glassTint: q('#glassTint'),
@@ -526,6 +527,10 @@ export class UIManager {
       creativeLookPauseAnimations: q('#creativeLookPauseAnimations'),
       creativeLookShaderAnimationSpeed: q('#creativeLookShaderAnimationSpeed'),
       creativeLookPatternScale: q('#creativeLookPatternScale'),
+      creativeLookTransmissionSamples: q('#creativeLookTransmissionSamples'),
+      creativeLookTransmissionDispersion: q('#creativeLookTransmissionDispersion'),
+      creativeLookTransmissionSolidMeshGlass: q('#creativeLookTransmissionSolidMeshGlass'),
+      creativeLookTransmissionDoubleSide: q('#creativeLookTransmissionDoubleSide'),
       creativeLookSketchStrokeWidth: q('#creativeLookSketchStrokeWidth'),
       creativeLookSketchRasterSize: q('#creativeLookSketchRasterSize'),
       creativeLookInkStrokeColor: q('#creativeLookInkStrokeColor'),
@@ -778,7 +783,7 @@ export class UIManager {
         logo: 'orby',
         placement: 'left',
         credit: 'Lorem Ipsu',
-        creditEnabled: true,
+        creditEnabled: false,
         logoScale: 100,
         creditScale: 100,
         logoColor: '#c4ff00',
@@ -2014,6 +2019,14 @@ export class UIManager {
       this.endLoadSpinnerElapsed();
       this._loadSpinnerStatusPrefix = 'Rendering';
     }
+    this._syncLoadSpinner();
+  }
+
+  /** Recover when capture/export leaves the viewport spinner or deferred UI stuck. */
+  forceClearLoadSpinner() {
+    this._loadSpinnerDepth = 0;
+    this.endLoadSpinnerElapsed();
+    this._loadSpinnerStatusPrefix = 'Rendering';
     this._syncLoadSpinner();
   }
 

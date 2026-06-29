@@ -20,6 +20,11 @@ import {
 } from './capture/CaptureSizePolicy.js';
 import { runOfflineCaptureSession } from './capture/OfflineCaptureSession.js';
 import { captureReadback } from './capture/captureReadback.js';
+import { readGradientMergedFromComposerOutput } from './capture/captureGradientComposite.js';
+import {
+  ensureExportCapturePixelRatio,
+  forceExportCaptureFramebuffer,
+} from './capture/forceExportCaptureFramebuffer.js';
 import { prepareCaptureFeatures, restoreCaptureFeatures } from './capture/captureFeatureHooks.js';
 import { downloadExportCanvas } from './capture/encodeExportBlob.js';
 import {
@@ -184,7 +189,7 @@ export class ImageExporter {
     const r = this.renderer;
     r.setRenderTarget(null);
     resetRendererFullViewport(r);
-    this.backgroundController?.gradientController?.restoreAfterCapture?.();
+    this.backgroundController?.gradientController?.applyIfActive?.();
   }
 
   /**
@@ -193,6 +198,10 @@ export class ImageExporter {
   _ensureComposerMatchesDrawingBuffer({ strict = false } = {}) {
     const composer = this.composer;
     if (!composer?.renderTarget1) return;
+    ensureExportCapturePixelRatio({
+      renderer: this.renderer,
+      composer,
+    });
     const gl = this.renderer.getContext();
     let bw;
     let bh;
@@ -225,6 +234,10 @@ export class ImageExporter {
     } else {
       composer.setPixelRatio(pr);
       composer.setSize(logicalW, logicalH);
+    }
+    if (Math.abs(rt.width - bw) > 2 || Math.abs(rt.height - bh) > 2) {
+      composer.renderTarget1.setSize(bw, bh);
+      composer.renderTarget2?.setSize(bw, bh);
     }
   }
 
@@ -376,6 +389,7 @@ export class ImageExporter {
     if (typeof this.renderer.setDrawingBufferSize === 'function') {
       this.renderer.setDrawingBufferSize(w, h, 1);
     } else {
+      this.renderer.setPixelRatio(1);
       this.renderer.setSize(w, h, false);
       this._syncRendererInternalSizeToCanvasBackingStore();
     }
@@ -502,20 +516,26 @@ export class ImageExporter {
       this.composer.setPixelRatio(1);
       this.composer.setSize(synced.width, synced.height);
     }
+    forceExportCaptureFramebuffer(
+      {
+        renderer: this.renderer,
+        composer: this.composer,
+        syncPostProcessingForLogicalSize: this.syncPostProcessingForLogicalSize?.bind(this),
+      },
+      synced.width,
+      synced.height,
+    );
     this._ensureComposerMatchesDrawingBuffer({ strict: true });
     return synced;
   }
 
-  /** Full backing-store viewport in logical units (pixelRatio should be 1 during export). */
+  /** Reset GL viewport to the full drawing buffer (export uses DPR 1). */
   _setExportViewport(width, height) {
+    void width;
+    void height;
     const r = this.renderer;
-    const w = Math.max(1, Math.floor(width));
-    const h = Math.max(1, Math.floor(height));
     r.setRenderTarget(null);
-    r.setViewport(0, 0, w, h);
-    if (typeof r.setScissor === 'function') {
-      r.setScissor(0, 0, w, h);
-    }
+    resetRendererFullViewport(r);
     if (typeof r.setScissorTest === 'function') {
       r.setScissorTest(false);
     }
@@ -531,6 +551,34 @@ export class ImageExporter {
 
     const allowResample = opts.allowResample ?? ALLOW_CAPTURE_RESAMPLE;
     const logDebug = opts.logDebug ?? LOG_CAPTURE_DEBUG;
+    const gradientCtrl = this.backgroundController?.gradientController;
+    const useGradientComposite =
+      gradientCtrl?.shouldCompositeGradientOnReadback?.() === true
+      && opts.transparent !== true;
+
+    if (useGradientComposite) {
+      const width = Math.max(1, Math.round(fallbackWidth));
+      const height = Math.max(1, Math.round(fallbackHeight));
+      const merged = readGradientMergedFromComposerOutput({
+        renderer: this.renderer,
+        scene: this.scene,
+        camera: this.camera,
+        composer,
+        width,
+        height,
+        getGradientRgba: () => gradientCtrl.getCaptureGradientRgba(),
+        finishGpu: () => {
+          const gl = this.renderer.getContext();
+          if (gl && typeof gl.finish === 'function') {
+            gl.finish();
+          }
+        },
+      });
+      if (logDebug) {
+        console.debug('[Orby capture] gradient CPU composite', { width, height });
+      }
+      return { pixels: merged, width, height, topDown: true };
+    }
 
     return captureReadback(
       {
@@ -577,6 +625,12 @@ export class ImageExporter {
     });
     if (!capture) return null;
     const { pixels, width, height } = capture;
+    if (capture.topDown) {
+      return this._pixelsTopDownToCanvas(pixels, width, height, {
+        cinematicLetterbox219,
+        forceOpaqueAlpha: true,
+      });
+    }
     return this._pixelsToFlippedCanvas(pixels, width, height, {
       cinematicLetterbox219,
       forceOpaqueAlpha: true,

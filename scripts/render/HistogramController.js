@@ -10,6 +10,8 @@ const HIST_BG = ORBY_BLACK;
 const HIST_BAR = ORBY_LIME;
 const HIST_BAR_WARN = '#ff9632';
 const HIST_BAR_SEVERE = ORBY_PINK;
+/** Panoramic shelf strip — full panel width, fixed height (not 16:9 video aspect). */
+const HIST_CSS_HEIGHT = 80;
 
 export class HistogramController {
   constructor(renderer, canvas, containerElement, composer = null) {
@@ -20,13 +22,14 @@ export class HistogramController {
     this.enabled = false;
     this._uiMounted = false;
     this._resizeObserver = null;
+    this._lastWarningLevel = 0;
 
-    // Create canvas — layout 16:9 in CSS (~25% shorter than 4:3); bitmap tracks DPR
+    // Create canvas — full-width panoramic strip; bitmap tracks DPR
     this.histogramCanvas = document.createElement('canvas');
     this.histogramCanvas.width = 320;
-    this.histogramCanvas.height = 180;
+    this.histogramCanvas.height = HIST_CSS_HEIGHT;
     this.histogramCanvas.style.width = '100%';
-    this.histogramCanvas.style.height = 'auto';
+    this.histogramCanvas.style.height = `${HIST_CSS_HEIGHT}px`;
     this.histogramCanvas.style.display = 'block';
     this.histogramCtx = this.histogramCanvas.getContext('2d', { alpha: false });
     
@@ -69,13 +72,21 @@ export class HistogramController {
     this.containerElement.appendChild(this.histogramCanvas);
     this.containerElement.appendChild(this.warningElement);
     this.containerElement.appendChild(this.warningCloseElement);
-    if (typeof ResizeObserver !== 'undefined') {
+    if (typeof ResizeObserver !== 'undefined' && this.containerElement) {
       this._resizeObserver = new ResizeObserver(() => {
         this._syncHistogramCanvasSize();
+        if (this.enabled && this.histogramCtx) {
+          this.renderHistogram(this._lastWarningLevel);
+        }
       });
-      this._resizeObserver.observe(this.histogramCanvas);
+      this._resizeObserver.observe(this.containerElement);
     }
-    requestAnimationFrame(() => this._syncHistogramCanvasSize());
+    requestAnimationFrame(() => {
+      this._syncHistogramCanvasSize();
+      if (this.enabled && this.histogramCtx) {
+        this.renderHistogram(this._lastWarningLevel);
+      }
+    });
   }
 
   unmountUi() {
@@ -99,13 +110,10 @@ export class HistogramController {
   _syncHistogramCanvasSize() {
     const el = this.histogramCanvas;
     if (!el) return;
-    const rect = el.getBoundingClientRect();
-    let cssW = rect.width;
-    let cssH = rect.height;
+    const rect = (this.containerElement ?? el).getBoundingClientRect();
+    const cssW = rect.width;
     if (cssW < 8) return;
-    if (cssH < 4) {
-      cssH = (cssW * 9) / 16;
-    }
+    const cssH = HIST_CSS_HEIGHT;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const bw = Math.max(1, Math.floor(cssW * dpr));
     const bh = Math.max(1, Math.floor(cssH * dpr));
@@ -274,6 +282,7 @@ export class HistogramController {
       const warningLevel = isCatastrophicHighlights
         ? 2
         : (isCloseToOverexposing ? 1 : 0);
+      this._lastWarningLevel = warningLevel;
       this.renderHistogram(warningLevel);
       
       // Hide warning labels (no longer needed)

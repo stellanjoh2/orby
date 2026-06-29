@@ -8285,23 +8285,11 @@ body.ui-hidden .shelf {
 }
 
 .histogram-container--expanded {
-  /* Tall enough for 16:9 canvas at full panel width (column layout shelf = 100% vw);
-   * fixed 320px used to clip the canvas bottom when width × 9/16 > 320. */
-  max-height: min(60vh, 640px);
+  /* Panoramic 80px canvas + fold-out inset */
+  max-height: calc(80px + var(--shelf-section-gap) + 0.5rem);
   opacity: 1;
   padding-top: var(--shelf-section-gap);
   padding-bottom: 0.5rem;
-}
-
-@supports (container-type: inline-size) {
-  .histogram-container {
-    container-type: inline-size;
-  }
-
-  .histogram-container--expanded {
-    /* Match canvas aspect-ratio + a few px for rounding; vh cap for very short viewports */
-    max-height: min(calc((100cqw * 9) / 16 + 8px), 92vh);
-  }
 }
 
 .histogram-container--collapsed {
@@ -8481,6 +8469,15 @@ body.ui-hidden .shelf {
   padding-top: 0;
 }
 
+/* Shader Lab — grow parent card when foldout is open (content-visibility placeholder is 400px). */
+.panel-block:has([data-subsection='creative-look'] .creative-look-foldout--expanded) {
+  content-visibility: visible;
+}
+
+.panel-block:has([data-subsection='creative-look'] #creativeLookTransmissionControls:not([hidden])) {
+  content-visibility: visible;
+}
+
 /* Object tab — Shader Lab fold-out (matches Look Filters behavior) */
 .creative-look-foldout {
   margin-top: 0;
@@ -8491,11 +8488,13 @@ body.ui-hidden .shelf {
 }
 
 .creative-look-foldout--expanded {
-  max-height: 120rem;
+  max-height: max-content;
   opacity: 1;
   padding-top: var(--shelf-section-gap);
   padding-bottom: 0;
   overflow: visible;
+  interpolate-size: allow-keywords;
+  content-visibility: visible;
 }
 
 .creative-look-foldout--collapsed {
@@ -8596,6 +8595,19 @@ body.ui-hidden .shelf {
 /* Preset sliders (Sketch stroke / raster) participate in foldout flex rhythm — no wrapper gap. */
 .creative-look-preset-sliders {
   display: contents;
+}
+
+.creative-look-transmission-controls {
+  display: contents;
+}
+
+.creative-look-transmission-controls[hidden] {
+  display: none !important;
+}
+
+.creative-look-transmission-controls > :is(.slider-line, .panel-hint) {
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .creative-look-preset-sliders[hidden] {
@@ -9088,8 +9100,7 @@ body.ui-hidden .shelf {
 .histogram-container canvas {
   display: block;
   width: 100%;
-  height: auto;
-  aspect-ratio: 16 / 9; /* ~25% less height than 4:3 at the same width */
+  height: 80px;
   border-radius: 4px;
   background: var(--orby-black);
 }
@@ -9262,8 +9273,12 @@ body.ui-hidden .shelf {
   color: var(--text-dim);
 }
 
+.font-extrude-action-row {
+  margin-top: var(--shelf-section-gap);
+}
+
 .font-extrude-file-fallback {
-  margin: var(--shelf-section-gap) 0 0;
+  margin: 0;
 }
 
 .font-extrude-system-fonts-prompt {
@@ -9465,9 +9480,7 @@ body.ui-hidden .shelf {
 }
 
 .font-extrude-generate {
-  width: 100%;
-  margin-top: var(--shelf-section-gap);
-  margin-bottom: 0;
+  margin: 0;
 }
 
 .font-extrude-generate.is-loading {

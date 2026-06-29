@@ -1376,6 +1376,48 @@
                     />
                     <span class="value" data-output="creativeLookPatternScale">1.00×</span>
                   </label>
+                  <div id="creativeLookTransmissionControls" class="creative-look-transmission-controls" hidden>
+                    <label class="slider-line">
+                      <span data-tooltip="Refraction sharpness for Glass, Holo-Glass, and Crystal Gem. On WebGL this maps to transmission blur via roughness (1 = softest, 10 = sharpest). Solid meshes blur more on camera-facing surfaces so refraction looks similar from all angles.">Transmission Samples</span>
+                      <input
+                        type="range"
+                        id="creativeLookTransmissionSamples"
+                        min="1"
+                        max="10"
+                        step="1"
+                        value="4"
+                      />
+                      <span class="value" data-output="creativeLookTransmissionSamples">4</span>
+                    </label>
+                    <label class="slider-line">
+                      <span data-tooltip="Subtle RGB split in refraction (chromatic dispersion). Reads premium at low values — Crystal Gem defaults higher. 0 = off.">Dispersion</span>
+                      <input
+                        type="range"
+                        id="creativeLookTransmissionDispersion"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value="0.28"
+                      />
+                      <span class="value" data-output="creativeLookTransmissionDispersion">0.28</span>
+                    </label>
+                    <div class="slider-line slider-line--toggle-only">
+                      <span data-tooltip="Closed scans (heads, statues): front faces only, stronger blur, and a best-effort cull of interior-facing facets. Turns off double-sided transmission.">Solid Mesh Glass</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="creativeLookTransmissionSolidMeshGlass" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Solid mesh glass mode</span>
+                      </label>
+                    </div>
+                    <div class="slider-line slider-line--toggle-only">
+                      <span data-tooltip="Thin hollow shells (windshields, bottles) — renders back faces for correct interior refraction. Disabled while Solid Mesh Glass is on.">Double-Sided Transmission</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="creativeLookTransmissionDoubleSide" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Double-sided transmission</span>
+                      </label>
+                    </div>
+                  </div>
                   <div id="creativeLookPresetSliders" class="creative-look-preset-sliders" hidden>
                     <label class="slider-line creative-look-preset-slider" data-slider-id="creativeLookSketchStrokeWidth" hidden>
                       <span data-tooltip="Ink outline thickness, silhouette edge dilation, and mesh wobble. Independent of screentone raster.">Stroke Width</span>
@@ -1655,6 +1697,16 @@
                     </summary>
                     <div class="slider-line slider-line--toggle-only">
                       <span
+                        data-tooltip="KHR transmission + named window glass use MeshPhysicalMaterial.transmission (real refraction). Reflections come from PBR roughness and the HDRI — not fake BLEND opacity. Needs Render Backdrop. Costs more GPU than Auto glass."
+                        >Physical Glass Transmission</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="physicalGlassTransmission" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Physical glass transmission</span>
+                      </label>
+                    </div>
+                    <div class="slider-line slider-line--toggle-only">
+                      <span
                         data-tooltip="Only affects transmission or meshes/materials named like glass, window, visor… Flip if glazing looks inside-out."
                         >Flip Glass Normal Y</span>
                       <label class="effect-toggle">
@@ -1678,7 +1730,7 @@
                     <p class="panel-hint advanced-glass-hint">When windows / glass are detected from mesh or material names:</p>
                     <label class="slider-line">
                       <span
-                        data-tooltip="Only when Transparency Mode is Auto. Opacity for meshes detected as glass or windows from names."
+                        data-tooltip="Physical glass: scales transmission strength. BLEND glass (Auto): opacity for detected windows."
                         >Glass opacity</span>
                       <input
                         id="glassOpacity"
@@ -1692,7 +1744,7 @@
                     </label>
                     <label class="slider-line">
                       <span
-                        data-tooltip="Environment reflection strength on glass/window materials, relative to the scene HDRI intensity slider."
+                        data-tooltip="PBR environment reflection strength on glass (roughness blurs the HDRI lobe — not a planar mirror)."
                         >Glass reflections</span>
                       <input
                         id="glassReflection"
@@ -2316,7 +2368,18 @@
                   </label>
                 </div>
                 <div class="slider-line">
-                  <span data-tooltip="Multi-stop linear or radial gradient">Gradient</span>
+                  <span data-tooltip="Multi-stop linear or radial gradient">
+                    <span class="block-title-name">
+                      <span>Gradient</span>
+                      <span
+                        class="dev-badge"
+                        data-tooltip="Currently not available for 1080p exports, 1440p and 2160p is ok"
+                        tabindex="0"
+                        role="img"
+                        aria-label="Currently not available for 1080p exports, 1440p and 2160p is ok"
+                      ><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
+                    </span>
+                  </span>
                   <label class="effect-toggle">
                     <input type="checkbox" id="backgroundGradientEnabled" />
                     <span class="effect-indicator" aria-hidden="true"></span>
@@ -5485,7 +5548,7 @@
                   <div class="slider-line">
                     <span data-tooltip="Show a credit line on the opposite side of the logotype">Credit</span>
                     <label class="effect-toggle">
-                      <input type="checkbox" id="watermarkCreditEnabled" checked />
+                      <input type="checkbox" id="watermarkCreditEnabled" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Toggle credit text</span>
                     </label>

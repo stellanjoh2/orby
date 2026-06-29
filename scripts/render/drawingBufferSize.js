@@ -23,8 +23,8 @@ export function getDrawingBufferPixels(renderer) {
 
 /**
  * Logical width/height for `renderer.setViewport(0, 0, w, h)`.
- * Never undershoots the real backing store — partial viewports leave the radial gradient
- * in a corner while bloom/post still fill the frame (Ultra preview + 1080p export).
+ * Derived from the GL backing store ÷ pixel ratio — not renderer.getSize(), which can stay
+ * stale after 1080p export restore when only DPR changes at the same logical layout.
  *
  * @param {THREE.WebGLRenderer} renderer
  * @param {THREE.Vector2} [target]
@@ -32,17 +32,7 @@ export function getDrawingBufferPixels(renderer) {
 export function getDrawingBufferLogicalSize(renderer, target = new THREE.Vector2()) {
   const pr = Math.max(1e-6, renderer.getPixelRatio());
   const { width: pw, height: ph } = getDrawingBufferPixels(renderer);
-  const fromBuffer = target.set(pw / pr, ph / pr);
-
-  const fromGetSize = new THREE.Vector2();
-  renderer.getSize(fromGetSize);
-  if (fromGetSize.x > 0 && fromGetSize.y > 0) {
-    return target.set(
-      Math.max(fromBuffer.x, fromGetSize.x),
-      Math.max(fromBuffer.y, fromGetSize.y),
-    );
-  }
-  return fromBuffer;
+  return target.set(pw / pr, ph / pr);
 }
 
 /**
@@ -52,10 +42,48 @@ export function getDrawingBufferLogicalSize(renderer, target = new THREE.Vector2
  * @returns {{ width: number, height: number }}
  */
 export function getViewportBackingStorePixels(renderer) {
-  const logical = getDrawingBufferLogicalSize(renderer);
-  const pr = Math.max(1e-6, renderer.getPixelRatio());
+  const { width, height } = getDrawingBufferPixels(renderer);
   return {
-    width: Math.max(1, Math.round(logical.x * pr)),
-    height: Math.max(1, Math.round(logical.y * pr)),
+    width: Math.max(1, width),
+    height: Math.max(1, height),
   };
+}
+
+/**
+ * Resize renderer logical units + pixel ratio and coerce the WebGL backing store to match.
+ * Required after export capture (setDrawingBufferSize at DPR 1) before gradient/viewport sync.
+ *
+ * @param {THREE.WebGLRenderer} renderer
+ * @param {number} logicalWidth
+ * @param {number} logicalHeight
+ * @param {number} pixelRatio
+ * @returns {{ width: number, height: number, pixelRatio: number }}
+ */
+export function coerceRendererLogicalSize(renderer, logicalWidth, logicalHeight, pixelRatio) {
+  const width = Math.max(1, Math.round(logicalWidth));
+  const height = Math.max(1, Math.round(logicalHeight));
+  const pr = Math.max(1e-6, pixelRatio);
+  const expectedW = Math.max(1, Math.round(width * pr));
+  const expectedH = Math.max(1, Math.round(height * pr));
+
+  // setDrawingBufferSize is authoritative — setSize alone can skip GL resize when logical
+  // dimensions are unchanged (1080p export ↔ Ultra restore at the same 1920×1080 layout).
+  if (typeof renderer.setDrawingBufferSize === 'function') {
+    renderer.setDrawingBufferSize(width, height, pr);
+  } else {
+    renderer.setPixelRatio(pr);
+    renderer.setSize(width, height, false);
+  }
+
+  let actual = getDrawingBufferPixels(renderer);
+  if (
+    Math.abs(actual.width - expectedW) > 2
+    || Math.abs(actual.height - expectedH) > 2
+  ) {
+    renderer.setPixelRatio(pr);
+    renderer.setSize(width, height, false);
+    actual = getDrawingBufferPixels(renderer);
+  }
+
+  return { width, height, pixelRatio: pr };
 }

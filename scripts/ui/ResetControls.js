@@ -129,6 +129,7 @@ const RESET_DIRTY_PATHS = {
     'advanced.glassTint', 'advanced.glassBody',
     'advanced.blendSortingMitigation',
     'advanced.flipGlassNormalMapY', 'advanced.glassFrontFacesOnly',
+    'advanced.physicalGlassTransmission',
     'advanced.uvChecker', 'advanced.uvCheckerScale', 'advanced.uvCheckerStyle',
     'advanced.normalView', 'advanced.normalViewMode',
     'advanced.stlSmoothShading', 'advanced.stlSmoothingAngle',

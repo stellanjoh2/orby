@@ -538,6 +538,13 @@ export class SceneSettingsManager {
         );
         this.eventBus.emit('mesh:glass-appearance');
       }
+      if (payload.advanced?.physicalGlassTransmission !== undefined) {
+        this.stateStore.set(
+          'advanced.physicalGlassTransmission',
+          !!payload.advanced.physicalGlassTransmission,
+        );
+        this.eventBus.emit('mesh:transparency-fix');
+      }
       if (
         payload.advanced?.glassOpacity !== undefined ||
         payload.advanced?.glassReflection !== undefined ||

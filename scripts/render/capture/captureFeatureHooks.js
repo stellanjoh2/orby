@@ -78,7 +78,11 @@ export class CaptureFeatureSession {
   }
 
   restore() {
-    if (!this._active) return;
+    this.backgroundController?.gradientController?.clearCaptureMode?.();
+    if (!this._active) {
+      unpinAsciiReferenceForCapture(this.postPipeline);
+      return;
+    }
     this.environmentController?.restoreAfterCapture?.();
     this.backgroundController?.gradientController?.restoreAfterCapture?.();
     unpinAsciiReferenceForCapture(this.postPipeline);

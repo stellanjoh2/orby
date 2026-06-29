@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { APP_BACKGROUND } from '../constants.js';
 import { getViewportBackingStorePixels } from '../render/drawingBufferSize.js';
+import { ensureExportCapturePixelRatio } from '../render/capture/forceExportCaptureFramebuffer.js';
 import { resetRendererFullViewport } from '../render/resetRendererFullViewport.js';
 import { isSketchColourCreativeLookPreset } from '../render/CreativeLookMaterials.js';
 import {
@@ -257,22 +258,31 @@ export class ComposerLifecycle {
       this.applyCreativeLookBloomSuppression();
     }
     try {
+      if (this.composer?.renderToScreen !== false) {
+        this.composer?.clearExportCaptureViewportPin?.();
+        const gradientCtrl = this.backgroundController?.gradientController;
+        if (gradientCtrl?.shouldBlitForCapture?.()) {
+          gradientCtrl.restoreAfterCapture();
+        }
+      }
       this.ensureComposerBuffersMatchRenderer();
       const gradient = this.backgroundController?.gradientController;
       const captureBlit = gradient?.shouldBlitForCapture?.() === true;
       if (captureBlit) {
-        gradient.pinCaptureViewport(this.renderer);
-      } else {
-        this.resetRendererViewportToCanvas();
+        ensureExportCapturePixelRatio({
+          renderer: this.renderer,
+          composer: this.composer,
+        });
       }
+      this.resetRendererViewportToCanvas();
       if (!transparent) {
         if (captureBlit) {
-          const { width: cw, height: ch } = gradient.getCapturePixelSize();
+          const { width: cw, height: ch } = getViewportBackingStorePixels(this.renderer);
           gradient.syncToDrawingBuffer(cw, ch, { forceRedraw: true });
-          gradient.applyIfActive();
         } else {
           const db = getViewportBackingStorePixels(this.renderer);
           gradient?.syncToDrawingBuffer?.(db.width, db.height, { forceRedraw: true });
+          gradient?.applyIfActive?.();
         }
         this.syncRendererClearForSceneBackground();
       }
@@ -325,6 +335,16 @@ export class ComposerLifecycle {
         this.postPipeline?.releaseCreativeLookOptics?.();
         this.postPipeline?.releaseCreativeLookSketch?.();
         this.postPipeline?.releaseCreativeLookVectrex?.();
+      }
+      const gradient = this.backgroundController?.gradientController;
+      const exportPin = this.composer?._exportCaptureViewportPin;
+      // Offline capture keeps gradient pinned until readback / session restore (renderToScreen false).
+      if (
+        gradient?.shouldBlitForCapture?.()
+        && !exportPin
+        && this.composer?.renderToScreen !== false
+      ) {
+        gradient.restoreAfterCapture();
       }
       this.resetRendererViewportToCanvas();
       // Transparent PNG/video export reads alpha from a direct scene pass after this —

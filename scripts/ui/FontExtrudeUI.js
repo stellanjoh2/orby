@@ -211,22 +211,24 @@ export class FontExtrudeUI {
             <input id="fontExtrudeLineHeight" type="range" min="0.1" max="2.5" step="0.05" value="1" />
             <span class="value" data-output="fontExtrudeLineHeight">1.00×</span>
           </label>
-          <div id="fontExtrudeFileFallback" class="font-extrude-file-fallback">
-            <input type="file" id="fontExtrudeFile" class="sr-only" accept=".ttf,.otf,.woff,.woff2,font/*" />
-            <button
-              type="button"
-              id="fontExtrudeFileBtn"
-              class="accent-action-btn font-extrude-file-btn"
-              data-tooltip="Load a font file directly. Use this for fonts that don't show up in the list above — e.g. several styles that share one family name."
-            >
-              <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
-              <span>Load .ttf / .otf…</span>
+          <div class="export-controls font-extrude-action-row">
+            <div id="fontExtrudeFileFallback" class="font-extrude-file-fallback">
+              <input type="file" id="fontExtrudeFile" class="sr-only" accept=".ttf,.otf,.woff,.woff2,font/*" />
+              <button
+                type="button"
+                id="fontExtrudeFileBtn"
+                class="accent-action-btn font-extrude-file-btn"
+                data-tooltip="Load a font file directly. Use this for fonts that don't show up in the list above — e.g. several styles that share one family name."
+              >
+                <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                <span>Load .ttf / .otf…</span>
+              </button>
+            </div>
+            <button type="button" id="fontExtrudeGenerate" class="accent-action-btn font-extrude-generate" disabled data-tooltip="Extrude preview text into a 3D mesh">
+              <i class="fa-solid fa-cube" aria-hidden="true"></i>
+              <span>Generate 3D Text</span>
             </button>
           </div>
-          <button type="button" id="fontExtrudeGenerate" class="accent-action-btn font-extrude-generate" disabled data-tooltip="Extrude preview text into a 3D mesh">
-            <i class="fa-solid fa-cube" aria-hidden="true"></i>
-            <span>Generate 3D Text</span>
-          </button>
           <div class="panel-block-divider" aria-hidden="true"></div>
           <div class="block-title font-extrude-section-title">Appearance</div>
           <label class="color-line font-extrude-fill-color">

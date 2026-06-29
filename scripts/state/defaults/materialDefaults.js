@@ -40,6 +40,11 @@ export function createMaterialDefaults() {
       /** Transmission / window meshes: draw front faces only (single-sided shell). */
       glassFrontFacesOnly: false,
       /**
+       * KHR transmission + heuristic window glass: MeshPhysicalMaterial.transmission refraction
+       * (PBR env reflections via roughness/specular — not BLEND opacity or planar Reflector).
+       */
+      physicalGlassTransmission: false,
+      /**
        * UV Checker overlay — tiles a checker map across mesh UVs so 3D artists can spot stretching
        * and seam issues at a glance. Renders as a translucent clone of the model so original
        * materials/shading are untouched.
@@ -95,6 +100,14 @@ export function createMaterialDefaults() {
       liftCrush: 0,
       /** Viewport bloom shortcut (independent of Camera & FX bloom.enabled). */
       viewportBloom: false,
+      /** Physical transmission quality for Glass / Holo-Glass / Crystal Gem (1–10). */
+      transmissionSamples: 4,
+      /** Double-sided draw for transmission shells (interior refraction; costs more). */
+      transmissionDoubleSide: false,
+      /** Closed solid scans — front side + stronger blur + interior facet cull. */
+      transmissionSolidMeshGlass: false,
+      /** Chromatic dispersion strength for glass family (0–1 UI). */
+      transmissionDispersion: 0.28,
       /** Preset-specific sliders — e.g. sketch strokeWidth / rasterSize. */
       presetParams: {},
     },

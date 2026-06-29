@@ -371,6 +371,12 @@ export function applyCreativeLookCrystalGemPhysicalParams(mat, patternScale, hdr
   mat.attenuationDistance = attenuationDistance;
 }
 
+import {
+  applyCreativeLookPhysicalTransmissionTuning,
+  creativeLookTransmissionTuningFromState,
+  isPhysicalTransmissionCreativeLookPreset,
+} from './creativeLookPhysicalTransmission.js';
+
 /** Lower transmission RT cost — biggest win after mesh complexity. */
 export function applyCreativeLookCrystalGemPerformanceTuning(mat, renderQuality) {
   if (!mat?.isMeshPhysicalMaterial) return;
@@ -385,15 +391,27 @@ export function applyCreativeLookCrystalGemPerformanceTuning(mat, renderQuality)
  * Re-apply transmission tier when viewport render quality changes.
  * @param {THREE.Object3D | null | undefined} root
  * @param {string | undefined} renderQuality
+ * @param {{ preset?: string | null, transmissionSamples?: number, transmissionDoubleSide?: boolean } | null | undefined} [creativeLook]
  */
-export function retuneCreativeCrystalGemMaterials(root, renderQuality) {
+export function retuneCreativeCrystalGemMaterials(root, renderQuality, creativeLook) {
   if (!root) return;
+  const useCreativeLabTuning = isPhysicalTransmissionCreativeLookPreset(creativeLook?.preset);
+  const labTuning = useCreativeLabTuning
+    ? creativeLookTransmissionTuningFromState(creativeLook)
+    : null;
   root.traverse((child) => {
     if (!child.isMesh) return;
     const mats = Array.isArray(child.material) ? child.material : [child.material];
     for (const mat of mats) {
       if (mat?.userData?.orbyCreativeLook !== 'crystal-gem' || !mat.isMeshPhysicalMaterial) continue;
-      applyCreativeLookCrystalGemPerformanceTuning(mat, renderQuality);
+      if (labTuning) {
+        applyCreativeLookPhysicalTransmissionTuning(mat, {
+          ...labTuning,
+          baseRoughness: mat.userData.orbyCreativeLookBaseRoughness ?? mat.roughness,
+        });
+      } else {
+        applyCreativeLookCrystalGemPerformanceTuning(mat, renderQuality);
+      }
     }
   });
 }

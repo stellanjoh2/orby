@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { resetRendererFullViewport } from '../resetRendererFullViewport.js';
 import { renderFrameForCaptureWithPins } from './renderFrameForCapture.js';
 import { createCaptureContext } from './captureContext.js';
 import { CaptureFeatureSession } from './captureFeatureHooks.js';
 import { logCaptureDebug } from './captureReadback.js';
+import { repairInteractiveViewportAfterCapture } from './repairInteractiveViewportAfterCapture.js';
 
 /**
  * @typedef {import('./captureContext.js').CaptureSize} CaptureSize
@@ -202,10 +202,19 @@ export class OfflineCaptureSession {
     }
 
     renderer.setRenderTarget(null);
-    resetRendererFullViewport(renderer);
 
     // After size/composer restore — re-apply gradient + HDRI (do not assign stale scene.environment).
     this._captureFeatures.restore();
+
+    repairInteractiveViewportAfterCapture({
+      renderer,
+      composer,
+      logicalWidth: snapshot.originalSize.x,
+      logicalHeight: snapshot.originalSize.y,
+      pixelRatio: snapshot.originalPixelRatio,
+      syncPostProcessingForLogicalSize,
+      backgroundController,
+    });
 
     if (this._suppressResizeWasSet && typeof setSuppressResizeForExport === 'function') {
       setSuppressResizeForExport(false);

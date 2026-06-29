@@ -1,5 +1,10 @@
 import { RenderPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/RenderPass.js';
-import { resetRendererFullViewport } from './resetRendererFullViewport.js';
+import { getDrawingBufferPixels } from './drawingBufferSize.js';
+import { ensureExportCapturePixelRatio } from './capture/forceExportCaptureFramebuffer.js';
+import {
+  pinRenderTargetPhysicalViewport,
+  resetRendererFullViewport,
+} from './resetRendererFullViewport.js';
 
 /**
  * RenderPass with full-canvas viewport restore around the scene draw (including after
@@ -53,37 +58,82 @@ export class MeshglRenderPass extends RenderPass {
       renderer.clearDepth();
     }
 
+    let savedSceneBackground = null;
     try {
       const gradientCtrl = this._resolveBackgroundGradientController();
-      const useCaptureBlit = gradientCtrl?.shouldBlitForCapture?.() === true;
-      const keepExportViewport = this._keepExportCaptureViewport === true || useCaptureBlit;
-
-      if (!keepExportViewport) {
-        resetRendererFullViewport(renderer);
+      const useGpuGradientBlit = gradientCtrl?.shouldGpuBlitGradient?.() === true;
+      const captureBlit = gradientCtrl?.shouldBlitForCapture?.() === true;
+      if (captureBlit) {
+        ensureExportCapturePixelRatio({
+          renderer,
+          composer: null,
+        });
       }
+      const resetViewport = () => {
+        if (captureBlit) {
+          ensureExportCapturePixelRatio({ renderer, composer: null });
+          const rt = renderer.getRenderTarget();
+          if (rt?.width > 0 && rt?.height > 0) {
+            pinRenderTargetPhysicalViewport(renderer, rt.width, rt.height);
+          } else {
+            const { width, height } = getDrawingBufferPixels(renderer);
+            pinRenderTargetPhysicalViewport(renderer, width, height);
+          }
+        } else {
+          resetRendererFullViewport(renderer);
+        }
+      };
+      if (gradientCtrl?.isActive?.() === true) {
+        savedSceneBackground = this.scene.background;
+        this.scene.background = null;
+      }
+
+      resetViewport();
       renderer.setRenderTarget(this.renderToScreen ? null : readBuffer);
+      resetViewport();
 
-      if (useCaptureBlit) {
-        gradientCtrl.pinCaptureViewport(renderer);
-      } else if (!keepExportViewport) {
-        resetRendererFullViewport(renderer);
-      }
+      const blitGradient = () => {
+        if (!useGpuGradientBlit) return;
+        const rt = this.renderToScreen ? null : readBuffer;
+        let gw;
+        let gh;
+        if (rt?.width > 0 && rt?.height > 0) {
+          gw = rt.width;
+          gh = rt.height;
+        } else {
+          ({ width: gw, height: gh } = getDrawingBufferPixels(renderer));
+        }
+        if (gradientCtrl.shouldBlitForCapture?.()) {
+          gradientCtrl.syncToDrawingBuffer(gw, gh, { forceRedraw: true });
+        }
+        gradientCtrl.blitFullViewport(renderer);
+      };
 
       if (this.clear === true) {
-        renderer.clear(
-          renderer.autoClearColor,
-          renderer.autoClearDepth,
-          renderer.autoClearStencil,
-        );
+        if (useGpuGradientBlit) {
+          renderer.clear(
+            false,
+            renderer.autoClearDepth,
+            renderer.autoClearStencil,
+          );
+          blitGradient();
+        } else {
+          renderer.clear(
+            renderer.autoClearColor,
+            renderer.autoClearDepth,
+            renderer.autoClearStencil,
+          );
+        }
+      } else if (useGpuGradientBlit) {
+        blitGradient();
       }
 
-      if (useCaptureBlit) {
-        gradientCtrl.pinCaptureViewport(renderer);
-      } else if (!keepExportViewport) {
-        resetRendererFullViewport(renderer);
-      }
+      resetViewport();
       renderer.render(this.scene, this.camera);
     } finally {
+      if (savedSceneBackground !== null) {
+        this.scene.background = savedSceneBackground;
+      }
       if (this.clearColor !== null) {
         renderer.setClearColor(this._oldClearColor);
       }
@@ -98,10 +148,7 @@ export class MeshglRenderPass extends RenderPass {
       if (camera && savedCameraViewport !== undefined) {
         camera.viewport = savedCameraViewport;
       }
-      const keepExportViewport =
-        this._keepExportCaptureViewport === true
-        || this._resolveBackgroundGradientController()?.shouldBlitForCapture?.();
-      if (!keepExportViewport) {
+      if (!this._keepExportCaptureViewport) {
         resetRendererFullViewport(renderer);
       }
     }

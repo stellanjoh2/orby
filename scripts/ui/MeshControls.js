@@ -28,6 +28,11 @@ import {
   normalizeCreativeLookPreset,
   resolveCreativeLookPresetChoice,
 } from '../render/CreativeLookMaterials.js';
+import {
+  normalizeCreativeLookTransmissionSamples,
+  normalizeCreativeLookTransmissionDispersion,
+  creativeLookTransmissionControlsVisible,
+} from '../render/creativeLookPhysicalTransmission.js';
 import { isVoxelCreativeLookPreset } from '../render/creativeLookVoxelArt.js';
 import { isFontExtrudeRevealModel } from '../scene/FontTextRevealController.js';
 import {
@@ -270,6 +275,10 @@ export class MeshControls {
       this.stateStore.set('advanced.glassFrontFacesOnly', !!event.target.checked);
       this.eventBus.emit('mesh:glass-appearance');
     });
+    this.ui.inputs.physicalGlassTransmission?.addEventListener('change', (event) => {
+      this.stateStore.set('advanced.physicalGlassTransmission', !!event.target.checked);
+      this.eventBus.emit('mesh:transparency-fix');
+    });
 
     this.ui.inputs.glassOpacity?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
@@ -492,6 +501,38 @@ export class MeshControls {
     if (this.ui.inputs.creativeLookPatternScale) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.creativeLookPatternScale);
     }
+    this.ui.inputs.creativeLookTransmissionSamples?.addEventListener('input', (event) => {
+      const value = parseInt(event.target.value, 10);
+      const samples = normalizeCreativeLookTransmissionSamples(value);
+      this.helpers.updateValueLabel('creativeLookTransmissionSamples', samples, 'integer');
+      this.stateStore.set('creativeLook.transmissionSamples', samples);
+      this.eventBus.emit('mesh:creative-look-live');
+    });
+    if (this.ui.inputs.creativeLookTransmissionSamples) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.creativeLookTransmissionSamples);
+    }
+    this.ui.inputs.creativeLookTransmissionDoubleSide?.addEventListener('change', (event) => {
+      this.stateStore.set('creativeLook.transmissionDoubleSide', !!event.target.checked);
+      this.eventBus.emit('mesh:creative-look-live');
+    });
+    this.ui.inputs.creativeLookTransmissionDispersion?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      const dispersion = Number.isFinite(value) ? value : 0;
+      this.helpers.updateValueLabel('creativeLookTransmissionDispersion', dispersion, 'decimal');
+      this.stateStore.set('creativeLook.transmissionDispersion', dispersion);
+      this.eventBus.emit('mesh:creative-look-live');
+    });
+    if (this.ui.inputs.creativeLookTransmissionDispersion) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.creativeLookTransmissionDispersion);
+    }
+    this.ui.inputs.creativeLookTransmissionSolidMeshGlass?.addEventListener('change', (event) => {
+      const enabled = !!event.target.checked;
+      this.stateStore.set('creativeLook.transmissionSolidMeshGlass', enabled);
+      if (enabled) {
+        this.stateStore.set('creativeLook.transmissionDoubleSide', false);
+      }
+      this.eventBus.emit('mesh:creative-look-live');
+    });
     this._bindCreativeLookPresetSliders();
     this._bindCreativeLookInkControls();
     this.ui.inputs.creativeLookMasterHue?.addEventListener('input', (event) => {
@@ -1144,6 +1185,9 @@ export class MeshControls {
     if (this.ui.inputs.flipGlassNormalMapY) {
       this.ui.setControlDisabled('flipGlassNormalMapY', !blendMitigationEnabled);
     }
+    if (this.ui.inputs.physicalGlassTransmission) {
+      this.ui.setControlDisabled('physicalGlassTransmission', !blendMitigationEnabled);
+    }
     if (this.ui.inputs.glassFrontFacesOnly) {
       this.ui.setControlDisabled('glassFrontFacesOnly', !blendMitigationEnabled);
     }
@@ -1317,6 +1361,10 @@ export class MeshControls {
     }
     if (this.ui.inputs.glassFrontFacesOnly) {
       this.ui.inputs.glassFrontFacesOnly.checked = !!state.advanced?.glassFrontFacesOnly;
+    }
+    if (this.ui.inputs.physicalGlassTransmission) {
+      this.ui.inputs.physicalGlassTransmission.checked =
+        !!state.advanced?.physicalGlassTransmission;
     }
     if (this.ui.inputs.glassOpacity) {
       const raw = Number(state.advanced?.glassOpacity ?? 0.45);
@@ -1512,6 +1560,7 @@ export class MeshControls {
     }
     this._syncCreativeLookPresetSliders(state, clPreset);
     this._syncCreativeLookInkControls(state, clPreset);
+    this._syncCreativeLookTransmissionControls(state, clPreset);
     if (this.ui.inputs.creativeLookMasterHue) {
       const hueLocked = creativeLookPresetLocksMasterHue(clPreset);
       const rawHue = Number(state.creativeLook?.masterHue);
@@ -1595,6 +1644,53 @@ export class MeshControls {
       this.stateStore.set('creativeLook.enabled', false);
       this.ui.setCreativeLookActive?.(null);
       this.eventBus.emit('mesh:creative-look');
+    }
+  }
+
+  _syncCreativeLookTransmissionControls(state, clPreset) {
+    const visible = creativeLookTransmissionControlsVisible(state);
+    const wrap = document.getElementById('creativeLookTransmissionControls');
+    if (wrap) wrap.hidden = !visible;
+
+    const samples = normalizeCreativeLookTransmissionSamples(
+      state.creativeLook?.transmissionSamples,
+    );
+    const dispersion = normalizeCreativeLookTransmissionDispersion(
+      state.creativeLook?.transmissionDispersion,
+    );
+    const solidMeshGlass = state.creativeLook?.transmissionSolidMeshGlass === true;
+
+    if (this.ui.inputs.creativeLookTransmissionSamples) {
+      const active = document.activeElement === this.ui.inputs.creativeLookTransmissionSamples;
+      if (!active) {
+        this.ui.inputs.creativeLookTransmissionSamples.value = String(samples);
+        this.helpers.updateValueLabel('creativeLookTransmissionSamples', samples, 'integer');
+      }
+      this.ui.setControlDisabled('creativeLookTransmissionSamples', !visible);
+    }
+    if (this.ui.inputs.creativeLookTransmissionDispersion) {
+      const active = document.activeElement === this.ui.inputs.creativeLookTransmissionDispersion;
+      if (!active) {
+        this.ui.inputs.creativeLookTransmissionDispersion.value = String(dispersion);
+        this.helpers.updateValueLabel('creativeLookTransmissionDispersion', dispersion, 'decimal');
+      }
+      this.ui.setControlDisabled('creativeLookTransmissionDispersion', !visible);
+    }
+    if (this.ui.inputs.creativeLookTransmissionSolidMeshGlass) {
+      const active = document.activeElement === this.ui.inputs.creativeLookTransmissionSolidMeshGlass;
+      if (!active) {
+        this.ui.inputs.creativeLookTransmissionSolidMeshGlass.checked = solidMeshGlass;
+      }
+      this.ui.setControlDisabled('creativeLookTransmissionSolidMeshGlass', !visible);
+    }
+    if (this.ui.inputs.creativeLookTransmissionDoubleSide) {
+      const active = document.activeElement === this.ui.inputs.creativeLookTransmissionDoubleSide;
+      if (!active) {
+        this.ui.inputs.creativeLookTransmissionDoubleSide.checked =
+          !!state.creativeLook?.transmissionDoubleSide;
+      }
+      const doubleSideDisabled = !visible || solidMeshGlass;
+      this.ui.setControlDisabled('creativeLookTransmissionDoubleSide', doubleSideDisabled);
     }
   }
 

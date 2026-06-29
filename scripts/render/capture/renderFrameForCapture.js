@@ -1,9 +1,17 @@
 import { createCaptureContext } from './captureContext.js';
 import { prepareCaptureFeatures } from './captureFeatureHooks.js';
 import {
+  clearComposerRenderTargets,
+  composerRenderTargetsMatchPixels,
+  ensureExportCapturePixelRatio,
+  forceExportCaptureFramebuffer,
+} from './forceExportCaptureFramebuffer.js';
+import { renderDisplayGradedGradientPlate } from './captureDisplayGradedGradient.js';
+import {
   pinLensDistortionForExportCapture,
   unpinLensDistortionForExportCapture,
 } from './capturePostPipelinePins.js';
+import { resetRendererFullViewport } from '../resetRendererFullViewport.js';
 
 /**
  * Canonical offline GL render sequence — one front door for raster capture.
@@ -40,13 +48,48 @@ export function renderFrameForCapture(deps) {
     captureH = synced.height;
   }
 
+  const renderer = deps.renderer ?? imageExporter?.renderer;
+  const composer = imageExporter?.composer;
+  const actual = forceExportCaptureFramebuffer(
+    {
+      renderer,
+      composer,
+      syncPostProcessingForLogicalSize: imageExporter?.syncPostProcessingForLogicalSize?.bind(
+        imageExporter,
+      ),
+    },
+    captureW,
+    captureH,
+  );
+  captureW = actual.width;
+  captureH = actual.height;
+
+  if (!composerRenderTargetsMatchPixels(composer, captureW, captureH)) {
+    const retry = forceExportCaptureFramebuffer(
+      {
+        renderer,
+        composer,
+        syncPostProcessingForLogicalSize: imageExporter?.syncPostProcessingForLogicalSize?.bind(
+          imageExporter,
+        ),
+      },
+      captureW,
+      captureH,
+    );
+    captureW = retry.width;
+    captureH = retry.height;
+  }
+
   const ctx = createCaptureContext(
     { width: captureW, height: captureH },
     { transparent },
   );
 
   imageExporter?._ensureComposerMatchesDrawingBuffer?.({ strict: true });
-  imageExporter?._setExportViewport?.(ctx.width, ctx.height);
+  if (renderer) {
+    renderer.setRenderTarget(null);
+    resetRendererFullViewport(renderer);
+  }
 
   if (captureFeatureSession) {
     captureFeatureSession.prepareFrame(ctx);
@@ -57,25 +100,49 @@ export function renderFrameForCapture(deps) {
     );
   }
 
+  if (
+    backgroundController?.gradientController?.shouldCompositeGradientOnReadback?.() === true
+    && !ctx.transparent
+  ) {
+    const displayGraded = renderDisplayGradedGradientPlate(
+      {
+        renderer,
+        composer,
+        postPipeline: imageExporter?.postPipeline,
+        imageExporter,
+        backgroundController,
+      },
+      captureW,
+      captureH,
+    );
+    backgroundController.gradientController.setDisplayGradedCapturePlate(displayGraded);
+    clearComposerRenderTargets(renderer, composer);
+  }
+
+  ensureExportCapturePixelRatio({ renderer, composer });
+
   const renderExportPass =
     renderComposerPassForExport
     ?? composerLifecycle?.renderComposerPassForExport?.bind(composerLifecycle);
 
-  const composer = imageExporter?.composer;
-  composer?.setExportCaptureViewportPin?.(ctx.width, ctx.height);
-  try {
-    if (typeof renderExportPass === 'function') {
-      renderExportPass({ transparent: ctx.transparent });
-    } else if (composer) {
-      composer.render();
-    } else {
-      deps.renderer?.render?.(deps.scene, deps.camera);
-    }
-  } finally {
-    composer?.clearExportCaptureViewportPin?.();
+  const gradientCapture =
+    backgroundController?.gradientController?.shouldCompositeGradientOnReadback?.() === true;
+  composer?.setExportCapturePhysicalViewport?.(gradientCapture);
+
+  if (typeof renderExportPass === 'function') {
+    renderExportPass({ transparent: ctx.transparent });
+  } else if (composer) {
+    composer.render();
+  } else {
+    renderer?.render?.(deps.scene, deps.camera);
   }
 
-  imageExporter?._setExportViewport?.(ctx.width, ctx.height);
+  composer?.setExportCapturePhysicalViewport?.(false);
+
+  if (renderer) {
+    renderer.setRenderTarget(null);
+    resetRendererFullViewport(renderer);
+  }
   return ctx;
 }
 

@@ -50,6 +50,20 @@ export function needsTransmissionBackdropForCreativeLook(state) {
   );
 }
 
+/** Import / heuristic glass with MeshPhysicalMaterial.transmission needs the HDRI backdrop. */
+export function needsTransmissionBackdropForPhysicalGlass(state) {
+  if (state?.advanced?.physicalGlassTransmission !== true) return false;
+  return state?.hdriEnabled !== false;
+}
+
+/** Any transmission refraction path that samples `scene.background`. */
+export function needsTransmissionBackdrop(state) {
+  return (
+    needsTransmissionBackdropForCreativeLook(state) ||
+    needsTransmissionBackdropForPhysicalGlass(state)
+  );
+}
+
 /**
  * Glass / Chrome use MeshPhysicalMaterial.transmission — Three.js refracts `scene.background`,
  * not the renderer clear color. When HDRI lighting is on, force Render Backdrop on.
@@ -58,8 +72,16 @@ export function needsTransmissionBackdropForCreativeLook(state) {
  * @returns {boolean} true when state was updated from off → on
  */
 export function syncTransmissionBackdropForCreativeLook(stateStore) {
+  return syncTransmissionBackdrop(stateStore);
+}
+
+/**
+ * @param {{ getState: () => object, set?: (path: string, value: unknown) => void }} stateStore
+ * @returns {boolean} true when state was updated from off → on
+ */
+export function syncTransmissionBackdrop(stateStore) {
   if (!stateStore || typeof stateStore.getState !== 'function') return false;
-  if (!needsTransmissionBackdropForCreativeLook(stateStore.getState())) return false;
+  if (!needsTransmissionBackdrop(stateStore.getState())) return false;
   if (stateStore.getState().hdriBackground) return false;
   stateStore.set?.('hdriBackground', true);
   return true;

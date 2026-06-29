@@ -57,6 +57,11 @@ import {
   syncCreativeLookShadowTint,
 } from './CreativeLookMaterials.js';
 import {
+  applyCreativeLookPhysicalTransmissionTuning,
+  creativeLookTransmissionTuningFromState,
+  isPhysicalTransmissionCreativeLookPreset,
+} from './creativeLookPhysicalTransmission.js';
+import {
   creativeHoloGlassParamsForMesh,
   CREATIVE_HOLO_GLASS_ENV_MAP_MUL,
   syncCreativeLookHoloGlassUniforms,
@@ -68,6 +73,11 @@ import {
   applyCreativeLookCrystalGemPerformanceTuning,
   retuneCreativeCrystalGemMaterials,
 } from './creativeLookCrystalGem.js';
+import {
+  applyHeuristicPhysicalGlassPresentation,
+  applyImportPhysicalGlassPresentation,
+  resolvePhysicalGlassUserParams,
+} from './importPhysicalGlassPresentation.js';
 import {
   creativeGouacheMergeFactor,
   creativeGouacheVertexDrift,
@@ -553,6 +563,10 @@ export class MaterialController {
 
   /** Import snapshot had KHR_materials_transmission (baseline), not live transmission slider state. */
   _materialHadImportTransmission(m) {
+    if (m?.userData?.orbyGltfPhysicalGlass) {
+      const importT = Number(m?.userData?.orbyGltfImportBaseline?.transmission);
+      return Number.isFinite(importT) && importT > 1e-4;
+    }
     if (m?.userData?.orbyGltfTransmissionFallback) return true;
     const importT = Number(m?.userData?.orbyGltfImportBaseline?.transmission);
     return Number.isFinite(importT) && importT > 1e-4;
@@ -560,6 +574,9 @@ export class MaterialController {
 
   /** Import had KHR_materials_transmission — includes live drift before baseline is snapshotted. */
   _materialHasImportTransmission(m) {
+    if (m?.userData?.orbyGltfPhysicalGlass) {
+      return m?.isMeshPhysicalMaterial && Number(m.transmission) > 1e-4;
+    }
     if (m?.userData?.orbyGltfTransmissionFallback) return true;
     if (this._materialHadImportTransmission(m)) return true;
     return (
@@ -696,6 +713,15 @@ export class MaterialController {
     return { glassOpacity, glassBody, glassTintHex, glassReflection };
   }
 
+  /** Advanced → Physical glass transmission (KHR imports + heuristic windows). */
+  _usePhysicalGlassTransmission() {
+    return this.stateStore?.getState()?.advanced?.physicalGlassTransmission === true;
+  }
+
+  _physicalGlassFrontFacesOnly() {
+    return this.stateStore?.getState()?.advanced?.glassFrontFacesOnly === true;
+  }
+
   /**
    * KHR_materials_transmission → env-heavy BLEND glass (Punto-style), not Three.js transmission pass.
    * Demote MeshPhysicalMaterial → MeshStandardMaterial so transmission can never re-enter the render list.
@@ -703,6 +729,9 @@ export class MaterialController {
   _applyImportGltfGlassPresentation(m, opts = {}) {
     if (!m || !this._materialHasImportTransmission(m)) return m;
     if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return m;
+    if (this._usePhysicalGlassTransmission()) {
+      return this._applyImportGltfPhysicalGlassPresentation(m, opts);
+    }
 
     const b = m.userData?.orbyGltfImportBaseline;
     const glassOpacity = opts.glassOpacity ?? this._glassPresentationFromState().glassOpacity;
@@ -760,6 +789,32 @@ export class MaterialController {
     target.userData.orbySkipBlendMitigation = true;
     target.needsUpdate = true;
     return target;
+  }
+
+  /** KHR_materials_transmission — MeshPhysicalMaterial.transmission (WebGL refraction pass). */
+  _applyImportGltfPhysicalGlassPresentation(m, opts = {}) {
+    if (!m || !this._materialHasImportTransmission(m)) return m;
+    const glass = {
+      ...this._glassPresentationFromState(),
+      ...opts,
+    };
+    const params = resolvePhysicalGlassUserParams(glass);
+    const next = applyImportPhysicalGlassPresentation(
+      m,
+      (src) => this._upgradeStandardMaterialToPhysical(src),
+      params,
+      {
+        baseline: m.userData?.orbyGltfImportBaseline ?? null,
+        frontFacesOnly: this._physicalGlassFrontFacesOnly(),
+      },
+    );
+    if (next !== m) {
+      next.userData = {
+        ...(m.userData || {}),
+        ...(next.userData || {}),
+      };
+    }
+    return next;
   }
 
   /** Swap a material reference on every mesh + import snapshot (shared glTF materials). */
@@ -1182,6 +1237,11 @@ export class MaterialController {
         baseline.roughness = Number.isFinite(m.roughness) ? m.roughness : undefined;
         baseline.ior = Number.isFinite(m.ior) ? m.ior : undefined;
         baseline.color = m.color?.clone?.() ?? null;
+        if (Number(baseline.transmission) > 1e-4) {
+          if (m.map) baseline.map = m.map;
+          if (m.transmissionMap) baseline.transmissionMap = m.transmissionMap;
+          if (m.thicknessMap) baseline.thicknessMap = m.thicknessMap;
+        }
       }
       if (m.isMeshStandardMaterial || m.isMeshPhysicalMaterial) {
         baseline.metalness = Number.isFinite(m.metalness)
@@ -1215,11 +1275,21 @@ export class MaterialController {
       if (m.isMeshPhysicalMaterial && b.transmission !== undefined) {
         const hadImportTransmission = Number(b.transmission) > 1e-4;
         if (hadImportTransmission) {
-          // KHR_materials_transmission — keep pass off; _applyImportGltfGlassPresentation runs after.
-          m.transmission = 0;
-          m.transmissionMap = null;
-          m.thickness = 0;
-          if (b.color && m.color) m.color.copy(b.color);
+          if (this._usePhysicalGlassTransmission()) {
+            m.transmission = b.transmission;
+            if (b.thickness !== undefined) m.thickness = b.thickness;
+            if (b.ior !== undefined) m.ior = b.ior;
+            if (b.color && m.color) m.color.copy(b.color);
+            if (b.map) m.map = b.map;
+            if (b.transmissionMap) m.transmissionMap = b.transmissionMap;
+            if (b.thicknessMap) m.thicknessMap = b.thicknessMap;
+          } else {
+            // KHR_materials_transmission — keep pass off; _applyImportGltfGlassPresentation runs after.
+            m.transmission = 0;
+            m.transmissionMap = null;
+            m.thickness = 0;
+            if (b.color && m.color) m.color.copy(b.color);
+          }
         } else {
           m.transmission = b.transmission;
           if (b.thickness !== undefined) m.thickness = b.thickness;
@@ -1230,6 +1300,8 @@ export class MaterialController {
       delete m.userData.orbyBlendMitigation;
       delete m.userData.orbyUserOpaqueBlend;
       delete m.userData.orbyAdvGlassPhysical;
+      delete m.userData.orbyGltfPhysicalGlass;
+      delete m.userData.orbyHeuristicPhysicalGlass;
       m.needsUpdate = true;
     });
   }
@@ -1299,7 +1371,7 @@ export class MaterialController {
     });
   }
 
-  /** Keep KHR transmission imports on BLEND fallback (rendered meshes + post-load / per-frame guard). */
+  /** Keep KHR transmission imports on chosen glass path (rendered meshes + post-load / per-frame guard). */
   syncImportGltfGlassMaterials(object = this.currentModel, { forcePresentation = false } = {}) {
     if (!object || this._shaderLabBypassesGlassPresentation()) return;
     if (!this.modelHasGltfTransmissionMaterials(object)) return;
@@ -1324,12 +1396,20 @@ export class MaterialController {
         ) {
           continue;
         }
-        const drifted =
-          forcePresentation ||
-          !live.userData?.orbyGltfTransmissionFallback ||
-          !!live.map ||
-          (live.isMeshPhysicalMaterial &&
-            (Number(live.transmission) > 1e-4 || !!live.transmissionMap));
+        let drifted = forcePresentation;
+        if (this._usePhysicalGlassTransmission()) {
+          drifted = drifted
+            || !live.userData?.orbyGltfPhysicalGlass
+            || !live.isMeshPhysicalMaterial
+            || Number(live.transmission) < 1e-4
+            || !!live.userData?.orbyGltfTransmissionFallback;
+        } else {
+          drifted = drifted
+            || !live.userData?.orbyGltfTransmissionFallback
+            || !!live.map
+            || (live.isMeshPhysicalMaterial
+              && (Number(live.transmission) > 1e-4 || !!live.transmissionMap));
+        }
         if (drifted) {
           this._assignImportGltfGlassPresentation(object, live, glass);
         }
@@ -1609,6 +1689,7 @@ export class MaterialController {
   _applyHeuristicGlassAppearanceToMaterial(m, { glassTintHex, bodyDarken, bodyOpacity }) {
     if (!m || (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial)) return;
     if (this._materialHasImportTransmission(m)) return;
+    if (this._usePhysicalGlassTransmission()) return;
     m.color.set(glassTintHex);
     m.color.multiplyScalar(bodyDarken);
     m.opacity = bodyOpacity;
@@ -1617,16 +1698,47 @@ export class MaterialController {
     m.needsUpdate = true;
   }
 
+  _applyHeuristicPhysicalGlassToMaterial(m, glass) {
+    if (!m || this._materialHasImportTransmission(m)) return m;
+    const params = resolvePhysicalGlassUserParams(glass);
+    const next = applyHeuristicPhysicalGlassPresentation(
+      m,
+      (src) => this._upgradeStandardMaterialToPhysical(src),
+      params,
+      { frontFacesOnly: this._physicalGlassFrontFacesOnly(), side: m.side },
+    );
+    if (next !== m) {
+      next.userData = { ...(m.userData || {}), ...(next.userData || {}) };
+    }
+    return next;
+  }
+
   /** Live shaded clones — window/glass meshes without KHR transmission. */
   _applyRenderedHeuristicGlassPresentation(object, glass, mode) {
     if (!object || mode !== 'default') return;
     object.traverse((child) => {
       if (!child.isMesh || !this.isWindowMesh(child)) return;
       const liveMats = Array.isArray(child.material) ? child.material : [child.material];
-      for (const live of liveMats) {
-        this._applyHeuristicGlassAppearanceToMaterial(live, glass);
+      for (let i = 0; i < liveMats.length; i += 1) {
+        const live = liveMats[i];
+        if (this._usePhysicalGlassTransmission()) {
+          const next = this._applyHeuristicPhysicalGlassToMaterial(live, glass);
+          if (next && next !== live) {
+            child.material = Array.isArray(child.material)
+              ? liveMats.map((mat, idx) => (idx === i ? next : mat))
+              : next;
+          }
+        } else {
+          this._applyHeuristicGlassAppearanceToMaterial(live, glass);
+        }
       }
     });
+  }
+
+  _assignHeuristicPhysicalGlassPresentation(object, m, glass) {
+    const next = this._applyHeuristicPhysicalGlassToMaterial(m, glass);
+    if (next && next !== m) this._replaceMaterialReference(object, m, next);
+    return next;
   }
 
   applyGlassAppearanceFromState(object) {
@@ -1668,6 +1780,11 @@ export class MaterialController {
           glassBody,
           glassTintHex,
         });
+        return;
+      }
+
+      if (this._usePhysicalGlassTransmission()) {
+        this._assignHeuristicPhysicalGlassPresentation(object, m, glass);
         return;
       }
 
@@ -1773,6 +1890,12 @@ export class MaterialController {
       }
 
       m.userData.orbyGlassPresentation = true;
+
+      if (this._usePhysicalGlassTransmission()) {
+        m.needsUpdate = true;
+        return;
+      }
+
       m.metalness = 0.0;
       m.depthWrite = false;
       if (Number.isFinite(m.roughness)) {
@@ -2234,6 +2357,11 @@ export class MaterialController {
                 cloned,
                 this._glassPresentationFromState(),
               );
+            } else if (this._usePhysicalGlassTransmission()) {
+              cloned = this._applyHeuristicPhysicalGlassToMaterial(
+                cloned,
+                this._glassPresentationFromState(),
+              );
             }
             if (cloned) {
               cloned.wireframe = false;
@@ -2636,6 +2764,7 @@ export class MaterialController {
               liftCrush: this.creativeLookSettings.liftCrush,
               envTexture: this._lastEnvTexture ?? null,
             });
+            this._applyCreativeLookTransmissionTuningFromState(m);
             return;
           }
           if (tag === 'holo-glass') {
@@ -2659,6 +2788,8 @@ export class MaterialController {
               patternScale,
               intensity: this.creativeLookSettings.intensity,
             });
+            m.userData.orbyCreativeLookBaseRoughness = m.roughness;
+            this._applyCreativeLookTransmissionTuningFromState(m);
             return;
           }
           if (tag === 'crystal-gem') {
@@ -2680,6 +2811,8 @@ export class MaterialController {
               patternScale,
               intensity: this.creativeLookSettings.intensity,
             });
+            m.userData.orbyCreativeLookBaseRoughness = m.roughness;
+            this._applyCreativeLookTransmissionTuningFromState(m);
           }
         };
         if (Array.isArray(child.material)) {
@@ -3060,6 +3193,38 @@ export class MaterialController {
     }
   }
 
+  /** Glass / Holo-Glass / Crystal Gem — transmission samples + double-sided shell draw. */
+  _applyCreativeLookTransmissionTuningFromState(material, baseRoughness) {
+    if (!material?.isMeshPhysicalMaterial) return;
+    const preset = normalizeCreativeLookPreset(this.creativeLookSettings?.preset);
+    if (!isPhysicalTransmissionCreativeLookPreset(preset)) return;
+    if (Number.isFinite(baseRoughness)) {
+      material.userData.orbyCreativeLookBaseRoughness = baseRoughness;
+    }
+    applyCreativeLookPhysicalTransmissionTuning(
+      material,
+      {
+        ...creativeLookTransmissionTuningFromState(this.stateStore?.getState()?.creativeLook),
+        baseRoughness: material.userData.orbyCreativeLookBaseRoughness,
+      },
+    );
+  }
+
+  /** Re-apply transmission roughness + double-sided draw after live Shader Lab tweaks. */
+  _syncCreativeLookTransmissionMaterials() {
+    if (!this.currentModel || !this.creativeLookSettings.enabled) return;
+    if (!isPhysicalTransmissionCreativeLookPreset(this.creativeLookSettings.preset)) return;
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      for (const m of mats) {
+        if (!isPhysicalTransmissionCreativeLookPreset(m?.userData?.orbyCreativeLook)) continue;
+        if (!m?.isMeshPhysicalMaterial) continue;
+        this._applyCreativeLookTransmissionTuningFromState(m);
+      }
+    });
+  }
+
   /** Live Shader Lab slider tweaks — uniforms without rebuilding materials. */
   syncCreativeLookLiveFromStore() {
     const cl = this.stateStore?.getState()?.creativeLook ?? {};
@@ -3078,6 +3243,7 @@ export class MaterialController {
       this._applyDustFieldMaterial(preset, this.creativeLookSettings.patternScale);
     }
     this._syncCreativeLookLiveUniforms(cl);
+    this._syncCreativeLookTransmissionMaterials();
   }
 
   /** Rebuild when voxel shaders predate flat albedo or grade post-process. */
@@ -3922,6 +4088,7 @@ export class MaterialController {
     }
 
     this._syncCreativeLookLiveUniforms(cl);
+    this._syncCreativeLookTransmissionMaterials();
   }
 
   /** Re-apply crystal-gem transmission tier when viewport render quality changes. */
@@ -3929,6 +4096,7 @@ export class MaterialController {
     retuneCreativeCrystalGemMaterials(
       this.currentModel,
       this.stateStore?.getState()?.renderQuality,
+      this.stateStore?.getState()?.creativeLook,
     );
   }
 
@@ -4086,6 +4254,7 @@ export class MaterialController {
             liftCrush,
             envTexture: this._lastEnvTexture ?? null,
           });
+          this._applyCreativeLookTransmissionTuningFromState(m);
         }
         if (m.userData.orbyCreativeLook === 'holo-glass' && m.isMeshPhysicalMaterial) {
           const ps = normalizeCreativeLookPatternScale(
@@ -4107,6 +4276,8 @@ export class MaterialController {
           m.iridescence = iridescence;
           m.iridescenceThicknessRange = iridescenceThicknessRange;
           m.roughness = roughness;
+          m.userData.orbyCreativeLookBaseRoughness = roughness;
+          this._applyCreativeLookTransmissionTuningFromState(m);
         }
         if (m.userData.orbyCreativeLook === 'crystal-gem' && m.isMeshPhysicalMaterial) {
           const ps = normalizeCreativeLookPatternScale(
@@ -4127,6 +4298,8 @@ export class MaterialController {
           );
           m.roughness = roughness;
           m.attenuationDistance = attenuationDistance;
+          m.userData.orbyCreativeLookBaseRoughness = roughness;
+          this._applyCreativeLookTransmissionTuningFromState(m);
         }
         if (m.isMeshPhysicalMaterial) {
           applyCreativeLookPhysicalMasterHue(m, masterHue, brightness);
@@ -5382,9 +5555,7 @@ export class MaterialController {
             liftCrush: state?.creativeLook?.liftCrush,
             envTexture,
           });
-          if (this._isFontExtrudeModel()) {
-            material.side = THREE.DoubleSide;
-          }
+          this._applyCreativeLookTransmissionTuningFromState(material);
           material.needsUpdate = true;
           return;
         }
@@ -5420,9 +5591,8 @@ export class MaterialController {
           material.transparent = true;
           material.opacity = 1;
           material.depthWrite = false;
-          if (this._isFontExtrudeModel()) {
-            material.side = THREE.DoubleSide;
-          }
+          material.userData.orbyCreativeLookBaseRoughness = roughness;
+          this._applyCreativeLookTransmissionTuningFromState(material);
           material.needsUpdate = true;
           return;
         }
@@ -5453,16 +5623,11 @@ export class MaterialController {
           material.thickness = thickness;
           material.roughness = roughness;
           material.attenuationDistance = attenuationDistance;
-          applyCreativeLookCrystalGemPerformanceTuning(
-            material,
-            state?.renderQuality,
-          );
+          material.userData.orbyCreativeLookBaseRoughness = roughness;
+          this._applyCreativeLookTransmissionTuningFromState(material);
           material.transparent = true;
           material.opacity = 1;
           material.depthWrite = false;
-          if (this._isFontExtrudeModel()) {
-            material.side = THREE.DoubleSide;
-          }
           material.needsUpdate = true;
           return;
         }
@@ -5473,17 +5638,22 @@ export class MaterialController {
           material.isMeshLambertMaterial ||
           material.isMeshPhongMaterial
         ) {
-          const importGltfGlass =
-            material.userData?.orbyGltfTransmissionFallback === true ||
-            this._materialHadImportTransmission(material) ||
-            this._materialHasImportTransmission(material);
+          const importGltfGlassBlend =
+            !this._usePhysicalGlassTransmission() &&
+            (material.userData?.orbyGltfTransmissionFallback === true ||
+              this._materialHadImportTransmission(material) ||
+              this._materialHasImportTransmission(material));
+          const importGltfPhysical =
+            this._usePhysicalGlassTransmission() &&
+            (material.userData?.orbyGltfPhysicalGlass === true ||
+              this._materialHadImportTransmission(material));
           const usesTransmission =
-            !importGltfGlass &&
+            !importGltfGlassBlend &&
             material.isMeshPhysicalMaterial &&
             (Number(material.transmission) > 1e-4 || !!material.transmissionMap);
 
           if (
-            importGltfGlass &&
+            importGltfGlassBlend &&
             !this._shaderLabBypassesGlassPresentation() &&
             (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial)
           ) {
@@ -5501,10 +5671,54 @@ export class MaterialController {
             return;
           }
 
+          if (
+            importGltfPhysical &&
+            !this._shaderLabBypassesGlassPresentation() &&
+            material.isMeshPhysicalMaterial
+          ) {
+            const active =
+              this._applyImportGltfPhysicalGlassPresentation(
+                material,
+                this._glassPresentationFromState(),
+              ) || material;
+            active.envMap = envTexture;
+            if (active.envMapIntensity !== undefined) {
+              active.envMapIntensity = intensity * litEnvMul * glassEnvMul;
+            }
+            active.needsUpdate = true;
+            return;
+          }
+
+          const heuristicPhysical =
+            this._usePhysicalGlassTransmission() &&
+            (material.userData?.orbyHeuristicPhysicalGlass === true ||
+              (this.isWindowMesh(child) && !importGltfPhysical));
+          if (
+            heuristicPhysical &&
+            !this._shaderLabBypassesGlassPresentation() &&
+            material.isMeshPhysicalMaterial
+          ) {
+            this._applyHeuristicPhysicalGlassToMaterial(
+              material,
+              this._glassPresentationFromState(),
+            );
+            material.envMap = envTexture;
+            if (material.envMapIntensity !== undefined) {
+              material.envMapIntensity = intensity * litEnvMul * glassEnvMul;
+            }
+            material.needsUpdate = true;
+            return;
+          }
+
           const envChanged = material.envMap !== envTexture;
           material.envMap = envTexture;
           if (material.envMapIntensity !== undefined) {
-            const glassBoost = this.isWindowMesh(child) || importGltfGlass || usesTransmission;
+            const glassBoost =
+              this.isWindowMesh(child) ||
+              importGltfGlassBlend ||
+              importGltfPhysical ||
+              heuristicPhysical ||
+              usesTransmission;
             const userSubsurface = material.userData?.orbySubsurface === true;
             let envMul = intensity * litEnvMul;
             if (glassBoost) {
@@ -6317,9 +6531,7 @@ export class MaterialController {
             && m?.userData?.orbyCreativeLook !== 'crystal-gem')
           || !m.isMeshPhysicalMaterial
         ) continue;
-        // https://threejs.org/examples/webgl_materials_physical_transmission.html uses DoubleSide.
-        m.side = THREE.DoubleSide;
-        m.needsUpdate = true;
+        this._applyCreativeLookTransmissionTuningFromState(m);
       }
     });
   }

@@ -42,6 +42,7 @@ export function createBlankCanvasPreset() {
       blendSortingMitigation: true,
       flipGlassNormalMapY: false,
       glassFrontFacesOnly: false,
+      physicalGlassTransmission: false,
       uvChecker: false,
       uvCheckerScale: 5,
       uvCheckerStyle: 'orby',
@@ -72,6 +73,10 @@ export function createBlankCanvasPreset() {
       intensity: 1,
       liftCrush: 0,
       viewportBloom: false,
+      transmissionSamples: 4,
+      transmissionDoubleSide: false,
+      transmissionSolidMeshGlass: false,
+      transmissionDispersion: 0.28,
       presetParams: {},
     },
     fresnel: {

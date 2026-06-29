@@ -6,8 +6,12 @@ import {
   getBackgroundGradientFallbackColor,
   normalizeBackgroundGradient,
 } from './backgroundGradientDefaults.js';
-import { getDrawingBufferLogicalSize, getViewportBackingStorePixels } from '../drawingBufferSize.js';
-import { pinRendererViewportLogical } from '../resetRendererFullViewport.js';
+import { getViewportBackingStorePixels } from '../drawingBufferSize.js';
+import { ensureExportCapturePixelRatio } from '../capture/forceExportCaptureFramebuffer.js';
+import {
+  pinRenderTargetPhysicalViewport,
+  resetRendererFullViewport,
+} from '../resetRendererFullViewport.js';
 
 /**
  * Screen-space viewport gradient when the HDRI backdrop is hidden.
@@ -39,8 +43,10 @@ export class BackgroundGradientController {
     this._texture.matrixAutoUpdate = false;
     this._lastWidth = 0;
     this._lastHeight = 0;
-    /** Offline capture — blit gradient instead of scene.background (partial viewport seam). */
+    /** Offline capture — exact hex canvas composited on readback (no GPU blit / no post on gradient). */
     this._captureBlitActive = false;
+    /** @type {Uint8ClampedArray | null} display-graded plate (exposure/tone, no bloom) */
+    this._displayGradedCaptureRgba = null;
     /** @type {BackgroundGradientFullscreenBlit | null} */
     this._fullscreenBlit = null;
     this._captureWidth = 0;
@@ -76,7 +82,9 @@ export class BackgroundGradientController {
   applyIfActive() {
     if (!this.isActive()) return false;
     this.syncToDrawingBuffer(undefined, undefined, { forceRedraw: true });
-    this.scene.background = this._texture;
+    // Gradient is drawn via MeshglRenderPass fullscreen blit — not scene.background
+    // (Three background can render into a partial GL viewport on Ultra / bloom passes).
+    this.scene.background = null;
     this.renderer.setClearAlpha(1);
     this.renderer.autoClear = true;
     this.renderer.setClearColor(new THREE.Color(this.getFallbackColor()), 1);
@@ -124,6 +132,13 @@ export class BackgroundGradientController {
     if (this._captureWidth <= 0 || this._captureHeight <= 0) {
       return { width: 0, height: 0 };
     }
+    // Export capture stores backing-store pixels (DPR 1) — do not multiply by studio Ultra DPR.
+    if (this._captureBlitActive) {
+      return {
+        width: Math.max(1, this._captureWidth),
+        height: Math.max(1, this._captureHeight),
+      };
+    }
     const pr = Math.max(1e-6, this.renderer?.getPixelRatio?.() ?? 1);
     return {
       width: Math.max(1, Math.round(this._captureWidth * pr)),
@@ -137,37 +152,98 @@ export class BackgroundGradientController {
   }
 
   /**
-   * Pin GL viewport/scissor to the export capture frame (logical units, not backing-store pixels).
+   * Pin GL viewport to the active render target / drawing buffer (not cached export logical size).
    * @param {THREE.WebGLRenderer} renderer
    */
   pinCaptureViewport(renderer) {
-    const w = this._captureWidth;
-    const h = this._captureHeight;
-    if (!renderer || w <= 0 || h <= 0) return;
-    pinRendererViewportLogical(renderer, w, h);
+    if (!renderer) return;
+    resetRendererFullViewport(renderer);
   }
 
-  /** @returns {Uint8ClampedArray | null} top-down RGBA at capture size */
+  /** @returns {Uint8ClampedArray | null} top-down RGBA for capture composite */
   getCaptureGradientRgba() {
-    if (!this.isActive() || this._captureWidth <= 0 || this._captureHeight <= 0) {
+    if (this._displayGradedCaptureRgba) {
+      return this._displayGradedCaptureRgba;
+    }
+    return this.getRawCaptureGradientRgba();
+  }
+
+  /** @param {Uint8ClampedArray | null} rgba */
+  setDisplayGradedCapturePlate(rgba) {
+    this._displayGradedCaptureRgba = rgba;
+  }
+
+  /** Raw 2D canvas RGBA at capture/export size (ungraded). */
+  getRawCaptureGradientRgba(width, height) {
+    const w = Math.max(
+      1,
+      Math.floor(width ?? this._captureWidth ?? this._canvas.width),
+    );
+    const h = Math.max(
+      1,
+      Math.floor(height ?? this._captureHeight ?? this._canvas.height),
+    );
+    if (!this.isActive() || w <= 0 || h <= 0) {
       return null;
     }
-    const { width: bw, height: bh } = this._getCaptureBackingStoreSize();
-    if (this._canvas.width !== bw || this._canvas.height !== bh) {
-      this.syncToDrawingBuffer(bw, bh, { forceRedraw: true });
+    if (this._canvas.width !== w || this._canvas.height !== h) {
+      this.syncToDrawingBuffer(w, h, { forceRedraw: true });
     }
-    return new Uint8ClampedArray(this._ctx.getImageData(0, 0, bw, bh).data);
+    return new Uint8ClampedArray(this._ctx.getImageData(0, 0, w, h).data);
   }
 
-  /** True while offline capture should use export-sized gradient via scene.background (not CPU composite). */
+  /** True while offline capture should composite the 2D canvas (not GL scene.background). */
   shouldBlitForCapture() {
     return this._captureBlitActive && this.isActive();
   }
 
+  /** GPU blit in MeshglRenderPass — live viewport only; capture uses CPU composite. */
+  shouldGpuBlitGradient() {
+    return this.isActive() && !this._captureBlitActive;
+  }
+
+  /** @deprecated alias — use {@link shouldGpuBlitGradient} */
+  shouldGpuBlitForCapture() {
+    return this.shouldGpuBlitGradient();
+  }
+
+  /** Opaque export — merge display-graded canvas under post-graded scene (no bloom on bg). */
+  shouldCompositeGradientOnReadback() {
+    return this._captureBlitActive && this.isActive();
+  }
+
+  /**
+   * Blit gradient texture into the active render target at exact pixel size.
+   * @param {THREE.WebGLRenderer} renderer
+   * @param {number} pixelWidth
+   * @param {number} pixelHeight
+   */
+  blitToRenderTarget(renderer, pixelWidth, pixelHeight) {
+    if (!this._texture || !renderer) return;
+    ensureExportCapturePixelRatio({ renderer, composer: null });
+    pinRenderTargetPhysicalViewport(
+      renderer,
+      Math.max(1, Math.floor(pixelWidth)),
+      Math.max(1, Math.floor(pixelHeight)),
+    );
+    this._getFullscreenBlit().render(renderer, this._texture);
+  }
+
   /** @param {THREE.WebGLRenderer} renderer */
   blitFullViewport(renderer) {
-    if (!this._texture) return;
-    this.pinCaptureViewport(renderer);
+    if (!this._texture || !renderer) return;
+    if (this._captureBlitActive) {
+      ensureExportCapturePixelRatio({ renderer, composer: null });
+      const rt = renderer.getRenderTarget();
+      if (rt?.width > 0 && rt?.height > 0) {
+        pinRenderTargetPhysicalViewport(renderer, rt.width, rt.height);
+      } else {
+        const { width, height } = getViewportBackingStorePixels(renderer);
+        pinRenderTargetPhysicalViewport(renderer, width, height);
+      }
+    } else {
+      resetRendererFullViewport(renderer);
+    }
     this._getFullscreenBlit().render(renderer, this._texture);
   }
 
@@ -179,33 +255,42 @@ export class BackgroundGradientController {
   }
 
   /**
-   * Offline capture — full-frame gradient at export resolution after viewport is set.
+   * Offline capture — sync exact export-sized canvas for CPU composite on readback.
    * @param {{ width?: number, height?: number, transparent?: boolean }} [ctx]
    */
   prepareForCapture(ctx = {}) {
     if (ctx.transparent || !this.isActive()) return;
-    const w = ctx.width;
-    const h = ctx.height;
-    if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) {
-      this._captureWidth = Math.max(1, Math.floor(w));
-      this._captureHeight = Math.max(1, Math.floor(h));
+    let w;
+    let h;
+    if (
+      Number.isFinite(ctx.width)
+      && Number.isFinite(ctx.height)
+      && ctx.width > 0
+      && ctx.height > 0
+    ) {
+      w = Math.max(1, Math.floor(ctx.width));
+      h = Math.max(1, Math.floor(ctx.height));
     } else {
-      const logical = getDrawingBufferLogicalSize(this.renderer);
-      this._captureWidth = Math.max(1, Math.floor(logical.x));
-      this._captureHeight = Math.max(1, Math.floor(logical.y));
+      ({ width: w, height: h } = getViewportBackingStorePixels(this.renderer));
     }
-    const { width: bw, height: bh } = this._getCaptureBackingStoreSize();
-    this.syncToDrawingBuffer(bw, bh, { forceRedraw: true });
+    this._captureWidth = w;
+    this._captureHeight = h;
+    this.syncToDrawingBuffer(w, h, { forceRedraw: true });
     this._captureBlitActive = true;
-    // scene.background + export viewport pin — gradient runs through post stack (grain, vignette, …).
-    this.applyIfActive();
+    // Scene renders without gradient; readback composites this canvas at exact hex colors.
+  }
+
+  /** Drop export-sized viewport pins without resyncing the gradient canvas. */
+  clearCaptureMode() {
+    this._captureBlitActive = false;
+    this._captureWidth = 0;
+    this._captureHeight = 0;
+    this._displayGradedCaptureRgba = null;
   }
 
   /** Restore gradient canvas to interactive viewport size after export. */
   restoreAfterCapture() {
-    this._captureBlitActive = false;
-    this._captureWidth = 0;
-    this._captureHeight = 0;
+    this.clearCaptureMode();
     if (!this.isActive()) return;
     this.syncToDrawingBuffer(undefined, undefined, { forceRedraw: true });
     this.applyIfActive();

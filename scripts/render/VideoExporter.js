@@ -15,7 +15,7 @@ import {
 } from './exportVideoMovements.js';
 import { lightsRotationForExportFrame } from '../config/lightsAutoRotate.js';
 import { buildOfflineExportOverlaySummary } from './offlineExportOverlaySummary.js';
-import { getDrawingBufferPixels } from './drawingBufferSize.js';
+import { forceExportCaptureFramebuffer } from './capture/forceExportCaptureFramebuffer.js';
 import {
   exportVideoAspectSequenceSuffix,
   getExportVideoResolutionPixelLabel,
@@ -38,6 +38,8 @@ import {
   readTransparentMergedTopDownRgba,
   restoreTransparentCaptureSetup,
 } from './capture/TransparentCapture.js';
+import { repairInteractiveViewportAfterCapture } from './capture/repairInteractiveViewportAfterCapture.js';
+import { coerceRendererLogicalSize } from './drawingBufferSize.js';
 
 export class VideoExporter {
   constructor({
@@ -443,10 +445,10 @@ export class VideoExporter {
     }
 
     this._restoreVideoExportSize(sizeSnapshot);
-    this._repairViewportAfterExport();
+    this._captureFeatureSession?.restore();
+    this._repairViewportAfterExport(sizeSnapshot);
     this._exportCaptureSize = null;
 
-    this._captureFeatureSession?.restore();
     this._captureFeatureSession = null;
 
     this.handleResize?.();
@@ -561,14 +563,18 @@ export class VideoExporter {
   _syncExportCaptureFramebuffer() {
     const size = this._exportCaptureSize;
     if (!size?.width || !size?.height) return;
-    const actual = getDrawingBufferPixels(this.renderer);
-    if (
-      Math.abs(actual.width - size.width) <= 2
-      && Math.abs(actual.height - size.height) <= 2
-    ) {
-      return;
-    }
-    this.imageExporter?._setExportFramebufferSize?.(size.width, size.height);
+    forceExportCaptureFramebuffer(
+      {
+        renderer: this.renderer,
+        composer: this.composer,
+        syncPostProcessingForLogicalSize: this.syncPostProcessingForLogicalSize,
+        ensureComposerBuffersMatchRenderer: this.ensureComposerBuffersMatchRenderer,
+      },
+      size.width,
+      size.height,
+    );
+    this.imageExporter?._ensureComposerMatchesDrawingBuffer?.({ strict: true });
+    this.ensureComposerBuffersMatchRenderer?.();
   }
 
   _resolveExportCapturePixelSize(exportWidth, exportHeight) {
@@ -663,8 +669,12 @@ export class VideoExporter {
       this._resolveExportCapturePixelSize(exportWidth, exportHeight);
     const cinematicLetterbox219 = this._resolveCinematicLetterbox219();
 
-    this._renderComposerFrameForCapture({ exportWidth: targetWidth, exportHeight: targetHeight });
+    this._renderComposerFrameForCapture({
+      exportWidth: targetWidth,
+      exportHeight: targetHeight,
+    });
     this._finishGpuFrame();
+
     return this.imageExporter._captureComposerOutputAsPngDataUrl(
       targetWidth,
       targetHeight,
@@ -833,8 +843,12 @@ export class VideoExporter {
   _restoreVideoExportSize(snapshot) {
     if (!snapshot) return;
     this.setDustFieldCaptureScale?.(1);
-    this.renderer.setPixelRatio(snapshot.previousPixelRatio);
-    this.renderer.setSize(snapshot.previousSize.x, snapshot.previousSize.y, false);
+    coerceRendererLogicalSize(
+      this.renderer,
+      snapshot.previousSize.x,
+      snapshot.previousSize.y,
+      snapshot.previousPixelRatio,
+    );
     this.camera.aspect = snapshot.previousAspect;
     this.camera.updateProjectionMatrix();
     this.syncPostProcessingForLogicalSize?.(
@@ -845,8 +859,24 @@ export class VideoExporter {
   }
 
   /** Repair GL viewport / composer RT size after offline capture (passes may leave partial viewport). */
-  _repairViewportAfterExport() {
+  _repairViewportAfterExport(sizeSnapshot = null) {
+    if (sizeSnapshot?.previousSize) {
+      repairInteractiveViewportAfterCapture({
+        renderer: this.renderer,
+        composer: this.composer,
+        logicalWidth: sizeSnapshot.previousSize.x,
+        logicalHeight: sizeSnapshot.previousSize.y,
+        pixelRatio: sizeSnapshot.previousPixelRatio,
+        syncPostProcessingForLogicalSize: this.syncPostProcessingForLogicalSize,
+        ensureComposerBuffersMatchRenderer: this.ensureComposerBuffersMatchRenderer,
+        backgroundController: this.backgroundController,
+      });
+      return;
+    }
+    this.composer?.clearExportCaptureViewportPin?.();
     this.ensureComposerBuffersMatchRenderer?.();
+    this.resetRendererViewportToCanvas?.();
+    this.backgroundController?.gradientController?.restoreAfterCapture?.();
     this.resetRendererViewportToCanvas?.();
   }
 

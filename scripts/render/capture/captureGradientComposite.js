@@ -1,14 +1,17 @@
 import * as THREE from 'three';
 import { getComposerOutputRenderTarget } from '../composerOutputBuffer.js';
-import { pinRendererViewportLogical } from '../resetRendererFullViewport.js';
+import { ensureExportCapturePixelRatio } from './forceExportCaptureFramebuffer.js';
+import { pinRenderTargetPhysicalViewport } from '../resetRendererFullViewport.js';
 
 /** @param {import('three').WebGLRenderer} renderer @param {number} width @param {number} height */
 export function pinRenderTargetViewport(renderer, width, height) {
-  pinRendererViewportLogical(renderer, width, height);
+  ensureExportCapturePixelRatio({ renderer, composer: null });
+  pinRenderTargetPhysicalViewport(renderer, width, height);
 }
 
 /**
- * Opaque export — gradient canvas (2D, exact export size) under post-processed RGB using scene alpha.
+ * Opaque export — gradient base layer; post RGB only where scene alpha > 0.
+ * Post background (stale partial GL gradient) is never used.
  *
  * @param {Uint8Array | Uint8ClampedArray} postPixels — bottom-up GL read order
  * @param {Uint8Array | Uint8ClampedArray} alphaPixels — bottom-up scene alpha pass
@@ -24,7 +27,7 @@ export function mergeGradientUnderPostRgba(
   width,
   height,
 ) {
-  const merged = new Uint8ClampedArray(width * height * 4);
+  const merged = new Uint8ClampedArray(gradientRgba);
   const rowStride = width * 4;
 
   for (let y = 0; y < height; y += 1) {
@@ -35,29 +38,22 @@ export function mergeGradientUnderPostRgba(
       const gi = dstRow + i;
       const ai = glRow + i;
       const a = alphaPixels[ai + 3] / 255;
-      const gr = gradientRgba[gi];
-      const gg = gradientRgba[gi + 1];
-      const gb = gradientRgba[gi + 2];
+      if (a <= 0) continue;
 
-      if (a <= 0) {
-        merged[gi] = gr;
-        merged[gi + 1] = gg;
-        merged[gi + 2] = gb;
-        merged[gi + 3] = 255;
-      } else if (a >= 1) {
-        merged[gi] = postPixels[ai];
-        merged[gi + 1] = postPixels[ai + 1];
-        merged[gi + 2] = postPixels[ai + 2];
-        merged[gi + 3] = 255;
+      const pr = postPixels[ai];
+      const pg = postPixels[ai + 1];
+      const pb = postPixels[ai + 2];
+
+      if (a >= 1) {
+        merged[gi] = pr;
+        merged[gi + 1] = pg;
+        merged[gi + 2] = pb;
       } else {
-        const pr = postPixels[ai];
-        const pg = postPixels[ai + 1];
-        const pb = postPixels[ai + 2];
-        merged[gi] = Math.round(pr * a + gr * (1 - a));
-        merged[gi + 1] = Math.round(pg * a + gg * (1 - a));
-        merged[gi + 2] = Math.round(pb * a + gb * (1 - a));
-        merged[gi + 3] = 255;
+        merged[gi] = Math.round(pr * a + merged[gi] * (1 - a));
+        merged[gi + 1] = Math.round(pg * a + merged[gi + 1] * (1 - a));
+        merged[gi + 2] = Math.round(pb * a + merged[gi + 2] * (1 - a));
       }
+      merged[gi + 3] = 255;
     }
   }
 
@@ -66,22 +62,21 @@ export function mergeGradientUnderPostRgba(
 
 /**
  * Post stack RGB + scene alpha + 2D gradient canvas → opaque top-down RGBA.
- * Same split read as transparent export; gradient is composited in CPU (WYSIWYG at export size).
+ * Caller must have already rendered the composer frame (no GPU gradient blit during capture).
  *
  * @param {{
  *   renderer: import('three').WebGLRenderer,
  *   scene: import('three').Scene,
  *   camera: import('three').Camera,
- *   composer?: import('three/examples/jsm/postprocessing/EffectComposer.js').EffectComposer,
+ *   composer: import('three/examples/jsm/postprocessing/EffectComposer.js').EffectComposer,
  *   width: number,
  *   height: number,
- *   getGradientRgba: () => Uint8ClampedArray,
- *   renderFrame: () => void,
+ *   getGradientRgba: () => Uint8ClampedArray | null,
  *   finishGpu?: () => void,
  * }} deps
  * @returns {Uint8ClampedArray}
  */
-export function readGradientMergedTopDownRgba(deps) {
+export function readGradientMergedFromComposerOutput(deps) {
   const {
     renderer,
     scene,
@@ -90,7 +85,6 @@ export function readGradientMergedTopDownRgba(deps) {
     width,
     height,
     getGradientRgba,
-    renderFrame,
     finishGpu,
   } = deps;
 
@@ -99,22 +93,12 @@ export function readGradientMergedTopDownRgba(deps) {
     throw new Error('Gradient capture buffer missing or wrong size');
   }
 
-  if (!composer) {
-    renderFrame();
-    finishGpu?.();
-    const canvas = renderer.domElement;
-    const ctx = canvas.getContext('2d');
-    const imageData = ctx.getImageData(0, 0, width, height);
-    return new Uint8ClampedArray(imageData.data);
-  }
+  finishGpu?.();
 
   const previousRenderToScreen = composer.renderToScreen;
   composer.renderToScreen = false;
   let postPixels = null;
   try {
-    renderFrame();
-    finishGpu?.();
-
     const byteRT = new THREE.WebGLRenderTarget(width, height, {
       type: THREE.UnsignedByteType,
       format: THREE.RGBAFormat,
@@ -151,9 +135,11 @@ export function readGradientMergedTopDownRgba(deps) {
   });
 
   let alphaPixels = null;
+  const savedSceneBackground = scene.background;
   try {
+    scene.background = null;
     renderer.setRenderTarget(alphaRT);
-    pinRenderTargetViewport(renderer, width, height);
+    pinRenderTargetPhysicalViewport(renderer, alphaRT.width, alphaRT.height);
     renderer.setClearColor(0x000000, 0);
     renderer.setClearAlpha(0);
     renderer.clear();
@@ -163,6 +149,7 @@ export function readGradientMergedTopDownRgba(deps) {
     alphaPixels = new Uint8Array(width * height * 4);
     renderer.readRenderTargetPixels(alphaRT, 0, 0, width, height, alphaPixels);
   } finally {
+    scene.background = savedSceneBackground;
     alphaRT.dispose();
   }
 
@@ -173,4 +160,28 @@ export function readGradientMergedTopDownRgba(deps) {
     width,
     height,
   );
+}
+
+/**
+ * Post stack RGB + scene alpha + 2D gradient canvas → opaque top-down RGBA.
+ * Same split read as transparent export; gradient is composited in CPU (WYSIWYG at export size).
+ *
+ * @param {{
+ *   renderer: import('three').WebGLRenderer,
+ *   scene: import('three').Scene,
+ *   camera: import('three').Camera,
+ *   composer?: import('three/examples/jsm/postprocessing/EffectComposer.js').EffectComposer,
+ *   width: number,
+ *   height: number,
+ *   getGradientRgba: () => Uint8ClampedArray,
+ *   renderFrame: () => void,
+ *   finishGpu?: () => void,
+ * }} deps
+ * @returns {Uint8ClampedArray}
+ */
+export function readGradientMergedTopDownRgba(deps) {
+  const { renderFrame, finishGpu, ...rest } = deps;
+  renderFrame();
+  finishGpu?.();
+  return readGradientMergedFromComposerOutput({ ...rest, finishGpu });
 }

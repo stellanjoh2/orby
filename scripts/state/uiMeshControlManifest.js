@@ -132,4 +132,10 @@ export const MESH_CHECKBOX_UI_MANIFEST = [
     event: 'mesh:reverse-normals',
     inputType: 'checkbox',
   },
+  {
+    inputId: 'physicalGlassTransmission',
+    statePath: 'advanced.physicalGlassTransmission',
+    event: 'mesh:transparency-fix',
+    inputType: 'checkbox',
+  },
 ];

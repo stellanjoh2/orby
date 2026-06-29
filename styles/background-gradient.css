@@ -12,6 +12,13 @@
   touch-action: none;
 }
 
+.panel-block[data-block='background'] .slider-line > span .block-title-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  min-width: 0;
+}
+
 .panel-block[data-block='background'] #backgroundGradientCenterRow {
   display: flex;
   flex-direction: column;

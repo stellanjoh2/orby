@@ -242,6 +242,18 @@ export function creativeLookPresetNeedsHdriBackdrop(preset) {
   return id === 'glass' || id === 'holo-glass' || id === 'crystal-gem' || id === 'chrome';
 }
 
+export {
+  PHYSICAL_TRANSMISSION_CREATIVE_PRESETS,
+  isPhysicalTransmissionCreativeLookPreset,
+  normalizeCreativeLookTransmissionSamples,
+  resolveCreativeLookTransmissionResolutionScale,
+  applyCreativeLookPhysicalTransmissionTuning,
+  creativeLookTransmissionTuningFromState,
+  CREATIVE_LOOK_TRANSMISSION_SAMPLES_MIN,
+  CREATIVE_LOOK_TRANSMISSION_SAMPLES_MAX,
+  CREATIVE_LOOK_TRANSMISSION_SAMPLES_DEFAULT,
+} from './creativeLookPhysicalTransmission.js';
+
 /** Full colorwheel range for Shader Lab master hue (degrees). */
 export const CREATIVE_LOOK_MASTER_HUE_MIN = -180;
 export const CREATIVE_LOOK_MASTER_HUE_MAX = 180;
@@ -1548,6 +1560,7 @@ export function syncCreativeLookGlassPhysical(material, opts = {}) {
   material.transparent = true;
   material.opacity = 1;
   material.depthWrite = false;
+  material.userData.orbyCreativeLookBaseRoughness = material.roughness;
 }
 
 /**
