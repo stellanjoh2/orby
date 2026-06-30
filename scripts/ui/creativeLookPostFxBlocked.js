@@ -67,7 +67,13 @@ const GRAIN_INPUTS = ['toggleGrain', 'grainIntensity', 'grainScale'];
 
 const LENS_DIRT_INPUTS = ['lensDirtEnabled', 'lensDirtStrength', 'lensDirtTintColor'];
 
-const ABERRATION_INPUTS = ['toggleAberration', 'aberrationAmount'];
+const ABERRATION_INPUTS = [
+  'toggleAberration',
+  'aberrationAmount',
+  'aberrationBlur',
+  'aberrationFalloff',
+  'aberrationQuality',
+];
 
 const VIGNETTE_INPUTS = ['toggleVignette', 'vignetteIntensity', 'vignetteColor'];
 

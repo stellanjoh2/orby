@@ -98,7 +98,7 @@ Portrait **9∶16** UI is disabled (`normalizeExportVideoAspectRatio` → always
 | Turntable | ✅ | 🟡 | Encode offline ✅; scrub thumb + capture preview frame ✅; live play/drag still ≠ encode — Chunk 6 full WYSIWYG open |
 | Orbit | ❓ | 🔧 | |
 | Zoom in / out | ❓ | 🔧 | |
-| Tilt left / right | ❓ | 🔧 | |
+| Roll left / right | ❓ | 🔧 | |
 | FOV offset | ❓ | 🔧 | |
 | Pitch offset | ❓ | 🔧 | |
 | HDRI rotation over duration | ❓ | 🔧 | Export-only spin (disabled in UI); encode uses `live: true` |

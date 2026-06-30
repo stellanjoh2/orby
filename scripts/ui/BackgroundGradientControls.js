@@ -39,6 +39,8 @@ export class BackgroundGradientControls {
     this.selectedStopIndex = 0;
     this.drag = null;
     this._mounted = false;
+    /** @type {ResizeObserver | null} */
+    this._previewResizeObserver = null;
   }
 
   bind() {
@@ -91,19 +93,19 @@ export class BackgroundGradientControls {
     this.ui.inputs.backgroundGradientAngle?.addEventListener('input', (event) => {
       const angle = parseFloat(event.target.value);
       this.helpers.updateValueLabel('backgroundGradientAngle', angle, 'angle');
-      this._commit({ angle }, { deferNotify: true });
+      this._commit({ angle });
     });
 
     this.ui.inputs.backgroundGradientCenterX?.addEventListener('input', (event) => {
       const centerX = parseFloat(event.target.value);
       this.helpers.updateValueLabel('backgroundGradientCenterX', `${Math.round(centerX)}%`);
-      this._commit({ centerX }, { deferNotify: true });
+      this._commit({ centerX });
     });
 
     this.ui.inputs.backgroundGradientCenterY?.addEventListener('input', (event) => {
       const centerY = parseFloat(event.target.value);
       this.helpers.updateValueLabel('backgroundGradientCenterY', `${Math.round(centerY)}%`);
-      this._commit({ centerY }, { deferNotify: true });
+      this._commit({ centerY });
     });
 
     this.typeButtons.forEach((button) => {
@@ -116,13 +118,25 @@ export class BackgroundGradientControls {
       });
     });
 
-    this._onPreviewPointerDown = (event) => this._handlePreviewPointerDown(event);
-    this._onPreviewPointerMove = (event) => this._handlePreviewPointerMove(event);
-    this._onPreviewPointerUp = (event) => this._handlePreviewPointerUp(event);
-    this.preview.addEventListener('pointerdown', this._onPreviewPointerDown);
-    window.addEventListener('pointermove', this._onPreviewPointerMove);
-    window.addEventListener('pointerup', this._onPreviewPointerUp);
-    window.addEventListener('pointercancel', this._onPreviewPointerUp);
+    if (this.preview) {
+      this._onPreviewPointerDown = (event) => this._handlePreviewPointerDown(event);
+      this._onPreviewPointerMove = (event) => this._handlePreviewPointerMove(event);
+      this._onPreviewPointerUp = (event) => this._handlePreviewPointerUp(event);
+      this.preview.addEventListener('pointerdown', this._onPreviewPointerDown);
+      window.addEventListener('pointermove', this._onPreviewPointerMove);
+      window.addEventListener('pointerup', this._onPreviewPointerUp);
+      window.addEventListener('pointercancel', this._onPreviewPointerUp);
+
+      // Redraw when the foldout / shelf tab becomes visible — sync() often runs while
+      // display:none or max-height:0, which paints a 1×1 buffer that CSS upscales to one color.
+      const previewWrap = this.preview.parentElement;
+      if (previewWrap && typeof ResizeObserver !== 'undefined') {
+        this._previewResizeObserver = new ResizeObserver(() => {
+          this._redrawPreviewFromStore();
+        });
+        this._previewResizeObserver.observe(previewWrap);
+      }
+    }
   }
 
   sync(state) {
@@ -138,16 +152,22 @@ export class BackgroundGradientControls {
       this.ui.inputs.backgroundGradientEnabled.checked = gradientOn;
     }
     if (this.ui.inputs.backgroundGradientAngle) {
-      this.ui.inputs.backgroundGradientAngle.value = gradient.angle;
+      this.helpers.syncRangeFromState(this.ui.inputs.backgroundGradientAngle, gradient.angle);
       this.helpers.updateValueLabel('backgroundGradientAngle', gradient.angle, 'angle');
     }
     if (this.ui.inputs.backgroundGradientCenterX) {
-      this.ui.inputs.backgroundGradientCenterX.value = gradient.centerX;
-      this.helpers.updateValueLabel('backgroundGradientCenterX', `${Math.round(gradient.centerX)}%`);
+      this.helpers.syncRangeFromState(this.ui.inputs.backgroundGradientCenterX, gradient.centerX);
+      this.helpers.updateValueLabel(
+        'backgroundGradientCenterX',
+        `${Math.round(gradient.centerX)}%`,
+      );
     }
     if (this.ui.inputs.backgroundGradientCenterY) {
-      this.ui.inputs.backgroundGradientCenterY.value = gradient.centerY;
-      this.helpers.updateValueLabel('backgroundGradientCenterY', `${Math.round(gradient.centerY)}%`);
+      this.helpers.syncRangeFromState(this.ui.inputs.backgroundGradientCenterY, gradient.centerY);
+      this.helpers.updateValueLabel(
+        'backgroundGradientCenterY',
+        `${Math.round(gradient.centerY)}%`,
+      );
     }
 
     this.typeButtons.forEach((button) => {
@@ -214,6 +234,7 @@ export class BackgroundGradientControls {
     this.stateStore.set('backgroundGradient', next);
     this.eventBus.emit('scene:background-gradient', next);
     if (deferNotify) this.stateStore.endDeferredNotify();
+    this.helpers.requestViewportRender();
     if (mode === 'gradient') {
       this._drawPreview(next);
     }
@@ -251,9 +272,17 @@ export class BackgroundGradientControls {
     this._drawPreview(this._previewGradientFromStore());
   }
 
+  /** Re-paint the stop strip when the canvas has layout (e.g. shelf tab or foldout opened). */
+  refreshPreview() {
+    this._redrawPreviewFromStore();
+  }
+
   _drawPreview(gradient) {
     if (!this.preview || !this.previewCtx) return;
     const rect = this.preview.getBoundingClientRect();
+    // Skip while hidden (other shelf tab, collapsed foldout) — never bake a 1×1 fallback.
+    if (rect.width < 2 || rect.height < 2) return;
+
     const dpr = window.devicePixelRatio || 1;
     const width = Math.max(1, Math.round(rect.width * dpr));
     const height = Math.max(1, Math.round(rect.height * dpr));

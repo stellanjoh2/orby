@@ -5049,6 +5049,9 @@ export class SceneManager {
       if (heavy) {
         this.ui?.endLoadSpinner?.();
       }
+      // Heavy applies yield two rAFs before materials swap; the state-store wake from the
+      // preset click can paint and stop the idle loop while shaders are still stale.
+      this.requestRender();
     }
   }
 
@@ -5104,6 +5107,9 @@ export class SceneManager {
   /** Wake the idle-aware render loop, or paint once if the loop is not armed. */
   requestRender() {
     if (!this.isStudioReady) return;
+    // Offline export / capture preview — a live composer pass clears gradient capture pins
+    // (restoreAfterCapture) and drops the display-graded plate before readback.
+    if (this._capturePreviewInFlight || this._suppressResizeForExport) return;
     if (this.renderLoop?.isLoopActive?.()) {
       this.renderLoop.requestFrame();
       return;
@@ -5113,6 +5119,7 @@ export class SceneManager {
 
   render() {
     if (!this.isStudioReady || !this.renderer) return;
+    if (this._capturePreviewInFlight || this._suppressResizeForExport) return;
     if (this.unlitMode) {
       // Avoid `renderer.render()` to the MSAA canvas — use RenderPass-only composer instead.
       if (this.composer && this.postPipeline) {

@@ -11,7 +11,7 @@
                     </button>
                 </div>
                 <label class="slider-line">
-                  <span data-tooltip="Camera tilt angle">Tilt</span>
+                  <span data-tooltip="Camera roll — rotate the frame around the view axis (Dutch angle)">Roll</span>
                   <input
                     id="cameraTilt"
                     type="range"
@@ -233,7 +233,7 @@
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="isometric">
                   <div class="block-title has-toggle has-reset">
-                    <span data-tooltip="RTS isometric view — locks orbit; pan optional via Unlock. Zoom and focal length still work. Tilt and fisheye are disabled until turned off.">Isometric Camera</span>
+                    <span data-tooltip="RTS isometric view — locks orbit; pan optional via Unlock. Zoom and focal length still work. Roll and fisheye are disabled until turned off.">Isometric Camera</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button
                         class="block-reset-btn"
@@ -1588,6 +1588,39 @@
                       step="0.0001"
                     />
                     <span class="value" data-output="aberrationAmount">0.0006</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Radial smear along the color split — zoom-blur style streaks at the frame edges.">Blur</span>
+                    <input
+                      id="aberrationBlur"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="aberrationBlur">0.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="How quickly aberration ramps from sharp center to fringe edges. Higher = tighter center.">Edge</span>
+                    <input
+                      id="aberrationFalloff"
+                      type="range"
+                      min="0.5"
+                      max="3"
+                      value="1"
+                      step="0.05"
+                    />
+                    <span class="value" data-output="aberrationFalloff">1.00</span>
+                  </label>
+                  <label class="select-line">
+                    <span data-tooltip="Blur streak sample count — higher tiers smooth heavy smear with more GPU taps.">Quality</span>
+                    <select id="aberrationQuality" aria-label="Chromatic aberration quality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
                   </label>
                   </div>
                 </div>

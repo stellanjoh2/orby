@@ -60,6 +60,7 @@ import { normalizeExportSubtleSpinDegrees } from '../render/exportVideoMovements
 import {
   getExportVideoResolutionPixelLabel,
   normalizeExportVideoAspectRatio,
+  normalizeExportVideoFps,
   normalizeExportVideoResolution,
 } from '../render/exportVideoResolution.js';
 import { IMPORT_MESH_SMOOTHING_ENABLED } from '../import/stlNormalSmoothing.js';
@@ -1026,17 +1027,26 @@ export class MeshControls {
       });
     });
 
+    const syncExportFpsUi = () => {
+      const video = this.ui.exportSettings.video || {};
+      const fps = normalizeExportVideoFps(video.fps);
+      video.fps = fps;
+      document.querySelectorAll('[data-video-fps]').forEach((btn) => {
+        btn.classList.toggle('active', parseInt(btn.dataset.videoFps, 10) === fps);
+      });
+    };
+
     document.querySelectorAll('[data-video-fps]').forEach((button) => {
       button.addEventListener('click', () => {
         const fps = parseInt(button.dataset.videoFps, 10);
         if (fps !== 24 && fps !== 30 && fps !== 60) return;
         this.ui.exportSettings.video.fps = fps;
-        document.querySelectorAll('[data-video-fps]').forEach((btn) => {
-          btn.classList.toggle('active', btn === button);
-        });
+        syncExportFpsUi();
         notifyExportPreviewSettingsChanged();
       });
     });
+
+    syncExportFpsUi();
 
     const syncExportSpinUi = () => {
       const video = this.ui.exportSettings.video || {};
@@ -1164,6 +1174,7 @@ export class MeshControls {
 
     this.syncExportSettingsUi = () => {
       syncExportVideoResolutionUi();
+      syncExportFpsUi();
       syncExportMovementButtons();
       updatePngTransparentUi();
       updateMp4Ui();

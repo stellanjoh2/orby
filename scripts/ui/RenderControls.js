@@ -32,6 +32,7 @@ import {
   RENDER_LOOK_FILTER_MANIFEST,
   RENDER_PLAIN_MANIFEST,
 } from '../state/uiRenderControlManifest.js';
+import { normalizeAberrationQualityId } from '../render/chromaticAberration.js';
 
 const ANAMORPHIC_BLOOM_INPUT_KEYS = [
   'anamorphicBloomEnabled',
@@ -317,11 +318,20 @@ export class RenderControls {
         this.stateStore.set('aberration.enabled', enabled);
       });
       this.ui.setEffectControlsDisabled(
-        ['aberrationAmount'],
+        ['aberrationAmount', 'aberrationBlur', 'aberrationFalloff', 'aberrationQuality'],
         !enabled,
       );
       emitAberration();
     });
+    if (this.ui.inputs.aberrationQuality) {
+      this.ui.inputs.aberrationQuality.addEventListener('change', (event) => {
+        const quality = normalizeAberrationQualityId(event.target.value);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('aberration.quality', quality);
+        });
+        emitAberration();
+      });
+    }
 
     const emitAmbientOcclusion = () =>
       this.eventBus.emit('render:ambient-occlusion', this.stateStore.getState().ambientOcclusion);
@@ -964,9 +974,21 @@ export class RenderControls {
     // Aberration
     this.ui.inputs.aberrationAmount.value = state.aberration.amount;
     this.helpers.updateValueLabel('aberrationAmount', state.aberration.amount, 'decimal', 4);
+    if (this.ui.inputs.aberrationBlur) {
+      this.ui.inputs.aberrationBlur.value = state.aberration.blur ?? 0;
+      this.helpers.updateValueLabel('aberrationBlur', state.aberration.blur ?? 0, 'decimal', 2);
+    }
+    if (this.ui.inputs.aberrationFalloff) {
+      this.ui.inputs.aberrationFalloff.value = state.aberration.falloff ?? 1;
+      this.helpers.updateValueLabel('aberrationFalloff', state.aberration.falloff ?? 1, 'decimal', 2);
+    }
+    if (this.ui.inputs.aberrationQuality) {
+      const q = normalizeAberrationQualityId(state.aberration.quality);
+      this.ui.inputs.aberrationQuality.value = q;
+    }
     this.ui.inputs.toggleAberration.checked = !!state.aberration.enabled;
     this.ui.setEffectControlsDisabled(
-      ['aberrationAmount'],
+      ['aberrationAmount', 'aberrationBlur', 'aberrationFalloff', 'aberrationQuality'],
       !state.aberration.enabled,
     );
 

@@ -113,6 +113,11 @@ export class GlobalControls {
         revealShelfPanelHeadline(
           document.querySelector(`.panel-header-title[data-header="${target}"]`),
         );
+        if (target === 'studio') {
+          requestAnimationFrame(() => {
+            this.ui.backgroundGradientControls?.refreshPreview?.();
+          });
+        }
       });
     });
   }
@@ -605,6 +610,7 @@ export class GlobalControls {
         this.stateStore.set('hdriBackground', next);
         this.eventBus.emit('studio:hdri-background', next);
         this.ui.syncHdriBackgroundCheckboxes?.(next);
+        this.ui.updateHdriBackgroundFallbackVisibility?.();
       }
 
       // X - Cycle through wireframe modes

@@ -81,7 +81,11 @@ export class BackgroundGradientController {
    */
   applyIfActive() {
     if (!this.isActive()) return false;
-    this.syncToDrawingBuffer(undefined, undefined, { forceRedraw: true });
+    if (this._captureBlitActive && this._captureWidth > 0 && this._captureHeight > 0) {
+      this.syncToDrawingBuffer(this._captureWidth, this._captureHeight, { forceRedraw: true });
+    } else {
+      this.syncToDrawingBuffer(undefined, undefined, { forceRedraw: true });
+    }
     // Gradient is drawn via MeshglRenderPass fullscreen blit — not scene.background
     // (Three background can render into a partial GL viewport on Ultra / bloom passes).
     this.scene.background = null;
@@ -109,6 +113,13 @@ export class BackgroundGradientController {
     if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
       w = Math.max(1, Math.floor(width));
       h = Math.max(1, Math.floor(height));
+    } else if (
+      this._captureBlitActive
+      && this._captureWidth > 0
+      && this._captureHeight > 0
+    ) {
+      w = Math.max(1, Math.floor(this._captureWidth));
+      h = Math.max(1, Math.floor(this._captureHeight));
     } else {
       ({ width: w, height: h } = this._getDrawingBufferPixelSize());
     }
@@ -156,16 +167,17 @@ export class BackgroundGradientController {
    * @param {THREE.WebGLRenderer} renderer
    */
   pinCaptureViewport(renderer) {
-    if (!renderer) return;
-    resetRendererFullViewport(renderer);
+    if (!renderer || this._captureWidth <= 0 || this._captureHeight <= 0) return;
+    ensureExportCapturePixelRatio({ renderer, composer: null });
+    pinRenderTargetPhysicalViewport(renderer, this._captureWidth, this._captureHeight);
   }
 
   /** @returns {Uint8ClampedArray | null} top-down RGBA for capture composite */
   getCaptureGradientRgba() {
-    if (this._displayGradedCaptureRgba) {
-      return this._displayGradedCaptureRgba;
+    if (!this.isActive() || this._captureWidth <= 0 || this._captureHeight <= 0) {
+      return null;
     }
-    return this.getRawCaptureGradientRgba();
+    return this.getRawCaptureGradientRgba(this._captureWidth, this._captureHeight);
   }
 
   /** @param {Uint8ClampedArray | null} rgba */
@@ -260,6 +272,7 @@ export class BackgroundGradientController {
    */
   prepareForCapture(ctx = {}) {
     if (ctx.transparent || !this.isActive()) return;
+    this._displayGradedCaptureRgba = null;
     let w;
     let h;
     if (

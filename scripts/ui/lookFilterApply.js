@@ -83,7 +83,7 @@ export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
     );
     ui.setEffectControlsDisabled(['grainIntensity', 'grainScale'], !b.grain.enabled);
     ui.setEffectControlsDisabled(
-      ['aberrationAmount'],
+      ['aberrationAmount', 'aberrationBlur', 'aberrationFalloff', 'aberrationQuality'],
       !b.aberration.enabled,
     );
     ui.setEffectControlsDisabled(

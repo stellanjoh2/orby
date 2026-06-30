@@ -9,6 +9,7 @@ import {
 } from '../render/exportVideoMovements.js';
 import {
   normalizeExportVideoAspectRatio,
+  normalizeExportVideoFps,
   normalizeExportVideoResolution,
 } from '../render/exportVideoResolution.js';
 
@@ -122,8 +123,7 @@ export function applySavedExportSettings(target, saved) {
   target.video.aspectRatio = normalizeExportVideoAspectRatio(video.aspectRatio);
 
   if (video.fps !== undefined) {
-    const fps = Number(video.fps);
-    if (fps === 24 || fps === 30 || fps === 60) target.video.fps = fps;
+    target.video.fps = normalizeExportVideoFps(Number(video.fps));
   }
   target.video.resolution = normalizeExportVideoResolution(video.resolution);
 

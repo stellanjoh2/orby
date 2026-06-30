@@ -725,7 +725,7 @@ export class ResetControls {
       this.ui.setEffectControlsDisabled(['grainIntensity', 'grainScale'], !defaults.grain.enabled);
       this.eventBus.emit('render:aberration', defaults.aberration);
       this.ui.setEffectControlsDisabled(
-        ['aberrationAmount'],
+        ['aberrationAmount', 'aberrationBlur', 'aberrationFalloff', 'aberrationQuality'],
         !defaults.aberration.enabled,
       );
       this.eventBus.emit('render:ambient-occlusion', defaults.ambientOcclusion);
@@ -1161,7 +1161,7 @@ export class ResetControls {
             });
             this.eventBus.emit('render:aberration', defaults.aberration);
             this.ui.setEffectControlsDisabled(
-              ['aberrationAmount'],
+              ['aberrationAmount', 'aberrationBlur', 'aberrationFalloff', 'aberrationQuality'],
               !defaults.aberration.enabled,
             );
             this.ui.syncUIFromState();
@@ -1207,7 +1207,7 @@ export class ResetControls {
             break;
 
           case 'camera':
-            // Reset basic camera settings (Tilt, Exposure, Auto Exposure, orbit, vignette)
+            // Reset basic camera settings (Roll, Exposure, Auto Exposure, orbit, vignette)
             this.stateStore.batch(() => {
               this.stateStore.set('lookFilterPreset', 'custom');
               this.stateStore.set('camera.tilt', defaults.camera.tilt ?? 0);

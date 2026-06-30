@@ -9,6 +9,10 @@ import {
   normalizeExportSpinSettings,
   normalizeExportHdriRotationSettings,
 } from './exportVideoMovements.js';
+import {
+  DEFAULT_EXPORT_VIDEO_FPS,
+  normalizeExportVideoFps,
+} from './exportVideoResolution.js';
 
 /**
  * Real-time viewport preview of export camera/mesh movement.
@@ -73,7 +77,7 @@ export class ExportMovementPreview {
     this._sessionDrivesEngaged = false;
     this._elapsed = 0;
     this._durationSec = 5;
-    this._fps = 24;
+    this._fps = DEFAULT_EXPORT_VIDEO_FPS;
     this._spinSettings = normalizeExportSpinSettings();
     this._hdriRotationSettings = normalizeExportHdriRotationSettings();
     this._startRotationY = 0;
@@ -136,7 +140,7 @@ export class ExportMovementPreview {
     const durationSec = allowedDurations.includes(settings?.durationSec)
       ? settings.durationSec
       : 5;
-    const fps = settings?.fps === 30 || settings?.fps === 60 ? settings.fps : 24;
+    const fps = normalizeExportVideoFps(settings?.fps);
     return JSON.stringify({
       movements,
       spinSettings,
@@ -171,7 +175,7 @@ export class ExportMovementPreview {
     this._durationSec = allowedDurations.includes(settings?.durationSec)
       ? settings.durationSec
       : 5;
-    this._fps = settings?.fps === 30 || settings?.fps === 60 ? settings.fps : 24;
+    this._fps = normalizeExportVideoFps(settings?.fps);
     this._spinSettings = normalizeExportSpinSettings(settings);
     this._hdriRotationSettings = normalizeExportHdriRotationSettings(settings);
     this._movements = normalizeExportVideoMovements(settings);

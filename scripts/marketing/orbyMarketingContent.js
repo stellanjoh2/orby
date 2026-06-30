@@ -140,7 +140,7 @@ export const MARKETING_SECTIONS = [
     lede:
       'Orbit, pan, and zoom with focus shortcuts, auto-orbit presentations, exposure tools, and a live histogram when you need precision.',
     bullets: [
-      'FOV, tilt, and camera presets for repeatable shots',
+      'FOV, roll, and camera presets for repeatable shots',
       'Composition grid and 21∶9 letterbox for cinematic framing',
       'Auto exposure plus manual grade stack in one tab',
     ],

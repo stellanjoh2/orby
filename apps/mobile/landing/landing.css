@@ -53,7 +53,8 @@ html.orby-mobile-gate body {
   font-family: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
-  scroll-snap-type: y mandatory;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   /* Match html.mobile-landing copy + chrome insets — not desktop --orby-home-padding-x */
   --orby-gate-inset-x: clamp(1.25rem, 5vw, 1.5rem);
   --orby-gate-edge-x: clamp(16px, 5vw, 24px);
@@ -92,8 +93,6 @@ html.orby-mobile-gate body {
   height: 100lvh;
   isolation: isolate;
   overflow: hidden;
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
   padding:
     max(env(safe-area-inset-top, 0px), 12px)
     var(--orby-gate-inset-x)
@@ -329,8 +328,6 @@ html.orby-mobile-gate body {
   height: 100vh;
   height: 100dvh;
   height: 100lvh;
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
   padding:
     max(env(safe-area-inset-top, 0px), 12px)
     0

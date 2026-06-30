@@ -126,7 +126,7 @@
                   aria-hidden="true"
                 >
                 <p class="export-format-sub">
-                  Combine object turntable, camera orbit/dolly/tilt, and optional HDRI rotation. Full and subtle spins apply only when Turntable or Orbit is enabled — they rotate the mesh or camera, not the environment.
+                  Combine object turntable, camera orbit/dolly/roll, and optional HDRI rotation. Full and subtle spins apply only when Turntable or Orbit is enabled — they rotate the mesh or camera, not the environment.
                 </p>
                 <p class="export-format-sub export-format-warning">
                   MP4 is a real-time viewport capture, not an offline render. Heavier scenes may drop frames or fail—best for previews and lighter setups. For dependable output, export a PNG sequence.
@@ -143,14 +143,14 @@
                       <button type="button" data-video-movement="zoom-out" class="export-option-btn" data-tooltip="Camera: dolly away from the orbit target over the export length">ZOOM OUT</button>
                     </div>
                     <div class="export-button-group">
-                      <button type="button" data-video-movement="tilt-left" class="export-option-btn" data-tooltip="Camera: roll left (counter-clockwise) over the export length">TILT LEFT</button>
-                      <button type="button" data-video-movement="tilt-right" class="export-option-btn" data-tooltip="Camera: roll right (clockwise) over the export length">TILT RIGHT</button>
+                      <button type="button" data-video-movement="tilt-left" class="export-option-btn" data-tooltip="Camera: roll left (counter-clockwise) over the export length">ROLL LEFT</button>
+                      <button type="button" data-video-movement="tilt-right" class="export-option-btn" data-tooltip="Camera: roll right (clockwise) over the export length">ROLL RIGHT</button>
                     </div>
                   </div>
                   <div class="export-option-group">
                     <label class="export-label">Full Spins (360°) · Object &amp; camera</label>
                     <div class="export-button-group export-button-group--triple">
-                      <button type="button" data-video-spins="0" class="export-option-btn" data-tooltip="No full 360° laps — use subtle spins below, HDRI rotation, or zoom/tilt only">0</button>
+                      <button type="button" data-video-spins="0" class="export-option-btn" data-tooltip="No full 360° laps — use subtle spins below, HDRI rotation, or zoom/roll only">0</button>
                       <button type="button" data-video-spins="1" class="export-option-btn active" data-tooltip="One full 360° — mesh (Turntable) or camera (Orbit), depending on which movement is enabled">1</button>
                       <button type="button" data-video-spins="2" class="export-option-btn" data-tooltip="Two full 360° laps over the same duration — mesh or camera">2</button>
                     </div>
@@ -184,7 +184,7 @@
                       <span class="value" data-output="exportZoomDistance">1.50m</span>
                     </label>
                     <label id="exportTiltAngleSettings" class="slider-line">
-                      <span data-tooltip="Camera: Dutch roll angle applied over the export length (degrees).">Roll angle</span>
+                      <span data-tooltip="Camera: roll angle applied over the export length (degrees).">Roll angle</span>
                       <input
                         id="exportTiltAngle"
                         type="range"
@@ -278,7 +278,7 @@
                       type="button"
                       id="exportVideoCameraSaveButton"
                       class="accent-action-btn export-video-camera-btn"
-                      data-tooltip="Remember this camera framing for this session (position, target, and tilt)"
+                      data-tooltip="Remember this camera framing for this session (position, target, and roll)"
                     >
                       <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
                       <span>Save Camera Position</span>
@@ -355,8 +355,8 @@
                   <div class="export-option-group">
                     <label class="export-label">FPS</label>
                     <div class="export-button-group export-button-group--triple">
-                      <button data-video-fps="24" class="export-option-btn active" data-tooltip="Cinematic motion">24</button>
-                      <button data-video-fps="30" class="export-option-btn" data-tooltip="Smoother standard video">30</button>
+                      <button data-video-fps="24" class="export-option-btn" data-tooltip="Cinematic motion">24</button>
+                      <button data-video-fps="30" class="export-option-btn active" data-tooltip="Smoother standard video">30</button>
                       <button data-video-fps="60" class="export-option-btn" data-tooltip="Very smooth motion, larger files">60</button>
                     </div>
                   </div>

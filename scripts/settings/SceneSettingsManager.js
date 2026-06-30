@@ -1305,7 +1305,7 @@ export class SceneSettingsManager {
         this.eventBus.emit('render:aberration', ab);
         if (this.uiHelper?.setEffectControlsDisabled) {
           this.uiHelper.setEffectControlsDisabled(
-            ['aberrationAmount'],
+            ['aberrationAmount', 'aberrationBlur', 'aberrationFalloff', 'aberrationQuality'],
             !payload.aberration.enabled,
           );
         }

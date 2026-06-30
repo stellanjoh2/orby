@@ -258,13 +258,6 @@ export class ComposerLifecycle {
       this.applyCreativeLookBloomSuppression();
     }
     try {
-      if (this.composer?.renderToScreen !== false) {
-        this.composer?.clearExportCaptureViewportPin?.();
-        const gradientCtrl = this.backgroundController?.gradientController;
-        if (gradientCtrl?.shouldBlitForCapture?.()) {
-          gradientCtrl.restoreAfterCapture();
-        }
-      }
       this.ensureComposerBuffersMatchRenderer();
       const gradient = this.backgroundController?.gradientController;
       const captureBlit = gradient?.shouldBlitForCapture?.() === true;
@@ -273,11 +266,16 @@ export class ComposerLifecycle {
           renderer: this.renderer,
           composer: this.composer,
         });
+        gradient.pinCaptureViewport(this.renderer);
+      } else {
+        if (this.composer?.renderToScreen !== false) {
+          this.composer?.clearExportCaptureViewportPin?.();
+        }
+        this.resetRendererViewportToCanvas();
       }
-      this.resetRendererViewportToCanvas();
       if (!transparent) {
         if (captureBlit) {
-          const { width: cw, height: ch } = getViewportBackingStorePixels(this.renderer);
+          const { width: cw, height: ch } = gradient.getCapturePixelSize();
           gradient.syncToDrawingBuffer(cw, ch, { forceRedraw: true });
         } else {
           const db = getViewportBackingStorePixels(this.renderer);
@@ -337,11 +335,9 @@ export class ComposerLifecycle {
         this.postPipeline?.releaseCreativeLookVectrex?.();
       }
       const gradient = this.backgroundController?.gradientController;
-      const exportPin = this.composer?._exportCaptureViewportPin;
       // Offline capture keeps gradient pinned until readback / session restore (renderToScreen false).
       if (
         gradient?.shouldBlitForCapture?.()
-        && !exportPin
         && this.composer?.renderToScreen !== false
       ) {
         gradient.restoreAfterCapture();

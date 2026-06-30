@@ -196,6 +196,26 @@ export const RENDER_LOOK_FILTER_MANIFEST = [
     labelType: 'decimal',
     labelDecimals: 4,
   },
+  {
+    inputId: 'aberrationBlur',
+    statePath: 'aberration.blur',
+    event: 'render:aberration',
+    emitSlice: 'aberration',
+    lookFilterTouch: true,
+    labelKey: 'aberrationBlur',
+    labelType: 'decimal',
+    labelDecimals: 2,
+  },
+  {
+    inputId: 'aberrationFalloff',
+    statePath: 'aberration.falloff',
+    event: 'render:aberration',
+    emitSlice: 'aberration',
+    lookFilterTouch: true,
+    labelKey: 'aberrationFalloff',
+    labelType: 'decimal',
+    labelDecimals: 2,
+  },
   // Ambient occlusion (toggle + quality stay inline)
   {
     inputId: 'ambientOcclusionIntensity',

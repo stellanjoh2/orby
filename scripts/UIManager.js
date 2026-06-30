@@ -6,6 +6,7 @@ import {
 } from './ui/effectFoldouts.js';
 import { applyCreativeLookPostFxUiBlocks, bindShaderLabBlockedClickHints } from './ui/creativeLookPostFxBlocked.js';
 import { getImageExportFormat, normalizeImageExportFormat } from './render/imageExportFormats.js';
+import { DEFAULT_EXPORT_VIDEO_FPS } from './render/exportVideoResolution.js';
 import {
   applySavedExportSettings,
   serializeExportSettings,
@@ -167,6 +168,9 @@ export class UIManager {
         this.cacheDom();
         this._initStudioUi();
         this._studioUiReady = true;
+        // _initStudioUi's initial syncControls() runs while _studioUiReady is still false
+        // (early return) — foldouts / background panel visibility never hydrate otherwise.
+        this.syncControls(this.stateStore.getState());
         window.orby?.ensureGamepad?.();
       })
       .finally(() => {
@@ -639,6 +643,9 @@ export class UIManager {
       grainScale: q('#grainScale'),
       toggleGrain: q('#toggleGrain'),
       aberrationAmount: q('#aberrationAmount'),
+      aberrationBlur: q('#aberrationBlur'),
+      aberrationFalloff: q('#aberrationFalloff'),
+      aberrationQuality: q('#aberrationQuality'),
       toggleAberration: q('#toggleAberration'),
       toggleAmbientOcclusion: q('#toggleAmbientOcclusion'),
       ambientOcclusionIntensity: q('#ambientOcclusionIntensity'),
@@ -809,7 +816,7 @@ export class UIManager {
         subtleSpinDegrees: 0,
         spinDirection: 'forward',
         hdriRotationDegrees: 0,
-        fps: 24,
+        fps: DEFAULT_EXPORT_VIDEO_FPS,
         resolution: '1080p',
         aspectRatio: '16:9',
         mp4Quality: 'medium',
@@ -1719,7 +1726,7 @@ export class UIManager {
         this.stateStore.set('aberration', ab);
         this.eventBus.emit('render:aberration', ab);
         this.setEffectControlsDisabled(
-          ['aberrationAmount'],
+          ['aberrationAmount', 'aberrationBlur', 'aberrationFalloff', 'aberrationQuality'],
           !payload.aberration.enabled,
         );
       }
@@ -2379,7 +2386,7 @@ export class UIManager {
       format: 'png',
     };
     const durationSec = video.durationSec ?? 5;
-    const fps = video.fps ?? 24;
+    const fps = video.fps ?? DEFAULT_EXPORT_VIDEO_FPS;
     const totalFrames = Math.max(2, Math.round(durationSec * fps));
 
     const sections = buildOfflineExportOverlaySummary({
@@ -2921,7 +2928,12 @@ export class UIManager {
     );
 
     applyEffectFoldouts(currentState, (key, open) => this.setEffectFoldoutOpen(key, open));
-    applyStudioFoldouts(currentState, (key, open) => this.setEffectFoldoutOpen(key, open));
+    applyStudioFoldouts(currentState, (key, open) => {
+      this.setEffectFoldoutOpen(key, open);
+      if (key === 'background-gradient' && open) {
+        requestAnimationFrame(() => this.backgroundGradientControls?.refreshPreview?.());
+      }
+    });
     applyMeshFoldouts(currentState, (key, open) => this.setEffectFoldoutOpen(key, open));
 
     this.updateHdriBackgroundFallbackVisibility(currentState);

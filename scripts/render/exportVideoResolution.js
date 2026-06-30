@@ -1,5 +1,7 @@
 /** Landscape (16∶9) vs portrait (9∶16) video export framing. */
 
+export const DEFAULT_EXPORT_VIDEO_FPS = 30;
+
 export const EXPORT_VIDEO_ASPECT_LANDSCAPE = '16:9';
 export const EXPORT_VIDEO_ASPECT_PORTRAIT = '9:16';
 
@@ -30,6 +32,16 @@ export function normalizeExportVideoAspectRatio(_value) {
  */
 export function normalizeExportVideoResolution(value) {
   return value === '1440p' || value === '2160p' ? value : '1080p';
+}
+
+/**
+ * @param {unknown} value
+ * @returns {24 | 30 | 60}
+ */
+export function normalizeExportVideoFps(value) {
+  return value === 24 || value === 30 || value === 60
+    ? value
+    : DEFAULT_EXPORT_VIDEO_FPS;
 }
 
 /**

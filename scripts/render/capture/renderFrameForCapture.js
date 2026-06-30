@@ -1,12 +1,10 @@
 import { createCaptureContext } from './captureContext.js';
 import { prepareCaptureFeatures } from './captureFeatureHooks.js';
 import {
-  clearComposerRenderTargets,
   composerRenderTargetsMatchPixels,
   ensureExportCapturePixelRatio,
   forceExportCaptureFramebuffer,
 } from './forceExportCaptureFramebuffer.js';
-import { renderDisplayGradedGradientPlate } from './captureDisplayGradedGradient.js';
 import {
   pinLensDistortionForExportCapture,
   unpinLensDistortionForExportCapture,
@@ -98,25 +96,6 @@ export function renderFrameForCapture(deps) {
       { backgroundController, environmentController, creativeLookCaptureDeps },
       ctx,
     );
-  }
-
-  if (
-    backgroundController?.gradientController?.shouldCompositeGradientOnReadback?.() === true
-    && !ctx.transparent
-  ) {
-    const displayGraded = renderDisplayGradedGradientPlate(
-      {
-        renderer,
-        composer,
-        postPipeline: imageExporter?.postPipeline,
-        imageExporter,
-        backgroundController,
-      },
-      captureW,
-      captureH,
-    );
-    backgroundController.gradientController.setDisplayGradedCapturePlate(displayGraded);
-    clearComposerRenderTargets(renderer, composer);
   }
 
   ensureExportCapturePixelRatio({ renderer, composer });

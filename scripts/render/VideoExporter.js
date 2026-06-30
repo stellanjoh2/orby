@@ -22,6 +22,7 @@ import {
   getExportVideoResolutionSize,
   isPortraitExportVideoAspect,
   normalizeExportVideoAspectRatio,
+  normalizeExportVideoFps,
   normalizeExportVideoResolution,
 } from './exportVideoResolution.js';
 import { renderFrameForCaptureWithPins } from './capture/renderFrameForCapture.js';
@@ -195,7 +196,7 @@ export class VideoExporter {
     const durationSec = allowedDurations.includes(settings?.durationSec)
       ? settings.durationSec
       : 5;
-    const fps = settings?.fps === 30 || settings?.fps === 60 ? settings.fps : 24;
+    const fps = normalizeExportVideoFps(settings?.fps);
     const totalFrames = Math.max(2, Math.round(durationSec * fps));
     const state = this.stateStore.getState();
     const startRotationY = Number.isFinite(state.rotationY)

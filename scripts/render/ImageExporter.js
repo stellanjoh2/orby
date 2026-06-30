@@ -189,7 +189,10 @@ export class ImageExporter {
     const r = this.renderer;
     r.setRenderTarget(null);
     resetRendererFullViewport(r);
-    this.backgroundController?.gradientController?.applyIfActive?.();
+    const gradientCtrl = this.backgroundController?.gradientController;
+    if (gradientCtrl?.shouldCompositeGradientOnReadback?.() !== true) {
+      gradientCtrl?.applyIfActive?.();
+    }
   }
 
   /**

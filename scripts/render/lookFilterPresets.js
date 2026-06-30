@@ -79,7 +79,7 @@ export const LOOK_FILTER_CATALOG = [
  * Only include fields that differ from defaults; nested objects are shallow-merged with defaults for that key.
  *
  * Film grain: `grain.intensity` is the stored value (UI slider 0–5 maps ×0.15, so 0.75 = slider max).
- * Chromatic aberration: `aberration` merges with defaults; set `enabled: false` for none. When on, `amount` is the radial channel-separation magnitude (0..0.02 typical).
+ * Chromatic aberration: `aberration` merges with defaults; set `enabled: false` for none. When on, `amount` is the radial channel-separation magnitude (0..0.02 typical); `blur` adds radial streak smear (0..1); `falloff` controls edge ramp (0.5..3, default 1); `quality` sets blur sample count (low..ultra).
  */
 const PRESET_SPECS = {
   studio: {

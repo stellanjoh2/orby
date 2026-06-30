@@ -1014,5 +1014,7 @@ export {
   defaultAberration,
   isChromaticAberrationActive,
   mergeAberrationSettings,
+  normalizeAberrationQualityId,
+  resolveAberrationQualityTier,
 } from '../render/chromaticAberration.js';
 

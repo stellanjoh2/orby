@@ -11,7 +11,9 @@ import {
 import {
   getExportVideoResolutionSize,
   getExportVideoResolutionSummaryLabel,
+  DEFAULT_EXPORT_VIDEO_FPS,
   normalizeExportVideoAspectRatio,
+  normalizeExportVideoFps,
   normalizeExportVideoResolution,
 } from './exportVideoResolution.js';
 
@@ -29,7 +31,7 @@ export const OFFLINE_EXPORT_OVERLAY_PREVIEW_JOB = {
   fovOffset: 0,
   pitchOffset: 0,
   durationSec: 5,
-  fps: 24,
+  fps: DEFAULT_EXPORT_VIDEO_FPS,
   resolution: '1080p',
   aspectRatio: '16:9',
   spins: 1,
@@ -66,8 +68,8 @@ function describeCameraMovement(movements) {
   if (movements.orbit) parts.push('Camera orbit');
   if (movements.zoomIn) parts.push(`Dolly in (${movements.zoomDistance}m)`);
   if (movements.zoomOut) parts.push(`Dolly out (${movements.zoomDistance}m)`);
-  if (movements.tiltLeft) parts.push(`Tilt left (${movements.tiltAngle}°)`);
-  if (movements.tiltRight) parts.push(`Tilt right (${movements.tiltAngle}°)`);
+  if (movements.tiltLeft) parts.push(`Roll left (${movements.tiltAngle}°)`);
+  if (movements.tiltRight) parts.push(`Roll right (${movements.tiltAngle}°)`);
   if (movements.fovOffset) {
     const sign = movements.fovOffset > 0 ? '+' : '';
     parts.push(`FOV ${sign}${movements.fovOffset}°`);
@@ -145,7 +147,7 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
   const resolution = normalizeExportVideoResolution(exportJob.resolution);
   const aspectRatio = normalizeExportVideoAspectRatio(exportJob.aspectRatio);
   const durationSec = exportJob.durationSec ?? 5;
-  const fps = exportJob.fps ?? 24;
+  const fps = normalizeExportVideoFps(exportJob.fps);
   const totalFrames = Math.max(2, Math.round(Number(durationSec) * Number(fps)));
   const defaultSize = getExportVideoResolutionSize(resolution, aspectRatio);
   const sequenceFolderName =

@@ -1,3 +1,5 @@
+import { DEFAULT_EXPORT_VIDEO_FPS } from '../render/exportVideoResolution.js';
+
 /**
  * "Blank canvas" preset — the exact scene snapshot applied when the homepage
  * "Blank canvas" link is used. A truly minimal void: HDRI lighting on but its
@@ -323,6 +325,9 @@ export function createBlankCanvasPreset() {
     aberration: {
       enabled: false,
       amount: 0.0006,
+      blur: 0,
+      falloff: 1,
+      quality: 'medium',
     },
     ambientOcclusion: {
       enabled: false,
@@ -459,7 +464,7 @@ export function createBlankCanvasPreset() {
         subtleSpinDegrees: 0,
         spinDirection: 'forward',
         hdriRotationDegrees: 0,
-        fps: 24,
+        fps: DEFAULT_EXPORT_VIDEO_FPS,
         resolution: '1080p',
         aspectRatio: '16:9',
         mp4Quality: 'medium',
