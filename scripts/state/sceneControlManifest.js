@@ -267,6 +267,7 @@ export const SCENE_CONTROL_MANIFEST = [
   { event: 'lights:height', apply: 'setLightsHeight' },
   { event: 'lights:auto-rotate', apply: 'setLightsAutoRotate' },
   { event: 'lights:show-indicators', apply: 'setShowLightIndicators' },
+  { event: 'lights:show-falloff-indicators', apply: 'setShowLightFalloffIndicators' },
   { event: 'lights:cast-shadows', apply: 'setLightsCastShadows' },
   { event: 'lights:shadow-quality', apply: 'setLightsShadowQuality' },
   { event: 'lights:shadow-softness', apply: 'setLightsShadowSoftness' },

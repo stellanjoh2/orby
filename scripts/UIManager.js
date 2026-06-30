@@ -6,6 +6,7 @@ import {
 } from './ui/effectFoldouts.js';
 import { applyCreativeLookPostFxUiBlocks, bindShaderLabBlockedClickHints } from './ui/creativeLookPostFxBlocked.js';
 import { getImageExportFormat, normalizeImageExportFormat } from './render/imageExportFormats.js';
+import { normalizeTransparentFraming } from './render/imageExportFraming.js';
 import { DEFAULT_EXPORT_VIDEO_FPS } from './render/exportVideoResolution.js';
 import {
   applySavedExportSettings,
@@ -590,6 +591,7 @@ export class UIManager {
       lightsHeight: q('#lightsHeight'),
       lightsAutoRotate: q('#lightsAutoRotate'),
       showLightIndicators: q('#showLightIndicators'),
+      showLightFalloffIndicators: q('#showLightFalloffIndicators'),
       lightsCastShadows: q('#lightsCastShadows'),
       lightsShadowQuality: q('#lightsShadowQuality'),
       lightsShadowSoftness: q('#lightsShadowSoftness'),
@@ -721,7 +723,9 @@ export class UIManager {
       exportVideoSectionOpen: q('#exportVideoSectionOpen'),
       exportSvgColorDetail: q('#exportSvgColorDetail'),
       exportImageTransparentSettings: q('#exportImageTransparentSettings'),
+      exportImageTransparentFraming: q('#exportImageTransparentFraming'),
       exportPngTransparentSettings: q('#exportPngTransparentSettings'),
+      exportVideoTransparentFraming: q('#exportVideoTransparentFraming'),
       exportPngFolderSettings: q('#exportPngFolderSettings'),
       exportPngFolderLabel: q('#exportPngFolderLabel'),
       exportMp4Settings: q('#exportMp4Settings'),
@@ -780,6 +784,7 @@ export class UIManager {
     this.exportSettings = {
       format: 'png',
       transparent: true,
+      transparentFraming: 'crop',
       size: 2,
       sections: {
         image: false,
@@ -791,7 +796,7 @@ export class UIManager {
       watermark: {
         logo: 'orby',
         placement: 'left',
-        credit: 'Lorem Ipsu',
+        credit: '',
         creditEnabled: false,
         logoScale: 100,
         creditScale: 100,
@@ -2577,6 +2582,31 @@ export class UIManager {
     }
   }
 
+  /** Framing row(s) for transparent still + video PNG — shared `transparentFraming` state. */
+  syncTransparentFramingUi() {
+    const framing = normalizeTransparentFraming(this.exportSettings.transparentFraming);
+    const syncWrap = (wrap, enabled) => {
+      if (!wrap) return;
+      wrap.classList.toggle('is-muted', !enabled);
+      wrap.querySelectorAll('[data-export-transparent-framing]').forEach((btn) => {
+        if ('disabled' in btn) btn.disabled = !enabled;
+        btn.classList.toggle('is-disabled', !enabled);
+        btn.classList.toggle('active', btn.dataset.exportTransparentFraming === framing);
+      });
+    };
+
+    const imageFormat = getImageExportFormat(
+      normalizeImageExportFormat(this.exportSettings.format),
+    );
+    const imageEnabled = imageFormat.supportsAlpha && !!this.exportSettings.transparent;
+    syncWrap(this.inputs.exportImageTransparentFraming, imageEnabled);
+
+    const videoEnabled =
+      this.exportSettings.video?.format === 'png'
+      && !!this.exportSettings.video?.movTransparent;
+    syncWrap(this.inputs.exportVideoTransparentFraming, videoEnabled);
+  }
+
   /** Image panel — format label, transparency mute (JPEG has no alpha). */
   syncImageExportUi() {
     const formatId = normalizeImageExportFormat(this.exportSettings.format);
@@ -2598,6 +2628,7 @@ export class UIManager {
         btn.classList.toggle('active', btn.dataset.exportTransparent === 'false');
       });
     }
+    this.syncTransparentFramingUi();
     if (exportBtn) {
       const label = exportBtn.querySelector('.export-image-btn-label');
       if (label) {
@@ -2660,7 +2691,7 @@ export class UIManager {
   /**
    * Show last offline capture preview tile (export resolution, not live viewport).
    * @param {string} objectUrl
-   * @param {{ width?: number, height?: number, frameIndex?: number, totalFrames?: number }} [meta]
+   * @param {{ width?: number, height?: number, frameIndex?: number, totalFrames?: number, transparent?: boolean, cropped?: boolean }} [meta]
    */
   showExportCapturePreviewThumb(objectUrl, meta = {}) {
     const wrap = this.dom.exportCapturePreviewThumbWrap;
@@ -2678,12 +2709,22 @@ export class UIManager {
     }
     empty?.setAttribute('hidden', '');
     if (label && meta.width && meta.height) {
-      const frame = Number.isFinite(meta.frameIndex) ? meta.frameIndex + 1 : 1;
-      const total = meta.totalFrames ?? '?';
-      const alphaNote = meta.transparent ? ' · transparent' : '';
-      label.textContent = `Export capture ${meta.width}×${meta.height}${alphaNote} · frame ${frame}/${total}`;
+      label.textContent = this._formatExportCapturePreviewLabel(meta);
     }
     wrap?.removeAttribute('hidden');
+  }
+
+  /** @param {{ width?: number, height?: number, frameIndex?: number, totalFrames?: number, transparent?: boolean, cropped?: boolean }} meta */
+  _formatExportCapturePreviewLabel(meta) {
+    const frame = Number.isFinite(meta.frameIndex) ? meta.frameIndex + 1 : 1;
+    const total = meta.totalFrames ?? '?';
+    const w = meta.width;
+    const h = meta.height;
+    if (meta.transparent && meta.cropped) {
+      return `Export capture ~${w}×${h} cropped · transparent · frame ${frame}/${total}`;
+    }
+    const alphaNote = meta.transparent ? ' · transparent' : '';
+    return `Export capture ${w}×${h}${alphaNote} · frame ${frame}/${total}`;
   }
 
   syncAnimationDisplayFps(fps) {

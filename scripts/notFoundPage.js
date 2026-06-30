@@ -166,6 +166,7 @@ const NOT_FOUND_PRESET = {
   lightsHeight: 5,
   lightsAutoRotate: false,
   showLightIndicators: false,
+  showLightFalloffIndicators: false,
   lightsCastShadows: false,
   lightsShadowQuality: 'medium',
   lightsShadowSoftness: DEFAULT_LIGHTS_SHADOW_SOFTNESS,

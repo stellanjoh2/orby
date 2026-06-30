@@ -808,6 +808,16 @@ export class MeshControls {
         document.querySelectorAll('[data-export-transparent]').forEach((btn) => {
           btn.classList.toggle('active', btn === button);
         });
+        this.ui.syncImageExportUi();
+      });
+    });
+
+    document.querySelectorAll('[data-export-transparent-framing]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const framing = button.dataset.exportTransparentFraming;
+        if (framing !== 'crop' && framing !== 'full') return;
+        this.ui.exportSettings.transparentFraming = framing;
+        this.ui.syncTransparentFramingUi();
       });
     });
 
@@ -825,6 +835,7 @@ export class MeshControls {
       this.eventBus.emit('export:image', {
         format: this.ui.exportSettings.format,
         transparent: this.ui.exportSettings.transparent,
+        transparentFraming: this.ui.exportSettings.transparentFraming,
         size: this.ui.exportSettings.size,
       });
     });
@@ -841,6 +852,7 @@ export class MeshControls {
         if (el.classList) el.classList.toggle('is-disabled', !enabled);
       });
       this.ui.syncExportPngFolderUi();
+      this.ui.syncTransparentFramingUi();
     };
     const updateMp4Ui = () => {
       const wrap = this.ui.inputs.exportMp4Settings;
@@ -1149,6 +1161,7 @@ export class MeshControls {
         document.querySelectorAll('[data-video-mov-transparent]').forEach((btn) => {
           btn.classList.toggle('active', btn === button);
         });
+        this.ui.syncTransparentFramingUi();
       });
     });
 

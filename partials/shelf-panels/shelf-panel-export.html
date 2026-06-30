@@ -33,6 +33,15 @@
                       <button type="button" data-export-transparent="true" class="export-option-btn active" data-tooltip="Export with transparent background">YES</button>
                     </div>
                   </div>
+                  <div id="exportImageTransparentFraming" class="export-image-transparent-framing is-muted">
+                    <div class="export-option-group">
+                      <label class="export-label">Framing</label>
+                      <div class="export-button-group">
+                        <button type="button" data-export-transparent-framing="crop" class="export-option-btn active" data-tooltip="Trim empty pixels around the mesh — best for stickers and compositing">CROP TO ASSET</button>
+                        <button type="button" data-export-transparent-framing="full" class="export-option-btn" data-tooltip="Keep the viewport canvas with transparent margins — best for overlays and motion graphics">FULL FRAME</button>
+                      </div>
+                    </div>
+                  </div>
                   <div class="export-option-group">
                     <label class="export-label">Size</label>
                     <div class="export-button-group">
@@ -325,6 +334,15 @@
                       </div>
                     </div>
                   </div>
+                  <div id="exportVideoTransparentFraming" class="export-video-transparent-framing is-muted">
+                    <div class="export-option-group">
+                      <label class="export-label">Framing</label>
+                      <div class="export-button-group">
+                        <button type="button" data-export-transparent-framing="crop" class="export-option-btn active" data-tooltip="Trim empty pixels around the mesh — best for stickers and compositing">CROP TO ASSET</button>
+                        <button type="button" data-export-transparent-framing="full" class="export-option-btn" data-tooltip="Keep the export canvas with transparent margins — best for overlays and motion graphics">FULL FRAME</button>
+                      </div>
+                    </div>
+                  </div>
                   <div id="exportPngFolderSettings" class="export-png-folder is-muted">
                     <div class="export-option-group">
                       <label class="export-label">Output folder</label>
@@ -396,16 +414,16 @@
 
               <div class="panel-block" data-export-section="watermark">
                 <div class="block-title has-toggle">
-                  <span>Watermark</span>
+                  <span>Logotype &amp; Credit</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" id="watermarkResetBtn" aria-label="Reset Watermark" data-tooltip="Reset Watermark settings">
+                    <button class="block-reset-btn" id="watermarkResetBtn" aria-label="Reset logotype and credit" data-tooltip="Reset logotype and credit settings">
                       <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
-                    <label class="effect-toggle" data-tooltip="Show a watermark logotype and credit in the viewport corner">
+                    <label class="effect-toggle" data-tooltip="Add a logotype and credit line to the viewport and exports">
                       <input type="checkbox" id="exportWatermarkSectionOpen" />
                       <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Toggle watermark</span>
+                      <span class="sr-only">Toggle logotype and credit</span>
                     </label>
                   </div>
                 </div>
@@ -424,12 +442,12 @@
                     <input type="file" id="watermarkCustomFile" class="sr-only" accept=".svg,image/svg+xml" />
                   </div>
                   <label class="slider-line">
-                    <span data-tooltip="Scale the watermark logotype up or down">Logotype Scale</span>
+                    <span data-tooltip="Scale the logotype up or down">Logotype Scale</span>
                     <input id="watermarkLogoScale" type="range" min="50" max="200" step="1" value="100" />
                     <span class="value" data-output="watermarkLogoScale">100%</span>
                   </label>
                   <label class="color-line">
-                    <span data-tooltip="Tint the watermark logotype">Logotype Color</span>
+                    <span data-tooltip="Tint the logotype">Logotype Color</span>
                     <input type="color" id="watermarkLogoColor" class="color-chip" value="#c4ff00" />
                   </label>
                   <div class="export-option-group">
@@ -447,14 +465,14 @@
                       <span class="sr-only">Toggle credit text</span>
                     </label>
                   </div>
-                  <div class="effect-foldout effect-foldout--collapsed watermark-credit-foldout" data-watermark-credit-foldout aria-hidden="true">
+                  <div class="effect-foldout effect-foldout--collapsed watermark-credit-foldout" data-watermark-credit-foldout hidden aria-hidden="true">
                     <input
                       type="text"
                       id="watermarkCredit"
                       class="watermark-credit-input"
                       maxlength="160"
-                      placeholder="Lorem Ipsu"
-                      value="Lorem Ipsu"
+                      placeholder="Credit, name, or © line"
+                      value=""
                       autocomplete="off"
                       spellcheck="false"
                       aria-label="Credit text"

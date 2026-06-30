@@ -116,6 +116,25 @@ export function computeTightAlphaBounds(pixels, width, height, minAlpha = 1) {
 }
 
 /**
+ * Write top-down RGBA (canvas row order) to a canvas without cropping.
+ *
+ * @param {Uint8ClampedArray | Uint8Array} rgba
+ * @param {number} width
+ * @param {number} height
+ * @returns {HTMLCanvasElement}
+ */
+export function topDownRgbaToCanvas(rgba, width, height) {
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width = width;
+  exportCanvas.height = height;
+  const ctx = exportCanvas.getContext('2d', { alpha: true });
+  const imageData = ctx.createImageData(width, height);
+  imageData.data.set(rgba);
+  ctx.putImageData(imageData, 0, 0);
+  return exportCanvas;
+}
+
+/**
  * Tight crop top-down RGBA (canvas row order) to opaque pixel bounds.
  *
  * @param {Uint8ClampedArray | Uint8Array} rgba
@@ -129,16 +148,11 @@ export function cropTransparentTopDownRgbaToCanvas(rgba, width, height, opts = {
   const minAlpha = opts.minAlpha ?? 1;
   const tight = computeTightAlphaBounds(rgba, width, height, minAlpha);
 
-  const exportCanvas = document.createElement('canvas');
   if (!tight) {
-    exportCanvas.width = width;
-    exportCanvas.height = height;
-    const ctx = exportCanvas.getContext('2d');
-    const imageData = ctx.createImageData(width, height);
-    imageData.data.set(rgba);
-    ctx.putImageData(imageData, 0, 0);
-    return exportCanvas;
+    return topDownRgbaToCanvas(rgba, width, height);
   }
+
+  const exportCanvas = document.createElement('canvas');
 
   const minCol = Math.max(0, tight.minCol - padding);
   const minRow = Math.max(0, tight.minRow - padding);

@@ -166,6 +166,7 @@ function createStateApplySteps() {
         s.setLightsRotation(state.lightsRotation ?? 0);
         s.setLightsHeight(state.lightsHeight ?? 5);
         s.setShowLightIndicators(state.showLightIndicators ?? false);
+        s.setShowLightFalloffIndicators(state.showLightFalloffIndicators ?? false);
         s.setLightsAutoRotate(state.lightsAutoRotate ?? false);
         s.setLightsCastShadows(state.lightsCastShadows ?? false);
         s.setLightsShadowQuality(state.lightsShadowQuality ?? 'medium');

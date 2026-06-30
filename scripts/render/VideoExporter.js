@@ -38,7 +38,9 @@ import {
   cropTransparentTopDownRgbaToCanvas,
   readTransparentMergedTopDownRgba,
   restoreTransparentCaptureSetup,
+  topDownRgbaToCanvas,
 } from './capture/TransparentCapture.js';
+import { isTransparentCropToAsset } from './imageExportFraming.js';
 import { repairInteractiveViewportAfterCapture } from './capture/repairInteractiveViewportAfterCapture.js';
 import { coerceRendererLogicalSize } from './drawingBufferSize.js';
 
@@ -553,11 +555,38 @@ export class VideoExporter {
     return new Blob([bytes], { type: mime });
   }
 
-  _captureCurrentFramePngBlob({ transparent = false, exportWidth, exportHeight } = {}) {
-    const dataUrl = transparent
-      ? this._captureTransparentFramePngDataUrl(exportWidth, exportHeight)
-      : this._renderAndCaptureCurrentFramePng(exportWidth, exportHeight);
-    return this._dataUrlToBlob(dataUrl);
+  /**
+   * @returns {{ blob: Blob, width: number, height: number, cropped: boolean }}
+   */
+  _captureCurrentFramePngBlob({
+    transparent = false,
+    exportWidth,
+    exportHeight,
+    transparentFraming = 'crop',
+  } = {}) {
+    const { width: targetWidth, height: targetHeight } =
+      this._resolveExportCapturePixelSize(exportWidth, exportHeight);
+    if (transparent) {
+      const cropToAsset = isTransparentCropToAsset(transparentFraming);
+      const { dataUrl, width, height } = this._captureTransparentFramePngDataUrl(
+        exportWidth,
+        exportHeight,
+        transparentFraming,
+      );
+      return {
+        blob: this._dataUrlToBlob(dataUrl),
+        width,
+        height,
+        cropped: cropToAsset,
+      };
+    }
+    const dataUrl = this._renderAndCaptureCurrentFramePng(exportWidth, exportHeight);
+    return {
+      blob: this._dataUrlToBlob(dataUrl),
+      width: targetWidth,
+      height: targetHeight,
+      cropped: false,
+    };
   }
 
   /** Keep the GL backing store locked to the export preset (not viewport × DPR). */
@@ -692,9 +721,13 @@ export class VideoExporter {
     );
   }
 
-  _captureTransparentFramePngDataUrl(exportWidth, exportHeight) {
+  /**
+   * @returns {{ dataUrl: string, width: number, height: number }}
+   */
+  _captureTransparentFramePngDataUrl(exportWidth, exportHeight, framing = 'crop') {
     const { width: targetWidth, height: targetHeight } =
       this._resolveExportCapturePixelSize(exportWidth, exportHeight);
+    const cropToAsset = isTransparentCropToAsset(framing);
 
     if (!this.composer) {
       this._renderComposerFrameForCapture({
@@ -702,7 +735,11 @@ export class VideoExporter {
         exportWidth: targetWidth,
         exportHeight: targetHeight,
       });
-      return this.renderer.domElement.toDataURL('image/png');
+      return {
+        dataUrl: this.renderer.domElement.toDataURL('image/png'),
+        width: targetWidth,
+        height: targetHeight,
+      };
     }
 
     const topDown = readTransparentMergedTopDownRgba({
@@ -722,12 +759,14 @@ export class VideoExporter {
       finishGpu: () => this._finishGpuFrame(),
     });
 
-    const exportCanvas = cropTransparentTopDownRgbaToCanvas(
-      topDown,
-      targetWidth,
-      targetHeight,
-    );
-    return exportCanvas.toDataURL('image/png');
+    const exportCanvas = cropToAsset
+      ? cropTransparentTopDownRgbaToCanvas(topDown, targetWidth, targetHeight)
+      : topDownRgbaToCanvas(topDown, targetWidth, targetHeight);
+    return {
+      dataUrl: exportCanvas.toDataURL('image/png'),
+      width: exportCanvas.width,
+      height: exportCanvas.height,
+    };
   }
 
   _getMp4BitrateForQuality(quality) {
@@ -1133,7 +1172,7 @@ export class VideoExporter {
    *
    * @param {object} settings — video export UI settings
    * @param {{ download?: boolean, previewT?: number, previewFrameIndex?: number, showThumbnail?: boolean }} [opts]
-   * @returns {Promise<{ blob: Blob, dataUrl: string, frameIndex: number, width: number, height: number } | null>}
+   * @returns {Promise<{ blob: Blob, dataUrl: string, frameIndex: number, width: number, height: number, cropped: boolean, transparent: boolean } | null>}
    */
   async capturePreviewFrame(settings = {}, opts = {}) {
     const params = this._resolveVideoExportParams(settings);
@@ -1205,12 +1244,15 @@ export class VideoExporter {
     };
 
     let blob = null;
+    let outputWidth = sizeSnapshot.exportWidth;
+    let outputHeight = sizeSnapshot.exportHeight;
+    let outputCropped = false;
     try {
       if (shouldUseTransparentFrames) {
         transparentSetupSnapshot = this._applyTransparentFrameSetup();
       }
       this._beginExportSession({ movements, meshAnimation });
-      blob = captureVideoExportFrameBlob(
+      const frameCapture = captureVideoExportFrameBlob(
         this,
         {
           movements,
@@ -1230,8 +1272,13 @@ export class VideoExporter {
           transparent: shouldUseTransparentFrames,
           exportWidth: sizeSnapshot.exportWidth,
           exportHeight: sizeSnapshot.exportHeight,
+          transparentFraming: settings?.transparentFraming,
         },
       );
+      blob = frameCapture.blob;
+      outputWidth = frameCapture.width;
+      outputHeight = frameCapture.height;
+      outputCropped = frameCapture.cropped;
     } finally {
       this._finishExportSession(
         exportSession,
@@ -1252,11 +1299,12 @@ export class VideoExporter {
     if (opts.showThumbnail) {
       previewDataUrl = URL.createObjectURL(blob);
       this.ui?.showExportCapturePreviewThumb?.(previewDataUrl, {
-        width: sizeSnapshot.exportWidth,
-        height: sizeSnapshot.exportHeight,
+        width: outputWidth,
+        height: outputHeight,
         frameIndex: timing.frameIndex,
         totalFrames,
         transparent: shouldUseTransparentFrames,
+        cropped: outputCropped,
       });
     }
 
@@ -1271,9 +1319,12 @@ export class VideoExporter {
         ),
       );
       this.ui?.uiSounds?.playRenderFinished?.();
+      const sizeNote = outputCropped
+        ? `~${outputWidth}×${outputHeight} cropped`
+        : `${outputWidth}×${outputHeight}`;
       const alphaNote = shouldUseTransparentFrames ? ', transparent' : '';
       this.ui?.showToast?.(
-        `Capture preview saved (${sizeSnapshot.exportWidth}×${sizeSnapshot.exportHeight}${alphaNote}, frame ${timing.frameIndex + 1}/${totalFrames})`,
+        `Capture preview saved (${sizeNote}${alphaNote}, frame ${timing.frameIndex + 1}/${totalFrames})`,
         3600,
         { notification: false },
       );
@@ -1283,8 +1334,9 @@ export class VideoExporter {
       blob,
       dataUrl: previewDataUrl,
       frameIndex: timing.frameIndex,
-      width: sizeSnapshot.exportWidth,
-      height: sizeSnapshot.exportHeight,
+      width: outputWidth,
+      height: outputHeight,
+      cropped: outputCropped,
       transparent: shouldUseTransparentFrames,
     };
   }
@@ -1504,7 +1556,7 @@ export class VideoExporter {
             break;
           }
           const t = i / totalFrames;
-          const blob = captureVideoExportFrameBlob(
+          const { blob } = captureVideoExportFrameBlob(
             this,
             {
               movements,
@@ -1524,6 +1576,7 @@ export class VideoExporter {
               transparent: shouldUseTransparentFrames,
               exportWidth: this._exportCaptureSize?.width,
               exportHeight: this._exportCaptureSize?.height,
+              transparentFraming: settings?.transparentFraming,
             },
           );
           const fileName = this._frameNameForSequence(baseName, modeLabel, durationSec, i);

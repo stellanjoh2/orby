@@ -32,8 +32,10 @@ import {
   extractCroppedTransparentCanvas,
   readTransparentMergedTopDownRgba,
   restoreTransparentCaptureSetup,
+  topDownRgbaToCanvas,
   cropTransparentTopDownRgbaToCanvas as cropTransparentTopDownRgbaToCanvasFn,
 } from './capture/TransparentCapture.js';
+import { isTransparentCropToAsset } from './imageExportFraming.js';
 import {
   pinAsciiReferenceForCapture,
   unpinAsciiReferenceForCapture,
@@ -767,7 +769,16 @@ export class ImageExporter {
     cameraController,
     size = 2,
     formatId = 'png',
+    framing = 'crop',
   ) {
+    if (!isTransparentCropToAsset(framing)) {
+      return this._exportTransparentImageFullFrameViaCaptureSession(
+        currentFile,
+        size,
+        formatId,
+      );
+    }
+
     const originalSize = new THREE.Vector2();
     this.renderer.getSize(originalSize);
     const { density: exportDensity } = this._resolveExportPixelSize(size);
@@ -833,6 +844,57 @@ export class ImageExporter {
           restoreTransparentCaptureSetup(transparentDeps, transparentSnap);
         }
       });
+    return true;
+  }
+
+  async _exportTransparentImageFullFrameViaCaptureSession(
+    currentFile,
+    size = 2,
+    formatId = 'png',
+  ) {
+    const captureSize = resolvePngExportCaptureSize(
+      this.renderer,
+      size,
+      this._maxExportPixelArea,
+    );
+
+    await runOfflineCaptureSession(this._captureSessionDeps(), async (session) => {
+      const { width, height } = session.applyCaptureSize(captureSize);
+
+      const transparentDeps = {
+        renderer: this.renderer,
+        scene: this.scene,
+        composer: this.composer,
+        backgroundController: this.backgroundController,
+        postPipeline: this.postPipeline,
+      };
+      const transparentSnap = applyTransparentCaptureSetup(transparentDeps);
+      try {
+        const gl = this.renderer.getContext();
+        const topDown = readTransparentMergedTopDownRgba({
+          renderer: this.renderer,
+          scene: this.scene,
+          camera: this.camera,
+          composer: this.composer,
+          width,
+          height,
+          renderFrame: () => session.renderFrame({ transparent: true }),
+          finishGpu: () => {
+            if (gl && typeof gl.finish === 'function') {
+              gl.finish();
+            }
+          },
+        });
+
+        const canvas = topDownRgbaToCanvas(topDown, width, height);
+        await downloadExportCanvas(canvas, currentFile, formatId, {
+          transparent: true,
+          downloadBlob: (blob, file, suffix) => this._downloadBlob(blob, file, suffix),
+        });
+      } finally {
+        restoreTransparentCaptureSetup(transparentDeps, transparentSnap);
+      }
+    });
     return true;
   }
 
@@ -962,6 +1024,7 @@ export class ImageExporter {
     cameraController,
     size = 2,
     format = 'png',
+    framing = 'crop',
   ) {
     const formatId = normalizeImageExportFormat(format);
     const formatMeta = getImageExportFormat(formatId);
@@ -997,6 +1060,7 @@ export class ImageExporter {
         cameraController,
         size,
         formatId,
+        framing,
       );
     }
 
@@ -1005,6 +1069,50 @@ export class ImageExporter {
 
     // Set up for transparent export
     this._setupTransparentRender();
+
+    if (!isTransparentCropToAsset(framing)) {
+      const { width: targetWidth, height: targetHeight } = this._resolveExportPixelSize(size);
+      const { width: exportW, height: exportH } = this._setExportFramebufferSize(
+        targetWidth,
+        targetHeight,
+      );
+      if (this.syncPerspectiveProjection) {
+        this.syncPerspectiveProjection();
+      }
+      this._setExportViewport(exportW, exportH);
+      try {
+        const topDown = readTransparentMergedTopDownRgba({
+          renderer: this.renderer,
+          scene: this.scene,
+          camera: this.camera,
+          composer: this.composer,
+          width: exportW,
+          height: exportH,
+          renderFrame: () => {
+            if (this.composer) {
+              this.composer.render();
+            } else {
+              this.renderer.render(this.scene, this.camera);
+            }
+          },
+          finishGpu: () => {
+            const gl = this.renderer.getContext();
+            if (gl && typeof gl.finish === 'function') {
+              gl.finish();
+            }
+          },
+        });
+        const canvas = topDownRgbaToCanvas(topDown, exportW, exportH);
+        const blob = await encodeCanvasToBlob(canvas, formatId);
+        this._downloadBlob(blob, currentFile, imageExportDownloadSuffix(true, formatId));
+        this._restoreState(state);
+        return true;
+      } catch (error) {
+        console.error('Legacy full-frame transparent export failed', error);
+        this._restoreState(state);
+        return false;
+      }
+    }
 
     const { density: exportDensity } = this._resolveExportPixelSize(size);
     const cropInfo = this._calculateCropRegion(

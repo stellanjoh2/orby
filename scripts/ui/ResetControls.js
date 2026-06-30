@@ -191,6 +191,7 @@ const STUDIO_TAB_RESET_PATHS = [
   'lightsHeight',
   'lightsAutoRotate',
   'showLightIndicators',
+  'showLightFalloffIndicators',
   'lensFlare',
   'godRays',
   'lightsCastShadows',
@@ -694,6 +695,10 @@ export class ResetControls {
         twoSided: defaults.lightsShadowTwoSided ?? false,
       });
       this.eventBus.emit('lights:show-indicators', defaults.showLightIndicators ?? false);
+      this.eventBus.emit(
+        'lights:show-falloff-indicators',
+        defaults.showLightFalloffIndicators ?? false,
+      );
       
       this.ui.syncUIFromState();
       this.helpers.showToast('Studio settings reset', 3200, { notification: false });

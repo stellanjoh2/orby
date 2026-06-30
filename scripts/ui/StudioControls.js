@@ -315,6 +315,11 @@ export class StudioControls {
       this.stateStore.set('showLightIndicators', enabled);
       this.eventBus.emit('lights:show-indicators', enabled);
     });
+    this.ui.inputs.showLightFalloffIndicators?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('showLightFalloffIndicators', enabled);
+      this.eventBus.emit('lights:show-falloff-indicators', enabled);
+    });
     this.ui.inputs.lightsCastShadows?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('lightsCastShadows', enabled);
@@ -352,6 +357,11 @@ export class StudioControls {
         this.stateStore.set('showLightIndicators', false);
         this.eventBus.emit('lights:show-indicators', false);
         if (this.ui.inputs.showLightIndicators) this.ui.inputs.showLightIndicators.checked = false;
+        this.stateStore.set('showLightFalloffIndicators', false);
+        this.eventBus.emit('lights:show-falloff-indicators', false);
+        if (this.ui.inputs.showLightFalloffIndicators) {
+          this.ui.inputs.showLightFalloffIndicators.checked = false;
+        }
         this.stateStore.set('lightsCastShadows', false);
         this.eventBus.emit('lights:cast-shadows', false);
         if (this.ui.inputs.lightsCastShadows) this.ui.inputs.lightsCastShadows.checked = false;
@@ -805,6 +815,9 @@ export class StudioControls {
     }
     if (this.ui.inputs.showLightIndicators) {
       this.ui.inputs.showLightIndicators.checked = !!state.showLightIndicators;
+    }
+    if (this.ui.inputs.showLightFalloffIndicators) {
+      this.ui.inputs.showLightFalloffIndicators.checked = !!state.showLightFalloffIndicators;
     }
     if (this.ui.inputs.lightsAutoRotate) {
       this.ui.inputs.lightsAutoRotate.checked = !!state.lightsAutoRotate;

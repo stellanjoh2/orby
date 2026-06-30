@@ -652,6 +652,7 @@ export class RenderControls {
     this.ui.buttons.exportPng?.addEventListener('click', () => {
       this.eventBus.emit('export:png', {
         transparent: this.ui.exportSettings.transparent,
+        transparentFraming: this.ui.exportSettings.transparentFraming,
         size: this.ui.exportSettings.size,
       });
     });
@@ -687,7 +688,7 @@ export class RenderControls {
       const scrub = this.ui.dom.exportPreviewScrub;
       const previewT = scrub ? parseFloat(scrub.value) : undefined;
       this.eventBus.emit('export:video-capture-preview', {
-        download: true,
+        download: false,
         showThumbnail: true,
         ...(Number.isFinite(previewT) ? { previewT } : {}),
         ...(this.ui.exportSettings.video || {}),

@@ -149,6 +149,7 @@ import {
   getImageExportFormat,
   normalizeImageExportFormat,
 } from './render/imageExportFormats.js';
+import { normalizeTransparentFraming } from './render/imageExportFraming.js';
 import { resolvePngExportCaptureSize } from './render/capture/CaptureSizePolicy.js';
 import { fullViewportLogicalSize } from './render/fullViewportLogicalSize.js';
 import { deferSpinnerPaint } from './utils/viewportLoadSpinner.js';
@@ -3069,10 +3070,21 @@ export class SceneManager {
   }
 
   setShowLightIndicators(enabled) {
+    if (enabled) {
+      // Bounds must be current before createIndicators — toggling on with no mesh yet
+      // still no-ops, but after load this avoids a silent miss when bounds were stale.
+      this._syncShadowCameraBounds();
+    }
     this.lightsController?.setIndicatorsVisible(enabled);
+    this.requestRender();
+  }
+
+  setShowLightFalloffIndicators(enabled) {
     if (enabled) {
       this._syncShadowCameraBounds();
     }
+    this.lightsController?.setFalloffIndicatorsVisible(enabled);
+    this.requestRender();
   }
 
   updateLightIndicators() {
@@ -5213,7 +5225,8 @@ export class SceneManager {
   async exportImage(settings = {}) {
     const formatId = normalizeImageExportFormat(settings.format);
     const formatMeta = getImageExportFormat(formatId);
-    let { transparent = false, size = 2 } = settings;
+    let { transparent = false, size = 2, transparentFraming = 'crop' } = settings;
+    transparentFraming = normalizeTransparentFraming(transparentFraming);
     if (transparent && !formatMeta.supportsAlpha) {
       transparent = false;
     }
@@ -5257,6 +5270,7 @@ export class SceneManager {
           this.cameraController,
           size,
           formatId,
+          transparentFraming,
         );
         if (ok) {
           this.ui?.showToast?.(
@@ -5621,6 +5635,9 @@ export class SceneManager {
     if (this.ui?.pngExportDirectoryHandle) {
       video.pngOutputDirectoryHandle = this.ui.pngExportDirectoryHandle;
     }
+    video.transparentFraming = normalizeTransparentFraming(
+      settings.transparentFraming ?? this.ui?.exportSettings?.transparentFraming,
+    );
     return video;
   }
 }

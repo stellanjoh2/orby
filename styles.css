@@ -7018,7 +7018,10 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 /* Credit input + scale + color rows share the foldout with even section-gap
  * rhythm. The parent .export-controls flex already supplies one section gap
  * above the foldout, so zero the foldout's own padding-top to avoid a doubled
- * gap between the "Credit" toggle row and the input field. */
+ * gap between the "Credit" toggle row and the input field.
+ * When collapsed, keep the foldout out of flex layout (hidden) so .export-controls
+ * gap does not stack an extra section gap under the Credit toggle — same as
+ * animation frame reference (#animationTimeReferenceSection). */
 .watermark-credit-foldout.effect-foldout--expanded {
   display: flex;
   flex-direction: column;
@@ -7332,13 +7335,15 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   margin-bottom: 0;
 }
 
+/* .export-option-group flex gap owns row rhythm — don't stack margin on top */
 .export-preview-pause-all-row {
   display: flex;
-  margin-top: var(--shelf-section-gap, 0.5rem);
+  margin-top: 0;
 }
 
 .export-preview-pause-all-row .export-preview-pause-all-btn {
   margin-top: 0;
+  font-size: var(--shelf-headline-font-size);
 }
 
 .export-capture-preview-thumb {
@@ -7852,6 +7857,24 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
 }
 
 .export-png-transparent.is-muted {
+  opacity: 0.52;
+}
+
+/* Still-image transparent framing — muted unless transparent + alpha format */
+.export-image-transparent-framing {
+  transition: opacity 0.2s ease;
+}
+
+.export-image-transparent-framing.is-muted {
+  opacity: 0.52;
+}
+
+/* Video PNG transparent framing — muted unless PNG + transparent */
+.export-video-transparent-framing {
+  transition: opacity 0.2s ease;
+}
+
+.export-video-transparent-framing.is-muted {
   opacity: 0.52;
 }
 

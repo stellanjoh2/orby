@@ -272,6 +272,7 @@ export function createBlankCanvasPreset() {
     lightsHeight: 5,
     lightsAutoRotate: false,
     showLightIndicators: false,
+    showLightFalloffIndicators: false,
     lightsCastShadows: false,
     lightsShadowQuality: 'medium',
     lightsShadowSoftness: 0.6,
@@ -440,6 +441,7 @@ export function createBlankCanvasPreset() {
     exportSettings: {
       format: 'png',
       transparent: true,
+      transparentFraming: 'crop',
       size: 2,
       sections: {
         image: false,

@@ -1,6 +1,10 @@
 import { formatCreativeLookPresetLabel } from './CreativeLookMaterials.js';
 import { getImageExportFormat, normalizeImageExportFormat } from './imageExportFormats.js';
 import {
+  isTransparentCropToAsset,
+  transparentFramingSummaryLabel,
+} from './imageExportFraming.js';
+import {
   exportSpinToastLabel,
   exportHdriRotationToastLabel,
   normalizeExportVideoMovements,
@@ -203,6 +207,13 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
   addRow(rows, 'Frame rate', `${fps} fps`);
   addRow(rows, 'Frame count', totalFrames);
   addRow(rows, 'Transparent', exportJob.movTransparent);
+  if (exportJob.movTransparent && exportJob.format === 'png') {
+    addRow(
+      rows,
+      'Framing',
+      transparentFramingSummaryLabel(exportJob.transparentFraming),
+    );
+  }
   addRow(
     rows,
     'Look',
@@ -263,7 +274,11 @@ function describeStillExportOnlyTransforms(renderContext = {}) {
     parts.push('Lens distortion export pin');
   }
   if (renderContext.transparent) {
-    parts.push('Mesh AABB + tight alpha crop');
+    if (isTransparentCropToAsset(renderContext.transparentFraming)) {
+      parts.push('Mesh AABB + tight alpha crop');
+    } else {
+      parts.push('Full viewport frame');
+    }
   }
   return parts.length ? parts.join(' · ') : 'Matches viewport framing';
 }
@@ -275,6 +290,7 @@ function describeStillExportOnlyTransforms(renderContext = {}) {
  *   formatId?: string,
  *   scale?: number,
  *   transparent?: boolean,
+ *   transparentFraming?: import('./imageExportFraming.js').TransparentFraming,
  *   assetName?: string,
  *   renderContext?: Record<string, unknown>,
  * }} params
@@ -284,6 +300,7 @@ export function buildStillImageExportOverlaySummary({
   formatId = 'png',
   scale = 1,
   transparent = false,
+  transparentFraming = 'crop',
   assetName = '',
   renderContext = {},
 } = {}) {
@@ -302,7 +319,10 @@ export function buildStillImageExportOverlaySummary({
   );
   addRow(rows, 'Background', transparent ? 'Transparent' : 'Scene background');
   if (transparent) {
-    addRow(rows, 'Output crop', 'Mesh bounds + alpha padding');
+    addRow(rows, 'Framing', transparentFramingSummaryLabel(transparentFraming));
+    if (isTransparentCropToAsset(transparentFraming)) {
+      addRow(rows, 'Output crop', 'Mesh bounds + alpha padding');
+    }
   } else if (renderContext.exportWidth && renderContext.exportHeight) {
     addRow(
       rows,

@@ -1,5 +1,6 @@
 import { deepClone } from '../utils/deepClone.js';
 import { normalizeImageExportFormat } from '../render/imageExportFormats.js';
+import { normalizeTransparentFraming } from '../render/imageExportFraming.js';
 import {
   normalizeExportFovOffset,
   normalizeExportPitchOffset,
@@ -39,6 +40,9 @@ export function applySavedExportSettings(target, saved) {
   }
   if (saved.transparent !== undefined) {
     target.transparent = !!saved.transparent;
+  }
+  if (saved.transparentFraming !== undefined) {
+    target.transparentFraming = normalizeTransparentFraming(saved.transparentFraming);
   }
   if (saved.size !== undefined) {
     const size = Number(saved.size);

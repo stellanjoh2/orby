@@ -1026,6 +1026,10 @@ export class SceneSettingsManager {
         this.stateStore.set('showLightIndicators', payload.showLightIndicators);
         this.eventBus.emit('lights:show-indicators', payload.showLightIndicators);
       }
+      if (payload.showLightFalloffIndicators !== undefined) {
+        this.stateStore.set('showLightFalloffIndicators', payload.showLightFalloffIndicators);
+        this.eventBus.emit('lights:show-falloff-indicators', payload.showLightFalloffIndicators);
+      }
       if (payload.lightsCastShadows !== undefined) {
         this.stateStore.set('lightsCastShadows', payload.lightsCastShadows);
       }

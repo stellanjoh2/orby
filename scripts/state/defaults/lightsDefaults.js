@@ -18,6 +18,7 @@ export function createLightsDefaults() {
     lightsHeight: 5,
     lightsAutoRotate: false,
     showLightIndicators: false,
+    showLightFalloffIndicators: false,
     lightsCastShadows: false,
     /** 3-point light shadow map quality preset. */
     lightsShadowQuality: 'medium',

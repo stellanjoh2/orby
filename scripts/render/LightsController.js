@@ -19,12 +19,23 @@ const SHADOW_FAR_MULTIPLIER_BY_QUALITY = {
   high: 6,
   ultra: 4.5,
 };
-/** Viewport gizmos scale with the loaded mesh so tiny models don't get huge cones. */
-const LIGHT_INDICATOR_DISTANCE_FACTOR = 2.5;
-const LIGHT_INDICATOR_RADIUS_FACTOR = 0.15;
-const LIGHT_INDICATOR_HEIGHT_FACTOR = 0.3;
+/** Solid cones are a fraction of the beam frustum — same angle, smaller visual footprint. */
+const LIGHT_INDICATOR_SIZE_SCALE = 0.2;
 const LIGHT_INDICATOR_UNIT_CONE_RADIUS = 1;
 const LIGHT_INDICATOR_UNIT_CONE_HEIGHT = 1;
+/** Floor so indicators stay visible on tiny/degenerate bounds — angle preserved via ratio. */
+const LIGHT_INDICATOR_MIN_CONE_RADIUS = 0.02;
+const LIGHT_INDICATOR_MIN_CONE_HEIGHT = 0.04;
+const LIGHT_INDICATOR_INTENSITY_SCALE_MIN = 0.5;
+const LIGHT_INDICATOR_INTENSITY_SCALE_MAX = 2.5;
+const LIGHT_INDICATOR_INTENSITY_REFERENCE = 10;
+const LIGHT_INDICATOR_RENDER_ORDER = 1004;
+const LIGHT_FALLOFF_SEGMENTS = 16;
+const LIGHT_FALLOFF_LINE_OPACITY = 0.72;
+/** ConeGeometry tip is +Y; beam opens toward -Y — align opening with light→target. */
+const _BEAM_CONE_OPEN = new THREE.Vector3(0, -1, 0);
+const _BEAM_ICON_QUAT = new THREE.Quaternion();
+const _BEAM_ICON_POS = new THREE.Vector3();
 
 export class LightsController {
   constructor(scene, options = {}) {
@@ -39,6 +50,10 @@ export class LightsController {
     this.receiveSurfaceRadius = 0;
     this.showIndicators = false;
     this.lightIndicators = null;
+    this.showFalloffIndicators = false;
+    this.lightFalloffIndicators = null;
+    /** Shadow ortho half-extent at the target plane (matches shadow camera left/right/top/bottom). */
+    this._shadowFrustumExtent = 3;
     this.shadowQuality = normalizeShadowQuality(options.shadowQuality);
     this.shadowSoftness = this._normalizeShadowSoftness(options.shadowSoftness);
     this.shadowContactOffset = this._normalizeShadowContactOffset(
@@ -151,6 +166,7 @@ export class LightsController {
       ? Math.max(0, this.receiveSurfaceRadius)
       : 0;
     const extent = Math.max(meshExtent, receiveReach);
+    this._shadowFrustumExtent = extent;
     const farPlane = Math.max(20, Math.max(meshRadius, receiveReach) * farMultiplier);
     ['key', 'fill', 'rim'].forEach((lightId) => {
       const light = this.lights[lightId];
@@ -168,6 +184,9 @@ export class LightsController {
       cam.far = farPlane;
       cam.updateProjectionMatrix();
     });
+    if (this.showFalloffIndicators) {
+      this.updateFalloffIndicators();
+    }
   }
 
   getLights() {
@@ -182,6 +201,9 @@ export class LightsController {
     this._applyShadowCameraBounds();
     if (this.showIndicators) {
       this.createIndicators();
+    }
+    if (this.showFalloffIndicators) {
+      this.createFalloffIndicators();
     }
   }
 
@@ -474,6 +496,222 @@ export class LightsController {
     });
   }
 
+  setFalloffIndicatorsVisible(enabled) {
+    this.showFalloffIndicators = !!enabled;
+    if (this.showFalloffIndicators) {
+      this.createFalloffIndicators();
+    } else {
+      this.clearFalloffIndicators();
+    }
+  }
+
+  _createFalloffLineMaterial(color) {
+    return new THREE.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity: LIGHT_FALLOFF_LINE_OPACITY,
+      depthWrite: false,
+      toneMapped: false,
+    });
+  }
+
+  _resolveLightBeamBasis(origin, target, scratch) {
+    const forward = scratch.forward.copy(target).sub(origin);
+    const beamLength = forward.length();
+    if (beamLength <= 1e-6) {
+      forward.set(0, -1, 0);
+      scratch.beamLength = 1;
+    } else {
+      forward.multiplyScalar(1 / beamLength);
+      scratch.beamLength = beamLength;
+    }
+    const worldUp = scratch.worldUp.set(0, 1, 0);
+    scratch.right.crossVectors(worldUp, forward);
+    if (scratch.right.lengthSq() < 1e-8) {
+      scratch.right.set(1, 0, 0);
+    } else {
+      scratch.right.normalize();
+    }
+    scratch.upInPlane.crossVectors(forward, scratch.right).normalize();
+    return scratch;
+  }
+
+  _buildBeamWireGeometry(segments = LIGHT_FALLOFF_SEGMENTS) {
+    const segCount = Math.max(3, segments);
+    const positions = new Float32Array(segCount * 2 * 2 * 3);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.userData.segmentCount = segCount;
+    return geometry;
+  }
+
+  _writeBeamWireWorldPositions(geometry, origin, target, scratch, extent) {
+    const segCount = geometry.userData.segmentCount ?? LIGHT_FALLOFF_SEGMENTS;
+    const attr = geometry.getAttribute('position');
+    const { right, upInPlane } = scratch;
+    const e = Math.max(Number(extent) || 0, 1e-6);
+    const ox = origin.x;
+    const oy = origin.y;
+    const oz = origin.z;
+    const tx = target.x;
+    const ty = target.y;
+    const tz = target.z;
+    let vi = 0;
+    for (let i = 0; i < segCount; i += 1) {
+      const a0 = (i / segCount) * Math.PI * 2;
+      const a1 = ((i + 1) / segCount) * Math.PI * 2;
+      const c0 = Math.cos(a0) * e;
+      const s0 = Math.sin(a0) * e;
+      const c1 = Math.cos(a1) * e;
+      const s1 = Math.sin(a1) * e;
+      const x0 = tx + right.x * c0 + upInPlane.x * s0;
+      const y0 = ty + right.y * c0 + upInPlane.y * s0;
+      const z0 = tz + right.z * c0 + upInPlane.z * s0;
+      const x1 = tx + right.x * c1 + upInPlane.x * s1;
+      const y1 = ty + right.y * c1 + upInPlane.y * s1;
+      const z1 = tz + right.z * c1 + upInPlane.z * s1;
+
+      attr.setXYZ(vi++, ox, oy, oz);
+      attr.setXYZ(vi++, x0, y0, z0);
+      attr.setXYZ(vi++, x0, y0, z0);
+      attr.setXYZ(vi++, x1, y1, z1);
+    }
+    attr.needsUpdate = true;
+    geometry.computeBoundingSphere();
+  }
+
+  _beamIconQuaternion(out, scratch) {
+    // Tip stays at the light; wide base opens toward the target (ConeGeometry expands -Y).
+    return out.setFromUnitVectors(_BEAM_CONE_OPEN, scratch.forward);
+  }
+
+  _getBeamConeIntensityScale(light) {
+    const normalizedIntensity = Math.min(
+      light.intensity / LIGHT_INDICATOR_INTENSITY_REFERENCE,
+      1,
+    );
+    return THREE.MathUtils.lerp(
+      LIGHT_INDICATOR_INTENSITY_SCALE_MIN,
+      LIGHT_INDICATOR_INTENSITY_SCALE_MAX,
+      normalizedIntensity,
+    );
+  }
+
+  /**
+   * Match solid cone frustum to beam wireframes: length light→target, radius = shadow extent.
+   * Intensity scales both axes uniformly so the half-angle stays fixed.
+   */
+  _getBeamConeDimensions(beamLength, extent, intensityScale) {
+    const safeLength = Math.max(Number(beamLength) || 0, 1e-6);
+    const safeExtent = Math.max(Number(extent) || 0, 1e-6);
+    const beamRatio = safeExtent / safeLength;
+    let coneLength = safeLength * intensityScale * LIGHT_INDICATOR_SIZE_SCALE;
+    let coneRadius = safeExtent * intensityScale * LIGHT_INDICATOR_SIZE_SCALE;
+
+    if (coneLength < LIGHT_INDICATOR_MIN_CONE_HEIGHT) {
+      coneLength = LIGHT_INDICATOR_MIN_CONE_HEIGHT;
+      coneRadius = Math.max(coneRadius, coneLength * beamRatio);
+    }
+    coneRadius = Math.max(coneRadius, LIGHT_INDICATOR_MIN_CONE_RADIUS);
+
+    return { coneLength, coneRadius };
+  }
+
+  createFalloffIndicators() {
+    this.clearFalloffIndicators();
+    if (!this.modelBounds || !this.basePositions) return;
+
+    const group = new THREE.Group();
+    group.name = 'LightFalloffIndicators';
+
+    ['key', 'fill', 'rim'].forEach((id) => {
+      const light = this.lights[id];
+      if (!light) return;
+
+      const lightGroup = new THREE.Group();
+      lightGroup.name = `LightFalloff_${id}`;
+      lightGroup.userData.lightId = id;
+      lightGroup.frustumCulled = false;
+
+      const beamLines = new THREE.LineSegments(
+        this._buildBeamWireGeometry(),
+        this._createFalloffLineMaterial(light.color),
+      );
+      beamLines.name = 'LightFalloffBeam';
+      beamLines.frustumCulled = false;
+      beamLines.renderOrder = LIGHT_INDICATOR_RENDER_ORDER + 1;
+      beamLines.userData.orbyLightFalloff = true;
+      beamLines.userData.skipBokehDepth = true;
+
+      lightGroup.add(beamLines);
+      group.add(lightGroup);
+    });
+
+    this.lightFalloffIndicators = group;
+    this._falloffScratch = this._falloffScratch ?? {
+      forward: new THREE.Vector3(),
+      right: new THREE.Vector3(),
+      upInPlane: new THREE.Vector3(),
+      worldUp: new THREE.Vector3(),
+      beamLength: 1,
+    };
+    this.scene.add(group);
+    this.updateFalloffIndicators();
+  }
+
+  clearFalloffIndicators() {
+    if (!this.lightFalloffIndicators) return;
+    this.scene.remove(this.lightFalloffIndicators);
+    this.lightFalloffIndicators.traverse((child) => {
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) child.material.dispose();
+    });
+    this.lightFalloffIndicators = null;
+  }
+
+  updateFalloffIndicators() {
+    if (!this.lightFalloffIndicators || !this.modelBounds) return;
+    const { center } = this.modelBounds;
+    const extent = this._shadowFrustumExtent;
+    const scratch = this._falloffScratch ?? {
+      forward: new THREE.Vector3(),
+      right: new THREE.Vector3(),
+      upInPlane: new THREE.Vector3(),
+      worldUp: new THREE.Vector3(),
+      beamLength: 1,
+    };
+    this._falloffScratch = scratch;
+    this.lightFalloffIndicators.children.forEach((lightGroup) => {
+      const lightId = lightGroup.userData.lightId;
+      const light = this.lights[lightId];
+      if (!light) return;
+
+      const props = this.individualProperties[lightId];
+      const isLightEnabled = props?.enabled === true && this.lightsEnabled;
+      lightGroup.visible = isLightEnabled;
+
+      const origin = light.position;
+      const target = light.target?.position ?? center;
+      this._resolveLightBeamBasis(origin, target, scratch);
+
+      const beamLines = lightGroup.getObjectByName('LightFalloffBeam');
+      if (beamLines) {
+        beamLines.position.set(0, 0, 0);
+        beamLines.quaternion.identity();
+        beamLines.scale.set(1, 1, 1);
+        beamLines.updateMatrix();
+        this._writeBeamWireWorldPositions(
+          beamLines.geometry,
+          origin,
+          target,
+          scratch,
+          extent,
+        );
+        beamLines.material.color.copy(light.color);
+      }
+    });
+  }
+
   setIndicatorsVisible(enabled) {
     this.showIndicators = !!enabled;
     if (this.showIndicators) {
@@ -483,13 +721,17 @@ export class LightsController {
     }
   }
 
-  _getIndicatorMetrics(radius) {
-    const r = Math.max(Number(radius) || 0, 1e-6);
-    return {
-      baseDistance: r * LIGHT_INDICATOR_DISTANCE_FACTOR,
-      coneRadius: r * LIGHT_INDICATOR_RADIUS_FACTOR,
-      coneHeight: r * LIGHT_INDICATOR_HEIGHT_FACTOR,
-    };
+  _getLightIndicatorScratch() {
+    if (!this._indicatorScratch) {
+      this._indicatorScratch = {
+        forward: new THREE.Vector3(),
+        right: new THREE.Vector3(),
+        upInPlane: new THREE.Vector3(),
+        worldUp: new THREE.Vector3(),
+        beamLength: 1,
+      };
+    }
+    return this._indicatorScratch;
   }
 
   createIndicators() {
@@ -497,7 +739,7 @@ export class LightsController {
     if (!this.modelBounds || !this.basePositions) return;
 
     const group = new THREE.Group();
-    const { center, radius } = this.modelBounds;
+    group.name = 'LightIndicators';
 
     ['key', 'fill', 'rim'].forEach((id) => {
       const light = this.lights[id];
@@ -514,11 +756,18 @@ export class LightsController {
           color: light.color,
           transparent: true,
           opacity: 0.8,
+          depthWrite: false,
+          toneMapped: false,
           side: THREE.DoubleSide,
         }),
       );
 
+      cone.name = `LightIndicator_${id}`;
+      cone.frustumCulled = false;
+      cone.renderOrder = LIGHT_INDICATOR_RENDER_ORDER;
       cone.userData.lightId = id;
+      cone.userData.orbyLightIndicator = true;
+      cone.userData.skipBokehDepth = true;
       group.add(cone);
     });
 
@@ -538,33 +787,46 @@ export class LightsController {
   }
 
   updateIndicators() {
-    if (!this.lightIndicators || !this.modelBounds) return;
-    const { center, radius } = this.modelBounds;
-    const { baseDistance, coneRadius, coneHeight } = this._getIndicatorMetrics(radius);
-    this.lightIndicators.traverse((child) => {
-      if (!child.isMesh || !child.userData.lightId) return;
-      const lightId = child.userData.lightId;
-      const light = this.lights[lightId];
-      if (!light) return;
-      const lightPos = light.position.clone();
-      const direction = lightPos.clone().sub(center).normalize();
-      const newPosition = center.clone().add(direction.multiplyScalar(baseDistance));
-      child.position.copy(newPosition);
-      child.material.color.copy(light.color);
-      const maxIntensity = 10;
-      const normalizedIntensity = Math.min(light.intensity / maxIntensity, 1);
-      const intensityScale = 0.5 + normalizedIntensity * 2.0;
-      child.scale.set(
-        coneRadius * intensityScale,
-        coneHeight * intensityScale,
-        coneRadius * intensityScale,
-      );
-      const dirToCenter = center.clone().sub(newPosition).normalize();
-      const up = new THREE.Vector3(0, 1, 0);
-      const quaternion = new THREE.Quaternion();
-      quaternion.setFromUnitVectors(up.clone().negate(), dirToCenter);
-      child.quaternion.copy(quaternion);
-    });
+    if (this.lightIndicators && this.modelBounds) {
+      const { center } = this.modelBounds;
+      const extent = this._shadowFrustumExtent;
+      const scratch = this._getLightIndicatorScratch();
+
+      this.lightIndicators.traverse((child) => {
+        if (!child.isMesh || !child.userData.lightId) return;
+        const lightId = child.userData.lightId;
+        const light = this.lights[lightId];
+        if (!light) return;
+
+        const props = this.individualProperties[lightId];
+        const isLightEnabled = props?.enabled === true && this.lightsEnabled;
+        child.visible = isLightEnabled;
+
+        const origin = light.position;
+        const target = light.target?.position ?? center;
+        this._resolveLightBeamBasis(origin, target, scratch);
+        const intensityScale = this._getBeamConeIntensityScale(light);
+        const { coneLength, coneRadius } = this._getBeamConeDimensions(
+          scratch.beamLength,
+          extent,
+          intensityScale,
+        );
+        child.quaternion.copy(this._beamIconQuaternion(_BEAM_ICON_QUAT, scratch));
+        // ConeGeometry is center-pivoted; shift so the tip (+Y) sits on the light rig.
+        _BEAM_ICON_POS.copy(origin).addScaledVector(
+          scratch.forward,
+          0.5 * coneLength * LIGHT_INDICATOR_UNIT_CONE_HEIGHT,
+        );
+        child.position.copy(_BEAM_ICON_POS);
+        child.material.color.copy(light.color);
+        child.scale.set(
+          coneRadius,
+          coneLength,
+          coneRadius,
+        );
+      });
+    }
+    this.updateFalloffIndicators();
   }
 }
 

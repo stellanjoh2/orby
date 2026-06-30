@@ -51,8 +51,8 @@ export function resolveVideoExportFrameTiming(
  *
  * @param {import('../VideoExporter.js').VideoExporter} exporter
  * @param {object} frameParams — `_applyVideoExportFrame` args
- * @param {{ transparent?: boolean, exportWidth?: number, exportHeight?: number }} [captureOpts]
- * @returns {Blob}
+ * @param {{ transparent?: boolean, exportWidth?: number, exportHeight?: number, transparentFraming?: import('../imageExportFraming.js').TransparentFraming }} [captureOpts]
+ * @returns {{ blob: Blob, width: number, height: number, cropped: boolean }}
  */
 export function captureVideoExportFrameBlob(exporter, frameParams, captureOpts = {}) {
   exporter._applyVideoExportFrame(frameParams);

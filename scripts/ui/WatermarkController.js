@@ -7,7 +7,7 @@
 import { ensureLottie } from './lottieLoader.js';
 import { ORBY_LIME } from '../constants.js';
 
-const DEFAULT_CREDIT = 'Lorem Ipsu';
+const DEFAULT_CREDIT = '';
 const DEFAULT_LOGO_SCALE = 100;
 const DEFAULT_CREDIT_SCALE = 100;
 const MIN_SCALE = 50;
@@ -406,7 +406,7 @@ export class WatermarkController {
 
     this.ui?.uiSounds?.playSelect?.();
     this.syncFromSettings();
-    this.ui?.helpers?.showToast?.('Watermark reset', 3200, { notification: false });
+    this.ui?.helpers?.showToast?.('Logotype & credit reset', 3200, { notification: false });
   }
 
   /** Push persisted settings into the controls + overlay (no event side effects). */
@@ -500,9 +500,11 @@ export class WatermarkController {
 
     // Credit foldout follows the toggle.
     if (this.creditFoldout) {
-      this.creditFoldout.classList.toggle('effect-foldout--collapsed', !settings.creditEnabled);
-      this.creditFoldout.classList.toggle('effect-foldout--expanded', settings.creditEnabled);
-      this.creditFoldout.setAttribute('aria-hidden', settings.creditEnabled ? 'false' : 'true');
+      const creditOpen = !!settings.creditEnabled;
+      this.creditFoldout.hidden = !creditOpen;
+      this.creditFoldout.classList.toggle('effect-foldout--collapsed', !creditOpen);
+      this.creditFoldout.classList.toggle('effect-foldout--expanded', creditOpen);
+      this.creditFoldout.setAttribute('aria-hidden', creditOpen ? 'false' : 'true');
     }
 
     // Logotype Color only applies to a custom SVG — the Orby Lottie mark keeps
