@@ -72,6 +72,7 @@ body.legal-doc--support {
 }
 
 .legal-support-export-callout,
+.legal-support-common-issues,
 .legal-support-bug-report,
 .legal-support-section,
 .legal-support-glossary__group {
@@ -636,6 +637,10 @@ body.legal-doc--support p.legal-meta {
 }
 
 .legal-support-export-callout {
+  margin-bottom: 0;
+}
+
+.legal-support-common-issues {
   margin-bottom: 2.75rem;
 }
 
@@ -649,12 +654,22 @@ body.legal-doc--support p.legal-meta {
   color: color-mix(in srgb, #fecaca 28%, var(--legal-text));
 }
 
+.legal-doc--support .legal-callout--red p + p {
+  margin-top: 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid color-mix(in srgb, var(--warning) 18%, transparent);
+}
+
 .legal-doc--support .legal-callout--red strong {
   color: #fca5a5;
 }
 
 .legal-doc--support .legal-callout--red p > strong:first-child {
+  display: block;
+  margin-bottom: 0.4em;
   font-weight: 700;
+  font-size: 1.0625em;
+  letter-spacing: -0.02em;
   color: #fff;
 }
 
@@ -669,9 +684,6 @@ body.legal-doc--support p.legal-meta {
 }
 
 .legal-doc--support .legal-callout--red .legal-callout__secondary {
-  margin-top: 0.85rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid color-mix(in srgb, var(--warning) 18%, transparent);
   font-size: 0.94em;
   color: color-mix(in srgb, #fecaca 16%, var(--legal-text));
 }

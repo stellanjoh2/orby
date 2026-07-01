@@ -5850,6 +5850,10 @@ button.advanced-info-doc-btn {
  */
 :is(.panel-block, .subsection, .effect-foldout, .export-option-group)
   > :is(.slider-line, .color-line, .select-line, .map-slot-row):last-child,
+/* Trailing [hidden] placeholders (e.g. font Circular wrap → post-gen) are not :last-child */
+:is(.panel-block, .subsection, .effect-foldout, .export-option-group)
+  > :is(.slider-line, .color-line, .select-line, .map-slot-row):not(:has(~ :not([hidden]))),
+.effect-foldout :is(.slider-line, .color-line, .select-line, .map-slot-row):not(:has(~ :not([hidden]))),
 :is(.panel-block, .subsection, .effect-foldout)
   > :is(.slider-line, .color-line, .select-line):has(+ .effect-foldout, + .clip-planes-foldout),
 :is(.panel-block, .subsection, .effect-foldout)
@@ -9514,10 +9518,6 @@ body.ui-hidden .shelf {
 
 .font-extrude-system-fonts-prompt {
   margin: 0 0 var(--shelf-section-gap);
-}
-
-.font-extrude-system-fonts-prompt .ghost-btn {
-  width: 100%;
 }
 
 /* Generate from Font — family picker with lazy typeface previews */

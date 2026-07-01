@@ -125,7 +125,7 @@
       <nav class="legal-support-quicknav" aria-label="On this page">
         <p class="legal-support-quicknav__label">On this page</p>
         <ul class="legal-support-quicknav__list">
-          <li><a href="#support-disclaimer">Disclaimer</a></li>
+          <li><a href="#support-disclaimer">Common issues</a></li>
           <li><a href="#report-issue">Report issue</a></li>
           <li><a href="#file-formats">File formats</a></li>
           <li><a href="#shader-lab">Shader Lab</a></li>
@@ -154,10 +154,11 @@
         </ul>
       </nav>
 
-      <aside
-        id="support-disclaimer"
-        class="legal-callout legal-callout--red legal-support-export-callout"
-      >
+      <section id="support-disclaimer" class="legal-support-section legal-support-common-issues">
+        <h2>Common Issues</h2>
+        <aside
+          class="legal-callout legal-callout--red legal-support-export-callout"
+        >
         <p>
           <strong>Every source exports differently.</strong> Meshes from AI tools, game engines,
           Blender, marketplaces, and elsewhere can arrive at very different scales, brightness levels,
@@ -198,6 +199,14 @@
           and see how stylized shaders react to post-processing rather than forcing everything off. If a
           combo looks wrong, try disabling effects one at a time to find the culprit.
         </p>
+        <p>
+          <strong>Camera sweeps, not keyframes.</strong> Orby is not a timeline editor. Video export under
+          <strong>Export → Video</strong> builds motion by combining settings — object turntable, camera
+          orbit, dolly, roll, FOV and pitch animation, optional HDRI spin — all on one easing curve over
+          the clip length. Stack a mesh turn with a slow orbit and zoom for product shots and hero sweeps
+          without placing keys. Use export preview to dial it in before you encode MP4 or a PNG sequence;
+          see <a href="#exports">Exports</a> for formats and limits.
+        </p>
         <p class="legal-callout__secondary">
           Orby is a free passion project — no ads, no subscriptions, no revenue. I read every report
           and keep improving the app when I can, but I’m
@@ -205,7 +214,8 @@
           turnaround isn’t always fast. If something’s off, still send it in; it genuinely helps me
           decide what to fix next.
         </p>
-      </aside>
+        </aside>
+      </section>
 
       <section
         id="report-issue"

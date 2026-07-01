@@ -169,10 +169,11 @@ export class FontExtrudeUI {
             <button
               type="button"
               id="fontExtrudeAllowSystemFonts"
-              class="ghost-btn small"
+              class="accent-action-btn font-extrude-allow-system-fonts-btn"
               data-tooltip="Your browser will ask to access fonts installed on this device"
             >
-              Allow system fonts…
+              <i class="fa-solid fa-font" aria-hidden="true"></i>
+              <span>Allow system fonts…</span>
             </button>
           </div>
           <label class="select-line font-extrude-family-line font-extrude-typo-family-line">
