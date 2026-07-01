@@ -69,9 +69,10 @@ No build step, no installation, no dependencies to install. Just open and use.
 - **OBJ** (`.obj`) - Wavefront 3D object format (basic support)
 - **FBX** (`.fbx`) - Autodesk 3D format (basic support)
 - **STL** (`.stl`) - Stereolithography format (basic support)
-- **USD/USDZ** (`.usd`, `.usdz`) - Universal Scene Description format (basic support)
 
-**Note**: While other formats can be loaded, Orby is primarily tested and optimized for `.glb` files. For the best experience and feature support, use GLB/GLTF format.
+**Note**: Orby is built and tested around `.glb` / `.gltf`. OBJ, FBX, and STL load with basic support; feature coverage varies by exporter. For the best experience, export as GLB.
+
+**Experimental**: `.usdz` may load text-USDA stages only (binary USDC — the usual Apple/exporter default — often shows up empty). Barely tested; prefer GLB.
 
 Perfect for models exported from:
 - **AI-generated 3D**: Meshy, Tripo, Luma, CSM, Rodin, etc.
@@ -502,7 +503,7 @@ The canvas size is calculated on page load and doesn't automatically update when
 - Some complex models with unusual material setups may not render perfectly.
 - Models with very large textures may take longer to load.
 - Certain GLTF extensions may not be fully supported.
-- **Format support**: While multiple formats are supported, `.glb` files are the primary tested format. Other formats (OBJ, FBX, STL, USD) may have limited feature support or compatibility issues.
+- **Format support**: While multiple formats are supported, `.glb` files are the primary tested format. OBJ, FBX, and STL may have limited feature support or compatibility issues. USDZ is experimental and largely untested.
 
 ### Browser-Specific Issues
 
@@ -672,7 +673,7 @@ Highlights include Three.js, GSAP, Lottie Web, N8AO, Font Awesome, JSZip, ImageT
 
 ### Model won't load
 
-- Check that the file format is supported (`.glb`, `.gltf`, `.obj`, `.fbx`, `.stl`, `.usd`, `.usdz`)
+- Check that the file format is supported (`.glb`, `.gltf`, `.obj`, `.fbx`, `.stl`; `.usdz` is experimental)
 - Ensure the file isn't corrupted
 - Try a different model to verify the viewer is working
 - Check browser console for error messages

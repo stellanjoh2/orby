@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-07-01T17:33:29.818Z",
+    "generatedAt": "2026-07-01T17:42:14.441Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -114,7 +114,7 @@
       ],
       "lede": "No accounts, no uploads, no waiting. Your models stay on your machine — Orby never trains on your work.",
       "bullets": [
-        "GLB / glTF, OBJ, FBX, STL, USD, and SVG extrusion",
+        "GLB / glTF, OBJ, FBX, STL, and SVG extrusion",
         "Drag-and-drop or browse — plus full .orby scene recall",
         "Client-side only: close the tab and your files are gone"
       ],
@@ -328,7 +328,7 @@
         },
         {
           "question": "What formats does Orby support?",
-          "answer": "Orby is built and optimized for GLB and glTF — that's where you'll get the full experience. It also supports OBJ, FBX, STL, and USD/USDZ with basic support. For best results, export as GLB."
+          "answer": "Orby is built and optimized for GLB and glTF — that's where you'll get the full experience. OBJ, FBX, and STL load with basic support. For best results, export as GLB."
         },
         {
           "question": "Can I export my renders?",
