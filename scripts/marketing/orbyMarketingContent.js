@@ -305,8 +305,8 @@ export const MARKETING_SECTIONS = [
   {
     type: 'pro',
     id: 'orby-marketing-pro',
-    eyebrow: "THERE'S MORE",
-    title: 'Goes a lot deeper\nthan you think',
+    eyebrow: 'More tools',
+    title: 'Beyond the basics',
     lede:
       "It's not just a viewer. It's a studio. UV checker, wireframe, clay mode, isometric camera, ColorChecker, onset reference kit, a dynamic curved studio backdrop — and the list goes on. The kind of tooling you'd expect from a desktop app, running quietly in your browser tab.",
     cards: [
@@ -454,7 +454,7 @@ export const MARKETING_SECTIONS = [
     eyebrow: "What's coming",
     title: 'Roadmap',
     lede:
-      "A lot is already here. A lot more is coming. Features get added, timelines shift, and we're always building — but this is our best outline of what's next and when to expect it.",
+      "A lot is already here. A lot more is coming. Features get added and timelines shift — this is the best outline of what's next.",
     gradientPhrases: ['A lot more is coming'],
   },
   {
@@ -471,7 +471,7 @@ export const MARKETING_SECTIONS = [
       {
         question: 'Do I need to create an account?',
         answer:
-          "No. No account, no login, no email, no waitlist. Just open the browser and drop your file. We wanted getting started to be as frictionless as possible — no hoops, no setup, no commitment. If you have a file, you're ready.",
+          "No. No account, no login, no email. Open the browser and drop your file.",
       },
       {
         question: 'Do my files get uploaded anywhere?',
@@ -496,12 +496,12 @@ export const MARKETING_SECTIONS = [
       {
         question: 'Is it really free?',
         answer:
-          'Completely. No hidden tiers, no export limits, no watermarks. Free now, free always.',
+          'Completely. No hidden tiers, no export limits, no watermarks.',
       },
       {
         question: 'Why does Orby exist?',
         answer:
-          "Orby started as a personal learning experiment — I wanted to learn more about code and 3D on the web, and the process of building something on my own. It was never meant to be anything more than that. But it kept growing, and at some point it became something worth sharing. So here it is. I hope it's useful.",
+          "I wanted a viewer with real lighting and export controls that ran in the browser. Orby started as a solo build; it kept growing into something worth sharing.",
       },
     ],
   },
@@ -528,7 +528,7 @@ export const MARKETING_SECTIONS = [
     type: 'in-progress',
     id: 'orby-marketing-in-progress',
     eyebrow: 'In progress',
-    title: 'Do you enjoy Orby? We got more things coming soon',
+    title: 'More from the same studio — rfrct',
     gradientPhrases: ['more things'],
     lede:
       "rfrct is a design tool for distorting type and building audio-reactive visuals, right in the browser. Bend your letters through glass, push them through waves, blur the edges until they frost over. Dial in chromatic aberration, layer on refraction, and let the whole thing react to sound. When you're done, export it as a PNG, a GIF, or straight to MP4 — no plugins, no timelines, no fuss. Early access is limited.",

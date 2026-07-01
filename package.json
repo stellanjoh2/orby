@@ -1,7 +1,7 @@
 {
   "name": "orby",
   "version": "0.5.123",
-  "description": "A completely free, zero-install, drag-and-drop 3D model viewer",
+  "description": "Free browser-based 3D viewer and virtual studio — GLB/SVG, local-only, no account",
   "type": "module",
   "scripts": {
     "start": "node scripts/static-dev-server.mjs",

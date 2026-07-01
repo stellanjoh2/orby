@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**A completely free, zero-install, drag-and-drop 3D model viewer that makes any model look stunning in seconds.**
+**A free browser-based 3D viewer and virtual studio. Drop a GLB, light it, export it — no account, no upload.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Browser](https://img.shields.io/badge/Browser-Chrome%20%7C%20Firefox%20%7C%20Safari%20%7C%20Edge-blue)](https://github.com/stellanjoh2/orby)
@@ -14,16 +14,16 @@
 
 ## ✨ Overview
 
-Orby is a professional-grade 3D model viewer that runs entirely in your browser. Perfect for **AI-generated 3D** (Meshy, Tripo, Luma, CSM, etc.), **game assets**, **product visualization**, and everything in between.
+Orby is a free browser-based 3D viewer and virtual studio that runs entirely in your browser. Built for **AI-generated 3D** (Meshy, Tripo, Luma, CSM, etc.), **game assets**, **product visualization**, and client presentations.
 
-**No accounts, no waiting, no uploads**—just drop your file and get a full artist-grade studio with HDR environments, real depth of field, selective bloom, film grain, tonemapping, 3-point lighting, and pro controls that react instantly.
+**No account, no upload** — drop your file and get full studio controls: HDR environments, depth of field, selective bloom, film grain, tonemapping, 3-point lighting, and real-time grading.
 
 ### 🎯 Key Highlights
 
 - ⚡ **Instant drag-and-drop loading** for your local files
 - 🎬 **Full cinematic post-processing**: selective bloom, depth of field, film grain, chromatic aberration, professional tonemapping
 - 🌍 **HDR environments** with blur, rotation, intensity controls, and custom `.hdr` / `.exr` upload
-- 💡 **Custom 3-point studio lighting** that blends seamlessly with image-based lighting
+- 💡 **Custom 3-point studio lighting** that blends with image-based lighting
 - 🎨 **Real-time material controls**: brightness (up to 3.0), metalness, roughness, emissive glow
 - 📊 **Exposure histogram** with overexposure warnings
 - 🎥 **Auto-orbit camera** for screensaver-style presentations
@@ -189,7 +189,7 @@ Orby fully supports gamepad input for a console-like experience.
 ### Post-Processing Effects
 
 #### Bloom
-Selective bloom with customizable threshold, strength, radius, and tint. Adds a glowing, dreamy effect to bright areas.
+Selective bloom with customizable threshold, strength, radius, and tint. Highlights bright areas with a controlled glow.
 
 #### Depth of Field
 Real bokeh depth of field with focus distance, aperture, and blur controls. Blurs the background while keeping your model sharp, like a camera lens.
@@ -449,7 +449,7 @@ Orby is **100% client-side** and **completely private**:
 - ✅ **No data collection** - Your files never leave your device
 - ✅ **Close the tab** - Your model is instantly and permanently gone
 
-Your privacy is guaranteed. No one can ever access your files.
+Your files never leave your device.
 
 ---
 
@@ -633,9 +633,9 @@ window.orby.gamepad
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+2. Create your feature branch (`git checkout -b your-feature-name`)
+3. Commit your changes (`git commit -m 'Add feature description'`)
+4. Push to the branch (`git push origin your-feature-name`)
 5. Open a Pull Request
 
 ### Development Guidelines
@@ -759,7 +759,7 @@ For issues, questions, or suggestions, please open an issue on [GitHub](https://
 
 <div align="center">
 
-**Made with ❤️ for the 3D community**
+Orby is free and open source (MIT). [orby.studio](https://orby.studio)
 
 [⭐ Star on GitHub](https://github.com/stellanjoh2/orby) · [🐛 Report Bug](https://github.com/stellanjoh2/orby/issues) · [💡 Request Feature](https://github.com/stellanjoh2/orby/issues)
 
