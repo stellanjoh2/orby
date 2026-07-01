@@ -943,7 +943,7 @@ html.orby-sr-on .orby-sr,
   pointer-events: none !important;
 }
 
-html:not(.orby-sr-on) body.legal-doc--about > :not(#orby-sr-root) {
+html:not(.orby-sr-on) body.legal-doc > :not(#orby-sr-root) {
   visibility: hidden !important;
 }
 
