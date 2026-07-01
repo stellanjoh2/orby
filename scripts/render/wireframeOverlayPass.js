@@ -73,8 +73,13 @@ export function renderWireframeOverlay({ renderer, camera, wireframeMeshes }) {
   renderer.clearDepth();
 
   try {
+    const skeletonsUpdated = new Set();
     for (const mesh of wireframeMeshes) {
       if (!mesh?.isMesh || !mesh.visible) continue;
+      if (mesh.isSkinnedMesh && mesh.skeleton && !skeletonsUpdated.has(mesh.skeleton)) {
+        mesh.skeleton.update();
+        skeletonsUpdated.add(mesh.skeleton);
+      }
       mesh.updateMatrixWorld(true);
       renderer.render(mesh, camera);
     }

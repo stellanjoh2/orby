@@ -135,51 +135,67 @@
                   aria-hidden="true"
                 >
                 <p class="export-format-sub">
-                  Combine object turntable, camera orbit/dolly/roll, and optional HDRI rotation. Full and subtle spins apply only when Turntable or Orbit is enabled — they rotate the mesh or camera, not the environment.
+                  Combine object turntable, camera orbit/dolly/roll, and optional HDRI rotation.
                 </p>
                 <p class="export-format-sub export-format-warning">
                   MP4 is a real-time viewport capture, not an offline render. Heavier scenes may drop frames or fail—best for previews and lighter setups. For dependable output, export a PNG sequence.
                 </p>
                 <div class="export-controls">
-                  <div class="export-option-group">
-                    <label class="export-label">Movement</label>
+                  <div class="block-title export-section-title">Object</div>
+                  <div id="exportVideoObjectGroup" class="export-option-group export-video-object-group">
                     <div class="export-button-group">
-                      <button type="button" data-video-movement="turntable" class="export-option-btn active" data-tooltip="Object: rotate the mesh in place over the export length">TURNTABLE</button>
-                      <button type="button" data-video-movement="orbit" class="export-option-btn" data-tooltip="Camera: orbit around your current target; one full 360° per spin over export length">ORBIT</button>
+                      <button type="button" data-video-movement="turntable" class="export-option-btn active" data-tooltip="Rotate the mesh in place over the export length">TURNTABLE</button>
                     </div>
-                    <div class="export-button-group">
-                      <button type="button" data-video-movement="zoom-in" class="export-option-btn" data-tooltip="Camera: dolly toward the orbit target over the export length">ZOOM IN</button>
-                      <button type="button" data-video-movement="zoom-out" class="export-option-btn" data-tooltip="Camera: dolly away from the orbit target over the export length">ZOOM OUT</button>
-                    </div>
-                    <div class="export-button-group">
-                      <button type="button" data-video-movement="tilt-left" class="export-option-btn" data-tooltip="Camera: roll left (counter-clockwise) over the export length">ROLL LEFT</button>
-                      <button type="button" data-video-movement="tilt-right" class="export-option-btn" data-tooltip="Camera: roll right (clockwise) over the export length">ROLL RIGHT</button>
-                    </div>
-                  </div>
-                  <div class="export-option-group">
-                    <label class="export-label">Full Spins (360°) · Object &amp; camera</label>
+                    <label class="export-label">Laps</label>
                     <div class="export-button-group export-button-group--triple">
-                      <button type="button" data-video-spins="0" class="export-option-btn" data-tooltip="No full 360° laps — use subtle spins below, HDRI rotation, or zoom/roll only">0</button>
-                      <button type="button" data-video-spins="1" class="export-option-btn active" data-tooltip="One full 360° — mesh (Turntable) or camera (Orbit), depending on which movement is enabled">1</button>
-                      <button type="button" data-video-spins="2" class="export-option-btn" data-tooltip="Two full 360° laps over the same duration — mesh or camera">2</button>
+                      <button type="button" data-video-object-spins="0" class="export-option-btn" data-tooltip="No full 360° mesh rotation — use arc below for partial turns">0</button>
+                      <button type="button" data-video-object-spins="1" class="export-option-btn active" data-tooltip="One full mesh rotation over the export length">1</button>
+                      <button type="button" data-video-object-spins="2" class="export-option-btn" data-tooltip="Two full mesh rotations over the same duration">2</button>
                     </div>
-                  </div>
-                  <div id="exportSubtleSpinsGroup" class="export-option-group">
-                    <label class="export-label">Subtle Spins · Object &amp; camera</label>
-                    <div class="export-button-group export-button-group--triple">
-                      <button type="button" data-video-subtle-spins="22.5" class="export-option-btn" data-tooltip="Partial 22.5° mesh or camera rotation over the export length (when full spins is 0)">22.5°</button>
-                      <button type="button" data-video-subtle-spins="45" class="export-option-btn" data-tooltip="Partial 45° mesh or camera rotation over the export length (when full spins is 0)">45°</button>
-                      <button type="button" data-video-subtle-spins="90" class="export-option-btn" data-tooltip="Partial 90° mesh or camera rotation over the export length (when full spins is 0)">90°</button>
+                    <label class="export-label">Arc</label>
+                    <div id="exportObjectArcGroup" class="export-button-group export-button-group--triple">
+                      <button type="button" data-video-object-arc="22.5" class="export-option-btn" data-tooltip="Partial 22.5° mesh rotation when laps is 0">22.5°</button>
+                      <button type="button" data-video-object-arc="45" class="export-option-btn" data-tooltip="Partial 45° mesh rotation when laps is 0">45°</button>
+                      <button type="button" data-video-object-arc="90" class="export-option-btn" data-tooltip="Partial 90° mesh rotation when laps is 0">90°</button>
                     </div>
-                  </div>
-                  <div class="export-option-group">
-                    <label class="export-label">Spin Direction · Object &amp; camera</label>
+                    <label class="export-label">Direction</label>
                     <div class="export-button-group">
-                      <button type="button" data-video-spin-direction="forward" class="export-option-btn active" data-tooltip="Default direction for mesh/camera spins">FORWARD</button>
-                      <button type="button" data-video-spin-direction="reverse" class="export-option-btn" data-tooltip="Opposite direction for mesh/camera spins">REVERSE</button>
+                      <button type="button" data-video-object-direction="reverse" class="export-option-btn" data-tooltip="Opposite mesh rotation direction">REVERSE</button>
+                      <button type="button" data-video-object-direction="forward" class="export-option-btn active" data-tooltip="Default mesh rotation direction">FORWARD</button>
                     </div>
                   </div>
-                  <div id="exportMovementSliders" class="export-option-group">
+                  <div class="panel-block-divider" aria-hidden="true"></div>
+                  <div class="block-title export-section-title">Camera</div>
+                  <div class="export-option-group export-video-camera-group">
+                    <div class="export-button-group">
+                      <button type="button" data-video-movement="orbit" class="export-option-btn" data-tooltip="Orbit around your current target over the export length">ORBIT</button>
+                    </div>
+                    <label class="export-label">Orbit laps</label>
+                    <div class="export-button-group export-button-group--triple">
+                      <button type="button" data-video-camera-spins="0" class="export-option-btn" data-tooltip="No full 360° camera orbit — use arc below for partial moves">0</button>
+                      <button type="button" data-video-camera-spins="1" class="export-option-btn active" data-tooltip="One full camera orbit over the export length">1</button>
+                      <button type="button" data-video-camera-spins="2" class="export-option-btn" data-tooltip="Two full camera orbits over the same duration">2</button>
+                    </div>
+                    <label class="export-label">Orbit arc</label>
+                    <div id="exportCameraArcGroup" class="export-button-group export-button-group--triple">
+                      <button type="button" data-video-camera-arc="22.5" class="export-option-btn" data-tooltip="Partial 22.5° camera orbit when orbit laps is 0">22.5°</button>
+                      <button type="button" data-video-camera-arc="45" class="export-option-btn" data-tooltip="Partial 45° camera orbit when orbit laps is 0">45°</button>
+                      <button type="button" data-video-camera-arc="90" class="export-option-btn" data-tooltip="Partial 90° camera orbit when orbit laps is 0">90°</button>
+                    </div>
+                    <label class="export-label">Orbit direction</label>
+                    <div class="export-button-group">
+                      <button type="button" data-video-camera-direction="reverse" class="export-option-btn" data-tooltip="Opposite camera orbit direction">REVERSE</button>
+                      <button type="button" data-video-camera-direction="forward" class="export-option-btn active" data-tooltip="Default camera orbit direction">FORWARD</button>
+                    </div>
+                    <div class="export-button-group">
+                      <button type="button" data-video-movement="zoom-in" class="export-option-btn" data-tooltip="Dolly toward the orbit target over the export length">ZOOM IN</button>
+                      <button type="button" data-video-movement="zoom-out" class="export-option-btn" data-tooltip="Dolly away from the orbit target over the export length">ZOOM OUT</button>
+                    </div>
+                    <div class="export-button-group">
+                      <button type="button" data-video-movement="tilt-left" class="export-option-btn" data-tooltip="Roll left (counter-clockwise) over the export length">ROLL LEFT</button>
+                      <button type="button" data-video-movement="tilt-right" class="export-option-btn" data-tooltip="Roll right (clockwise) over the export length">ROLL RIGHT</button>
+                    </div>
+                    <div id="exportMovementSliders" class="export-video-camera-sliders">
                     <label id="exportZoomDistanceSettings" class="slider-line">
                       <span data-tooltip="Camera: how far the camera dollies in or out over the export length (scene units).">Zoom distance</span>
                       <input
@@ -228,59 +244,31 @@
                       />
                       <span class="value" data-output="exportPitchOffset">0°</span>
                     </label>
+                    </div>
                   </div>
-                  <div class="export-option-group export-preview-animation">
-                    <label class="export-label">Preview animation</label>
-                    <div class="animation-timeline">
-                      <div class="animation-controls">
-                        <div class="animation-transport-btns">
-                          <button
-                            id="exportPreviewPlayPause"
-                            type="button"
-                            class="animation-play-btn"
-                            disabled
-                            aria-label="Play export preview"
-                            data-tooltip="Play export movement preview in the viewport"
-                          >
-                            <i class="fa-solid fa-play" aria-hidden="true"></i>
-                            <span class="sr-only">Play</span>
-                          </button>
-                          <button
-                            id="exportPreviewReset"
-                            type="button"
-                            class="animation-play-btn"
-                            disabled
-                            aria-label="Stop preview and return to start"
-                            data-tooltip="End preview, return to frame 0, and restore camera orbit"
-                          >
-                            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
-                            <span class="sr-only">Stop preview</span>
-                          </button>
-                        </div>
-                        <input
-                          type="range"
-                          id="exportPreviewScrub"
-                          min="0"
-                          max="1"
-                          step="0.001"
-                          value="0"
-                          disabled
-                          aria-label="Export preview timeline"
-                        />
-                        <span id="exportPreviewTime">0:00</span>
-                      </div>
-                    </div>
-                    <div class="export-preview-pause-all-row">
-                      <button
-                        type="button"
-                        id="exportPreviewPauseAll"
-                        class="ghost-btn small export-preview-pause-all-btn"
-                        disabled
-                        data-tooltip="Freeze 3D type reveal and constant animations at the current pose without leaving the Export tab. Press again to resume."
-                      >
-                        Pause all animations
-                      </button>
-                    </div>
+                  <div class="block-title export-section-title" data-tooltip="One curve for the whole clip — object spin, camera moves, FOV, and pitch.">Timing</div>
+                  <div class="export-option-group export-video-timing-group">
+                    <label id="exportMovementEasingFamilyLine" class="select-line">
+                      <span data-tooltip="Linear is default for turntables; ease out suits camera dollies and orbits.">Easing</span>
+                      <select id="exportMovementEasingFamily" aria-label="Export timing easing curve">
+                        <option value="linear" selected>Linear</option>
+                        <option value="sine">Sine</option>
+                        <option value="quad">Quad</option>
+                        <option value="cubic">Cubic</option>
+                        <option value="quart">Quart</option>
+                        <option value="quint">Quint</option>
+                        <option value="expo">Expo</option>
+                        <option value="circ">Circ</option>
+                      </select>
+                    </label>
+                    <label id="exportMovementEasingTypeLine" class="select-line is-muted">
+                      <span data-tooltip="Ease in accelerates from rest; ease out decelerates into the end of the clip; in-out blends both.">Type</span>
+                      <select id="exportMovementEasingType" aria-label="Export timing easing type" disabled>
+                        <option value="in">In</option>
+                        <option value="out" selected>Out</option>
+                        <option value="inOut">In-out</option>
+                      </select>
+                    </label>
                   </div>
                   <div class="export-video-preview-actions scene-controls">
                     <button
@@ -304,20 +292,29 @@
                     </button>
                   </div>
                   <div id="exportMeshAnimationsSettings" class="export-option-group" hidden>
-                    <div class="slider-line">
-                      <span data-tooltip="Play a GLB animation clip during export and preview">Embed Animations</span>
+                    <label class="select-line">
+                      <span data-tooltip="GLB clip baked into export and preview timeline. Off: static mesh in the export file; preview keeps live studio playback.">GLB animation</span>
+                      <select id="exportMeshAnimationSelect" aria-label="GLB animation for export"></select>
+                    </label>
+                    <div id="exportMeshMatchDurationWrap" class="slider-line" hidden>
+                      <span data-tooltip="Set export length to the selected clip duration. Length presets (5s / 10s / 15s) are ignored while this is on.">Match export length to clip</span>
                       <label class="effect-toggle">
-                        <input type="checkbox" id="exportMeshAnimationsEmbed" />
+                        <input type="checkbox" id="exportMeshMatchDurationToClip" />
                         <span class="effect-indicator" aria-hidden="true"></span>
-                        <span class="sr-only">Embed GLB animations in video export</span>
+                        <span class="sr-only">Match export length to selected GLB clip</span>
                       </label>
                     </div>
-                    <label id="exportMeshAnimationClipWrap" class="select-line" hidden>
-                      <span class="sr-only">Export animation clip</span>
-                      <select id="exportMeshAnimationSelect" aria-label="Export animation clip" data-tooltip="Which GLB animation clip to play during export"></select>
-                    </label>
+                    <div id="exportMeshSyncCameraWrap" class="slider-line" hidden>
+                      <span data-tooltip="When off, camera and turntable moves keep your Length preset timing while the clip plays at normal speed over the export.">Sync camera move to duration</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="exportMeshSyncCameraToDuration" checked />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Sync camera and turntable to export duration</span>
+                      </label>
+                    </div>
                   </div>
                   <div class="panel-block-divider" aria-hidden="true"></div>
+                  <div class="block-title export-section-title">Output</div>
                   <div class="export-option-group">
                     <label class="export-label">Format</label>
                     <div class="export-button-group">
@@ -362,13 +359,14 @@
                       </div>
                     </div>
                   </div>
-                  <div class="export-option-group">
+                  <div id="exportVideoLengthGroup" class="export-option-group">
                     <label class="export-label">Length</label>
                     <div class="export-button-group export-button-group--triple">
                       <button data-video-duration="5" class="export-option-btn active" data-tooltip="5 second export duration">5s</button>
                       <button data-video-duration="10" class="export-option-btn" data-tooltip="10 second export duration">10s</button>
                       <button data-video-duration="15" class="export-option-btn" data-tooltip="15 second export duration">15s</button>
                     </div>
+                    <span id="exportVideoLengthClipHint" class="export-length-clip-hint" hidden></span>
                   </div>
                   <div class="export-option-group">
                     <label class="export-label">FPS</label>

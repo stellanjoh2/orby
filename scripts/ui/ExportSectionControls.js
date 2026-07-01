@@ -25,6 +25,7 @@ export class ExportSectionControls {
       input.checked = open;
       this.setSectionOpen(key, open);
     });
+    this.ui.syncExportVideoPreviewDock?.();
   }
 
   /** @param {'image' | 'svg' | 'glb' | 'video' | 'watermark'} key */
@@ -38,6 +39,9 @@ export class ExportSectionControls {
     foldout.classList.toggle('effect-foldout--collapsed', !open);
     foldout.classList.toggle('effect-foldout--expanded', open);
     foldout.setAttribute('aria-hidden', open ? 'false' : 'true');
+    if (key === 'video') {
+      this.ui.syncExportVideoPreviewDock?.();
+    }
   }
 
   syncFromSettings() {

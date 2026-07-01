@@ -30,7 +30,7 @@ const LIGHT_INDICATOR_INTENSITY_SCALE_MIN = 0.5;
 const LIGHT_INDICATOR_INTENSITY_SCALE_MAX = 2.5;
 const LIGHT_INDICATOR_INTENSITY_REFERENCE = 10;
 const LIGHT_INDICATOR_RENDER_ORDER = 1004;
-const LIGHT_FALLOFF_SEGMENTS = 16;
+const LIGHT_FALLOFF_SEGMENTS = 32;
 const LIGHT_FALLOFF_LINE_OPACITY = 0.72;
 /** ConeGeometry tip is +Y; beam opens toward -Y — align opening with light→target. */
 const _BEAM_CONE_OPEN = new THREE.Vector3(0, -1, 0);
@@ -710,6 +710,15 @@ export class LightsController {
         beamLines.material.color.copy(light.color);
       }
     });
+  }
+
+  /** Groups composited after post when Shader Lab / DOF would stylize viewport guides. */
+  getIndicatorOverlayGroups() {
+    /** @type {import('three').Group[]} */
+    const groups = [];
+    if (this.lightIndicators) groups.push(this.lightIndicators);
+    if (this.lightFalloffIndicators) groups.push(this.lightFalloffIndicators);
+    return groups;
   }
 
   setIndicatorsVisible(enabled) {

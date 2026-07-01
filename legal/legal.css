@@ -815,8 +815,7 @@ body.legal-doc a.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
   }
 }
 
-/* Site entry gate — same access phrase as homepage (see scripts/orbyEntryGate.js) */
-.orby-entry-gate {
+.orby-sr {
   position: fixed;
   inset: 0;
   z-index: 2147483646;
@@ -830,7 +829,7 @@ body.legal-doc a.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
   pointer-events: auto;
 }
 
-.orby-entry-gate__panel {
+.orby-sr__panel {
   width: 100%;
   max-width: 420px;
   padding: 1.75rem 1.5rem;
@@ -843,7 +842,7 @@ body.legal-doc a.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
     0 0 80px color-mix(in srgb, var(--legal-accent) 8%, transparent);
 }
 
-.orby-entry-gate__title {
+.orby-sr__title {
   font-family: var(--legal-brand-headline-bold);
   margin: 0 0 0.35rem 0;
   font-size: 2rem;
@@ -853,20 +852,20 @@ body.legal-doc a.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
   color: var(--legal-accent);
 }
 
-.orby-entry-gate__hint {
+.orby-sr__hint {
   margin: 0 0 1.25rem 0;
   font-size: 0.88rem;
   line-height: 1.45;
   color: var(--legal-muted);
 }
 
-.orby-entry-gate__form {
+.orby-sr__form {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
 }
 
-.orby-entry-gate__label {
+.orby-sr__label {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -874,7 +873,7 @@ body.legal-doc a.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
   color: var(--legal-faint);
 }
 
-.orby-entry-gate__input {
+.orby-sr__input {
   width: 100%;
   box-sizing: border-box;
   padding: 0.65rem 0.85rem;
@@ -888,25 +887,25 @@ body.legal-doc a.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.orby-entry-gate__input:focus {
+.orby-sr__input:focus {
   border-color: color-mix(in srgb, var(--legal-accent) 55%, transparent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--legal-accent) 22%, transparent);
 }
 
-.orby-entry-gate__error {
+.orby-sr__msg {
   margin: 0;
   min-height: 1.25rem;
   font-size: 0.82rem;
   color: var(--orby-pink);
 }
 
-.orby-entry-gate__submit {
+.orby-sr__btn {
   margin-top: 0.35rem;
   width: 100%;
   justify-content: center;
 }
 
-.orby-entry-gate .accent-action-btn {
+.orby-sr .accent-action-btn {
   width: 100%;
   padding: 0.5rem 1rem;
   border-radius: 999px;
@@ -927,24 +926,24 @@ body.legal-doc a.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
   opacity: 1;
 }
 
-.orby-entry-gate .accent-action-btn:hover {
+.orby-sr .accent-action-btn:hover {
   background: var(--legal-accent);
   color: var(--orby-black);
   box-shadow: 0 0 24px color-mix(in srgb, var(--legal-accent) 35%, transparent);
 }
 
-.orby-entry-gate .accent-action-btn:active {
+.orby-sr .accent-action-btn:active {
   filter: brightness(0.95);
 }
 
-html.orby-gate-unlocked .orby-entry-gate,
-#orby-entry-gate[hidden] {
+html.orby-sr-on .orby-sr,
+#orby-sr-root[hidden] {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
 }
 
-html:not(.orby-gate-unlocked) body.legal-doc--about > :not(#orby-entry-gate) {
+html:not(.orby-sr-on) body.legal-doc--about > :not(#orby-sr-root) {
   visibility: hidden !important;
 }
 

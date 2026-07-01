@@ -82,7 +82,12 @@ export class GlobalControls {
         this.helpers.flushRangeSliderInteractionState?.();
         const previousTab = this.ui.activeTab;
         if (previousTab === 'export' && target !== 'export') {
-          this.eventBus.emit('export:movement-preview-stop');
+          const keepPausedPreview =
+            window.orby?.scene?.exportMovementPreview?.isActive?.()
+            && this.ui.exportPreviewControls?.isExportPreviewPaused?.();
+          if (!keepPausedPreview) {
+            this.eventBus.emit('export:movement-preview-stop');
+          }
         }
         this.ui.uiSounds?.playSelect();
         this.ui.activeTab = target;
@@ -110,6 +115,8 @@ export class GlobalControls {
         document.querySelectorAll('.panel-header-title').forEach((header) => {
           header.classList.toggle('visible', header.dataset.header === target);
         });
+        this.ui.syncExportVideoPreviewDock?.();
+        this.ui.syncExportPreviewBanner?.();
         revealShelfPanelHeadline(
           document.querySelector(`.panel-header-title[data-header="${target}"]`),
         );

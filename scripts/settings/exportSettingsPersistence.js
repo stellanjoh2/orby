@@ -2,10 +2,15 @@ import { deepClone } from '../utils/deepClone.js';
 import { normalizeImageExportFormat } from '../render/imageExportFormats.js';
 import { normalizeTransparentFraming } from '../render/imageExportFraming.js';
 import {
+  normalizeExportMovementEasing,
+} from '../render/exportMovementEasing.js';
+import {
   normalizeExportFovOffset,
   normalizeExportPitchOffset,
   normalizeExportSpins,
   normalizeExportSubtleSpinDegrees,
+  normalizeExportObjectSpinSettings,
+  normalizeExportCameraSpinSettings,
   normalizeExportVideoMovements,
 } from '../render/exportVideoMovements.js';
 import {
@@ -123,6 +128,41 @@ export function applySavedExportSettings(target, saved) {
   target.video.spins = normalizeExportSpins(video.spins);
   target.video.subtleSpinDegrees = normalizeExportSubtleSpinDegrees(video.subtleSpinDegrees);
   target.video.spinDirection = video.spinDirection === 'reverse' ? 'reverse' : 'forward';
+  if (video.objectSpins !== undefined) {
+    target.video.objectSpins = normalizeExportSpins(video.objectSpins);
+  }
+  if (video.objectSubtleDegrees !== undefined) {
+    target.video.objectSubtleDegrees = normalizeExportSubtleSpinDegrees(video.objectSubtleDegrees);
+  }
+  if (video.objectSpinDirection === 'reverse' || video.objectSpinDirection === 'forward') {
+    target.video.objectSpinDirection = video.objectSpinDirection;
+  }
+  if (video.cameraSpins !== undefined) {
+    target.video.cameraSpins = normalizeExportSpins(video.cameraSpins);
+  }
+  if (video.cameraSubtleDegrees !== undefined) {
+    target.video.cameraSubtleDegrees = normalizeExportSubtleSpinDegrees(video.cameraSubtleDegrees);
+  }
+  if (video.cameraSpinDirection === 'reverse' || video.cameraSpinDirection === 'forward') {
+    target.video.cameraSpinDirection = video.cameraSpinDirection;
+  }
+  const objectSpin = normalizeExportObjectSpinSettings({
+    ...target.video,
+    ...video,
+  });
+  const cameraSpin = normalizeExportCameraSpinSettings({
+    ...target.video,
+    ...video,
+  });
+  target.video.objectSpins = objectSpin.fullSpins;
+  target.video.objectSubtleDegrees = objectSpin.subtleSpinDegrees;
+  target.video.objectSpinDirection = objectSpin.spinDirection;
+  target.video.cameraSpins = cameraSpin.fullSpins;
+  target.video.cameraSubtleDegrees = cameraSpin.subtleSpinDegrees;
+  target.video.cameraSpinDirection = cameraSpin.spinDirection;
+  if (video.movementEasing !== undefined) {
+    target.video.movementEasing = normalizeExportMovementEasing(video.movementEasing);
+  }
   target.video.hdriRotationDegrees = 0;
   target.video.aspectRatio = normalizeExportVideoAspectRatio(video.aspectRatio);
 
@@ -145,5 +185,11 @@ export function applySavedExportSettings(target, saved) {
     if (Number.isFinite(clipIndex) && clipIndex >= 0) {
       target.video.meshAnimationClipIndex = clipIndex;
     }
+  }
+  if (video.meshMatchDurationToClip !== undefined) {
+    target.video.meshMatchDurationToClip = !!video.meshMatchDurationToClip;
+  }
+  if (video.meshSyncCameraToDuration !== undefined) {
+    target.video.meshSyncCameraToDuration = !!video.meshSyncCameraToDuration;
   }
 }

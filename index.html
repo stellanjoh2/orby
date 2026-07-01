@@ -71,7 +71,7 @@
       body {
         background: #080808;
       }
-      .orby-entry-gate {
+      .orby-sr {
         background: #080808;
       }
       .dropzone {
@@ -108,12 +108,7 @@
         transform: none !important;
       }
     </style>
-    <!-- Entry gate: false = open site immediately (HTML + phrase logic stay in this file). true = require access phrase + periodic re-check. -->
-    <script>
-      window.__ORBY_ENTRY_GATE_ENABLED__ = true;
-    </script>
-    
-    <!-- Open Graph / Facebook -->
+<!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Orby — Free 3D Model Viewer | Professional Studio in Your Browser" />
     <meta property="og:description" content="A completely free, zero-install, drag-and-drop 3D model viewer that makes any model look stunning in seconds. Full artist-grade studio with HDR environments, post-processing, and pro controls. Try it now at orby.studio" />
@@ -146,22 +141,22 @@
     <link rel="stylesheet" href="./styles/marketing/09-scroll-cue-responsive.css" />
     <script>
       (function () {
-        if (typeof window !== 'undefined' && window.__ORBY_ENTRY_GATE_ENABLED__ === false) {
-          document.documentElement.classList.add('orby-gate-unlocked');
+        if (typeof window !== 'undefined' && window.__ORBY_SR_OFF__ === true) {
+          document.documentElement.classList.add('orby-sr-on');
           return;
         }
         try {
-          var VERIFIED_KEY = 'orby_site_gate_verified';
-          var VISIT_SEQ_KEY = 'orby_site_gate_visit_seq';
+          var SK = 'orby_sr_s';
+          var CK = 'orby_sr_c';
           var CHALLENGE_EVERY_N_VISITS = 5;
-          var prev = parseInt(sessionStorage.getItem(VISIT_SEQ_KEY) || '0', 10);
+          var prev = parseInt(sessionStorage.getItem(CK) || '0', 10);
           var visitSeq = (isNaN(prev) ? 0 : prev) + 1;
-          sessionStorage.setItem(VISIT_SEQ_KEY, String(visitSeq));
+          sessionStorage.setItem(CK, String(visitSeq));
           if (visitSeq % CHALLENGE_EVERY_N_VISITS === 0) {
-            sessionStorage.removeItem(VERIFIED_KEY);
+            sessionStorage.removeItem(SK);
           }
-          if (sessionStorage.getItem(VERIFIED_KEY) === '1') {
-            document.documentElement.classList.add('orby-gate-unlocked');
+          if (sessionStorage.getItem(SK) === '1') {
+            document.documentElement.classList.add('orby-sr-on');
           }
         } catch (e) {}
       })();
@@ -204,33 +199,30 @@
       </div>
     </nav>
     <div
-      id="orby-entry-gate"
-      class="orby-entry-gate"
+      id="orby-sr-root"
+      class="orby-sr"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="orby-entry-gate-title"
+      aria-labelledby="orby-sr-title"
     >
-      <div class="orby-entry-gate__panel">
-        <h1 id="orby-entry-gate-title" class="orby-entry-gate__title">Orby</h1>
-        <p class="orby-entry-gate__hint">
-          Enter the access phrase to open the studio.
-        </p>
-        <form class="orby-entry-gate__form" id="orby-entry-gate-form" autocomplete="off">
-          <label class="orby-entry-gate__label" for="orby-access-phrase-field"
-            >Access phrase</label
+      <div class="orby-sr__panel">
+        <h1 id="orby-sr-title" class="orby-sr__title">Orby</h1>
+        <form class="orby-sr__form" id="orby-sr-form" autocomplete="off">
+          <label class="orby-sr__label" for="orby-sr-field"
+            ><span class="orby-sr__label-text">Continue</span></label
           >
           <input
-            id="orby-access-phrase-field"
-            class="orby-entry-gate__input"
+            id="orby-sr-field"
+            class="orby-sr__input"
             type="text"
-            name="orby-access-phrase"
+            name="orby-sr-field"
             autocomplete="off"
             autocorrect="off"
             autocapitalize="off"
             spellcheck="false"
           />
-          <p class="orby-entry-gate__error" id="orby-entry-gate-error" aria-live="polite"></p>
-          <button type="submit" class="orby-entry-gate__submit accent-action-btn">
+          <p class="orby-sr__msg" id="orby-sr-msg" aria-live="polite"></p>
+          <button type="submit" class="orby-sr__btn accent-action-btn">
             Continue
           </button>
         </form>
@@ -259,7 +251,7 @@
         </button>
       </div>
     </section>
-    <script src="./scripts/orbyEntryGate.js"></script>
+    <script src="./scripts/orbyShellReady.js"></script>
     <div id="app">
       <main class="workspace">
         <section class="viewport">
@@ -666,6 +658,65 @@
           </div>
             <div class="shelf-scrollbar" aria-hidden="true">
               <div class="shelf-scrollbar-thumb"></div>
+            </div>
+          </div>
+          <div
+            id="exportVideoPreviewDock"
+            class="export-video-preview-dock"
+            hidden
+            aria-hidden="true"
+          >
+            <div class="export-video-preview-dock__inner">
+              <div class="animation-timeline">
+                <div class="animation-controls">
+                  <div class="animation-transport-btns">
+                    <button
+                      id="exportPreviewPlayPause"
+                      type="button"
+                      class="animation-play-btn"
+                      disabled
+                      aria-label="Play export preview"
+                      data-tooltip="Play export movement preview in the viewport"
+                    >
+                      <i class="fa-solid fa-play" aria-hidden="true"></i>
+                      <span class="sr-only">Play</span>
+                    </button>
+                    <button
+                      id="exportPreviewReset"
+                      type="button"
+                      class="animation-play-btn"
+                      disabled
+                      aria-label="Stop preview and return to start"
+                      data-tooltip="End preview, return to frame 0, and restore camera orbit"
+                    >
+                      <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                      <span class="sr-only">Stop preview</span>
+                    </button>
+                  </div>
+                  <input
+                    type="range"
+                    id="exportPreviewScrub"
+                    min="0"
+                    max="1"
+                    step="0.001"
+                    value="0"
+                    disabled
+                    aria-label="Export preview timeline"
+                  />
+                  <span id="exportPreviewTime">00:00</span>
+                </div>
+              </div>
+              <div class="export-preview-pause-all-row">
+                <button
+                  type="button"
+                  id="exportPreviewPauseAll"
+                  class="ghost-btn small"
+                  disabled
+                  data-tooltip="Freeze export preview motion (camera, turntable, GLB), 3D type reveal/constant loops, and animated Shader Lab presets (Flow Field, Plasma, etc.). Stays in sync with Object → Pause shader animations. Press again to resume."
+                >
+                  Pause all animations
+                </button>
+              </div>
             </div>
           </div>
         </aside>

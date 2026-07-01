@@ -60,14 +60,7 @@ export class AnimationController {
   }
 
   _applyClipLoopSettings() {
-    if (!this.currentAction) return;
-    if (this.clipPlaybackMode === 'cycle') {
-      this.currentAction.setLoop(THREE.LoopOnce, 1);
-      this.currentAction.clampWhenFinished = true;
-      return;
-    }
-    this.currentAction.setLoop(THREE.LoopRepeat, Infinity);
-    this.currentAction.clampWhenFinished = false;
+    this._applyClipLoopSettingsToAction(this.currentAction);
   }
 
   _handleClipFinished(event) {
@@ -125,10 +118,61 @@ export class AnimationController {
     this._exportPoseHoldActive = false;
     this._exportClipIndex = idx;
 
+    if (this.currentAction && this.currentAction !== this.mixer.clipAction(clip)) {
+      this.currentAction.stop();
+    }
+
     this._exportAction = this.mixer.clipAction(clip);
     this._exportAction.reset();
+    this._applyClipLoopSettingsToAction(this._exportAction);
     this._exportAction.play();
     this._exportAction.paused = true;
+    this._exportAction.timeScale = 1;
+  }
+
+  _applyClipLoopSettingsToAction(action) {
+    if (!action) return;
+    if (this.clipPlaybackMode === 'cycle') {
+      action.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
+      return;
+    }
+    action.setLoop(THREE.LoopRepeat, Infinity);
+    action.clampWhenFinished = false;
+  }
+
+  /**
+   * Map export timeline seconds to clip local time using studio playback speed / reverse.
+   * @param {number} exportTimeSec
+   * @param {number} clipDuration
+   * @param {number} loop
+   */
+  _resolveExportClipLocalTime(exportTimeSec, clipDuration, loop) {
+    const scaled = Math.max(0, exportTimeSec) * this.playbackSpeed;
+
+    if (this.playbackReverse) {
+      if (loop === THREE.LoopOnce) {
+        return Math.max(0, clipDuration - scaled);
+      }
+      if (loop === THREE.LoopPingPong) {
+        const cycle = clipDuration * 2;
+        const m = scaled % cycle;
+        const forward = m <= clipDuration ? m : cycle - m;
+        return clipDuration - forward;
+      }
+      const remainder = scaled % clipDuration;
+      return clipDuration - remainder || 0;
+    }
+
+    if (loop === THREE.LoopOnce) {
+      return Math.min(scaled, clipDuration);
+    }
+    if (loop === THREE.LoopPingPong) {
+      const cycle = clipDuration * 2;
+      const m = scaled % cycle;
+      return m <= clipDuration ? m : cycle - m;
+    }
+    return scaled % clipDuration;
   }
 
   /**
@@ -150,19 +194,11 @@ export class AnimationController {
     const clip = this.animations[this._exportClipIndex];
     if (!clip || !(clip.duration > 0)) return;
 
-    const duration = clip.duration;
-    const loop = this._exportAction.loop;
-    const timeSec = Math.max(0, exportTimeSec);
-    let time;
-    if (loop === THREE.LoopOnce) {
-      time = Math.min(timeSec, duration);
-    } else if (loop === THREE.LoopPingPong) {
-      const cycle = duration * 2;
-      const m = timeSec % cycle;
-      time = m <= duration ? m : cycle - m;
-    } else {
-      time = timeSec % duration;
-    }
+    const time = this._resolveExportClipLocalTime(
+      exportTimeSec,
+      clip.duration,
+      this._exportAction.loop,
+    );
 
     this._exportAction.time = time;
     this.mixer.update(0);

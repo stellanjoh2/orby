@@ -56,7 +56,17 @@ import {
   syncSvgExtrudeControls,
   renderSvgColorDepthControls,
 } from './svgExtrudeControlsShared.js';
-import { normalizeExportSubtleSpinDegrees } from '../render/exportVideoMovements.js';
+import {
+  normalizeExportSubtleSpinDegrees,
+  normalizeExportObjectSpinSettings,
+  normalizeExportCameraSpinSettings,
+  resolveExportMeshAnimationTiming,
+} from '../render/exportVideoMovements.js';
+import { formatTime } from '../utils/timeFormatter.js';
+import {
+  composeExportMovementEasing,
+  parseExportMovementEasing,
+} from '../render/exportMovementEasing.js';
 import {
   getExportVideoResolutionPixelLabel,
   normalizeExportVideoAspectRatio,
@@ -867,7 +877,27 @@ export class MeshControls {
       });
     };
 
+    const ensureSplitExportSpinDefaults = (video = {}) => {
+      const objectSpin = normalizeExportObjectSpinSettings(video);
+      const cameraSpin = normalizeExportCameraSpinSettings(video);
+      if (video.objectSpins === undefined) video.objectSpins = objectSpin.fullSpins;
+      if (video.objectSubtleDegrees === undefined) {
+        video.objectSubtleDegrees = objectSpin.subtleSpinDegrees;
+      }
+      if (video.objectSpinDirection === undefined) {
+        video.objectSpinDirection = objectSpin.spinDirection;
+      }
+      if (video.cameraSpins === undefined) video.cameraSpins = cameraSpin.fullSpins;
+      if (video.cameraSubtleDegrees === undefined) {
+        video.cameraSubtleDegrees = cameraSpin.subtleSpinDegrees;
+      }
+      if (video.cameraSpinDirection === undefined) {
+        video.cameraSpinDirection = cameraSpin.spinDirection;
+      }
+    };
+
     const notifyExportPreviewSettingsChanged = () => {
+      ensureSplitExportSpinDefaults(this.ui.exportSettings.video || {});
       this.eventBus.emit('export:video-preview-settings-changed', {
         ...(this.ui.exportSettings.video || {}),
       });
@@ -930,6 +960,7 @@ export class MeshControls {
           if (video.tiltRight) video.tiltLeft = false;
         }
         syncExportMovementButtons();
+        syncExportSpinUi();
         notifyExportPreviewSettingsChanged();
       });
     });
@@ -994,25 +1025,76 @@ export class MeshControls {
       );
     }
 
-    if (this.ui.inputs.exportMeshAnimationsEmbed) {
-      this.ui.inputs.exportMeshAnimationsEmbed.addEventListener('change', (event) => {
-        this.ui.exportSettings.video.meshAnimationsInclude = !!event.target.checked;
+    if (this.ui.inputs.exportMeshAnimationSelect) {
+      this.ui.inputs.exportMeshAnimationSelect.addEventListener('change', (event) => {
+        const parsed = this.ui._parseExportMeshAnimationSelectValue?.(event.target.value);
+        if (!parsed) return;
+        this.ui.exportSettings.video.meshAnimationsInclude = parsed.include;
+        this.ui.exportSettings.video.meshAnimationClipIndex = parsed.clipIndex;
+        if (!parsed.include) {
+          this.ui.exportSettings.video.meshMatchDurationToClip = false;
+        }
         this.ui.syncExportMeshAnimationsUi();
         notifyExportPreviewSettingsChanged();
       });
     }
 
-    if (this.ui.inputs.exportMeshAnimationSelect) {
-      this.ui.inputs.exportMeshAnimationSelect.addEventListener('change', (event) => {
-        const index = parseInt(event.target.value, 10);
-        if (!Number.isFinite(index)) return;
-        this.ui.exportSettings.video.meshAnimationClipIndex = index;
+    if (this.ui.inputs.exportMeshMatchDurationToClip) {
+      this.ui.inputs.exportMeshMatchDurationToClip.addEventListener('change', (event) => {
+        this.ui.exportSettings.video.meshMatchDurationToClip = !!event.target.checked;
+        this.ui.syncExportMeshAnimationsUi();
         notifyExportPreviewSettingsChanged();
       });
     }
 
+    if (this.ui.inputs.exportMeshSyncCameraToDuration) {
+      this.ui.inputs.exportMeshSyncCameraToDuration.addEventListener('change', (event) => {
+        this.ui.exportSettings.video.meshSyncCameraToDuration = !!event.target.checked;
+        notifyExportPreviewSettingsChanged();
+      });
+    }
+
+    const syncExportDurationUi = () => {
+      const video = this.ui.exportSettings.video || {};
+      const select = this.ui.inputs.exportMeshAnimationSelect;
+      const clipCount = this.ui._exportMeshAnimationClipCount?.() ?? 0;
+      const clipIndex = Number(video.meshAnimationClipIndex) || 0;
+      const clipOption = select?.querySelector(`option[value="${clipIndex}"]`);
+      const clipSeconds = Number(clipOption?.dataset?.seconds);
+      const timing = resolveExportMeshAnimationTiming(
+        video,
+        clipCount,
+        Number.isFinite(clipSeconds) && clipSeconds > 0 ? clipSeconds : 0,
+      );
+      const matchDuration = timing.matchDurationToClip;
+      const lengthGroup = this.ui.inputs.exportVideoLengthGroup;
+      const hint = this.ui.inputs.exportVideoLengthClipHint;
+
+      document.querySelectorAll('[data-video-duration]').forEach((btn) => {
+        const duration = parseInt(btn.dataset.videoDuration, 10);
+        btn.classList.toggle('active', duration === video.durationSec);
+        if ('disabled' in btn) btn.disabled = matchDuration;
+        btn.classList.toggle('is-disabled', matchDuration);
+      });
+      if (lengthGroup) {
+        lengthGroup.classList.toggle('is-muted', matchDuration);
+      }
+      if (hint) {
+        if (matchDuration && timing.clipDurationSec > 0) {
+          hint.hidden = false;
+          hint.textContent = `Export length: ${formatTime(timing.exportDurationSec)} (clip duration)`;
+        } else {
+          hint.hidden = true;
+          hint.textContent = '';
+        }
+      }
+    };
+
+    this.syncExportDurationUi = syncExportDurationUi;
+
     syncExportMovementButtons();
     this.ui.syncExportMeshAnimationsUi();
+    syncExportDurationUi();
 
     document.querySelectorAll('[data-video-format]').forEach((button) => {
       button.addEventListener('click', () => {
@@ -1029,12 +1111,11 @@ export class MeshControls {
 
     document.querySelectorAll('[data-video-duration]').forEach((button) => {
       button.addEventListener('click', () => {
+        if (button.disabled) return;
         const duration = parseInt(button.dataset.videoDuration, 10);
         if (!Number.isFinite(duration)) return;
         this.ui.exportSettings.video.durationSec = duration;
-        document.querySelectorAll('[data-video-duration]').forEach((btn) => {
-          btn.classList.toggle('active', btn === button);
-        });
+        syncExportDurationUi();
         notifyExportPreviewSettingsChanged();
       });
     });
@@ -1060,67 +1141,189 @@ export class MeshControls {
 
     syncExportFpsUi();
 
-    const syncExportSpinUi = () => {
+    const syncExportSpinGroupUi = ({
+      spinsKey,
+      arcKey,
+      directionKey,
+      spinsAttr,
+      arcAttr,
+      directionAttr,
+      arcGroupId,
+      groupEnabled,
+    }) => {
       const video = this.ui.exportSettings.video || {};
-      const fullSpins = video.spins === 0 || video.spins === 2 ? video.spins : 1;
-      const subtleEnabled = fullSpins === 0;
-      const subtleDegrees = normalizeExportSubtleSpinDegrees(video.subtleSpinDegrees);
-      const spinDirection = video.spinDirection === 'reverse' ? 'reverse' : 'forward';
+      const rawSpins = Number(video[spinsKey]);
+      const fullSpins = rawSpins === 0 || rawSpins === 2 ? rawSpins : 1;
+      const arcEnabled = fullSpins === 0;
+      const arcDegrees = normalizeExportSubtleSpinDegrees(video[arcKey]);
+      const direction = video[directionKey] === 'reverse' ? 'reverse' : 'forward';
 
-      document.querySelectorAll('[data-video-spins]').forEach((btn) => {
-        const spins = parseInt(btn.dataset.videoSpins, 10);
+      document.querySelectorAll(`[${spinsAttr}]`).forEach((btn) => {
+        const spins = parseInt(btn.getAttribute(spinsAttr), 10);
         btn.classList.toggle('active', spins === fullSpins);
+        if ('disabled' in btn) btn.disabled = !groupEnabled;
+        btn.classList.toggle('is-disabled', !groupEnabled);
       });
 
-      const subtleWrap = document.getElementById('exportSubtleSpinsGroup');
-      if (subtleWrap) {
-        subtleWrap.classList.toggle('is-muted', !subtleEnabled);
+      const arcWrap = document.getElementById(arcGroupId);
+      if (arcWrap) {
+        arcWrap.classList.toggle('is-muted', !groupEnabled || !arcEnabled);
       }
-      document.querySelectorAll('[data-video-subtle-spins]').forEach((btn) => {
-        const degrees = normalizeExportSubtleSpinDegrees(parseFloat(btn.dataset.videoSubtleSpins));
-        btn.classList.toggle('active', subtleEnabled && degrees === subtleDegrees);
-        if ('disabled' in btn) btn.disabled = !subtleEnabled;
-        btn.classList.toggle('is-disabled', !subtleEnabled);
+      document.querySelectorAll(`[${arcAttr}]`).forEach((btn) => {
+        const degrees = normalizeExportSubtleSpinDegrees(
+          parseFloat(btn.getAttribute(arcAttr)),
+        );
+        const active = groupEnabled && arcEnabled && degrees === arcDegrees;
+        btn.classList.toggle('active', active);
+        if ('disabled' in btn) btn.disabled = !groupEnabled || !arcEnabled;
+        btn.classList.toggle('is-disabled', !groupEnabled || !arcEnabled);
       });
 
-      document.querySelectorAll('[data-video-spin-direction]').forEach((btn) => {
-        btn.classList.toggle('active', btn.dataset.videoSpinDirection === spinDirection);
+      document.querySelectorAll(`[${directionAttr}]`).forEach((btn) => {
+        const btnDirection = btn.getAttribute(directionAttr);
+        btn.classList.toggle('active', btnDirection === direction);
+        if ('disabled' in btn) btn.disabled = !groupEnabled;
+        btn.classList.toggle('is-disabled', !groupEnabled);
       });
     };
 
-    document.querySelectorAll('[data-video-spins]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const spins = parseInt(button.dataset.videoSpins, 10);
-        if (spins !== 0 && spins !== 1 && spins !== 2) return;
-        this.ui.exportSettings.video.spins = spins;
-        syncExportSpinUi();
-        notifyExportPreviewSettingsChanged();
+    const syncExportSpinUi = () => {
+      const video = this.ui.exportSettings.video || {};
+      ensureSplitExportSpinDefaults(video);
+
+      const objectEnabled = !!video.turntable;
+
+      syncExportSpinGroupUi({
+        spinsKey: 'objectSpins',
+        arcKey: 'objectSubtleDegrees',
+        directionKey: 'objectSpinDirection',
+        spinsAttr: 'data-video-object-spins',
+        arcAttr: 'data-video-object-arc',
+        directionAttr: 'data-video-object-direction',
+        arcGroupId: 'exportObjectArcGroup',
+        groupEnabled: objectEnabled,
       });
+
+      const cameraOrbitEnabled = !!video.orbit;
+      syncExportSpinGroupUi({
+        spinsKey: 'cameraSpins',
+        arcKey: 'cameraSubtleDegrees',
+        directionKey: 'cameraSpinDirection',
+        spinsAttr: 'data-video-camera-spins',
+        arcAttr: 'data-video-camera-arc',
+        directionAttr: 'data-video-camera-direction',
+        arcGroupId: 'exportCameraArcGroup',
+        groupEnabled: cameraOrbitEnabled,
+      });
+    };
+
+    const bindExportSpinButtons = ({
+      spinsAttr,
+      arcAttr,
+      directionAttr,
+      spinsKey,
+      arcKey,
+      directionKey,
+    }) => {
+      document.querySelectorAll(`[${spinsAttr}]`).forEach((button) => {
+        button.addEventListener('click', () => {
+          if (button.disabled) return;
+          const spins = parseInt(button.getAttribute(spinsAttr), 10);
+          if (spins !== 0 && spins !== 1 && spins !== 2) return;
+          this.ui.exportSettings.video[spinsKey] = spins;
+          syncExportSpinUi();
+          notifyExportPreviewSettingsChanged();
+        });
+      });
+
+      document.querySelectorAll(`[${arcAttr}]`).forEach((button) => {
+        button.addEventListener('click', () => {
+          if (button.disabled) return;
+          const degrees = parseFloat(button.getAttribute(arcAttr));
+          const normalized = normalizeExportSubtleSpinDegrees(degrees);
+          if (!normalized) return;
+          const video = this.ui.exportSettings.video;
+          const current = normalizeExportSubtleSpinDegrees(video[arcKey]);
+          const nextArc = current === normalized ? 0 : normalized;
+          video[spinsKey] = 0;
+          video[arcKey] = nextArc;
+          syncExportSpinUi();
+          notifyExportPreviewSettingsChanged();
+        });
+      });
+
+      document.querySelectorAll(`[${directionAttr}]`).forEach((button) => {
+        button.addEventListener('click', () => {
+          if (button.disabled) return;
+          const direction = button.getAttribute(directionAttr);
+          if (direction !== 'forward' && direction !== 'reverse') return;
+          this.ui.exportSettings.video[directionKey] = direction;
+          syncExportSpinUi();
+          notifyExportPreviewSettingsChanged();
+        });
+      });
+    };
+
+    bindExportSpinButtons({
+      spinsAttr: 'data-video-object-spins',
+      arcAttr: 'data-video-object-arc',
+      directionAttr: 'data-video-object-direction',
+      spinsKey: 'objectSpins',
+      arcKey: 'objectSubtleDegrees',
+      directionKey: 'objectSpinDirection',
+    });
+    bindExportSpinButtons({
+      spinsAttr: 'data-video-camera-spins',
+      arcAttr: 'data-video-camera-arc',
+      directionAttr: 'data-video-camera-direction',
+      spinsKey: 'cameraSpins',
+      arcKey: 'cameraSubtleDegrees',
+      directionKey: 'cameraSpinDirection',
     });
 
-    document.querySelectorAll('[data-video-subtle-spins]').forEach((button) => {
-      button.addEventListener('click', () => {
-        if (button.disabled) return;
-        const degrees = parseFloat(button.dataset.videoSubtleSpins);
-        const normalized = normalizeExportSubtleSpinDegrees(degrees);
-        if (!normalized) return;
-        const video = this.ui.exportSettings.video;
-        const current = normalizeExportSubtleSpinDegrees(video.subtleSpinDegrees);
-        video.subtleSpinDegrees = current === normalized ? 0 : normalized;
-        syncExportSpinUi();
-        notifyExportPreviewSettingsChanged();
-      });
-    });
+    syncExportSpinUi();
 
-    document.querySelectorAll('[data-video-spin-direction]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const direction = button.dataset.videoSpinDirection;
-        if (direction !== 'forward' && direction !== 'reverse') return;
-        this.ui.exportSettings.video.spinDirection = direction;
-        syncExportSpinUi();
-        notifyExportPreviewSettingsChanged();
+    const syncExportMovementEasingUi = () => {
+      const familySelect = this.ui.inputs.exportMovementEasingFamily;
+      const typeSelect = this.ui.inputs.exportMovementEasingType;
+      const typeLine = this.ui.inputs.exportMovementEasingTypeLine;
+      if (!familySelect || !typeSelect) return;
+
+      const video = this.ui.exportSettings.video;
+      const parsed = parseExportMovementEasing(video?.movementEasing);
+      video.movementEasing = composeExportMovementEasing(parsed.family, parsed.type);
+      familySelect.value = parsed.family;
+      typeSelect.value = parsed.type;
+
+      const typeActive = parsed.family !== 'linear';
+      if (typeLine) typeLine.classList.toggle('is-muted', !typeActive);
+      typeSelect.disabled = !typeActive;
+      typeSelect.classList.toggle('is-disabled', !typeActive);
+    };
+
+    const applyExportMovementEasingFromUi = () => {
+      const familySelect = this.ui.inputs.exportMovementEasingFamily;
+      const typeSelect = this.ui.inputs.exportMovementEasingType;
+      if (!familySelect || !typeSelect) return;
+      this.ui.exportSettings.video.movementEasing = composeExportMovementEasing(
+        familySelect.value,
+        typeSelect.value,
+      );
+      syncExportMovementEasingUi();
+      notifyExportPreviewSettingsChanged();
+    };
+
+    if (this.ui.inputs.exportMovementEasingFamily) {
+      this.ui.inputs.exportMovementEasingFamily.addEventListener('change', () => {
+        applyExportMovementEasingFromUi();
       });
-    });
+    }
+    if (this.ui.inputs.exportMovementEasingType) {
+      this.ui.inputs.exportMovementEasingType.addEventListener('change', () => {
+        applyExportMovementEasingFromUi();
+      });
+    }
+    syncExportMovementEasingUi();
 
     syncExportSpinUi();
 
@@ -1189,6 +1392,8 @@ export class MeshControls {
       syncExportVideoResolutionUi();
       syncExportFpsUi();
       syncExportMovementButtons();
+      syncExportSpinUi();
+      syncExportDurationUi();
       updatePngTransparentUi();
       updateMp4Ui();
     };

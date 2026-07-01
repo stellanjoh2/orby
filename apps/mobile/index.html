@@ -18,31 +18,28 @@
       body {
         background: #080808;
       }
-      .orby-entry-gate {
+      .orby-sr {
         background: #080808;
       }
     </style>
-    <script>
-      window.__ORBY_ENTRY_GATE_ENABLED__ = true;
-    </script>
-    <script>
+<script>
       (function () {
-        if (typeof window !== 'undefined' && window.__ORBY_ENTRY_GATE_ENABLED__ === false) {
-          document.documentElement.classList.add('orby-gate-unlocked');
+        if (typeof window !== 'undefined' && window.__ORBY_SR_OFF__ === true) {
+          document.documentElement.classList.add('orby-sr-on');
           return;
         }
         try {
-          var VERIFIED_KEY = 'orby_site_gate_verified';
-          var VISIT_SEQ_KEY = 'orby_site_gate_visit_seq';
+          var SK = 'orby_sr_s';
+          var CK = 'orby_sr_c';
           var CHALLENGE_EVERY_N_VISITS = 5;
-          var prev = parseInt(sessionStorage.getItem(VISIT_SEQ_KEY) || '0', 10);
+          var prev = parseInt(sessionStorage.getItem(CK) || '0', 10);
           var visitSeq = (isNaN(prev) ? 0 : prev) + 1;
-          sessionStorage.setItem(VISIT_SEQ_KEY, String(visitSeq));
+          sessionStorage.setItem(CK, String(visitSeq));
           if (visitSeq % CHALLENGE_EVERY_N_VISITS === 0) {
-            sessionStorage.removeItem(VERIFIED_KEY);
+            sessionStorage.removeItem(SK);
           }
-          if (sessionStorage.getItem(VERIFIED_KEY) === '1') {
-            document.documentElement.classList.add('orby-gate-unlocked');
+          if (sessionStorage.getItem(SK) === '1') {
+            document.documentElement.classList.add('orby-sr-on');
           }
         } catch (e) {}
       })();
@@ -218,8 +215,8 @@
       }
     </script>
   </head>
-  <body class="orby-entry-gate-page">
-    <script src="/scripts/orbyEntryGate.js"></script>
+  <body class="orby-sr-page">
+    <script src="/scripts/orbyShellReady.js"></script>
     <div id="orbyMobile" class="orby-mobile" data-sheet="closed" data-object-menu="closed" data-active-tab="light" data-hdri-panel="presets-only" data-style-panel="presets-only">
       <main class="orby-mobile-viewport" aria-label="3D viewport">
         <div class="orby-mobile-viewport__canvas"></div>

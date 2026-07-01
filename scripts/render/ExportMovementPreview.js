@@ -6,9 +6,17 @@ import {
   needsExportFovDrive,
   normalizeExportVideoMovements,
   normalizeExportMeshAnimationSettings,
-  normalizeExportSpinSettings,
+  normalizeExportObjectSpinSettings,
+  normalizeExportCameraSpinSettings,
   normalizeExportHdriRotationSettings,
+  normalizeExportPresetDurationSec,
+  resolveExportMeshAnimationTiming,
+  resolveExportCameraMovementLinearT,
 } from './exportVideoMovements.js';
+import {
+  easeExportMovementProgress,
+  normalizeExportMovementEasing,
+} from './exportMovementEasing.js';
 import {
   DEFAULT_EXPORT_VIDEO_FPS,
   normalizeExportVideoFps,
@@ -29,6 +37,7 @@ export class ExportMovementPreview {
     getHdriRotation = () => 0,
     getCurrentModel,
     getAnimationClipCount = () => 0,
+    getAnimationClipDuration = () => 0,
     beginExportCameraDrive = () => {},
     applyExportCameraDriveFrame = () => {},
     endExportCameraDrive = () => {},
@@ -54,6 +63,7 @@ export class ExportMovementPreview {
     this.getHdriRotation = getHdriRotation;
     this.getCurrentModel = getCurrentModel;
     this.getAnimationClipCount = getAnimationClipCount;
+    this.getAnimationClipDuration = getAnimationClipDuration;
     this.beginExportCameraDrive = beginExportCameraDrive;
     this.applyExportCameraDriveFrame = applyExportCameraDriveFrame;
     this.endExportCameraDrive = endExportCameraDrive;
@@ -77,8 +87,11 @@ export class ExportMovementPreview {
     this._sessionDrivesEngaged = false;
     this._elapsed = 0;
     this._durationSec = 5;
+    this._cameraMovementDurationSec = 5;
+    this._presetDurationSec = 5;
     this._fps = DEFAULT_EXPORT_VIDEO_FPS;
-    this._spinSettings = normalizeExportSpinSettings();
+    this._objectSpinSettings = normalizeExportObjectSpinSettings();
+    this._cameraSpinSettings = normalizeExportCameraSpinSettings();
     this._hdriRotationSettings = normalizeExportHdriRotationSettings();
     this._startRotationY = 0;
     this._startLightsRotation = 0;
@@ -86,7 +99,9 @@ export class ExportMovementPreview {
     this._hdriPreviewDriven = false;
     this._lightsAutoRotate = false;
     this._movements = normalizeExportVideoMovements();
+    this._movementEasing = normalizeExportMovementEasing();
     this._meshAnimation = normalizeExportMeshAnimationSettings();
+    this._movementSettingsKey = '';
     this._settingsKey = '';
     this._lastProgressUiAt = 0;
   }
@@ -111,13 +126,33 @@ export class ExportMovementPreview {
     this._notifyProgress();
   }
 
+  resumePlayback() {
+    if (!this._active || this._playing) return;
+    this._playing = true;
+    this._lastProgressUiAt = 0;
+    this._notifyProgress({ force: true });
+  }
+
+  _resolveTiming(settings = {}) {
+    const clipCount = this.getAnimationClipCount?.() ?? 0;
+    const mesh = normalizeExportMeshAnimationSettings(settings, clipCount);
+    const clipDuration = mesh.include
+      ? this.getAnimationClipDuration?.(mesh.clipIndex) ?? 0
+      : 0;
+    return resolveExportMeshAnimationTiming(settings, clipCount, clipDuration);
+  }
+
   _syncPreviewStateToStore() {
-    if (this._movements.turntable && this._spinSettings.rotationDegrees > 0) {
+    if (this._movements.turntable && this._objectSpinSettings.rotationDegrees > 0) {
       const durationSec = Math.max(1e-6, this._durationSec);
       const elapsed = Math.min(this._elapsed, durationSec);
-      const t = elapsed / durationSec;
+      const cameraLinearT = resolveExportCameraMovementLinearT(
+        elapsed,
+        this._cameraMovementDurationSec,
+      );
+      const t = easeExportMovementProgress(cameraLinearT, this._movementEasing);
       const rotationY =
-        this._startRotationY + this._spinSettings.signedRotationDegrees * t;
+        this._startRotationY + this._objectSpinSettings.signedRotationDegrees * t;
       this.stateStore.set('rotationY', rotationY);
     }
   }
@@ -125,29 +160,34 @@ export class ExportMovementPreview {
   /** Whether export settings describe any previewable motion. */
   static canPreview(settings = {}) {
     const movements = normalizeExportVideoMovements(settings);
-    return hasExportVideoMovement(movements);
+    return hasExportVideoMovement(movements, settings);
   }
 
-  _settingsFingerprint(settings = {}) {
+  _movementSettingsFingerprint(settings = {}) {
     const movements = normalizeExportVideoMovements(settings);
-    const spinSettings = normalizeExportSpinSettings(settings);
+    const objectSpinSettings = normalizeExportObjectSpinSettings(settings);
+    const cameraSpinSettings = normalizeExportCameraSpinSettings(settings);
     const hdriRotationSettings = normalizeExportHdriRotationSettings(settings);
-    const meshAnimation = normalizeExportMeshAnimationSettings(
-      settings,
-      this.getAnimationClipCount?.() ?? 0,
-    );
-    const allowedDurations = [5, 10, 15];
-    const durationSec = allowedDurations.includes(settings?.durationSec)
-      ? settings.durationSec
-      : 5;
+    const timing = this._resolveTiming(settings);
     const fps = normalizeExportVideoFps(settings?.fps);
     return JSON.stringify({
       movements,
-      spinSettings,
+      objectSpinSettings,
+      cameraSpinSettings,
       hdriRotationSettings,
-      meshAnimation,
-      durationSec,
+      movementEasing: normalizeExportMovementEasing(settings?.movementEasing),
+      presetDurationSec: normalizeExportPresetDurationSec(settings?.durationSec),
+      exportDurationSec: timing.exportDurationSec,
+      cameraMovementDurationSec: timing.cameraMovementDurationSec,
       fps,
+    });
+  }
+
+  _settingsFingerprint(settings = {}) {
+    const meshAnimation = this._resolveTiming(settings);
+    return JSON.stringify({
+      ...JSON.parse(this._movementSettingsFingerprint(settings)),
+      meshAnimation,
     });
   }
 
@@ -158,7 +198,7 @@ export class ExportMovementPreview {
       : Math.min(this._elapsed, durationSec);
     if (this._playing && !force) {
       const now = performance.now();
-      if (now - this._lastProgressUiAt < 100) return;
+      if (now - this._lastProgressUiAt < 16) return;
       this._lastProgressUiAt = now;
     }
     this.onProgressChange({
@@ -171,19 +211,78 @@ export class ExportMovementPreview {
   }
 
   _applySettings(settings = {}) {
-    const allowedDurations = [5, 10, 15];
-    this._durationSec = allowedDurations.includes(settings?.durationSec)
-      ? settings.durationSec
-      : 5;
+    const timing = this._resolveTiming(settings);
+    this._presetDurationSec = normalizeExportPresetDurationSec(settings?.durationSec);
+    this._durationSec = timing.exportDurationSec;
+    this._cameraMovementDurationSec = timing.cameraMovementDurationSec;
     this._fps = normalizeExportVideoFps(settings?.fps);
-    this._spinSettings = normalizeExportSpinSettings(settings);
+    this._objectSpinSettings = normalizeExportObjectSpinSettings(settings);
+    this._cameraSpinSettings = normalizeExportCameraSpinSettings(settings);
     this._hdriRotationSettings = normalizeExportHdriRotationSettings(settings);
     this._movements = normalizeExportVideoMovements(settings);
-    this._meshAnimation = normalizeExportMeshAnimationSettings(
-      settings,
-      this.getAnimationClipCount?.() ?? 0,
-    );
+    this._movementEasing = normalizeExportMovementEasing(settings?.movementEasing);
+    this._meshAnimation = timing;
+    this._movementSettingsKey = this._movementSettingsFingerprint(settings);
     this._settingsKey = this._settingsFingerprint(settings);
+  }
+
+  /**
+   * Update GLB clip export settings during an armed preview without re-capturing
+   * camera drives (avoids orbit lock flicker and framing jumps on embed toggle).
+   * @returns {boolean} true when handled — caller should skip full rearm
+   */
+  updateMeshAnimationSettings(settings = {}) {
+    if (!this._active) return false;
+
+    const nextTiming = this._resolveTiming(settings);
+    const movementSettingsKey = this._movementSettingsFingerprint(settings);
+    const meshUnchanged =
+      nextTiming.include === this._meshAnimation.include
+      && nextTiming.clipIndex === this._meshAnimation.clipIndex
+      && nextTiming.matchDurationToClip === this._meshAnimation.matchDurationToClip
+      && nextTiming.syncCameraToDuration === this._meshAnimation.syncCameraToDuration;
+
+    if (meshUnchanged) {
+      if (movementSettingsKey === this._movementSettingsKey) {
+        return true;
+      }
+      this._applySettings(settings);
+      if (this._sessionDrivesEngaged && this._meshAnimation.include) {
+        this.endExportAnimationDrive();
+        this.beginExportAnimationDrive(this._meshAnimation);
+        const durationSec = Math.max(1e-6, this._durationSec);
+        const exportTimeSec = this._playing
+          ? this._elapsed % durationSec
+          : Math.min(this._elapsed, durationSec);
+        this.applyExportAnimationDriveTime(exportTimeSec);
+      }
+      const cameraLinearT = resolveExportCameraMovementLinearT(
+        Math.min(this._elapsed, this._durationSec),
+        this._cameraMovementDurationSec,
+      );
+      this._applyFrame(cameraLinearT, Math.min(this._elapsed, this._durationSec));
+      return true;
+    }
+    if (movementSettingsKey !== this._movementSettingsKey) {
+      return false;
+    }
+
+    if (this._meshAnimation.include) {
+      this.endExportAnimationDrive();
+    }
+
+    this._applySettings(settings);
+
+    if (this._sessionDrivesEngaged && this._meshAnimation.include) {
+      this.beginExportAnimationDrive(this._meshAnimation);
+      const durationSec = Math.max(1e-6, this._durationSec);
+      const exportTimeSec = this._playing
+        ? this._elapsed % durationSec
+        : Math.min(this._elapsed, durationSec);
+      this.applyExportAnimationDriveTime(exportTimeSec);
+    }
+
+    return true;
   }
 
   _captureStartState() {
@@ -205,14 +304,19 @@ export class ExportMovementPreview {
 
   _engageSessionDrives() {
     if (this._sessionDrivesEngaged) return;
-    this.beginExportAnimationDrive(this._meshAnimation);
+    // Camera-only preview must not freeze live GLB playback — export drive pauses the mixer.
+    if (this._meshAnimation.include) {
+      this.beginExportAnimationDrive(this._meshAnimation);
+    }
     this.beginFontTextRevealExportDrive();
     this._sessionDrivesEngaged = true;
   }
 
   _releaseSessionDrives() {
     if (!this._sessionDrivesEngaged) return;
-    this.endExportAnimationDrive();
+    if (this._meshAnimation.include) {
+      this.endExportAnimationDrive();
+    }
     this.endFontTextRevealExportDrive();
     this._sessionDrivesEngaged = false;
   }
@@ -243,10 +347,10 @@ export class ExportMovementPreview {
     this._drivesEngaged = false;
   }
 
-  _applyPreviewFrame(t, exportTimeSec) {
+  _applyPreviewFrame(cameraLinearT, exportTimeSec) {
     this._engageSessionDrives();
     this._engageViewportDrives();
-    this._applyFrame(t, exportTimeSec);
+    this._applyFrame(cameraLinearT, exportTimeSec);
   }
 
   /** Enter export preview session at frame 0. */
@@ -302,7 +406,12 @@ export class ExportMovementPreview {
 
     this._playing = false;
     this._elapsed = normalizedT * duration;
-    this._applyPreviewFrame(normalizedT, this._elapsed);
+    const exportTimeSec = this._elapsed;
+    const cameraLinearT = resolveExportCameraMovementLinearT(
+      exportTimeSec,
+      this._cameraMovementDurationSec,
+    );
+    this._applyPreviewFrame(cameraLinearT, exportTimeSec);
     this._syncPreviewStateToStore();
     this._notifyProgress({ force: true });
     return true;
@@ -366,8 +475,11 @@ export class ExportMovementPreview {
     const duration = Math.max(1e-6, this._durationSec);
     this._elapsed += d;
     const loopElapsed = this._elapsed % duration;
-    const t = loopElapsed / duration;
-    this._applyFrame(t, loopElapsed);
+    const cameraLinearT = resolveExportCameraMovementLinearT(
+      loopElapsed,
+      this._cameraMovementDurationSec,
+    );
+    this._applyFrame(cameraLinearT, loopElapsed);
     this._notifyProgress();
   }
 
@@ -410,17 +522,26 @@ export class ExportMovementPreview {
     });
   }
 
-  _applyFrame(t, exportTimeSec) {
+  _applyFrame(cameraLinearT, exportTimeSec) {
+    const t = easeExportMovementProgress(cameraLinearT, this._movementEasing);
     const movements = this._movements;
-    const { rotationDegrees, signedRotationDegrees, sign } = this._spinSettings;
-    if (movements.turntable && rotationDegrees > 0) {
-      const rotationY = this._startRotationY + signedRotationDegrees * t;
+    const {
+      rotationDegrees: objectRotationDegrees,
+      signedRotationDegrees: objectSignedRotationDegrees,
+    } = this._objectSpinSettings;
+    if (movements.turntable && objectRotationDegrees > 0) {
+      const rotationY = this._startRotationY + objectSignedRotationDegrees * t;
       this.setRotationY(rotationY);
+      this.stateStore.set('rotationY', rotationY);
     }
     if (needsExportCameraDrive(movements)) {
+      const {
+        rotationDegrees: cameraRotationDegrees,
+        sign: cameraRotationSign,
+      } = this._cameraSpinSettings;
       this.applyExportCameraDriveFrame(t, {
-        rotationDegrees,
-        rotationSign: sign,
+        rotationDegrees: cameraRotationDegrees,
+        rotationSign: cameraRotationSign,
         orbit: movements.orbit,
         zoom: movements.zoom,
         zoomDistance: movements.zoomDistance,
@@ -441,7 +562,7 @@ export class ExportMovementPreview {
     if (this._lightsAutoRotate && typeof this.setLightsRotation === 'function') {
       const lightsRotation = lightsRotationForExportFrame(
         this._startLightsRotation,
-        this._durationSec,
+        this._cameraMovementDurationSec,
         t,
       );
       this.setLightsRotation(lightsRotation, { updateUi: false, updateState: false });

@@ -689,10 +689,13 @@ export class CameraController {
     const distance = Math.max(0, Number(zoomDistance) || 0);
     if (zoom === 'in' && distance > 0) {
       const minRadius = this.controls.minDistance ?? 0.01;
-      radius = Math.max(minRadius, sn.radius - distance * u);
+      // Cap travel so dolly eases over the full export duration — don't slam into minDistance early.
+      const travel = Math.min(distance, Math.max(0, sn.radius - minRadius));
+      radius = sn.radius - travel * u;
     } else if (zoom === 'out' && distance > 0) {
       const maxRadius = this.controls.maxDistance ?? Infinity;
-      radius = Math.min(maxRadius, sn.radius + distance * u);
+      const travel = Math.min(distance, Math.max(0, maxRadius - sn.radius));
+      radius = sn.radius + travel * u;
     }
 
     let phi = sn.phi;
@@ -700,8 +703,12 @@ export class CameraController {
     if (Math.abs(pitch) > 1e-6) {
       const EPS = 1e-4;
       // Nod up (+) arcs the camera toward sky; nod down (−) toward ground — fixed orbit target.
-      phi = sn.phi - THREE.MathUtils.degToRad(pitch) * u;
-      phi = THREE.MathUtils.clamp(phi, EPS, Math.PI - EPS);
+      const endPhi = THREE.MathUtils.clamp(
+        sn.phi - THREE.MathUtils.degToRad(pitch),
+        EPS,
+        Math.PI - EPS,
+      );
+      phi = sn.phi + (endPhi - sn.phi) * u;
     }
 
     this._orbitSpherical.set(radius, phi, theta);
@@ -872,7 +879,9 @@ export class CameraController {
     const offset = Number(fovOffset) || 0;
     if (offset === 0) return;
     const u = THREE.MathUtils.clamp(typeof t === 'number' ? t : 0, 0, 1);
-    this.camera.fov = clampFovDeg(this._exportStartFov + offset * u);
+    const start = this._exportStartFov;
+    const travel = clampFovDeg(start + offset) - start;
+    this.camera.fov = clampFovDeg(start + travel * u);
     this.camera.updateProjectionMatrix();
   }
 

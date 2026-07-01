@@ -19,6 +19,12 @@ import {
   restoreWireframeOverlaysFromPass,
   shouldOverlayWireframeMeshes,
 } from '../render/wireframeOverlayPass.js';
+import {
+  hideLightIndicatorOverlaysForPass,
+  renderLightIndicatorOverlay,
+  restoreLightIndicatorOverlaysFromPass,
+  shouldOverlayLightIndicators,
+} from '../render/lightIndicatorOverlayPass.js';
 
 /**
  * EffectComposer prep, render, and viewport/clear repair — shared by the live loop,
@@ -41,6 +47,7 @@ export class ComposerLifecycle {
     getCreativeLookOpticsActive,
     getCreativeLookVectrexActive,
     getWireframeOverlayMeshes,
+    getLightIndicatorOverlayGroups,
     getTransformControls,
     getGroundGrid,
     getRenderState,
@@ -71,6 +78,8 @@ export class ComposerLifecycle {
     this.getCreativeLookVectrexActive =
       getCreativeLookVectrexActive ?? (() => false);
     this.getWireframeOverlayMeshes = getWireframeOverlayMeshes ?? (() => []);
+    this.getLightIndicatorOverlayGroups =
+      getLightIndicatorOverlayGroups ?? (() => []);
     this.getRenderState = getRenderState ?? (() => ({}));
     this.syncPostProcessingForLogicalSize = syncPostProcessingForLogicalSize;
     this.beforeComposerRender = beforeComposerRender;
@@ -82,6 +91,8 @@ export class ComposerLifecycle {
     this._gridPassVisibility = null;
     /** @type {Array<{ mesh: import('three').Mesh, visible: boolean }> | null} */
     this._wireframePassVisibility = null;
+    /** @type {Array<{ root: import('three').Object3D, visible: boolean }> | null} */
+    this._lightIndicatorPassVisibility = null;
   }
 
   /**
@@ -165,12 +176,13 @@ export class ComposerLifecycle {
   /**
    * Shared composer render — live viewport, PNG export, and video capture use the same pass
    * sequence so Shader Lab viewport bloom cannot drift from export.
-   * @param {{ transparent?: boolean, beforeRender?: () => void, overlayTransformGizmos?: boolean }} [opts]
+   * @param {{ transparent?: boolean, beforeRender?: () => void, overlayTransformGizmos?: boolean, overlayLightIndicators?: boolean }} [opts]
    */
   _runComposerWithCreativeLookPrep({
     transparent = false,
     beforeRender,
     overlayTransformGizmos = false,
+    overlayLightIndicators = false,
   } = {}) {
     if (!this.composer) return;
     beforeRender?.();
@@ -206,6 +218,11 @@ export class ComposerLifecycle {
     const overlayWireframe =
       wireframeMeshes.length > 0 &&
       shouldOverlayWireframeMeshes(this.postPipeline, shaderLabOn);
+    const lightIndicatorRoots = this.getLightIndicatorOverlayGroups?.() ?? [];
+    const overlayLights =
+      overlayLightIndicators &&
+      lightIndicatorRoots.length > 0 &&
+      shouldOverlayLightIndicators(this.postPipeline, shaderLabOn);
     if (overlayGizmos) {
       this._gizmoPassVisibility = hideTransformGizmosForPass(
         this.getTransformControls?.() ?? [],
@@ -213,6 +230,10 @@ export class ComposerLifecycle {
     }
     if (overlayWireframe) {
       this._wireframePassVisibility = hideWireframeOverlaysForPass(wireframeMeshes);
+    }
+    if (overlayLights) {
+      this._lightIndicatorPassVisibility =
+        hideLightIndicatorOverlaysForPass(lightIndicatorRoots);
     }
     const grid = this.getGroundGrid?.();
     const overlayGrid = asciiTerminal && grid?.visible === true;
@@ -300,6 +321,11 @@ export class ComposerLifecycle {
         this._wireframePassVisibility = null;
         this._renderWireframeOverlay();
       }
+      if (this._lightIndicatorPassVisibility) {
+        restoreLightIndicatorOverlaysFromPass(this._lightIndicatorPassVisibility);
+        this._lightIndicatorPassVisibility = null;
+        this._renderLightIndicatorOverlay();
+      }
     } finally {
       if (this._gizmoPassVisibility) {
         restoreTransformGizmosFromPass(this._gizmoPassVisibility);
@@ -312,6 +338,10 @@ export class ComposerLifecycle {
       if (this._wireframePassVisibility) {
         restoreWireframeOverlaysFromPass(this._wireframePassVisibility);
         this._wireframePassVisibility = null;
+      }
+      if (this._lightIndicatorPassVisibility) {
+        restoreLightIndicatorOverlaysFromPass(this._lightIndicatorPassVisibility);
+        this._lightIndicatorPassVisibility = null;
       }
       if (watercolour) {
         this.postPipeline?.popCreativeLookWatercolourPresentation?.();
@@ -381,11 +411,21 @@ export class ComposerLifecycle {
     });
   }
 
+  /** Spotlight cones and beam guides on top of post — not Shader Lab pixel looks or DoF blur. */
+  _renderLightIndicatorOverlay() {
+    renderLightIndicatorOverlay({
+      renderer: this.renderer,
+      camera: this.camera,
+      roots: this.getLightIndicatorOverlayGroups?.() ?? [],
+    });
+  }
+
   /** Interactive viewport — same EffectComposer sequence as PNG/video export. */
   renderComposerPass() {
     this._runComposerWithCreativeLookPrep({
       beforeRender: () => this.beforeComposerRender?.(),
       overlayTransformGizmos: true,
+      overlayLightIndicators: true,
     });
   }
 

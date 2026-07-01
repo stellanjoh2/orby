@@ -127,6 +127,7 @@ import { CaptureSizeMismatchError } from './render/capture/captureReadback.js';
 import { normalizeGlyphFillHex } from './import/FontExtrudeImporter.js';
 import { VideoExporter } from './render/VideoExporter.js';
 import { ExportMovementPreview } from './render/ExportMovementPreview.js';
+import { resolveExportMeshAnimationTiming } from './render/exportVideoMovements.js';
 import { FontTextRevealController, isFontExtrudeRevealModel } from './scene/FontTextRevealController.js';
 import { FontTextConstantController } from './scene/FontTextConstantController.js';
 import { HistogramController } from './render/HistogramController.js';
@@ -1204,6 +1205,8 @@ export class SceneManager {
       },
       getWireframeOverlayMeshes: () =>
         this.materialController?.wireframeOverlayMeshes ?? [],
+      getLightIndicatorOverlayGroups: () =>
+        this.lightsController?.getIndicatorOverlayGroups?.() ?? [],
       getRenderState: () => this.stateStore.peekState(),
       syncPostProcessingForLogicalSize: (w, h) =>
         this.syncPostProcessingForLogicalSize(w, h),
@@ -1359,6 +1362,10 @@ export class SceneManager {
       getCurrentAssetMetadata: () => this.currentAssetMetadata,
       getHdriBackgroundEnabled: () => this.hdriBackgroundEnabled,
       getAnimationClipCount: () => this.animationController?.animations?.length ?? 0,
+      getAnimationClipDuration: (index) => {
+        const clip = this.animationController?.animations?.[index];
+        return clip?.duration ?? 0;
+      },
       getAnimationClipLabel: (index) => {
         const clip = this.animationController?.animations?.[index];
         return clip?.name || (clip ? `Clip ${index + 1}` : null);
@@ -1400,6 +1407,10 @@ export class SceneManager {
       getHdriRotation: () => this.hdriRotation ?? 0,
       getCurrentModel: () => this.currentModel,
       getAnimationClipCount: () => this.animationController?.animations?.length ?? 0,
+      getAnimationClipDuration: (index) => {
+        const clip = this.animationController?.animations?.[index];
+        return clip?.duration ?? 0;
+      },
       beginExportCameraDrive: () => this.cameraController?.beginExportCameraDrive?.(),
       applyExportCameraDriveFrame: (t, options) =>
         this.cameraController?.applyExportCameraDriveFrame?.(t, options),
@@ -1434,6 +1445,7 @@ export class SceneManager {
             fromPlayback: true,
           });
         }
+        this.ui?.syncExportPreviewPauseAll?.();
       },
       onProgressChange: ({ currentSec, durationSec, playing }) => {
         this.ui?.setExportPreviewPlaying?.(playing);
@@ -1445,9 +1457,15 @@ export class SceneManager {
   }
 
   _exportPreviewDurationSec() {
-    const allowed = [5, 10, 15];
-    const duration = this.ui?.exportSettings?.video?.durationSec;
-    return allowed.includes(duration) ? duration : 5;
+    const video = this._videoExportSettingsFromUi();
+    const clipCount = this.animationController?.animations?.length ?? 0;
+    const mesh = resolveExportMeshAnimationTiming(
+      video,
+      clipCount,
+      this.animationController?.animations?.[video.meshAnimationClipIndex ?? 0]
+        ?.duration ?? 0,
+    );
+    return mesh.exportDurationSec;
   }
 
   /**
@@ -5567,13 +5585,13 @@ export class SceneManager {
 
   syncExportVideoPreviewSettings(settings = {}) {
     const resolved = this._videoExportSettingsFromUi(settings);
-    if (
-      !ExportMovementPreview.canPreview(resolved)
-      && this.exportMovementPreview?.isActive?.()
-    ) {
-      this.exportMovementPreview.stop({ silent: true });
+    const preview = this.exportMovementPreview;
+    if (!ExportMovementPreview.canPreview(resolved) && preview?.isActive?.()) {
+      preview.stop({ silent: true });
+    } else if (preview?.updateMeshAnimationSettings?.(resolved)) {
+      // Mesh timing / clip options — keep camera drives and orbit lock stable when possible.
     } else {
-      this.exportMovementPreview?.rearm(resolved);
+      preview?.rearm(resolved);
     }
     this.ui?.syncExportPreviewAvailability?.(!!this.currentModel);
   }
@@ -5621,16 +5639,21 @@ export class SceneManager {
 
   _videoExportSettingsFromUi(settings = {}) {
     const video = { ...(this.ui?.exportSettings?.video || {}), ...settings };
-    const embedToggle = this.ui?.inputs?.exportMeshAnimationsEmbed;
     const clipSelect = this.ui?.inputs?.exportMeshAnimationSelect;
-    if (embedToggle) {
-      video.meshAnimationsInclude = !!embedToggle.checked;
-    }
+    const matchToggle = this.ui?.inputs?.exportMeshMatchDurationToClip;
+    const syncToggle = this.ui?.inputs?.exportMeshSyncCameraToDuration;
     if (clipSelect && clipSelect.options.length) {
-      const index = parseInt(clipSelect.value, 10);
-      if (Number.isFinite(index)) {
-        video.meshAnimationClipIndex = index;
+      const parsed = this.ui?._parseExportMeshAnimationSelectValue?.(clipSelect.value);
+      if (parsed) {
+        video.meshAnimationsInclude = parsed.include;
+        video.meshAnimationClipIndex = parsed.clipIndex;
       }
+    }
+    if (matchToggle) {
+      video.meshMatchDurationToClip = !!matchToggle.checked;
+    }
+    if (syncToggle) {
+      video.meshSyncCameraToDuration = !!syncToggle.checked;
     }
     if (this.ui?.pngExportDirectoryHandle) {
       video.pngOutputDirectoryHandle = this.ui.pngExportDirectoryHandle;

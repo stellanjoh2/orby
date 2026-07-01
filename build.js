@@ -1,4 +1,5 @@
 import * as esbuild from 'esbuild';
+import { createHash } from 'crypto';
 import { readFileSync, writeFileSync, cpSync, existsSync, rmSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -91,6 +92,26 @@ function injectTurnstileSiteKey(html) {
   );
 }
 
+/** Shell-ready SHA-256 digest; set ORBY_SR_PHRASE in CI (GitHub Secret) — never commit the phrase. */
+function injectShellReadyHash(js) {
+  const phrase = process.env.ORBY_SR_PHRASE?.trim() ?? '';
+  const hash = phrase ? createHash('sha256').update(phrase, 'utf8').digest('hex') : '';
+  return js.replace(/__ORBY_SR_H__/g, hash);
+}
+
+async function writeShellReadyScript(outDir) {
+  const src = readFileSync(join(__dirname, 'scripts', 'orbyShellReady.js'), 'utf8');
+  const injected = injectShellReadyHash(src);
+  const outPath = join(outDir, 'scripts', 'orbyShellReady.js');
+  mkdirSync(join(outDir, 'scripts'), { recursive: true });
+  const { code } = await esbuild.transform(injected, {
+    minify: true,
+    target: 'es2020',
+    legalComments: 'none',
+  });
+  writeFileSync(outPath, code);
+}
+
 /** Public stats API; ORBY_STATS_API_URL or derived from BUG_REPORT_API_URL (/api/stats). */
 function injectStatsApiUrl(html) {
   let url = process.env.ORBY_STATS_API_URL?.trim();
@@ -174,8 +195,7 @@ await esbuild.build({
   legalComments: 'none',
 });
 
-mkdirSync(join(distDir, 'scripts'), { recursive: true });
-cpSync(join(__dirname, 'scripts', 'orbyEntryGate.js'), join(distDir, 'scripts', 'orbyEntryGate.js'));
+await writeShellReadyScript(distDir);
 cpSync(
   join(__dirname, 'scripts', 'orbyMobileLandingBoot.js'),
   join(distDir, 'scripts', 'orbyMobileLandingBoot.js'),
@@ -300,9 +320,9 @@ if (existsSync(join(__dirname, 'styles', 'orby-magic-btn.css'))) {
   mkdirSync(join(distDir, 'styles'), { recursive: true });
   cpSync(join(__dirname, 'styles', 'orby-magic-btn.css'), join(distDir, 'styles', 'orby-magic-btn.css'));
 }
-if (existsSync(join(__dirname, 'styles', 'orby-entry-gate.css'))) {
+if (existsSync(join(__dirname, 'styles', 'orby-shell-ready.css'))) {
   mkdirSync(join(distDir, 'styles'), { recursive: true });
-  cpSync(join(__dirname, 'styles', 'orby-entry-gate.css'), join(distDir, 'styles', 'orby-entry-gate.css'));
+  cpSync(join(__dirname, 'styles', 'orby-shell-ready.css'), join(distDir, 'styles', 'orby-shell-ready.css'));
 }
 if (existsSync(join(__dirname, 'styles', 'orby-site-nav.css'))) {
   mkdirSync(join(distDir, 'styles'), { recursive: true });

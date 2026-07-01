@@ -141,7 +141,7 @@ export class UIHelpers {
   }
 
   /**
-   * Double-click a slider value label to reset to default; Shift+double-click to type an exact value.
+   * Click a slider value label to type an exact value; double-click to reset to default.
    */
   setupValueLabelInlineEdit() {
     if (this._valueLabelEditBound) return;
@@ -149,14 +149,45 @@ export class UIHelpers {
     this._editingValueLabel = null;
 
     const root = this.ui?.dom?.panelsContainer ?? document;
+    const resolveValueLabel = (event) =>
+      event.target.closest('.value[data-output], #svgExtrudeColorDepths .value');
+    const EDIT_DELAY_MS = 250;
+    /** @type {{ label: Element, timer: number } | null} */
+    let pendingEdit = null;
+
+    const clearPendingEdit = () => {
+      if (!pendingEdit) return;
+      clearTimeout(pendingEdit.timer);
+      pendingEdit = null;
+    };
+
+    root.addEventListener('click', (event) => {
+      const label = resolveValueLabel(event);
+      if (!label) return;
+      if (label.classList.contains('is-editing')) return;
+      if (event.target.closest('.value-inline-input')) return;
+
+      event.preventDefault();
+      clearPendingEdit();
+      pendingEdit = {
+        label,
+        timer: window.setTimeout(() => {
+          pendingEdit = null;
+          this.startValueLabelEdit(label);
+        }, EDIT_DELAY_MS),
+      };
+    });
+
     root.addEventListener('dblclick', (event) => {
-      const label = event.target.closest('.value[data-output], #svgExtrudeColorDepths .value');
+      const label = resolveValueLabel(event);
       if (!label) return;
       event.preventDefault();
 
-      if (event.shiftKey) {
-        this.startValueLabelEdit(label);
-        return;
+      if (label.classList.contains('is-editing')) {
+        if (event.target.closest('.value-inline-input')) return;
+        this.cancelValueLabelEdit();
+      } else {
+        clearPendingEdit();
       }
 
       const slider = this.resolveSliderForValueLabel(label);
@@ -252,6 +283,7 @@ export class UIHelpers {
     this._editingValueSlider = null;
 
     slider.value = String(next);
+    this.updateSliderFill(slider);
     slider.dispatchEvent(new Event('input', { bubbles: true }));
   }
 

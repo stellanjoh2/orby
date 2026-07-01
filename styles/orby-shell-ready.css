@@ -1,8 +1,4 @@
-/**
- * Site entry gate — shared by standalone shells (/mobile, /mobile/app).
- * Full studio uses styles.css; pair with scripts/orbyEntryGate.js.
- */
-.orby-entry-gate {
+.orby-sr {
   position: fixed;
   inset: 0;
   z-index: 2147483646;
@@ -16,7 +12,7 @@
   pointer-events: auto;
 }
 
-.orby-entry-gate__panel {
+.orby-sr__panel {
   width: 100%;
   max-width: 420px;
   padding: 1.75rem 1.5rem;
@@ -29,9 +25,9 @@
     0 0 80px color-mix(in srgb, var(--orby-lime, #c4ff00) 8%, transparent);
 }
 
-.orby-entry-gate__title {
+.orby-sr__title {
   font-family: var(--brand-font-headline, 'Mattone Bold', system-ui, sans-serif);
-  margin: 0 0 0.35rem 0;
+  margin: 0 0 1rem 0;
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -39,28 +35,29 @@
   color: var(--orby-lime, #c4ff00);
 }
 
-.orby-entry-gate__hint {
-  margin: 0 0 1.25rem 0;
-  font-size: 0.88rem;
-  line-height: 1.45;
-  color: rgba(245, 241, 255, 0.55);
-}
-
-.orby-entry-gate__form {
+.orby-sr__form {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
 }
 
-.orby-entry-gate__label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgba(245, 241, 255, 0.55);
+.orby-sr__label {
+  position: relative;
 }
 
-.orby-entry-gate__input {
+.orby-sr__label-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.orby-sr__input {
   width: 100%;
   box-sizing: border-box;
   padding: 0.65rem 0.85rem;
@@ -74,25 +71,25 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.orby-entry-gate__input:focus {
+.orby-sr__input:focus {
   border-color: color-mix(in srgb, var(--orby-lime, #c4ff00) 55%, transparent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--orby-lime, #c4ff00) 22%, transparent);
 }
 
-.orby-entry-gate__error {
+.orby-sr__msg {
   margin: 0;
   min-height: 1.25rem;
   font-size: 0.82rem;
   color: var(--orby-pink, #ff00c4);
 }
 
-.orby-entry-gate__submit {
+.orby-sr__btn {
   margin-top: 0.35rem;
   width: 100%;
   justify-content: center;
 }
 
-.orby-entry-gate .accent-action-btn {
+.orby-sr .accent-action-btn {
   width: 100%;
   padding: 0.5rem 1rem;
   border-radius: 999px;
@@ -113,23 +110,23 @@
   opacity: 1;
 }
 
-.orby-entry-gate .accent-action-btn:hover {
+.orby-sr .accent-action-btn:hover {
   background: var(--orby-lime, #c4ff00);
   color: var(--orby-black, #080808);
   box-shadow: 0 0 24px color-mix(in srgb, var(--orby-lime, #c4ff00) 35%, transparent);
 }
 
-.orby-entry-gate .accent-action-btn:active {
+.orby-sr .accent-action-btn:active {
   filter: brightness(0.95);
 }
 
-html.orby-gate-unlocked .orby-entry-gate,
-#orby-entry-gate[hidden] {
+html.orby-sr-on .orby-sr,
+#orby-sr-root[hidden] {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
 }
 
-html:not(.orby-gate-unlocked) body.orby-entry-gate-page > :not(#orby-entry-gate) {
+html:not(.orby-sr-on) body.orby-sr-page > :not(#orby-sr-root) {
   visibility: hidden !important;
 }

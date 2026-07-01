@@ -12,6 +12,14 @@ export const formatTime = (seconds) => {
   return `${mins}:${secs}`;
 };
 
+/** Fixed-width SS:CC for export preview — seconds + centiseconds (e.g. `02:50` = 2.50s). */
+export const formatPreviewTime = (seconds) => {
+  const clamp = Math.max(0, Number(seconds) || 0);
+  const wholeSecs = Math.floor(clamp);
+  const centis = Math.min(99, Math.floor((clamp % 1) * 100 + 1e-6));
+  return `${String(wholeSecs).padStart(2, '0')}:${String(centis).padStart(2, '0')}`;
+};
+
 /** 1-based frame index at `currentSec`, clamped to [1, totalFrames]. */
 export function animationFrameAtTime(currentSec, durationSec, fps = ANIMATION_DISPLAY_FPS) {
   const rate = Math.max(1, fps);

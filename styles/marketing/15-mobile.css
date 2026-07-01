@@ -1187,7 +1187,7 @@ html.mobile-landing:has(body.orby-not-found-active) body {
 html.mobile-landing body.orby-not-found-active #orby-marketing,
 html.mobile-landing body.orby-not-found-active .orby-marketing-scroll-nav,
 html.mobile-landing body.orby-not-found-active .orby-marketing-scroll-cue,
-html.mobile-landing body.orby-not-found-active #orby-entry-gate,
+html.mobile-landing body.orby-not-found-active #orby-sr-root,
 html.mobile-landing body.orby-not-found-active .dropzone,
 html.mobile-landing body.orby-not-found-active #shelf,
 html.mobile-landing body.orby-not-found-active .demo-logotype,

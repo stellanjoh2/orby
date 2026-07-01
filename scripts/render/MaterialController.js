@@ -4804,6 +4804,12 @@ export class MaterialController {
         if (child.userData.ownsGeometry || child.userData.isCloned) {
           child.geometry?.dispose?.();
         }
+        if (child.userData.ownsMaterial) {
+          const mats = Array.isArray(child.material) ? child.material : [child.material];
+          for (const mat of mats) {
+            mat?.dispose?.();
+          }
+        }
       }
     }
     this._wireframeLineMaterial?.dispose?.();
@@ -4841,6 +4847,38 @@ export class MaterialController {
     sourceGeometry.boundingBox.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
     return resolveWireframeSurfaceOffset(maxDim);
+  }
+
+  /** @param {THREE.Mesh} mesh */
+  _meshUsesSkeletalDeform(mesh) {
+    if (!mesh.skeleton) return false;
+    if (mesh.isSkinnedMesh) return true;
+    const geo = mesh.geometry;
+    return !!(geo?.attributes?.skinIndex && geo?.attributes?.skinWeight);
+  }
+
+  /** @param {THREE.Mesh} mesh */
+  _meshUsesMorphDeform(mesh) {
+    return !!(mesh.morphTargetInfluences?.length);
+  }
+
+  /** @param {THREE.Mesh} mesh @returns {{ skinned: boolean, morph: boolean }} */
+  _resolveWireframeDeformFlags(mesh) {
+    return {
+      skinned: this._meshUsesSkeletalDeform(mesh),
+      morph: this._meshUsesMorphDeform(mesh),
+    };
+  }
+
+  /** @param {Set<import('three').Skeleton>} [seen] */
+  _updateSkinnedWireframeSkeletons(seen = new Set()) {
+    for (const wireMesh of this.wireframeOverlayMeshes ?? []) {
+      if (!wireMesh?.isSkinnedMesh || !wireMesh.skeleton) continue;
+      if (seen.has(wireMesh.skeleton)) continue;
+      wireMesh.skeleton.update();
+      seen.add(wireMesh.skeleton);
+    }
+    return seen;
   }
 
   /**
@@ -4926,10 +4964,12 @@ export class MaterialController {
     return material;
   }
 
-  _createWireframeBasicMaterial({ color, onlyVisibleFaces, thickness, opacity }) {
+  _createWireframeBasicMaterial({ color, onlyVisibleFaces, thickness, opacity, skinning = true, morphTargets = true }) {
     const material = new THREE.MeshBasicMaterial({
       color: new THREE.Color(color),
       wireframe: true,
+      skinning,
+      morphTargets,
       depthTest: onlyVisibleFaces,
       depthWrite: false,
       transparent: opacity < 1 || !onlyVisibleFaces,
@@ -4987,12 +5027,6 @@ export class MaterialController {
         height: 0,
         pixelRatio: window.devicePixelRatio || 1,
       });
-      this._wireframeBasicMaterial = this._createWireframeBasicMaterial({
-        color,
-        onlyVisibleFaces,
-        thickness,
-        opacity,
-      });
 
       // Create wireframe meshes that follow the model.
       // Parent each wire mesh to the same Object3D as the source mesh so local transforms
@@ -5010,22 +5044,47 @@ export class MaterialController {
         // InstancedMesh uses instance matrices; a plain wire clone would not match instances.
         if (child.isInstancedMesh) return;
 
-        // Always push wireframe source geometry out along normals so lines hover just
-        // off the surface instead of being exactly glued to it. The polygon-offset depth
-        // bias (only-visible-faces) still applies on top to keep front edges from z-fighting.
-        let offsetGeometry = this._buildOffsetWireframeSourceGeometry(child.geometry, {
-          applySurfaceOffset: true,
-        });
-        const sourceGeometry = offsetGeometry;
-
+        const { skinned, morph } = this._resolveWireframeDeformFlags(child);
+        const usesDeform = skinned || morph;
         let wireMesh;
-        if (child.isSkinnedMesh) {
-          wireMesh = new THREE.SkinnedMesh(
-            sourceGeometry,
-            this._wireframeBasicMaterial,
-          );
+
+        if (usesDeform) {
+          // GLB rigs / morph clips — offset clone hovers above the surface; skin weights stay intact.
+          const offsetGeometry = this._buildOffsetWireframeSourceGeometry(child.geometry, {
+            applySurfaceOffset: true,
+          });
+          const material = this._createWireframeBasicMaterial({
+            color,
+            onlyVisibleFaces,
+            thickness,
+            opacity,
+            skinning: skinned,
+            morphTargets: morph,
+          });
+
+          if (skinned) {
+            wireMesh = new THREE.SkinnedMesh(offsetGeometry, material);
+            wireMesh.bind(child.skeleton, child.bindMatrix);
+            if (child.bindMatrixInverse) {
+              wireMesh.bindMatrixInverse = child.bindMatrixInverse.clone();
+            }
+          } else {
+            wireMesh = new THREE.Mesh(offsetGeometry, material);
+          }
+
+          if (morph) {
+            wireMesh.morphTargetInfluences = child.morphTargetInfluences;
+            wireMesh.morphTargetDictionary = child.morphTargetDictionary;
+          }
+
           wireMesh.userData.ownsGeometry = true;
+          wireMesh.userData.ownsMaterial = true;
         } else {
+          // Static meshes — crisp screen-space lines via LineSegments2.
+          let offsetGeometry = this._buildOffsetWireframeSourceGeometry(child.geometry, {
+            applySurfaceOffset: true,
+          });
+          const sourceGeometry = offsetGeometry;
           const lineGeometry = this._buildWireframeLineGeometry(sourceGeometry);
           wireMesh = new LineSegments2(lineGeometry, this._wireframeLineMaterial);
           wireMesh.frustumCulled = false;
@@ -5034,7 +5093,7 @@ export class MaterialController {
         }
 
         wireMesh.userData.originalMesh = child;
-        wireMesh.userData.isCloned = !!child.isSkinnedMesh;
+        wireMesh.userData.isCloned = skinned;
         wireMesh.userData.isWireframeOverlay = true;
         wireMesh.name = child.name ? `${child.name}_wireframe` : 'wireframe';
         wireMesh.renderOrder = 999;
@@ -5043,12 +5102,6 @@ export class MaterialController {
         wireMesh.rotation.copy(child.rotation);
         wireMesh.scale.copy(child.scale);
 
-        if (child.isSkinnedMesh) {
-          wireMesh.bind(child.skeleton, child.bindMatrix);
-          if (child.bindMatrixInverse) {
-            wireMesh.bindMatrixInverse = child.bindMatrixInverse.clone();
-          }
-        }
         const hostParent = child.parent;
         if (hostParent) {
           hostParent.add(wireMesh);
@@ -5078,6 +5131,8 @@ export class MaterialController {
       }
       wireMesh.updateMatrixWorld(true);
     }
+
+    this._updateSkinnedWireframeSkeletons();
   }
 
   /** Delegating wrappers — UV Checker logic lives in {@link UvCheckerOverlay}. */

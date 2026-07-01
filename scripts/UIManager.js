@@ -378,6 +378,7 @@ export class UIManager {
     this.dom.panelsContainer = q('.panels');
     this.dom.shelfScrollbar = q('.shelf-scrollbar');
     this.dom.shelfScrollbarThumb = q('.shelf-scrollbar-thumb');
+    this.dom.exportVideoPreviewDock = q('#exportVideoPreviewDock');
     this.dom.toastTemplate = document.querySelector('#toastTemplate');
     this.dom.messageAlertModal = q('#messageAlertModal');
     this.dom.messageAlertTitle = q('#messageAlertTitle');
@@ -738,10 +739,17 @@ export class UIManager {
       exportPitchOffset: q('#exportPitchOffset'),
       exportPitchOffsetSettings: q('#exportPitchOffsetSettings'),
       exportMovementSliders: q('#exportMovementSliders'),
+      exportMovementEasingFamily: q('#exportMovementEasingFamily'),
+      exportMovementEasingType: q('#exportMovementEasingType'),
+      exportMovementEasingTypeLine: q('#exportMovementEasingTypeLine'),
       exportMeshAnimationSelect: q('#exportMeshAnimationSelect'),
-      exportMeshAnimationClipWrap: q('#exportMeshAnimationClipWrap'),
-      exportMeshAnimationsEmbed: q('#exportMeshAnimationsEmbed'),
       exportMeshAnimationsSettings: q('#exportMeshAnimationsSettings'),
+      exportMeshMatchDurationToClip: q('#exportMeshMatchDurationToClip'),
+      exportMeshMatchDurationWrap: q('#exportMeshMatchDurationWrap'),
+      exportMeshSyncCameraToDuration: q('#exportMeshSyncCameraToDuration'),
+      exportMeshSyncCameraWrap: q('#exportMeshSyncCameraWrap'),
+      exportVideoLengthGroup: q('#exportVideoLengthGroup'),
+      exportVideoLengthClipHint: q('#exportVideoLengthClipHint'),
       fbxMapFileInput: q('#fbxMapFileInput'),
       fbxMapMaterial: q('#fbxMapMaterial'),
       fbxMapMaterialLine: q('#fbxMapMaterialLine'),
@@ -817,17 +825,26 @@ export class UIManager {
         pitchOffset: 0,
         format: 'mp4',
         durationSec: 5,
+        objectSpins: 1,
+        objectSubtleDegrees: 0,
+        objectSpinDirection: 'forward',
+        cameraSpins: 1,
+        cameraSubtleDegrees: 0,
+        cameraSpinDirection: 'forward',
         spins: 1,
         subtleSpinDegrees: 0,
         spinDirection: 'forward',
+        movementEasing: 'linear',
         hdriRotationDegrees: 0,
         fps: DEFAULT_EXPORT_VIDEO_FPS,
         resolution: '1080p',
         aspectRatio: '16:9',
         mp4Quality: 'medium',
         movTransparent: false,
-        meshAnimationsInclude: false,
+        meshAnimationsInclude: true,
         meshAnimationClipIndex: 0,
+        meshMatchDurationToClip: false,
+        meshSyncCameraToDuration: true,
       },
     };
 
@@ -878,6 +895,7 @@ export class UIManager {
     this.animationControls.bind();
     this.exportPreviewControls.bind();
     this.exportSectionControls.bind();
+    this.syncExportVideoPreviewDock?.();
     this.watermark.bind();
     this.resetControls.bind();
     
@@ -1138,6 +1156,34 @@ export class UIManager {
     const on = !!visible;
     banner.hidden = !on;
     banner.setAttribute('aria-hidden', on ? 'false' : 'true');
+    if (on) {
+      this.syncExportPreviewBanner();
+    }
+  }
+
+  /** Viewport pill — copy reflects paused export preview and active shelf tab. */
+  syncExportPreviewBanner() {
+    const banner = this.dom.exportPreviewBanner;
+    if (!banner || banner.hidden) return;
+
+    const paused = this.exportPreviewControls?.isExportPreviewPaused?.() ?? false;
+    const onExportTab = this.activeTab === 'export';
+    const title = banner.querySelector('.viewport-export-preview-banner__title');
+    const hint = banner.querySelector('.viewport-export-preview-banner__hint');
+
+    banner.classList.toggle('is-paused', paused);
+
+    if (paused) {
+      if (title) title.textContent = 'Export preview paused';
+      if (hint) {
+        hint.textContent = onExportTab
+          ? 'Orbit locked — resume in Export or exit preview'
+          : 'Orbit locked — open Export tab to resume, or exit preview';
+      }
+    } else {
+      if (title) title.textContent = 'Preview mode';
+      if (hint) hint.textContent = 'Orbit locked — exit to adjust camera';
+    }
   }
 
   /** Enable restore once a session camera bookmark exists. */
@@ -2481,8 +2527,6 @@ export class UIManager {
   setExportVideoAnimationClips(clips) {
     const select = this.inputs.exportMeshAnimationSelect;
     const wrap = this.inputs.exportMeshAnimationsSettings;
-    const clipWrap = this.inputs.exportMeshAnimationClipWrap;
-    const embedToggle = this.inputs.exportMeshAnimationsEmbed;
     if (!select || !wrap) return;
 
     select.innerHTML = '';
@@ -2491,33 +2535,77 @@ export class UIManager {
     if (!hasClips) {
       wrap.hidden = true;
       this.exportSettings.video.meshAnimationsInclude = false;
-      if (embedToggle) {
-        embedToggle.checked = false;
-        embedToggle.disabled = true;
-      }
-      if (clipWrap) clipWrap.hidden = true;
+      this.exportSettings.video.meshMatchDurationToClip = false;
       select.disabled = true;
       return;
     }
 
     wrap.hidden = false;
-    if (embedToggle) embedToggle.disabled = false;
+    select.disabled = false;
 
     clips.forEach((clip, index) => {
       const option = document.createElement('option');
-      option.value = index;
+      option.value = String(index);
       option.textContent = this.extractAnimationName(clip.name);
+      if (Number.isFinite(clip.seconds) && clip.seconds > 0) {
+        option.dataset.seconds = String(clip.seconds);
+      }
       select.appendChild(option);
     });
+
+    const offOption = document.createElement('option');
+    offOption.value = 'off';
+    offOption.textContent = 'Off';
+    select.appendChild(offOption);
 
     const savedIndex = Number(this.exportSettings.video.meshAnimationClipIndex);
     const clipIndex = Number.isFinite(savedIndex)
       ? Math.min(clips.length - 1, Math.max(0, savedIndex))
       : 0;
     this.exportSettings.video.meshAnimationClipIndex = clipIndex;
-    select.value = String(clipIndex);
+    if (this.exportSettings.video.meshAnimationsInclude !== false) {
+      this.exportSettings.video.meshAnimationsInclude = true;
+    }
 
+    this._syncExportMeshAnimationSelectValue();
     this.syncExportMeshAnimationsUi();
+  }
+
+  /** @returns {{ include: boolean, clipIndex: number }} */
+  _parseExportMeshAnimationSelectValue(value) {
+    if (value === 'off') {
+      return { include: false, clipIndex: 0 };
+    }
+    const index = parseInt(value, 10);
+    return {
+      include: true,
+      clipIndex: Number.isFinite(index) ? index : 0,
+    };
+  }
+
+  _syncExportMeshAnimationSelectValue() {
+    const select = this.inputs.exportMeshAnimationSelect;
+    const video = this.exportSettings.video || {};
+    if (!select || !select.options.length) return;
+    if (video.meshAnimationsInclude === false) {
+      select.value = 'off';
+      return;
+    }
+    const clipIndex = Number(video.meshAnimationClipIndex) || 0;
+    const clipValue = String(clipIndex);
+    if (select.querySelector(`option[value="${clipValue}"]`)) {
+      select.value = clipValue;
+    } else {
+      select.value = '0';
+      this.exportSettings.video.meshAnimationClipIndex = 0;
+    }
+  }
+
+  /** Clip count for export timing — excludes the Off option. */
+  _exportMeshAnimationClipCount() {
+    const select = this.inputs.exportMeshAnimationSelect;
+    if (!select) return 0;
+    return Array.from(select.options).filter((option) => option.value !== 'off').length;
   }
 
   restoreExportSettings(saved) {
@@ -2525,30 +2613,45 @@ export class UIManager {
     this.meshControls?.syncExportSettingsUi?.();
     this.exportSectionControls?.syncFromSettings?.();
     this.watermark?.syncFromSettings?.();
+    this.syncExportVideoPreviewDock?.();
   }
 
   syncExportMeshAnimationsUi() {
     const video = this.exportSettings.video || {};
     const select = this.inputs.exportMeshAnimationSelect;
-    const clipWrap = this.inputs.exportMeshAnimationClipWrap;
-    const embedToggle = this.inputs.exportMeshAnimationsEmbed;
     const settingsWrap = this.inputs.exportMeshAnimationsSettings;
-    const hasClips = !!(select && select.options.length);
-    const embed = hasClips && !!video.meshAnimationsInclude;
+    const matchWrap = this.inputs.exportMeshMatchDurationWrap;
+    const matchToggle = this.inputs.exportMeshMatchDurationToClip;
+    const syncWrap = this.inputs.exportMeshSyncCameraWrap;
+    const syncToggle = this.inputs.exportMeshSyncCameraToDuration;
+    const hasClips = this._exportMeshAnimationClipCount() > 0;
+    const embed = hasClips && video.meshAnimationsInclude !== false;
+    const matchDuration = embed && !!video.meshMatchDurationToClip;
+    const syncCamera = video.meshSyncCameraToDuration !== false;
 
     if (settingsWrap) {
       settingsWrap.hidden = !hasClips;
     }
-    if (embedToggle) {
-      embedToggle.checked = embed;
-      embedToggle.disabled = !hasClips;
-    }
-    if (clipWrap) {
-      clipWrap.hidden = !embed;
-    }
+    this._syncExportMeshAnimationSelectValue();
     if (select) {
-      select.disabled = !embed;
+      select.disabled = !hasClips;
     }
+    if (matchWrap) {
+      matchWrap.hidden = !embed;
+    }
+    if (matchToggle) {
+      matchToggle.checked = matchDuration;
+      matchToggle.disabled = !embed;
+    }
+    if (syncWrap) {
+      syncWrap.hidden = !matchDuration;
+    }
+    if (syncToggle) {
+      syncToggle.checked = syncCamera;
+      syncToggle.disabled = !matchDuration;
+    }
+
+    this.meshControls?.syncExportDurationUi?.();
   }
 
   static supportsPngFolderExport() {
@@ -2686,6 +2789,22 @@ export class UIManager {
 
   syncExportPreviewAvailability(hasModel) {
     this.exportPreviewControls?.syncAvailability(hasModel);
+  }
+
+  syncExportPreviewPauseAll() {
+    this.exportPreviewControls?.syncPauseAll();
+  }
+
+  /** Bottom dock — visible on Export tab when Video section is expanded. */
+  syncExportVideoPreviewDock() {
+    const dock = this.dom.exportVideoPreviewDock;
+    if (!dock) return;
+    const videoOpen = !!this.exportSettings?.sections?.video;
+    const exportTabActive = this.activeTab === 'export';
+    const show = videoOpen && exportTabActive;
+    dock.hidden = !show;
+    dock.setAttribute('aria-hidden', show ? 'false' : 'true');
+    this.dom.shelf?.classList.toggle('has-export-preview-dock', show);
   }
 
   /**

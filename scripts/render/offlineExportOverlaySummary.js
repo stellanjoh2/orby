@@ -8,10 +8,15 @@ import {
   exportSpinToastLabel,
   exportHdriRotationToastLabel,
   normalizeExportVideoMovements,
-  normalizeExportSpinSettings,
+  normalizeExportObjectSpinSettings,
+  normalizeExportCameraSpinSettings,
   normalizeExportHdriRotationSettings,
   normalizeExportMeshAnimationSettings,
 } from './exportVideoMovements.js';
+import {
+  exportMovementEasingLabel,
+  normalizeExportMovementEasing,
+} from './exportMovementEasing.js';
 import {
   getExportVideoResolutionSize,
   getExportVideoResolutionSummaryLabel,
@@ -41,9 +46,10 @@ export const OFFLINE_EXPORT_OVERLAY_PREVIEW_JOB = {
   spins: 1,
   subtleSpinDegrees: 0,
   spinDirection: 'forward',
+  movementEasing: 'linear',
   hdriRotationDegrees: 0,
   movTransparent: false,
-  meshAnimationsInclude: false,
+  meshAnimationsInclude: true,
   meshAnimationClipIndex: 0,
   clipCount: 0,
 };
@@ -142,7 +148,8 @@ function estimatePngSequenceSizeLabel(width, height, totalFrames) {
  */
 function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
   const movements = normalizeExportVideoMovements(exportJob);
-  const spinSettings = normalizeExportSpinSettings(exportJob);
+  const objectSpinSettings = normalizeExportObjectSpinSettings(exportJob);
+  const cameraSpinSettings = normalizeExportCameraSpinSettings(exportJob);
   const hdriRotationSettings = normalizeExportHdriRotationSettings(exportJob);
   const meshAnimation = normalizeExportMeshAnimationSettings(
     exportJob,
@@ -234,8 +241,15 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
     renderContext.lightsAutoRotate ? 'Auto-rotate' : 'Static',
   );
   addRow(rows, 'Movement', describeCameraMovement(movements));
-  if (spinSettings?.rotationDegrees) {
-    addRow(rows, 'Spins', exportSpinToastLabel(spinSettings));
+  const movementEasing = normalizeExportMovementEasing(exportJob.movementEasing);
+  if (movementEasing !== 'linear') {
+    addRow(rows, 'Timing', exportMovementEasingLabel(movementEasing));
+  }
+  if (objectSpinSettings?.rotationDegrees) {
+    addRow(rows, 'Object rotation', exportSpinToastLabel(objectSpinSettings));
+  }
+  if (cameraSpinSettings?.rotationDegrees) {
+    addRow(rows, 'Camera orbit', exportSpinToastLabel(cameraSpinSettings));
   }
   const hdriLabel = exportHdriRotationToastLabel(hdriRotationSettings);
   if (hdriLabel) {

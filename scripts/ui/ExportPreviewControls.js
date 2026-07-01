@@ -3,6 +3,12 @@ import {
   SCRUB_CAPTURE_DEBOUNCE_MS,
   USE_CAPTURE_PREVIEW_ON_SCRUB,
 } from '../constants.js';
+import { formatPreviewTime } from '../utils/timeFormatter.js';
+import {
+  creativeLookPresetUsesShaderAnimation,
+  normalizeCreativeLookPreset,
+  resolveCreativeLookPresetChoice,
+} from '../render/CreativeLookMaterials.js';
 
 /**
  * Export movement preview transport — play/stop, scrub, reset, and time readout.
@@ -14,6 +20,10 @@ export class ExportPreviewControls {
     this._scrubbing = false;
     this._scrubCaptureTimer = null;
     this._scrubCapturePendingT = null;
+    /** Export preview session frozen via dock Pause all (not scrub-idle). */
+    this._exportPreviewPaused = false;
+    this._exportPreviewWasPlaying = false;
+    this._liveGlbPausedByDock = false;
   }
 
   bind() {
@@ -63,15 +73,15 @@ export class ExportPreviewControls {
 
     this.ui.dom.exportPreviewPauseAll?.addEventListener('click', () => {
       this.ui.uiSounds?.playSelect();
-      const store = this.ui.stateStore;
-      const next = !store?.getState()?.fontExtrude?.pauseAllAnimations;
-      store?.set('fontExtrude.pauseAllAnimations', next);
-      this._applyPauseAll(next);
-      this.syncPauseAll(store?.getState());
+      this._togglePauseAll();
     });
 
     this._pauseAllUnsub = this.ui.stateStore?.subscribe?.((state) => {
       this.syncPauseAll(state);
+    });
+
+    this.eventBus.on('export:movement-preview-stop', () => {
+      this._clearExportPreviewPauseState();
     });
 
     this.eventBus.on('scene:model-load-complete', () => {
@@ -101,19 +111,161 @@ export class ExportPreviewControls {
   }
 
   /**
-   * Shortcut to freeze/resume font 3D-type reveal + constant animations from the
-   * Export tab. Mirrors the Object tab "Pause all" control via the shared
-   * `fontExtrude.pauseAllAnimations` flag so both stay in sync.
+   * Pause/resume export preview motion, font type animations, and Shader Lab motion.
+   */
+  _togglePauseAll() {
+    const state = this.ui.stateStore?.getState();
+    this._setPauseAllEngaged(!this._pauseAllEngaged(state), state);
+    this.syncPauseAll(state);
+    this._requestRender();
+  }
+
+  _pauseAllEngaged(state) {
+    const current = state ?? this.ui.stateStore?.getState();
+    const preview = this._exportMovementPreview();
+    if (preview?.isActive?.()) {
+      return (
+        this._exportPreviewPaused
+        || (
+          this._shaderPauseSupported(current)
+          && !!current?.creativeLook?.pauseShaderAnimations
+        )
+      );
+    }
+    return (
+      (this._fontPauseAvailable() && !!current?.fontExtrude?.pauseAllAnimations)
+      || (
+        this._shaderPauseSupported(current)
+        && !!current?.creativeLook?.pauseShaderAnimations
+      )
+    );
+  }
+
+  _setPauseAllEngaged(paused, state) {
+    const preview = this._exportMovementPreview();
+    if (preview?.isActive?.()) {
+      if (paused && !this._exportPreviewPaused) {
+        this._applyExportPreviewPause(preview);
+      } else if (!paused && this._exportPreviewPaused) {
+        this._resumeExportPreviewPause(preview);
+      }
+    } else if (!paused) {
+      this._clearExportPreviewPauseState();
+    }
+
+    if (!preview?.isActive?.() && this._fontPauseAvailable()) {
+      this.ui.stateStore?.set('fontExtrude.pauseAllAnimations', paused);
+      this._applyFontPauseAll(paused);
+    }
+
+    if (this._shaderPauseSupported(state)) {
+      this.ui.stateStore?.set('creativeLook.pauseShaderAnimations', paused);
+    }
+  }
+
+  _applyExportPreviewPause(preview) {
+    this._exportPreviewWasPlaying = !!preview.isPlaying?.();
+    preview.pausePlayback?.();
+    this._pauseLiveGlbIfNeeded();
+    this._exportPreviewPaused = true;
+    this.ui.syncExportPreviewBanner?.();
+  }
+
+  _resumeExportPreviewPause(preview) {
+    if (this._exportPreviewWasPlaying) {
+      preview.resumePlayback?.();
+    }
+    this._resumeLiveGlbIfNeeded();
+    this._clearExportPreviewPauseState();
+  }
+
+  _clearExportPreviewPauseState() {
+    this._resumeLiveGlbIfNeeded();
+    this._exportPreviewPaused = false;
+    this._exportPreviewWasPlaying = false;
+    this.ui.syncExportPreviewBanner?.();
+  }
+
+  _exportMovementPreview() {
+    return window.orby?.scene?.exportMovementPreview ?? null;
+  }
+
+  _pauseLiveGlbIfNeeded() {
+    const ac = window.orby?.scene?.animationController;
+    if (
+      !ac?.currentAction
+      || ac.isExportSessionActive?.()
+      || ac.currentAction.paused
+    ) {
+      return;
+    }
+    ac.togglePlayback();
+    this._liveGlbPausedByDock = true;
+  }
+
+  _resumeLiveGlbIfNeeded() {
+    if (!this._liveGlbPausedByDock) return;
+    const ac = window.orby?.scene?.animationController;
+    if (ac?.currentAction?.paused && !ac.isExportSessionActive?.()) {
+      ac.togglePlayback();
+    }
+    this._liveGlbPausedByDock = false;
+  }
+
+  _requestRender() {
+    window.orby?.scene?.requestRender?.();
+  }
+
+  /**
+   * Sync bottom dock Pause all — export preview session or Object-tab font mirror.
    * @param {object} [state]
    */
+  /** True when dock Pause all froze an active export preview session. */
+  isExportPreviewPaused() {
+    return !!this._exportPreviewPaused;
+  }
+
   syncPauseAll(state) {
     const button = this.ui.dom.exportPreviewPauseAll;
     if (!button) return;
     const current = state ?? this.ui.stateStore?.getState();
-    const paused = !!current?.fontExtrude?.pauseAllAnimations;
-    button.disabled = !this._pauseAllAvailable();
+    const paused = this._pauseAllEngaged(current);
+    button.disabled = !this._pauseAllAvailable(current);
     button.classList.toggle('active', paused);
     button.textContent = paused ? 'Resume all animations' : 'Pause all animations';
+    this.ui.syncExportPreviewBanner?.();
+  }
+
+  _shaderPauseSupported(state) {
+    const current = state ?? this.ui.stateStore?.getState();
+    if (!current?.creativeLook?.enabled) return false;
+    const preset =
+      resolveCreativeLookPresetChoice(current.creativeLook?.preset)
+      ?? normalizeCreativeLookPreset(null);
+    return creativeLookPresetUsesShaderAnimation(preset);
+  }
+
+  _pauseAllAvailable(state) {
+    const video = this.ui.exportSettings.video || {};
+    if (ExportMovementPreview.canPreview(video)) return true;
+    if (this._shaderPauseSupported(state)) return true;
+    return this._fontPauseAvailable();
+  }
+
+  _fontPauseAvailable() {
+    const scene = window.orby?.scene;
+    const reveal = scene?.fontTextRevealController;
+    const constant = scene?.fontTextConstantController;
+    return (
+      this._hasFontMesh() &&
+      !!(reveal?.isEnabled?.() || constant?.isEnabled?.())
+    );
+  }
+
+  _applyFontPauseAll(active) {
+    const scene = window.orby?.scene;
+    const reveal = scene?.fontTextRevealController;
+    reveal?.applyPauseAll?.(active, scene?.currentModel ?? null);
   }
 
   _hasFontMesh() {
@@ -125,23 +277,14 @@ export class ExportPreviewControls {
     );
   }
 
-  _pauseAllAvailable() {
-    const scene = window.orby?.scene;
-    const reveal = scene?.fontTextRevealController;
-    const constant = scene?.fontTextConstantController;
-    return (
-      this._hasFontMesh() &&
-      !!(reveal?.isEnabled?.() || constant?.isEnabled?.())
-    );
-  }
-
-  _applyPauseAll(active) {
-    const scene = window.orby?.scene;
-    const reveal = scene?.fontTextRevealController;
-    reveal?.applyPauseAll?.(active, scene?.currentModel ?? null);
-  }
-
   setPlaying(playing) {
+    if (playing) {
+      if (this._pauseAllEngaged()) {
+        this._setPauseAllEngaged(false);
+      } else {
+        this._clearExportPreviewPauseState();
+      }
+    }
     const button = this.ui.dom.exportPreviewPlayPause;
     const icon = button?.querySelector('i');
     const srLabel = button?.querySelector('.sr-only');
@@ -168,15 +311,14 @@ export class ExportPreviewControls {
     if (this.ui.dom.exportPreviewScrub) {
       this.ui.dom.exportPreviewScrub.classList.toggle('is-scrub-playing', !!playing);
     }
+    this.syncPauseAll();
   }
 
   updateTimeline(currentSec, durationSec, { fromPlayback = false } = {}) {
     if (!durationSec) return;
     const clamp = Math.max(0, Math.min(currentSec, durationSec));
-    const minutes = Math.floor(clamp / 60).toString();
-    const seconds = Math.floor(clamp % 60).toString().padStart(2, '0');
     if (this.ui.dom.exportPreviewTime) {
-      this.ui.dom.exportPreviewTime.textContent = `${minutes}:${seconds}`;
+      this.ui.dom.exportPreviewTime.textContent = formatPreviewTime(clamp);
     }
     const scrub = this.ui.dom.exportPreviewScrub;
     if (scrub && (!this._scrubbing || fromPlayback)) {

@@ -471,8 +471,10 @@ export function createBlankCanvasPreset() {
         aspectRatio: '16:9',
         mp4Quality: 'medium',
         movTransparent: false,
-        meshAnimationsInclude: false,
+        meshAnimationsInclude: true,
         meshAnimationClipIndex: 0,
+        meshMatchDurationToClip: false,
+        meshSyncCameraToDuration: true,
       },
     },
   };

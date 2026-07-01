@@ -7,12 +7,20 @@ import {
   needsExportFovDrive,
   normalizeExportVideoMovements,
   normalizeExportMeshAnimationSettings,
-  normalizeExportSpinSettings,
+  normalizeExportObjectSpinSettings,
+  normalizeExportCameraSpinSettings,
   normalizeExportHdriRotationSettings,
+  resolveExportMeshAnimationTiming,
+  resolveExportCameraMovementLinearT,
+  resolveExportTimeSecFromFrame,
   exportSpinSequenceLabel,
   exportSpinToastLabel,
   exportHdriRotationToastLabel,
 } from './exportVideoMovements.js';
+import {
+  easeExportMovementProgress,
+  normalizeExportMovementEasing,
+} from './exportMovementEasing.js';
 import { lightsRotationForExportFrame } from '../config/lightsAutoRotate.js';
 import { buildOfflineExportOverlaySummary } from './offlineExportOverlaySummary.js';
 import { forceExportCaptureFramebuffer } from './capture/forceExportCaptureFramebuffer.js';
@@ -92,6 +100,7 @@ export class VideoExporter {
     getCurrentAssetMetadata,
     getHdriBackgroundEnabled,
     getAnimationClipCount = () => 0,
+    getAnimationClipDuration = () => 0,
     getAnimationClipLabel = () => null,
     getFontTextRevealExportLabel = () => null,
     handleResize,
@@ -137,6 +146,7 @@ export class VideoExporter {
     this.getCurrentAssetMetadata = getCurrentAssetMetadata;
     this.getHdriBackgroundEnabled = getHdriBackgroundEnabled;
     this.getAnimationClipCount = getAnimationClipCount;
+    this.getAnimationClipDuration = getAnimationClipDuration;
     this.getAnimationClipLabel = getAnimationClipLabel;
     this.getFontTextRevealExportLabel = getFontTextRevealExportLabel;
     this.handleResize = handleResize;
@@ -145,6 +155,13 @@ export class VideoExporter {
     /** @type {{ width: number, height: number } | null} — PNG sequence output size from export settings */
     /** @type {import('./capture/captureFeatureHooks.js').CaptureFeatureSession | null} */
     this._captureFeatureSession = null;
+  }
+
+  _cameraMovementLinearT(frameIndex, fps, cameraMovementDurationSec) {
+    return resolveExportCameraMovementLinearT(
+      resolveExportTimeSecFromFrame(frameIndex, fps),
+      cameraMovementDurationSec,
+    );
   }
 
   requestCancelExport() {
@@ -191,13 +208,18 @@ export class VideoExporter {
       return null;
     }
     const movements = normalizeExportVideoMovements(settings);
-    if (!hasExportVideoMovement(movements)) {
+    if (!hasExportVideoMovement(movements, settings)) {
       return null;
     }
     const allowedDurations = [5, 10, 15];
-    const durationSec = allowedDurations.includes(settings?.durationSec)
-      ? settings.durationSec
-      : 5;
+    const clipCount = this.getAnimationClipCount?.() ?? 0;
+    const meshAnimation = normalizeExportMeshAnimationSettings(settings, clipCount);
+    const clipDuration = meshAnimation.include
+      ? this.getAnimationClipDuration?.(meshAnimation.clipIndex) ?? 0
+      : 0;
+    const timing = resolveExportMeshAnimationTiming(settings, clipCount, clipDuration);
+    const durationSec = timing.exportDurationSec;
+    const cameraMovementDurationSec = timing.cameraMovementDurationSec;
     const fps = normalizeExportVideoFps(settings?.fps);
     const totalFrames = Math.max(2, Math.round(durationSec * fps));
     const state = this.stateStore.getState();
@@ -216,14 +238,16 @@ export class VideoExporter {
       movements,
       hdriRotationSettings: normalizeExportHdriRotationSettings(settings),
       modeLabel: exportVideoMovementLabel(movements),
-      meshAnimation: normalizeExportMeshAnimationSettings(
-        settings,
-        this.getAnimationClipCount?.() ?? 0,
-      ),
+      meshAnimation: timing,
       durationSec,
+      cameraMovementDurationSec,
+      presetDurationSec: allowedDurations.includes(settings?.durationSec)
+        ? settings.durationSec
+        : 5,
       fps,
       totalFrames,
-      spinSettings: normalizeExportSpinSettings(settings),
+      objectSpinSettings: normalizeExportObjectSpinSettings(settings),
+      cameraSpinSettings: normalizeExportCameraSpinSettings(settings),
       resolution: normalizeExportVideoResolution(settings?.resolution),
       aspectRatio: normalizeExportVideoAspectRatio(settings?.aspectRatio),
       outputSize: this._getVideoResolutionSize(
@@ -238,6 +262,7 @@ export class VideoExporter {
       startLightsRotation,
       startHdriRotation,
       lightsAutoRotate: !!state.lightsAutoRotate,
+      movementEasing: normalizeExportMovementEasing(settings?.movementEasing),
     };
   }
 
@@ -245,7 +270,8 @@ export class VideoExporter {
     baseName,
     durationSec,
     fps,
-    spinSettings,
+    objectSpinSettings,
+    cameraSpinSettings,
     resolution,
     mode = 'turntable',
     aspectRatio = '16:9',
@@ -255,35 +281,53 @@ export class VideoExporter {
       .replace(/[^a-zA-Z0-9_-]+/g, '_')
       .replace(/^_+|_+$/g, '')
       || 'orby';
-    const spinLabel = exportSpinSequenceLabel(spinSettings);
+    const spinParts = [];
+    if (objectSpinSettings?.rotationDegrees) {
+      spinParts.push(`obj_${exportSpinSequenceLabel(objectSpinSettings)}`);
+    }
+    if (cameraSpinSettings?.rotationDegrees) {
+      spinParts.push(`cam_${exportSpinSequenceLabel(cameraSpinSettings)}`);
+    }
+    const spinLabel = spinParts.length ? spinParts.join('_') : 'nospin';
     const aspectSuffix = exportVideoAspectSequenceSuffix(aspectRatio);
     return `${safeBase}_${mode}_${durationSec}s_${fps}fps_${spinLabel}_${resolution}${aspectSuffix}`;
   }
 
   _applyVideoExportFrame({
     movements,
-    t,
-    spinSettings,
+    t: linearT,
+    movementEasing,
+    objectSpinSettings,
+    cameraSpinSettings,
     hdriRotationSettings,
     startRotationY,
     startLightsRotation,
     startHdriRotation,
     lightsAutoRotate,
     durationSec,
+    cameraMovementDurationSec,
     frameIndex,
     fps,
     meshAnimation,
   }) {
-    const { rotationDegrees, signedRotationDegrees, sign } = spinSettings;
-    if (movements.turntable && rotationDegrees > 0) {
-      const rotationY = startRotationY + signedRotationDegrees * t;
+    const t = easeExportMovementProgress(linearT, movementEasing);
+    const cameraDuration = Math.max(
+      1e-6,
+      Number(cameraMovementDurationSec) || Number(durationSec) || 1,
+    );
+    const {
+      rotationDegrees: objectRotationDegrees,
+      signedRotationDegrees: objectSignedRotationDegrees,
+    } = objectSpinSettings;
+    if (movements.turntable && objectRotationDegrees > 0) {
+      const rotationY = startRotationY + objectSignedRotationDegrees * t;
       this.setRotationY(rotationY);
       this.stateStore.set('rotationY', rotationY);
     }
     if (lightsAutoRotate && typeof this.setLightsRotation === 'function') {
       const lightsRotation = lightsRotationForExportFrame(
         startLightsRotation,
-        durationSec,
+        cameraDuration,
         t,
       );
       this.setLightsRotation(lightsRotation, { updateUi: false, updateState: false });
@@ -299,9 +343,13 @@ export class VideoExporter {
       });
     }
     if (needsExportCameraDrive(movements)) {
+      const {
+        rotationDegrees: cameraRotationDegrees,
+        sign: cameraRotationSign,
+      } = cameraSpinSettings;
       this.applyExportCameraDriveFrame?.(t, {
-        rotationDegrees,
-        rotationSign: sign,
+        rotationDegrees: cameraRotationDegrees,
+        rotationSign: cameraRotationSign,
         orbit: movements.orbit,
         zoom: movements.zoom,
         zoomDistance: movements.zoomDistance,
@@ -341,7 +389,9 @@ export class VideoExporter {
   /** Rewind export-driven scene state to frame 0 before tearing down export drives. */
   _resetExportSceneToFirstFrame({
     movements,
-    spinSettings,
+    movementEasing,
+    objectSpinSettings,
+    cameraSpinSettings,
     hdriRotationSettings,
     startRotationY,
     startLightsRotation,
@@ -350,17 +400,21 @@ export class VideoExporter {
     durationSec,
     fps,
     meshAnimation,
+    cameraMovementDurationSec,
   }) {
     this._applyVideoExportFrame({
       movements,
       t: 0,
-      spinSettings,
+      movementEasing,
+      objectSpinSettings,
+    cameraSpinSettings,
       hdriRotationSettings,
       startRotationY,
       startLightsRotation,
       startHdriRotation,
       lightsAutoRotate,
       durationSec,
+      cameraMovementDurationSec,
       frameIndex: 0,
       fps,
       meshAnimation,
@@ -386,7 +440,9 @@ export class VideoExporter {
   _finishExportSession(session, transparentRestore = null) {
     const {
       movements,
-      spinSettings,
+      movementEasing,
+      objectSpinSettings,
+    cameraSpinSettings,
       hdriRotationSettings,
       startRotationY,
       startLightsRotation,
@@ -395,12 +451,15 @@ export class VideoExporter {
       durationSec,
       fps,
       meshAnimation,
+      cameraMovementDurationSec,
       sizeSnapshot,
     } = session;
 
     this._resetExportSceneToFirstFrame({
       movements,
-      spinSettings,
+      movementEasing,
+      objectSpinSettings,
+    cameraSpinSettings,
       hdriRotationSettings,
       startRotationY,
       startLightsRotation,
@@ -409,6 +468,7 @@ export class VideoExporter {
       durationSec,
       fps,
       meshAnimation,
+      cameraMovementDurationSec,
     });
     if (needsExportCameraDrive(movements)) {
       this.endExportCameraDrive?.();
@@ -462,7 +522,8 @@ export class VideoExporter {
     baseName,
     durationSec,
     fps,
-    spinSettings,
+    objectSpinSettings,
+    cameraSpinSettings,
     resolution,
     mode = 'turntable',
     aspectRatio = '16:9',
@@ -482,7 +543,8 @@ export class VideoExporter {
       baseName,
       durationSec,
       fps,
-      spinSettings,
+      objectSpinSettings,
+    cameraSpinSettings,
       resolution,
       mode,
       aspectRatio,
@@ -516,7 +578,8 @@ export class VideoExporter {
     baseName,
     durationSec,
     fps,
-    spinSettings,
+    objectSpinSettings,
+    cameraSpinSettings,
     resolution,
     mode = 'turntable',
     aspectRatio = '16:9',
@@ -525,7 +588,8 @@ export class VideoExporter {
       baseName,
       durationSec,
       fps,
-      spinSettings,
+      objectSpinSettings,
+    cameraSpinSettings,
       resolution,
       mode,
       aspectRatio,
@@ -949,15 +1013,18 @@ export class VideoExporter {
    */
   async _recordTurntableToMp4Blob({
     durationSec,
+    cameraMovementDurationSec,
     fps,
     startRotationY,
     startLightsRotation,
     startHdriRotation,
     lightsAutoRotate,
     quality = 'medium',
-    spinSettings,
+    objectSpinSettings,
+    cameraSpinSettings,
     hdriRotationSettings,
     movements,
+    movementEasing,
     meshAnimation,
   }) {
     const mimeType = this._getSupportedRecorderMimeType();
@@ -972,15 +1039,18 @@ export class VideoExporter {
       stream.getTracks().forEach((t) => t.stop());
       return this._recordTurntableToMp4BlobLegacy({
         durationSec,
+        cameraMovementDurationSec,
         fps,
         startRotationY,
         startLightsRotation,
         startHdriRotation,
         lightsAutoRotate,
         quality,
-        spinSettings,
+        objectSpinSettings,
+    cameraSpinSettings,
         hdriRotationSettings,
         movements,
+        movementEasing,
         meshAnimation,
       });
     }
@@ -1003,13 +1073,16 @@ export class VideoExporter {
     this._applyVideoExportFrame({
       movements,
       t: 0,
-      spinSettings,
+      movementEasing,
+      objectSpinSettings,
+    cameraSpinSettings,
       hdriRotationSettings,
       startRotationY,
       startLightsRotation,
       startHdriRotation,
       lightsAutoRotate,
       durationSec,
+      cameraMovementDurationSec,
       frameIndex: 0,
       fps,
       meshAnimation,
@@ -1024,7 +1097,7 @@ export class VideoExporter {
     );
     recorder.start(timesliceMs);
 
-    // Same discrete angles as PNG export: i = 0 … totalFrames-1, t = i / totalFrames.
+    // Same discrete angles as PNG export: i = 0 … totalFrames-1.
     const startedAt = performance.now();
     for (let i = 0; i < totalFrames; i += 1) {
       const targetAt = startedAt + i * frameDurationMs;
@@ -1032,17 +1105,20 @@ export class VideoExporter {
       if (delay > 0) {
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
-      const t = i / totalFrames;
+      const t = this._cameraMovementLinearT(i, fps, cameraMovementDurationSec);
       this._applyVideoExportFrame({
         movements,
         t,
-        spinSettings,
+        movementEasing,
+        objectSpinSettings,
+    cameraSpinSettings,
         hdriRotationSettings,
         startRotationY,
         startLightsRotation,
         startHdriRotation,
         lightsAutoRotate,
         durationSec,
+        cameraMovementDurationSec,
         frameIndex: i,
         fps,
         meshAnimation,
@@ -1064,15 +1140,18 @@ export class VideoExporter {
   /** @returns {Promise<Blob | null>} */
   async _recordTurntableToMp4BlobLegacy({
     durationSec,
+    cameraMovementDurationSec,
     fps,
     startRotationY,
     startLightsRotation,
     startHdriRotation,
     lightsAutoRotate,
     quality = 'medium',
-    spinSettings,
+    objectSpinSettings,
+    cameraSpinSettings,
     hdriRotationSettings,
     movements,
+    movementEasing,
     meshAnimation,
   }) {
     const mimeType = this._getSupportedRecorderMimeType();
@@ -1096,13 +1175,16 @@ export class VideoExporter {
     this._applyVideoExportFrame({
       movements,
       t: 0,
-      spinSettings,
+      movementEasing,
+      objectSpinSettings,
+    cameraSpinSettings,
       hdriRotationSettings,
       startRotationY,
       startLightsRotation,
       startHdriRotation,
       lightsAutoRotate,
       durationSec,
+      cameraMovementDurationSec,
       frameIndex: 0,
       fps,
       meshAnimation,
@@ -1125,17 +1207,20 @@ export class VideoExporter {
       if (delay > 0) {
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
-      const t = i / totalFrames;
+      const t = this._cameraMovementLinearT(i, fps, cameraMovementDurationSec);
       this._applyVideoExportFrame({
         movements,
         t,
-        spinSettings,
+        movementEasing,
+        objectSpinSettings,
+    cameraSpinSettings,
         hdriRotationSettings,
         startRotationY,
         startLightsRotation,
         startHdriRotation,
         lightsAutoRotate,
         durationSec,
+        cameraMovementDurationSec,
         frameIndex: i,
         fps,
         meshAnimation,
@@ -1189,7 +1274,8 @@ export class VideoExporter {
       durationSec,
       fps,
       totalFrames,
-      spinSettings,
+      objectSpinSettings,
+    cameraSpinSettings,
       resolution,
       aspectRatio,
       outputSize,
@@ -1198,6 +1284,8 @@ export class VideoExporter {
       startLightsRotation,
       startHdriRotation,
       lightsAutoRotate,
+      movementEasing,
+      cameraMovementDurationSec,
     } = params;
 
     const timing = resolveVideoExportFrameTiming(totalFrames, {
@@ -1208,6 +1296,11 @@ export class VideoExporter {
     });
     timing.fps = fps;
     timing.durationSec = durationSec;
+    const exportTimeSec = resolveExportTimeSecFromFrame(timing.frameIndex, fps);
+    const cameraLinearT = resolveExportCameraMovementLinearT(
+      exportTimeSec,
+      cameraMovementDurationSec,
+    );
 
     const format = settings?.format === 'png' ? 'png' : 'mp4';
     const shouldUseTransparentFrames = format === 'png' && !!settings?.movTransparent;
@@ -1231,7 +1324,9 @@ export class VideoExporter {
 
     const exportSession = {
       movements,
-      spinSettings,
+      movementEasing,
+      objectSpinSettings,
+    cameraSpinSettings,
       hdriRotationSettings,
       startRotationY,
       startLightsRotation,
@@ -1240,6 +1335,7 @@ export class VideoExporter {
       durationSec,
       fps,
       meshAnimation,
+      cameraMovementDurationSec,
       sizeSnapshot,
     };
 
@@ -1256,14 +1352,17 @@ export class VideoExporter {
         this,
         {
           movements,
-          t: timing.t,
-          spinSettings,
+          t: cameraLinearT,
+          movementEasing,
+          objectSpinSettings,
+    cameraSpinSettings,
           hdriRotationSettings,
           startRotationY,
           startLightsRotation,
           startHdriRotation,
           lightsAutoRotate,
           durationSec,
+          cameraMovementDurationSec,
           frameIndex: timing.frameIndex,
           fps,
           meshAnimation,
@@ -1361,7 +1460,8 @@ export class VideoExporter {
       durationSec,
       fps,
       totalFrames,
-      spinSettings,
+      objectSpinSettings,
+    cameraSpinSettings,
       resolution,
       aspectRatio,
       outputSize,
@@ -1370,6 +1470,8 @@ export class VideoExporter {
       startLightsRotation,
       startHdriRotation,
       lightsAutoRotate,
+      movementEasing,
+      cameraMovementDurationSec,
     } = params;
 
     const format = settings?.format === 'png' ? 'png' : 'mp4';
@@ -1397,7 +1499,8 @@ export class VideoExporter {
         baseName,
         durationSec,
         fps,
-        spinSettings,
+        objectSpinSettings,
+    cameraSpinSettings,
         resolution,
         modeLabel,
         aspectRatio,
@@ -1455,7 +1558,9 @@ export class VideoExporter {
     this._startVideoCaptureFeatureSession(sizeSnapshot.previousSize);
     const exportSession = {
       movements,
-      spinSettings,
+      movementEasing,
+      objectSpinSettings,
+    cameraSpinSettings,
       hdriRotationSettings,
       startRotationY,
       startLightsRotation,
@@ -1464,6 +1569,7 @@ export class VideoExporter {
       durationSec,
       fps,
       meshAnimation,
+      cameraMovementDurationSec,
       sizeSnapshot,
     };
     let spinnerActive = false;
@@ -1479,7 +1585,14 @@ export class VideoExporter {
 
       if (format === 'mp4') {
         const hdriLabel = exportHdriRotationToastLabel(hdriRotationSettings);
-        const spinSummary = exportSpinToastLabel(spinSettings);
+        const spinParts = [];
+        if (objectSpinSettings?.rotationDegrees) {
+          spinParts.push(`Object ${exportSpinToastLabel(objectSpinSettings)}`);
+        }
+        if (cameraSpinSettings?.rotationDegrees) {
+          spinParts.push(`Camera ${exportSpinToastLabel(cameraSpinSettings)}`);
+        }
+        const spinSummary = spinParts.length ? spinParts.join('; ') : 'no spin';
         const motionSummary = hdriLabel
           ? `${spinSummary}; ${hdriLabel}`
           : spinSummary;
@@ -1489,6 +1602,7 @@ export class VideoExporter {
         try {
           const success = await this._exportTurntableRealtimeRecorder({
             durationSec,
+            cameraMovementDurationSec,
             fps,
             startRotationY,
             startLightsRotation,
@@ -1496,9 +1610,11 @@ export class VideoExporter {
             lightsAutoRotate,
             baseName,
             quality: mp4Quality,
-            spinSettings,
+            objectSpinSettings,
+    cameraSpinSettings,
             hdriRotationSettings,
             movements,
+            movementEasing,
             meshAnimation,
           });
           if (success) {
@@ -1534,7 +1650,8 @@ export class VideoExporter {
               baseName,
               durationSec,
               fps,
-              spinSettings,
+              objectSpinSettings,
+    cameraSpinSettings,
               resolution,
               mode: modeLabel,
               aspectRatio,
@@ -1555,19 +1672,22 @@ export class VideoExporter {
             exportCancelled = true;
             break;
           }
-          const t = i / totalFrames;
+          const t = this._cameraMovementLinearT(i, fps, cameraMovementDurationSec);
           const { blob } = captureVideoExportFrameBlob(
             this,
             {
               movements,
               t,
-              spinSettings,
+              movementEasing,
+              objectSpinSettings,
+    cameraSpinSettings,
               hdriRotationSettings,
               startRotationY,
               startLightsRotation,
               startHdriRotation,
               lightsAutoRotate,
               durationSec,
+              cameraMovementDurationSec,
               frameIndex: i,
               fps,
               meshAnimation,
@@ -1612,7 +1732,8 @@ export class VideoExporter {
             baseName,
             durationSec,
             fps,
-            spinSettings,
+            objectSpinSettings,
+    cameraSpinSettings,
             resolution,
             mode: modeLabel,
             aspectRatio,
