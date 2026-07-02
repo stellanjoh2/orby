@@ -34,9 +34,28 @@ import {
   DEFAULT_FONT_REVEAL_UNIT,
   isFontRevealAnimationActive,
   normalizeFontRevealSlideDirection,
+  normalizeFontRevealStaggerEasing,
   normalizeFontRevealType,
   normalizeFontRevealUnit,
 } from '../scene/fontTextRevealTypes.js';
+import {
+  clampFontTrackingAnimatorAmountPercent,
+  clampFontTrackingAnimatorTimeSec,
+  clampFontTrackingValue,
+  computeTrackingAnimatorAmountFromPercent,
+  DEFAULT_FONT_TRACKING_ANIMATOR_AMOUNT_PERCENT,
+  DEFAULT_FONT_TRACKING_ANIMATOR_TIME_SEC,
+  isFontTrackingAnimatorModel,
+  MAX_FONT_TRACKING_VALUE,
+  MIN_FONT_TRACKING_VALUE,
+  normalizeFontTrackingAnimatorEnabled,
+  normalizeFontTrackingAnimatorEasing,
+  resolveFontTrackingAnimatorAmountPercent,
+} from '../scene/fontTextTrackingAnimation.js';
+import {
+  composeExportMovementEasing,
+  parseExportMovementEasing,
+} from '../render/exportMovementEasing.js';
 import {
   clampFontConstantIntensityForType,
   clampFontConstantSpeedSec,
@@ -148,6 +167,7 @@ export class FontExtrudeUI {
           data-effect-foldout="font-extrude"
           aria-hidden="true"
         >
+          <div class="font-extrude-reset-scope" data-reset-scope="font-extrude-typography">
           <div class="font-extrude-live-editor" id="fontExtrudeLiveEditor">
             <canvas id="fontExtrudePreview" class="font-extrude-preview" aria-hidden="true"></canvas>
             <textarea
@@ -164,7 +184,19 @@ export class FontExtrudeUI {
             <span class="value" data-output="fontExtrudePreviewScale">0.65×</span>
           </label>
           <div class="panel-block-divider" aria-hidden="true"></div>
-          <div class="block-title font-extrude-section-title">Typography</div>
+          <div class="block-title font-extrude-section-title has-reset">
+            <span>Typography</span>
+            <button
+              type="button"
+              class="block-reset-btn"
+              data-reset="font-extrude-typography"
+              aria-label="Reset Typography"
+              data-tooltip="Reset Typography settings"
+            >
+              <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+              <span class="sr-only">Reset Typography</span>
+            </button>
+          </div>
           <div id="fontExtrudeSystemFontsPrompt" class="font-extrude-system-fonts-prompt" hidden>
             <button
               type="button"
@@ -197,14 +229,14 @@ export class FontExtrudeUI {
           <label class="select-line font-extrude-align-line" id="fontExtrudeAlignLine">
             <span data-tooltip="Horizontal alignment of each line">Align</span>
             <select id="fontExtrudeAlign" aria-label="Text alignment">
-              <option value="left">Left</option>
-              <option value="center" selected>Center</option>
+              <option value="left" selected>Left</option>
+              <option value="center">Center</option>
               <option value="right">Right</option>
             </select>
           </label>
           <label class="slider-line">
             <span data-tooltip="Letter-spacing in thousandths of an em">Letter Spacing</span>
-            <input id="fontExtrudeTracking" type="range" min="-100" max="200" step="1" value="0" />
+            <input id="fontExtrudeTracking" type="range" min="${MIN_FONT_TRACKING_VALUE}" max="${MAX_FONT_TRACKING_VALUE}" step="1" value="0" />
             <span class="value" data-output="fontExtrudeTracking">0</span>
           </label>
           <label class="slider-line">
@@ -230,16 +262,44 @@ export class FontExtrudeUI {
               <span>Generate 3D Text</span>
             </button>
           </div>
+          </div>
           <div class="panel-block-divider" aria-hidden="true"></div>
-          <div class="block-title font-extrude-section-title">Appearance</div>
+          <div class="font-extrude-reset-scope" data-reset-scope="font-extrude-appearance">
+          <div class="block-title font-extrude-section-title has-reset">
+            <span>Appearance</span>
+            <button
+              type="button"
+              class="block-reset-btn"
+              data-reset="font-extrude-appearance"
+              aria-label="Reset Appearance"
+              data-tooltip="Reset Appearance settings"
+            >
+              <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+              <span class="sr-only">Reset Appearance</span>
+            </button>
+          </div>
           <label class="color-line font-extrude-fill-color">
             <span data-tooltip="Fill color for 2D preview and generated 3D text">Color</span>
             <input type="color" id="fontExtrudeFillColor" class="color-chip" value="#808080" />
           </label>
           ${FONT_EXTRUDE_SURFACE_POST_GEN_HTML}
+          </div>
           ${FONT_EXTRUDE_SHAPE_CONTROLS_HTML}
           <div class="panel-block-divider font-extrude-circular-divider" aria-hidden="true"></div>
-          <div class="block-title font-extrude-section-title font-extrude-circular-title">Circular wrap</div>
+          <div class="font-extrude-reset-scope" data-reset-scope="font-extrude-circular-wrap">
+          <div class="block-title font-extrude-section-title font-extrude-circular-title has-reset">
+            <span>Circular wrap</span>
+            <button
+              type="button"
+              class="block-reset-btn"
+              data-reset="font-extrude-circular-wrap"
+              aria-label="Reset Circular wrap"
+              data-tooltip="Reset Circular wrap settings"
+            >
+              <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+              <span class="sr-only">Reset Circular wrap</span>
+            </button>
+          </div>
           <label class="slider-line slider-line--toggle-only font-extrude-circular-wrap-line">
             <span class="block-title-name">
               <span data-tooltip="Arrange letters on a circular arc (uses the first line only). Auto mode fits the full string into a 360° ring.">Wrap on circle</span>
@@ -270,6 +330,7 @@ export class FontExtrudeUI {
               <input id="fontExtrudeCircularWrapArc" type="range" min="30" max="360" step="1" value="360" />
               <span class="value" data-output="fontExtrudeCircularWrapArc">360°</span>
             </label>
+          </div>
           </div>
           ${FONT_EXTRUDE_POST_GEN_CONTROLS_HTML}
         </div>
@@ -317,6 +378,9 @@ export class FontExtrudeUI {
       surfaceStrength: block.querySelector('#fontExtrudeSurfaceStrength'),
       fillColor: block.querySelector('#fontExtrudeFillColor'),
       revealDuration: block.querySelector('#fontExtrudeRevealDuration'),
+      revealStaggerEasingFamily: block.querySelector('#fontExtrudeRevealStaggerEasingFamily'),
+      revealStaggerEasingType: block.querySelector('#fontExtrudeRevealStaggerEasingType'),
+      revealStaggerEasingTypeLine: block.querySelector('#fontExtrudeRevealStaggerEasingTypeLine'),
       revealSlideDepth: block.querySelector('#fontExtrudeRevealSlideDepth'),
       revealSlideTime: block.querySelector('#fontExtrudeRevealSlideTime'),
       revealSlideDirection: block.querySelector('#fontExtrudeRevealSlideDirection'),
@@ -326,12 +390,18 @@ export class FontExtrudeUI {
       revealEmissiveColor: block.querySelector('#fontExtrudeRevealEmissiveColor'),
       revealType: block.querySelector('#fontExtrudeRevealType'),
       revealUnit: block.querySelector('#fontExtrudeRevealUnit'),
-      revealPlay: block.querySelector('#fontExtrudeRevealPlay'),
-      revealLoop: block.querySelector('#fontExtrudeRevealLoop'),
-      revealScrub: block.querySelector('#fontExtrudeRevealScrub'),
-      revealTime: block.querySelector('#fontExtrudeRevealTime'),
-      pauseAllAnimations: block.querySelector('#fontExtrudePauseAllAnimations'),
-      resetAnimations: block.querySelector('#fontExtrudeResetAnimations'),
+      trackingAnimatorEnabled: block.querySelector('#fontExtrudeTrackingAnimatorEnabled'),
+      trackingAnimatorAmountStart: block.querySelector('#fontExtrudeTrackingAnimatorAmountStart'),
+      trackingAnimatorTime: block.querySelector('#fontExtrudeTrackingAnimatorTime'),
+      trackingAnimatorEasingFamily: block.querySelector('#fontExtrudeTrackingAnimatorEasingFamily'),
+      trackingAnimatorEasingType: block.querySelector('#fontExtrudeTrackingAnimatorEasingType'),
+      trackingAnimatorEasingTypeLine: block.querySelector('#fontExtrudeTrackingAnimatorEasingTypeLine'),
+      revealPlay: document.querySelector('#fontExtrudeRevealPlay'),
+      revealLoop: document.querySelector('#fontExtrudeRevealLoop'),
+      revealScrub: document.querySelector('#fontExtrudeRevealScrub'),
+      revealTime: document.querySelector('#fontExtrudeRevealTime'),
+      pauseAllAnimations: document.querySelector('#fontExtrudePauseAllAnimations'),
+      resetAnimations: document.querySelector('#fontExtrudeResetAnimations'),
       constantType: block.querySelector('#fontExtrudeConstantType'),
       constantIntensity: block.querySelector('#fontExtrudeConstantIntensity'),
       constantSpeed: block.querySelector('#fontExtrudeConstantSpeed'),
@@ -371,6 +441,7 @@ export class FontExtrudeUI {
       const open = !!event.target.checked;
       this.stateStore.set('fontExtrude.panelOpen', open);
       this.ui.setEffectFoldoutOpen('font-extrude', open);
+      this.ui.syncFontExtrudeAnimationPreviewDock?.();
       if (open) {
         this._primeLocalFontAccess();
         void this.ensureFontsReady({ fromUserGesture: true }).then(() => {
@@ -412,10 +483,20 @@ export class FontExtrudeUI {
       void this.onFontVariantChange();
     });
     els.tracking?.addEventListener('input', () => {
-      const value = Number(els.tracking.value);
+      const value = clampFontTrackingValue(Number(els.tracking.value));
+      els.tracking.value = String(value);
       this.stateStore.set('fontExtrude.tracking', value);
       this.ui.updateValueLabel('fontExtrudeTracking', value, 'integer');
+      this.ui.updateSliderFill?.(els.tracking);
       this.schedulePreview();
+      if (this._hasFontMesh() && !this._isCircularFontModel()) {
+        this._withRevealController((controller, model) => {
+          if (controller.ensureBoundToModel(model)) {
+            controller.onTypographyTrackingChange?.(model);
+          }
+        });
+        this._syncTrackingAnimatorControls();
+      }
     });
     els.kerning?.addEventListener('change', () => {
       this.ui.uiSounds?.playSelect();
@@ -428,6 +509,13 @@ export class FontExtrudeUI {
       this.stateStore.set('fontExtrude.lineHeight', value);
       this.ui.updateValueLabel('fontExtrudeLineHeight', value, 'multiplier');
       this.schedulePreview();
+      if (this._hasFontMesh() && !this._isCircularFontModel()) {
+        this._withRevealController((controller, model) => {
+          if (controller.ensureBoundToModel(model)) {
+            controller.onTypographyLineHeightChange?.(model);
+          }
+        });
+      }
     });
     els.detail?.addEventListener('change', () => {
       this.ui.uiSounds?.playSelect();
@@ -456,12 +544,27 @@ export class FontExtrudeUI {
         els.align.value === 'center' || els.align.value === 'right' ? els.align.value : 'left';
       this.stateStore.set('fontExtrude.align', value);
       this.schedulePreview();
+      if (this._hasFontMesh() && !this._isCircularFontModel()) {
+        this._withRevealController((controller, model) => {
+          if (controller.ensureBoundToModel(model)) {
+            controller.onTypographyAlignChange?.(model);
+          }
+        });
+      }
     });
     els.circularWrapEnabled?.addEventListener('change', () => {
       this.ui.uiSounds?.playSelect();
       const enabled = !!els.circularWrapEnabled.checked;
+      if (enabled && normalizeFontTrackingAnimatorEnabled(
+        this.stateStore.getState()?.fontExtrude?.trackingAnimatorEnabled,
+      )) {
+        els.circularWrapEnabled.checked = false;
+        this.ui.showToast('Turn off tracking animator before using circular wrap');
+        return;
+      }
       this.stateStore.set('fontExtrude.circularWrapEnabled', enabled);
       this._syncCircularWrapControlsVisibility();
+      this._syncTrackingAnimatorControls();
       this.schedulePreview();
     });
     els.circularWrapMode?.addEventListener('change', () => {
@@ -501,6 +604,30 @@ export class FontExtrudeUI {
       this._withRevealController((controller, model) => {
         controller.onDurationChange?.(model);
       });
+    });
+
+    const applyRevealStaggerEasingFromUi = () => {
+      const familySelect = els.revealStaggerEasingFamily;
+      const typeSelect = els.revealStaggerEasingType;
+      if (!familySelect || !typeSelect) return;
+      this.stateStore.set(
+        'fontExtrude.revealStaggerEasing',
+        composeExportMovementEasing(familySelect.value, typeSelect.value),
+      );
+      this._syncRevealStaggerEasingControls();
+      this._withRevealController((controller, model) => {
+        controller.onRevealTimingChange?.(model);
+      });
+    };
+
+    els.revealStaggerEasingFamily?.addEventListener('change', () => {
+      this.ui.uiSounds?.playSelect();
+      applyRevealStaggerEasingFromUi();
+    });
+
+    els.revealStaggerEasingType?.addEventListener('change', () => {
+      this.ui.uiSounds?.playSelect();
+      applyRevealStaggerEasingFromUi();
     });
 
     els.revealSlideDepth?.addEventListener('input', () => {
@@ -589,6 +716,124 @@ export class FontExtrudeUI {
       this.stateStore.set('fontExtrude.revealLoop', enabled);
     });
 
+    const onTrackingAnimatorChange = (options = {}) => {
+      this._withRevealController((controller, model) => {
+        if (!controller.ensureBoundToModel(model)) {
+          this.ui.showToast('Generate 3D text first to preview tracking');
+          return;
+        }
+        const trackingEnabled = normalizeFontTrackingAnimatorEnabled(
+          this.stateStore.getState()?.fontExtrude?.trackingAnimatorEnabled,
+        );
+        if (trackingEnabled) {
+          if (!isFontTrackingAnimatorModel(model)) {
+            this.ui.showToast('Tracking animator needs straight 3D text — not circular wrap');
+            return;
+          }
+          if (controller.getGlyphCount() <= 1) {
+            this.ui.showToast('Amount Start needs at least two letters');
+            return;
+          }
+        }
+        const inPreview =
+          controller.isPreviewPlaying?.() || controller.isPreviewPaused?.();
+        const resolved = { ...options };
+        if (inPreview) {
+          delete resolved.pinTrackingAmountPreview;
+        }
+        controller.onTrackingAnimatorChange?.(model, resolved);
+      });
+      this._syncAnimationTransportButtons(this.stateStore.getState());
+    };
+
+    els.trackingAnimatorEnabled?.addEventListener('change', () => {
+      this.ui.uiSounds?.playSelect();
+      const enabled = !!els.trackingAnimatorEnabled.checked;
+      if (enabled && normalizeFontCircularWrapEnabled(
+        this.els.circularWrapEnabled?.checked ?? this.stateStore.getState()?.fontExtrude?.circularWrapEnabled,
+      )) {
+        els.trackingAnimatorEnabled.checked = false;
+        this.ui.showToast('Turn off circular wrap before using tracking animator');
+        return;
+      }
+      if (enabled && !isFontTrackingAnimatorModel(this.getScene()?.currentModel)) {
+        if (this._isCircularFontModel()) {
+          els.trackingAnimatorEnabled.checked = false;
+          this.ui.showToast('Tracking animator is not available for circular wrap');
+          return;
+        }
+      }
+      this.stateStore.set('fontExtrude.trackingAnimatorEnabled', enabled);
+      this._syncTrackingAnimatorControls();
+      this._withRevealController((controller, model) => {
+        const inPreview = controller.isPreviewPlaying?.() || controller.isPreviewPaused?.();
+        onTrackingAnimatorChange(enabled && inPreview ? { resetPreview: true } : {});
+      });
+    });
+
+    els.trackingAnimatorAmountStart?.addEventListener('input', () => {
+      const value = clampFontTrackingAnimatorAmountPercent(els.trackingAnimatorAmountStart.value);
+      els.trackingAnimatorAmountStart.value = String(value);
+      this.stateStore.set('fontExtrude.trackingAnimatorAmountPercent', value);
+      this.ui.updateValueLabel('fontExtrudeTrackingAnimatorAmountStart', `${value}%`);
+      this.ui.updateSliderFill?.(els.trackingAnimatorAmountStart);
+      onTrackingAnimatorChange({ pinTrackingAmountPreview: true });
+    });
+
+    /** First input after pointerdown restarts tracking; later inputs only retime during play. */
+    let trackingTimePlayDragArmed = false;
+    els.trackingAnimatorTime?.addEventListener('pointerdown', () => {
+      this._withRevealController((controller) => {
+        trackingTimePlayDragArmed = !!controller.isPreviewPlaying?.();
+      });
+    });
+    const clearTrackingTimePlayDragArm = () => {
+      trackingTimePlayDragArmed = false;
+    };
+    els.trackingAnimatorTime?.addEventListener('pointerup', clearTrackingTimePlayDragArm);
+    els.trackingAnimatorTime?.addEventListener('pointercancel', clearTrackingTimePlayDragArm);
+    els.trackingAnimatorTime?.addEventListener('blur', clearTrackingTimePlayDragArm);
+
+    els.trackingAnimatorTime?.addEventListener('input', () => {
+      const value = clampFontTrackingAnimatorTimeSec(els.trackingAnimatorTime.value);
+      this.stateStore.set('fontExtrude.trackingAnimatorTimeSec', value);
+      this.ui.updateValueLabel('fontExtrudeTrackingAnimatorTime', `${value.toFixed(1)}s`);
+      this._withRevealController((controller) => {
+        const inPreview =
+          controller.isPreviewPlaying?.() || controller.isPreviewPaused?.();
+        if (inPreview) {
+          if (controller.isPreviewPlaying?.() && trackingTimePlayDragArmed) {
+            trackingTimePlayDragArmed = false;
+            onTrackingAnimatorChange({ resetTrackingClock: true });
+          } else {
+            onTrackingAnimatorChange({});
+          }
+          return;
+        }
+        onTrackingAnimatorChange({ resetTrackingClock: true, pinTrackingAmountPreview: true });
+      });
+    });
+
+    const applyTrackingAnimatorEasingFromUi = () => {
+      const familySelect = els.trackingAnimatorEasingFamily;
+      const typeSelect = els.trackingAnimatorEasingType;
+      if (!familySelect || !typeSelect) return;
+      this.stateStore.set(
+        'fontExtrude.trackingAnimatorEasing',
+        composeExportMovementEasing(familySelect.value, typeSelect.value),
+      );
+      this._syncTrackingAnimatorEasingControls();
+      onTrackingAnimatorChange({ resetTrackingClock: true, pinTrackingAmountPreview: true });
+    };
+
+    els.trackingAnimatorEasingFamily?.addEventListener('change', () => {
+      applyTrackingAnimatorEasingFromUi();
+    });
+
+    els.trackingAnimatorEasingType?.addEventListener('change', () => {
+      applyTrackingAnimatorEasingFromUi();
+    });
+
     els.revealPlay?.addEventListener('click', () => {
       this.ui.uiSounds?.playSelect();
       if (this.stateStore.getState()?.fontExtrude?.pauseAllAnimations) {
@@ -600,9 +845,23 @@ export class FontExtrudeUI {
           this.ui.showToast('Reveal needs 3D text — click Generate 3D Text first');
           return;
         }
-        if (!controller.isEnabled()) {
-          if (!isFontRevealAnimationActive(controller.getRevealType?.())) {
-            this.ui.showToast('Pick a reveal type other than None to preview');
+        if (!controller.isPreviewAnimationActive?.()) {
+          const fontState = this.stateStore.getState()?.fontExtrude || {};
+          if (
+            normalizeFontTrackingAnimatorEnabled(fontState.trackingAnimatorEnabled)
+            && !isFontTrackingAnimatorModel(model)
+          ) {
+            this.ui.showToast('Tracking animator needs straight 3D text — not circular wrap');
+          } else if (
+            normalizeFontTrackingAnimatorEnabled(fontState.trackingAnimatorEnabled)
+            && computeTrackingAnimatorAmountFromPercent(
+              fontState.tracking,
+              fontState.trackingAnimatorAmountPercent,
+            ) <= 1e-6
+          ) {
+            this.ui.showToast('Set Amount Start above 0 to preview tracking');
+          } else if (!isFontRevealAnimationActive(controller.getRevealType?.())) {
+            this.ui.showToast('Pick a reveal type, enable tracking animator, or add looping motion');
           } else if (controller.getDurationSec() <= 0) {
             this.ui.showToast('Set reveal duration above 0 to preview');
           }
@@ -735,6 +994,11 @@ export class FontExtrudeUI {
     );
   }
 
+  /** Used by shelf preview dock visibility (separate from Object → Animation GLB transport). */
+  hasFontMeshForPreviewDock() {
+    return this._hasFontMesh();
+  }
+
   syncPostGenControlsVisibility() {
     const show = this._hasFontMesh();
     if (this.els.surfacePostGen) {
@@ -746,8 +1010,10 @@ export class FontExtrudeUI {
     if (show) {
       this._attachRevealPreviewCallback();
       this.syncRevealPreviewControlsFromController();
+      this._syncTrackingAnimatorControls();
     }
     this._syncAnimationTransportButtons(this.stateStore.getState());
+    this.ui.syncFontExtrudeAnimationPreviewDock?.();
   }
 
   _fontAnimationPauseAllAvailable() {
@@ -755,8 +1021,149 @@ export class FontExtrudeUI {
     const constant = this._constantController();
     return (
       this._hasFontMesh()
-      && (reveal?.isEnabled?.() || constant?.isEnabled?.())
+      && (
+        reveal?.isEnabled?.()
+        || reveal?.isTrackingAnimatorActive?.()
+        || constant?.isEnabled?.()
+      )
     );
+  }
+
+  _isCircularFontModel() {
+    const model = this.getScene()?.currentModel;
+    return !!(model?.userData?.orbyFontCircularWrap);
+  }
+
+  _getMasterTrackingForUi() {
+    const fontState = this.stateStore.getState()?.fontExtrude || {};
+    const fromState = Number(fontState.tracking);
+    if (Number.isFinite(fromState)) return fromState;
+    const model = this.getScene()?.currentModel;
+    const fromModel = Number(model?.userData?.orbyFontGeneratedTracking);
+    return Number.isFinite(fromModel) ? fromModel : 0;
+  }
+
+  _syncRevealStaggerEasingControls() {
+    const { els } = this;
+    const familySelect = els.revealStaggerEasingFamily;
+    const typeSelect = els.revealStaggerEasingType;
+    const typeLine = els.revealStaggerEasingTypeLine;
+    if (!familySelect || !typeSelect) return;
+
+    const parsed = parseExportMovementEasing(
+      normalizeFontRevealStaggerEasing(
+        this.stateStore.getState()?.fontExtrude?.revealStaggerEasing,
+      ),
+    );
+    const easing = composeExportMovementEasing(parsed.family, parsed.type);
+    if (this.stateStore.getState()?.fontExtrude?.revealStaggerEasing !== easing) {
+      this.stateStore.set('fontExtrude.revealStaggerEasing', easing);
+    }
+    if (document.activeElement !== familySelect) {
+      familySelect.value = parsed.family;
+    }
+    if (document.activeElement !== typeSelect) {
+      typeSelect.value = parsed.type;
+    }
+
+    const typeActive = parsed.family !== 'linear';
+    typeLine?.classList.toggle('is-muted', !typeActive);
+    typeSelect.disabled = !typeActive;
+    typeSelect.classList.toggle('is-disabled', !typeActive);
+  }
+
+  _syncTrackingAnimatorEasingControls() {
+    const { els } = this;
+    const familySelect = els.trackingAnimatorEasingFamily;
+    const typeSelect = els.trackingAnimatorEasingType;
+    const typeLine = els.trackingAnimatorEasingTypeLine;
+    if (!familySelect || !typeSelect) return;
+
+    const parsed = parseExportMovementEasing(
+      normalizeFontTrackingAnimatorEasing(
+        this.stateStore.getState()?.fontExtrude?.trackingAnimatorEasing,
+      ),
+    );
+    const easing = composeExportMovementEasing(parsed.family, parsed.type);
+    if (this.stateStore.getState()?.fontExtrude?.trackingAnimatorEasing !== easing) {
+      this.stateStore.set('fontExtrude.trackingAnimatorEasing', easing);
+    }
+    if (document.activeElement !== familySelect) {
+      familySelect.value = parsed.family;
+    }
+    if (document.activeElement !== typeSelect) {
+      typeSelect.value = parsed.type;
+    }
+
+    const typeActive = parsed.family !== 'linear';
+    typeLine?.classList.toggle('is-muted', !typeActive);
+    typeSelect.disabled = !typeActive;
+    typeSelect.classList.toggle('is-disabled', !typeActive);
+  }
+
+  _syncTrackingAnimatorControls() {
+    const fontState = this.stateStore.getState()?.fontExtrude || {};
+    const circularModel = this._isCircularFontModel();
+    const circularUiEnabled = normalizeFontCircularWrapEnabled(
+      this.els.circularWrapEnabled?.checked ?? fontState.circularWrapEnabled,
+    );
+    const trackingUiEnabled = normalizeFontTrackingAnimatorEnabled(fontState.trackingAnimatorEnabled);
+    const trackingAvailable = this._hasFontMesh() && !circularModel;
+    const masterTracking = this._getMasterTrackingForUi();
+    const amountPercent = resolveFontTrackingAnimatorAmountPercent(fontState, masterTracking);
+    const timeValue = clampFontTrackingAnimatorTimeSec(
+      fontState.trackingAnimatorTimeSec ?? DEFAULT_FONT_TRACKING_ANIMATOR_TIME_SEC,
+    );
+
+    if (this.els.trackingAnimatorEnabled) {
+      this.els.trackingAnimatorEnabled.checked = trackingUiEnabled && trackingAvailable;
+      this.els.trackingAnimatorEnabled.disabled = !trackingAvailable || circularUiEnabled;
+    }
+
+    if (this.els.trackingAnimatorAmountStart) {
+      if (document.activeElement !== this.els.trackingAnimatorAmountStart) {
+        this.els.trackingAnimatorAmountStart.value = String(amountPercent);
+      }
+      this.els.trackingAnimatorAmountStart.disabled = !trackingAvailable || !trackingUiEnabled;
+      if (document.activeElement !== this.els.trackingAnimatorAmountStart) {
+        this.ui.updateValueLabel('fontExtrudeTrackingAnimatorAmountStart', `${amountPercent}%`);
+      }
+      this.ui.updateSliderFill?.(this.els.trackingAnimatorAmountStart);
+    }
+
+    if (this.els.trackingAnimatorTime) {
+      if (document.activeElement !== this.els.trackingAnimatorTime) {
+        this.els.trackingAnimatorTime.value = String(timeValue);
+      }
+      this.els.trackingAnimatorTime.disabled = !trackingAvailable || !trackingUiEnabled;
+      if (document.activeElement !== this.els.trackingAnimatorTime) {
+        this.ui.updateValueLabel('fontExtrudeTrackingAnimatorTime', `${timeValue.toFixed(1)}s`);
+      }
+    }
+
+    for (const el of [
+      this.els.trackingAnimatorAmountStart,
+      this.els.trackingAnimatorTime,
+      this.els.trackingAnimatorEasingFamily,
+      this.els.trackingAnimatorEasingType,
+    ]) {
+      el?.closest('.font-extrude-tracking-animator-detail')
+        ?.toggleAttribute('hidden', !trackingAvailable || !trackingUiEnabled);
+    }
+
+    if (this.els.circularWrapEnabled) {
+      this.els.circularWrapEnabled.disabled = trackingUiEnabled;
+    }
+
+    if (
+      trackingUiEnabled
+      && !trackingAvailable
+      && this.stateStore.getState()?.fontExtrude?.trackingAnimatorEnabled
+    ) {
+      this.stateStore.set('fontExtrude.trackingAnimatorEnabled', false);
+    }
+
+    this._syncTrackingAnimatorEasingControls();
   }
 
   _applyPauseAll(active) {
@@ -813,7 +1220,9 @@ export class FontExtrudeUI {
    */
   syncRevealPreviewControls({ elapsed, duration, playing }) {
     const controller = this._revealController();
-    const enabled = controller?.isEnabled?.() ?? (duration > 0 && this._hasFontMesh());
+    const enabled =
+      controller?.isPreviewAnimationActive?.()
+      ?? (duration > 0 && this._hasFontMesh());
     const { els } = this;
 
     if (els.revealPlay) {
@@ -838,6 +1247,7 @@ export class FontExtrudeUI {
       if (document.activeElement !== els.revealScrub) {
         const progress = duration > 0 ? elapsed / duration : 1;
         els.revealScrub.value = String(Math.max(0, Math.min(1, progress)));
+        this.ui.updateSliderFill?.(els.revealScrub);
       }
     }
 
@@ -881,6 +1291,52 @@ export class FontExtrudeUI {
     run(controller, model, scene);
   }
 
+  /** Post-reset side effects for Generate from Font subsection reset icons. */
+  onSubsectionReset(resetType) {
+    this.schedulePreview();
+    switch (resetType) {
+      case 'font-extrude-circular-wrap':
+        this._syncCircularWrapControlsVisibility();
+        this._syncTrackingAnimatorControls();
+        break;
+      case 'font-extrude-reveal':
+        this._withRevealController((controller, model) => {
+          controller.onRevealTypeChange?.(model);
+          controller.onRevealTimingChange?.(model);
+          controller.onRevealEmissiveChange?.(model);
+          controller.onTrackingAnimatorChange?.(model, { resetPreview: true });
+        });
+        this._syncRevealEmissiveControlsDisabled();
+        this._syncTrackingAnimatorControls();
+        break;
+      case 'font-extrude-looping-motion':
+        this._syncConstantControlsVisibility();
+        this._withConstantController((controller, model) => {
+          controller.onSettingsChange?.(model);
+        });
+        break;
+      case 'font-extrude-preview':
+        this._applyPauseAll(
+          this.stateStore.getState()?.fontExtrude?.pauseAllAnimations ?? false,
+        );
+        break;
+      case 'font-extrude-typography':
+        if (this._hasFontMesh() && !this._isCircularFontModel()) {
+          this._withRevealController((controller, model) => {
+            if (controller.ensureBoundToModel(model)) {
+              controller.onTypographyAlignChange?.(model);
+              controller.onTypographyTrackingChange?.(model);
+              controller.onTypographyLineHeightChange?.(model);
+            }
+          });
+        }
+        break;
+      default:
+        break;
+    }
+    this._syncAnimationTransportButtons(this.stateStore.getState());
+  }
+
   _fontExtrudeCtx() {
     const { els } = this;
     return {
@@ -920,6 +1376,7 @@ export class FontExtrudeUI {
       this.els.revealDuration.value = String(revealDuration);
       this.ui.updateValueLabel('fontExtrudeRevealDuration', `${revealDuration.toFixed(1)}s`);
     }
+    this._syncRevealStaggerEasingControls();
     const revealSlideDepth = clampFontRevealSlideDepth(
       state?.fontExtrude?.revealSlideDepth ?? DEFAULT_FONT_REVEAL_SLIDE_DEPTH,
     );
@@ -997,6 +1454,7 @@ export class FontExtrudeUI {
     }
     this._syncRevealEmissiveControlsDisabled();
     this._syncConstantControlsFromState(state);
+    this._syncTrackingAnimatorControls();
     this._syncPauseAllButton(state);
   }
 
@@ -1136,6 +1594,7 @@ export class FontExtrudeUI {
       this.els.panelOpen.checked = !!fontState.panelOpen;
     }
     this.ui.setEffectFoldoutOpen('font-extrude', !!fontState.panelOpen);
+    this.ui.syncFontExtrudeAnimationPreviewDock?.();
 
     if (
       this.els.text &&
@@ -1146,7 +1605,7 @@ export class FontExtrudeUI {
     }
 
     const align =
-      fontState.align === 'left' || fontState.align === 'right' ? fontState.align : 'center';
+      fontState.align === 'center' || fontState.align === 'right' ? fontState.align : 'left';
     if (this.els.align) this.els.align.value = align;
 
     if (this.els.tracking && Number.isFinite(fontState.tracking)) {
@@ -1499,11 +1958,23 @@ export class FontExtrudeUI {
     }
   }
 
-  /** Canvas preview drives glyph color; show plain textarea text until a font is loaded. */
-  _syncLiveEditorPreviewMode() {
+  /** @param {Awaited<ReturnType<import('../scene/FontExtrudeController.js').FontExtrudeController['layoutTextAsync']>> | null | undefined} [layout] */
+  _layoutHasPreviewInk(layout) {
+    return (layout?.lines || []).some((line) => (line.paths || []).length > 0);
+  }
+
+  /**
+   * Canvas preview drives glyph color; show plain textarea text until a font is loaded
+   * and the layout has drawable ink (empty/whitespace-only keeps shelf padding for placeholder).
+   * @param {boolean} [hasPreviewInk]
+   */
+  _syncLiveEditorPreviewMode(hasPreviewInk) {
     const wrap = this.els.liveEditor;
     if (!wrap) return;
-    const active = !!this.controller.font;
+    const hasInk =
+      hasPreviewInk ??
+      Boolean((this.els.text?.value ?? '').trim().length && this.controller.font);
+    const active = !!this.controller.font && hasInk;
     wrap.classList.toggle('font-extrude-live-editor--preview-active', active);
     wrap.classList.remove('font-extrude-live-editor--circular-active');
     if (!active) this._resetTextareaEditorStyles();
@@ -1662,11 +2133,11 @@ export class FontExtrudeUI {
   getOptions() {
     const fontState = this.stateStore.getState()?.fontExtrude || {};
     const align =
-      this.els.align?.value === 'left' || this.els.align?.value === 'right'
+      this.els.align?.value === 'center' || this.els.align?.value === 'right'
         ? this.els.align.value
-        : fontState.align === 'left' || fontState.align === 'right'
+        : fontState.align === 'center' || fontState.align === 'right'
           ? fontState.align
-          : 'center';
+          : 'left';
     const previewWidth = this._previewCssWidth || this.els.preview?.clientWidth || 520;
     const pad = this._previewLayoutPad();
     return {
@@ -1765,8 +2236,11 @@ export class FontExtrudeUI {
       drawCircularArcSpanPreviewIndicator(ctx, layout, options.circularWrap);
     }
     ctx.restore();
-    this._syncLiveEditorPreviewMode();
-    await this._syncTextareaToPreview(layout, viewport);
+    const hasInk = this._layoutHasPreviewInk(layout);
+    this._syncLiveEditorPreviewMode(hasInk);
+    if (hasInk) {
+      await this._syncTextareaToPreview(layout, viewport);
+    }
     if (generation !== this._previewGeneration) return;
 
     if (this._previewPending) {
@@ -1814,6 +2288,16 @@ export class FontExtrudeUI {
     variantSelect.disabled = variantSelect.options.length <= 1;
   }
 
+  _migrateTrackingAnimatorAmount() {
+    const fontState = this.stateStore.getState()?.fontExtrude || {};
+    const master = this._getMasterTrackingForUi();
+    const percent = resolveFontTrackingAnimatorAmountPercent(fontState, master);
+    if (fontState.trackingAnimatorAmountPercent !== percent) {
+      this.stateStore.set('fontExtrude.trackingAnimatorAmountPercent', percent);
+    }
+    this._syncTrackingAnimatorControls();
+  }
+
   async onGenerate() {
     if (this._generating) return;
     const text = this.els.text?.value ?? '';
@@ -1840,14 +2324,19 @@ export class FontExtrudeUI {
         throw new Error('Studio is not ready — refresh the page and try again');
       }
       await scene.ensureStudioReady();
-      const group = await this.controller.generateMesh(text, this.getOptions());
+      const options = this.getOptions();
+      const group = await this.controller.generateMesh(text, options);
       const added = await this.controller.addToScene(group);
       if (!added) return;
+      if (normalizeFontCircularWrapEnabled(options.circularWrap?.enabled)) {
+        this.stateStore.set('fontExtrude.trackingAnimatorEnabled', false);
+      }
       this.stateStore.set('fontExtrude.panelOpen', true);
       if (this.els.panelOpen) this.els.panelOpen.checked = true;
       this.ui.setEffectFoldoutOpen('font-extrude', true);
       this.syncExtrudeControls(this.stateStore.getState());
       this.syncPostGenControlsVisibility();
+      this._migrateTrackingAnimatorAmount();
     } catch (err) {
       console.error('[Orby] Font generate failed', err);
       const msg =

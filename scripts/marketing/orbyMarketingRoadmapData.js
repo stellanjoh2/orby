@@ -56,31 +56,27 @@ export const ROADMAP_LAUNCH_MILESTONE = {
  * @type {readonly RoadmapTaskGridDef[]}
  */
 export const ROADMAP_TASK_GRID_DEFS = [
-  /* Q2 2025 — Dev (grid 0–4) */
-  { label: 'Import & viewport', startGrid: 0, endGrid: 3, status: 'done' },
-  { label: 'Format loaders', startGrid: 1, endGrid: 4, status: 'done' },
+  /* Dev (grid 0–4) */
+  { label: 'Prototype', startGrid: 0, endGrid: 4, status: 'done' },
 
   /* Q3 2025 (grid 4–8) */
-  { label: 'HDR lighting', startGrid: 4, endGrid: 7, status: 'done' },
-  { label: 'Post FX stack', startGrid: 5, endGrid: 8, status: 'done' },
-  { label: 'Export stills', startGrid: 6, endGrid: 8, status: 'done' },
-  { label: 'Export MP4', startGrid: 6, endGrid: 8, status: 'done' },
+  { label: 'Rendering pipeline', startGrid: 4, endGrid: 8, status: 'done' },
+  { label: 'Export', startGrid: 10, endGrid: 16, status: 'done' },
 
   /* Q4 2025 (grid 8–12) */
-  { label: 'Display modes', startGrid: 8, endGrid: 11, status: 'done' },
-  { label: 'Gamepad support', startGrid: 8, endGrid: 10, status: 'done' },
-  { label: 'Animation scrub', startGrid: 9, endGrid: 12, status: 'done' },
-  { label: 'Scene JSON', startGrid: 8, endGrid: 10, status: 'done' },
-  { label: 'Wireframe & UV', startGrid: 11, endGrid: 13, status: 'done' },
+  { label: 'Scene & workflow', startGrid: 8, endGrid: 12, status: 'done' },
 
   /* Q1 2026 (grid 12–16) */
   { label: 'Look filters', startGrid: 12, endGrid: 14, status: 'done' },
   { label: 'Custom HDRI', startGrid: 12, endGrid: 14, status: 'done' },
   { label: 'Histogram', startGrid: 12, endGrid: 14, status: 'done' },
-  { label: 'Landing page', startGrid: 13, endGrid: 20, status: 'active' },
+  { label: 'Lens effects', startGrid: 12, endGrid: 15, status: 'done' },
+  { label: 'SVG export', startGrid: 13, endGrid: 15, status: 'done' },
   { label: 'Isometric cam', startGrid: 13, endGrid: 16, status: 'active' },
+  { label: 'Landing page', startGrid: 13, endGrid: 20, status: 'active' },
   { label: 'Spotlight gobos', startGrid: 14, endGrid: 16, status: 'active' },
-  { label: 'Lens effects', startGrid: 14, endGrid: 16, status: 'done' },
+  { label: 'SVG extrude', startGrid: 14, endGrid: 16, status: 'done' },
+  { label: 'Scene presets', startGrid: 14, endGrid: 16, status: 'done' },
 
   /* Q2 2026 — pre-launch (grid 16–20) */
   { label: 'Stability & QA', startGrid: 16, endGrid: 20, status: 'active' },
@@ -93,10 +89,10 @@ export const ROADMAP_TASK_GRID_DEFS = [
   /* Q3 2026 (grid 20–24) — launch milestone @ grid 20 */
   { label: 'Bevels V2', startGrid: 21, endGrid: 24, status: 'priority' },
   { label: 'Scene sharing', startGrid: 20, endGrid: 23, status: 'todo' },
-  { label: 'Batch export', startGrid: 21, endGrid: 24, status: 'todo' },
   { label: 'OUTLINER', startGrid: 20, endGrid: 24, status: 'future' },
 
   /* Q4 2026 (grid 24–28) */
+  { label: 'Advanced Animation', startGrid: 24, endGrid: 28, status: 'future' },
   { label: 'Collaboration', startGrid: 24, endGrid: 27, status: 'future' },
   { label: 'Plugin API', startGrid: 25, endGrid: 29, status: 'future' },
   { label: 'Shader Lab+', startGrid: 24, endGrid: 26, status: 'future' },

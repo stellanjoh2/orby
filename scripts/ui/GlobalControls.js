@@ -116,6 +116,7 @@ export class GlobalControls {
           header.classList.toggle('visible', header.dataset.header === target);
         });
         this.ui.syncExportVideoPreviewDock?.();
+        this.ui.syncFontExtrudeAnimationPreviewDock?.();
         this.ui.syncExportPreviewBanner?.();
         revealShelfPanelHeadline(
           document.querySelector(`.panel-header-title[data-header="${target}"]`),

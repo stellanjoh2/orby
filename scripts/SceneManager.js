@@ -204,6 +204,7 @@ import {
 } from './import/stlNormalSmoothing.js';
 import {
   captureAndApplyCenterPivot,
+  centerModelGeometryOnRoot,
   undoCenterPivot,
 } from './scene/centerModelPivot.js';
 
@@ -368,6 +369,9 @@ export class SceneManager {
     this.fontTextRevealController = new FontTextRevealController({
       stateStore: this.stateStore,
       onNeedRender: () => this.requestRender(),
+      onTypographyLayoutChange: () => {
+        this.finalizeFontModelStudioPlacement();
+      },
       reapplyMaterialEmissive: () => {
         const emissive = this.stateStore.getState().material?.emissive ?? 0;
         this.materialController.materialSettings.emissive = emissive;
@@ -1355,6 +1359,18 @@ export class SceneManager {
         this.fontTextRevealController?.applyExportFrame?.(frameIndex, fps, this.currentModel),
       endFontTextRevealExportDrive: () =>
         this.fontTextRevealController?.endExportDrive?.(),
+      isFontRevealFullyHiddenAtExportTime: (exportTimeSec) =>
+        this.fontTextRevealController?.isFullyHiddenAtExportTime?.(
+          exportTimeSec,
+          this.currentModel,
+        ) ?? false,
+      findFirstVisibleRevealExportFrameIndex: (startFrameIndex, totalFrames, fps) =>
+        this.fontTextRevealController?.findFirstVisibleExportFrameIndex?.(
+          startFrameIndex,
+          totalFrames,
+          fps,
+          this.currentModel,
+        ) ?? startFrameIndex,
       setDustFieldCaptureScale: (scale) =>
         this.materialController?.setDustFieldCaptureScale?.(scale),
       getCurrentModel: () => this.currentModel,
@@ -1376,8 +1392,9 @@ export class SceneManager {
         const constant = this.fontTextConstantController;
         if (!isFontExtrudeRevealModel(model)) return null;
         const revealActive = controller?.isEnabled?.() ?? false;
+        const trackingActive = controller?.isTrackingAnimatorActive?.() ?? false;
         const constantActive = constant?.isEnabled?.() ?? false;
-        if (!revealActive && !constantActive) return null;
+        if (!revealActive && !constantActive && !trackingActive) return null;
         const parts = [];
         if (revealActive) {
           const type = controller.getRevealType?.();
@@ -1388,9 +1405,14 @@ export class SceneManager {
           if (unit) parts.push(unit);
           if (Number.isFinite(duration) && duration > 0) parts.push(`${duration}s`);
         }
+        if (trackingActive) {
+          parts.push('Tracking');
+          const trackingTime = controller.getTrackingAnimatorTimeSec?.();
+          if (Number.isFinite(trackingTime) && trackingTime > 0) parts.push(`${trackingTime}s`);
+        }
         if (constantActive) {
           const constantType = constant.getType?.();
-          if (constantType) parts.push(`Constant ${constantType}`);
+          if (constantType) parts.push(`Looping ${constantType}`);
         }
         return parts.join(' · ');
       },
@@ -1436,6 +1458,9 @@ export class SceneManager {
         this.fontTextRevealController?.applyExportTime?.(exportTimeSec, this.currentModel),
       endFontTextRevealExportDrive: () =>
         this.fontTextRevealController?.endExportDrive?.(),
+      isExportCameraDriving: () => this.cameraController?.isExportCameraDriving?.() ?? false,
+      isExportFovDriving: () => this.cameraController?.isExportFovDriving?.() ?? false,
+      isExportViewportLocked: () => this.cameraController?.isPreviewViewportLocked?.() ?? false,
       onActiveChange: (active) => {
         this.ui?.setExportVideoPreviewActive?.(active);
         this.ui?.setExportPreviewBannerVisible?.(active);
@@ -1566,9 +1591,16 @@ export class SceneManager {
    * Keeps Three.js vertical FOV and the lens-distortion pass in lockstep (same as the
    * de Carpentier WebGL sample) so the warped sample stays inside the render and avoids
    * black edges. When fisheye is off, uses `camera.fov` from state.
+   *
+   * Skips overwriting `camera.fov` while export preview / encode FOV drive is active —
+   * otherwise capture buffer sync resets the animated FOV back to the studio slider value.
    */
   syncPerspectiveCameraFovAndLens(options = {}) {
     if (!this.camera?.isPerspectiveCamera) return;
+    if (this.cameraController?.isExportFovDriving?.()) {
+      this.camera.updateProjectionMatrix();
+      return;
+    }
     const state = this.stateStore.getState();
     if (state.camera?.isometric?.enabled) {
       const pass = this.postPipeline?.lensDistortionPass;
@@ -4020,6 +4052,53 @@ export class SceneManager {
     return true;
   }
 
+  /**
+   * Center imported geometry on modelRoot without preserving authored world offsets.
+   * Keeps modelRoot at the studio origin so lights, grid, and camera defaults align.
+   * @param {{ showToast?: boolean }} [options]
+   */
+  centerImportAtStudioOrigin(options = {}) {
+    if (!this.currentModel || !this.modelRoot) {
+      if (options.showToast !== false) {
+        this.ui?.showToast?.('Load a model first');
+      }
+      return false;
+    }
+
+    if (this._pivotCenterDelta) {
+      undoCenterPivot(this.modelRoot, this.currentModel, this._pivotCenterDelta);
+      this._pivotCenterDelta = null;
+    }
+
+    const delta = centerModelGeometryOnRoot(this.modelRoot, this.currentModel);
+    if (!delta) {
+      if (options.showToast !== false) {
+        this.ui?.showToast?.('Could not center import');
+      }
+      return false;
+    }
+
+    this._pivotCenterDelta = delta;
+    this._afterPivotChange();
+    return true;
+  }
+
+  /**
+   * Center generated font meshes on the studio origin after live typography offsets.
+   * Keeps the text block above the grid with a centered model pivot.
+   * @param {{ alignGround?: boolean }} [options]
+   */
+  finalizeFontModelStudioPlacement(options = {}) {
+    if (!isFontExtrudeRevealModel(this.currentModel)) return false;
+
+    const centered = this.centerImportAtStudioOrigin({ showToast: false });
+    if (options.alignGround) {
+      this._cancelGroundGridBottomAlignAnimation();
+      this._alignGroundAndGridToCurrentModelBottom();
+    }
+    return centered;
+  }
+
   _afterPivotChange() {
     if (!this.currentModel) return;
     this.currentModel.updateMatrixWorld(true);
@@ -4644,6 +4723,10 @@ export class SceneManager {
   }
 
   applyCameraPreset(preset) {
+    if (this.currentModel) {
+      this.currentModel.updateMatrixWorld(true);
+      this.cameraController?.refreshModelBounds(this.currentModel);
+    }
     this.cameraController?.applyCameraPreset(preset);
   }
 
@@ -5562,7 +5645,7 @@ export class SceneManager {
       if (resumeRenderLoop) {
         this.renderLoop.start();
       }
-      if (wasPreviewActive && (preservePreviewSession || resolvedPreviewT > 0)) {
+      if (preservePreviewSession || (wasPreviewActive && resolvedPreviewT > 0)) {
         this.scrubExportVideoPreview(resolvedPreviewT);
       }
     }

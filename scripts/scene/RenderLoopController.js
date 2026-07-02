@@ -293,10 +293,17 @@ export class RenderLoopController {
     this._wakeSourcesAttached = false;
   }
 
-  _scheduleFrameIfNeeded() {
+  /**
+   * @param {{ flushStaleDelta?: boolean }} [options]
+   */
+  _scheduleFrameIfNeeded({ flushStaleDelta = true } = {}) {
     if (this._frameId || !this._active || !this.scene?.isStudioReady) return;
     // Drop stale delta accumulated while idle so motion/easing stays seamless.
-    this.scene.clock?.getDelta();
+    // Skip when chaining continuous frames — flushing here discards render time and
+    // makes export preview / auto-rotate run in slow motion on heavy scenes.
+    if (flushStaleDelta) {
+      this.scene.clock?.getDelta();
+    }
     this._frameId = requestAnimationFrame(() => this._tick());
   }
 
@@ -362,7 +369,7 @@ export class RenderLoopController {
       && (this._queuedWake || this._shouldContinue(ctx))
     ) {
       this._queuedWake = false;
-      this._scheduleFrameIfNeeded();
+      this._scheduleFrameIfNeeded({ flushStaleDelta: false });
     }
   }
 }

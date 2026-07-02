@@ -627,6 +627,10 @@ export class RenderControls {
         commitLookFilterTouchWith(() => {
           this.stateStore.set('renderQuality', value);
         });
+        this.eventBus.emit('export:movement-preview-stop', {
+          silent: true,
+          toast: 'Exited export preview — camera restored',
+        });
         this.eventBus.emit('render:apply-performance');
         this._syncExportSizeControls();
       });

@@ -55,7 +55,7 @@ export function resolveVideoExportFrameTiming(
  * @returns {{ blob: Blob, width: number, height: number, cropped: boolean }}
  */
 export function captureVideoExportFrameBlob(exporter, frameParams, captureOpts = {}) {
-  exporter._applyVideoExportFrame(frameParams);
   exporter._syncExportCaptureFramebuffer();
+  exporter._applyVideoExportFrame(frameParams);
   return exporter._captureCurrentFramePngBlob(captureOpts);
 }

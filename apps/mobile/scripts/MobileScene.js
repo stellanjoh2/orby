@@ -26,7 +26,7 @@ import { markMobileDebugLog } from './mobileDebugLog.js';
 import { validateOrbyMobileModelFile, isOrbyMobileModelWithinLimit, orbyMobileModelTooLargeMessage } from '../../../scripts/orbyMobileModelLimits.js';
 import { findCreativeLook } from './mobileCatalog.js';
 import { MESH_AUTO_ROTATE_SPEED_NORMAL } from '../../../scripts/config/meshAutoRotate.js';
-import { captureAndApplyCenterPivot } from '../../../scripts/scene/centerModelPivot.js';
+import { centerModelGeometryOnRoot } from '../../../scripts/scene/centerModelPivot.js';
 import { AnimationController } from '../../../scripts/render/AnimationController.js';
 
 const ORBY_BLACK = '#080808';
@@ -437,7 +437,7 @@ export class MobileScene {
     this._resetModelRoot();
     this.currentModel = object;
     this.modelRoot.add(object);
-    captureAndApplyCenterPivot(this.modelRoot, object);
+    centerModelGeometryOnRoot(this.modelRoot, object);
     this.creativeLooks.setModel(object);
     this.animationController.setModel(object, animations);
     if (this._creativeLookPreset && this._creativeLookPreset !== 'none') {

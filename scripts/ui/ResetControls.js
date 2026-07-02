@@ -28,6 +28,12 @@ import {
   defaultCameraDistance,
 } from '../camera/cameraDefaults.js';
 import { resetSvgExtrudeState } from '../import/extrudeDefaults.js';
+import {
+  applyFontExtrudeSubsectionReset,
+  FONT_EXTRUDE_RESET_DIRTY_PATHS,
+  FONT_EXTRUDE_RESET_TOASTS,
+  isFontExtrudeSubsectionDirty,
+} from './fontExtrudeSectionResets.js';
 
 /**
  * For each `data-reset` value in the markup, the set of state paths whose
@@ -134,6 +140,7 @@ const RESET_DIRTY_PATHS = {
     'advanced.normalView', 'advanced.normalViewMode',
     'advanced.stlSmoothShading', 'advanced.stlSmoothingAngle',
   ],
+  ...FONT_EXTRUDE_RESET_DIRTY_PATHS,
 };
 
 /** HDRI section reset — dirty paths plus custom asset keys cleared on reset. */
@@ -286,6 +293,7 @@ const BLOCK_RESET_TOASTS = {
   transform: 'Transform reset',
   'svg-extrude': 'SVG Extrude settings reset',
   advanced: 'Advanced reset',
+  ...FONT_EXTRUDE_RESET_TOASTS,
 };
 
 export class ResetControls {
@@ -331,11 +339,13 @@ export class ResetControls {
       .map((button) => {
         const type = (button.dataset.reset ?? '').trim();
         if (!type) return null;
-        // Closest container that holds this section's controls. Subsections
-        // are most specific; fall back to a `[data-block]` panel block (used
-        // by the top-level Lights reset which lives directly under
-        // `.panel-block.lights`); finally the panel block itself.
+        // Closest container that holds this section's controls. Sub-reset
+        // scopes (font extrude subsections) are most specific; then subsections;
+        // fall back to a `[data-block]` panel block (used by the top-level
+        // Lights reset which lives directly under `.panel-block.lights`);
+        // finally the panel block itself.
         const scope =
+          button.closest('[data-reset-scope]') ||
           button.closest('[data-subsection]') ||
           button.closest('[data-block]') ||
           button.closest('.panel-block') ||
@@ -442,6 +452,8 @@ export class ResetControls {
       let dirty = false;
       if (normalizeDirty) {
         dirty = normalizeDirty(state, defaults);
+      } else if (type.startsWith('font-extrude-')) {
+        dirty = isFontExtrudeSubsectionDirty(type, state);
       } else if (paths) {
         for (const path of paths) {
           if (!deepEqual(getAtPath(state, path), getAtPath(defaults, path))) {
@@ -1402,6 +1414,18 @@ export class ResetControls {
             this.eventBus.emit('mesh:stl-smoothing');
             this.eventBus.emit('mesh:recenter-pivot', { showToast: false });
             this.ui.syncUIFromState();
+            break;
+
+          default:
+            if (
+              type.startsWith('font-extrude-') &&
+              applyFontExtrudeSubsectionReset(type, this.stateStore, this.eventBus, {
+                getScene: () => this.ui.fontExtrudeUI?.getScene?.(),
+              })
+            ) {
+              this.ui.fontExtrudeUI?.onSubsectionReset?.(type);
+              this.ui.syncUIFromState();
+            }
             break;
         }
 

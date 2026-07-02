@@ -405,7 +405,7 @@ export class FontExtrudeController {
       this.fontExtrudeImporter = new FontExtrudeImporter();
     }
 
-    const layout = await this.layoutTextAsync(text, options);
+    const layout = await this.layoutTextAsync(text, { ...options, forExtrude: true });
     if (!layout.lines.length) {
       throw new Error('Text has no drawable paths');
     }
@@ -432,6 +432,17 @@ export class FontExtrudeController {
     group.userData.orbyFontGenerated = true;
     group.userData.orbyFontExtrude = true;
     group.userData.orbyFontSourceText = text;
+    group.userData.orbyFontGeneratedTracking = Number(
+      options.tracking ?? this.stateStore.getState()?.fontExtrude?.tracking ?? 0,
+    );
+    // Extrude paths are always left-canonical (minX = 0 per line). Center/right/center
+    // alignment is applied live on glyph groups — see fontTextTrackingAnimation.js.
+    group.userData.orbyFontGeneratedAlign = 'left';
+    group.userData.orbyFontGeneratedLineHeight = Number(
+      options.lineHeight ?? fontState.lineHeight ?? 1,
+    );
+    group.userData.orbyFontLayoutFontSize =
+      Number(layout.fontSize) > 0 ? Number(layout.fontSize) : DEFAULT_FONT_SIZE;
     this.lastGeneratedGroup = group;
     return group;
   }
@@ -646,11 +657,16 @@ export class FontExtrudeController {
       }
     }
 
+    // 3D extrude keeps each line left-normalized; preview/SVG apply the UI align here.
+    const lineAlign = options.forExtrude ? 'left' : align;
+
     for (const draft of lineDrafts) {
       const { lineText, y: lineY, segments, inkBounds } = draft;
-      const lineRefWidth = align === 'left' ? inkBounds?.width ?? paragraphInkWidthSafe : paragraphInkWidthSafe;
-      const lineOffset = this._lineInkAlignOffset(inkBounds, align, lineRefWidth);
-      const totalOffset = lineOffset + (align === 'left' ? 0 : blockOffset);
+      const lineRefWidth =
+        lineAlign === 'left' ? inkBounds?.width ?? paragraphInkWidthSafe : paragraphInkWidthSafe;
+      const lineOffset = this._lineInkAlignOffset(inkBounds, lineAlign, lineRefWidth);
+      const usePreviewBlockOffset = !options.forExtrude && align !== 'left';
+      const totalOffset = lineOffset + (usePreviewBlockOffset ? blockOffset : 0);
 
       const paths = [];
       for (let i = 0; i < segments.length; i += 1) {
@@ -669,7 +685,8 @@ export class FontExtrudeController {
     }
     const width = align === 'left' ? Math.max(contentWidth, 1) : maxWidth;
     const height = Math.max(fontSize, y + fontSize * 0.35);
-    return { lines: laidOut, width, height, fontSize, align, maxWidth };
+    const inkBounds = laidOut.length ? this.getLayoutPreviewBounds({ lines: laidOut, width, height, fontSize }) : null;
+    return { lines: laidOut, width, height, fontSize, align, maxWidth, paragraphInkWidth: paragraphInkWidthSafe, inkBounds };
   }
 
   buildSvgFromLayout(layout) {

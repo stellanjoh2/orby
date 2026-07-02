@@ -52,6 +52,9 @@ export class ExportMovementPreview {
     beginFontTextRevealExportDrive = () => {},
     applyFontTextRevealExportTime = () => {},
     endFontTextRevealExportDrive = () => {},
+    isExportCameraDriving = () => false,
+    isExportFovDriving = () => false,
+    isExportViewportLocked = () => false,
     onActiveChange = () => {},
     onProgressChange = () => {},
   } = {}) {
@@ -78,6 +81,9 @@ export class ExportMovementPreview {
     this.beginFontTextRevealExportDrive = beginFontTextRevealExportDrive;
     this.applyFontTextRevealExportTime = applyFontTextRevealExportTime;
     this.endFontTextRevealExportDrive = endFontTextRevealExportDrive;
+    this.isExportCameraDriving = isExportCameraDriving;
+    this.isExportFovDriving = isExportFovDriving;
+    this.isExportViewportLocked = isExportViewportLocked;
     this.onActiveChange = onActiveChange;
     this.onProgressChange = onProgressChange;
 
@@ -321,6 +327,25 @@ export class ExportMovementPreview {
     this._sessionDrivesEngaged = false;
   }
 
+  _viewportDrivesAreLive() {
+    if (needsExportCameraDrive(this._movements)) {
+      if (!this.isExportCameraDriving?.()) return false;
+    } else if (!this.isExportViewportLocked?.()) {
+      return false;
+    }
+    if (needsExportFovDrive(this._movements) && !this.isExportFovDriving?.()) {
+      return false;
+    }
+    return true;
+  }
+
+  /** Re-engage orbit/FOV drives when offline capture ended them but preview state stayed armed. */
+  _syncViewportDrives() {
+    if (this._drivesEngaged && this._viewportDrivesAreLive()) return;
+    this._drivesEngaged = false;
+    this._engageViewportDrives();
+  }
+
   _engageViewportDrives() {
     if (this._drivesEngaged) return;
     if (needsExportCameraDrive(this._movements)) {
@@ -349,7 +374,7 @@ export class ExportMovementPreview {
 
   _applyPreviewFrame(cameraLinearT, exportTimeSec) {
     this._engageSessionDrives();
-    this._engageViewportDrives();
+    this._syncViewportDrives();
     this._applyFrame(cameraLinearT, exportTimeSec);
   }
 
@@ -396,15 +421,19 @@ export class ExportMovementPreview {
     if (!this.getCurrentModel?.()) return false;
     if (!ExportMovementPreview.canPreview(settings)) return false;
 
-    const duration = Math.max(1e-6, this._durationSec);
     const normalizedT = Math.max(0, Math.min(1, Number(t) || 0));
-    const settingsChanged = this._settingsKey !== this._settingsFingerprint(settings);
+    const fingerprint = this._settingsFingerprint(settings);
 
-    if (!this._active || settingsChanged) {
+    if (!this._active) {
       if (!this.arm(settings)) return false;
+    } else if (this._settingsKey !== fingerprint) {
+      this._applySettings(settings);
+      this._captureStartState();
+      this._settingsKey = fingerprint;
     }
 
     this._playing = false;
+    const duration = Math.max(1e-6, this._durationSec);
     this._elapsed = normalizedT * duration;
     const exportTimeSec = this._elapsed;
     const cameraLinearT = resolveExportCameraMovementLinearT(
@@ -468,9 +497,7 @@ export class ExportMovementPreview {
   update(delta) {
     if (!this._active || !this._playing) return;
     this._engageSessionDrives();
-    if (!this._drivesEngaged) {
-      this._engageViewportDrives();
-    }
+    this._syncViewportDrives();
     const d = typeof delta === 'number' && Number.isFinite(delta) ? delta : 0;
     const duration = Math.max(1e-6, this._durationSec);
     this._elapsed += d;

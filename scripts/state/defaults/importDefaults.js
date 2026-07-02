@@ -20,7 +20,7 @@ export function createImportDefaults() {
     fontExtrude: {
       panelOpen: false,
       /** @type {'left' | 'center' | 'right'} */
-      align: 'center',
+      align: 'left',
       tracking: 0,
       /** @type {'metrics' | 'optical' | 'none'} — metrics = font Auto / pair tables */
       kerning: 'metrics',
@@ -35,12 +35,22 @@ export function createImportDefaults() {
       fillColor: '#808080',
       /** Total seconds until the last character finishes scale-in (0 = off). */
       revealDurationSec: 2,
-      /** @type {'none' | 'scale' | 'fade' | 'slideUp' | 'slideDown' | 'drop' | 'pop' | 'rotate' | 'elastic'} */
+      /** @type {'none' | 'scale' | 'fade' | 'slideUp' | 'slideDown' | 'drop' | 'dropSmooth' | 'pop' | 'rotate' | 'elastic'} */
       revealType: 'scale',
       /** @type {'character' | 'word'} — stagger per letter or per word */
       revealUnit: 'character',
       /** Preview playback mode: true loops continuously, false stops at end. */
       revealLoop: true,
+      /** Post-generation letter-spacing settle animation (not available with circular wrap). */
+      trackingAnimatorEnabled: false,
+      /** Extra tracking at animation start, as percent of master letter-spacing. */
+      trackingAnimatorAmountPercent: 0,
+      /** Seconds to settle from widened spacing back to generated spacing. */
+      trackingAnimatorTimeSec: 1.5,
+      /** Easing curve for tracking expand (export movement easing id). */
+      trackingAnimatorEasing: 'linear',
+      /** Easing curve for reveal stagger across the full duration (export movement easing id). */
+      revealStaggerEasing: 'linear',
       /** Freeze reveal preview + constant loop at the current pose (Resume continues from there). */
       pauseAllAnimations: false,
       /** Per-glyph Z travel distance before landing in place. */

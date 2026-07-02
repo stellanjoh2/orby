@@ -6,6 +6,37 @@ import * as THREE from 'three';
 
 /**
  * Move the loaded model so its bounding-box center sits on {@link modelRoot}'s origin.
+ * Does not move {@link modelRoot} — use on import so the mesh lands at the studio origin.
+ *
+ * @param {THREE.Object3D} modelRoot
+ * @param {THREE.Object3D} model
+ * @returns {CenterPivotDelta | null}
+ */
+export function centerModelGeometryOnRoot(modelRoot, model) {
+  if (!modelRoot || !model) return null;
+
+  model.updateMatrixWorld(true);
+  modelRoot.updateMatrixWorld(true);
+
+  const box = new THREE.Box3().setFromObject(model);
+  if (box.isEmpty()) return null;
+
+  const modelBefore = model.position.clone();
+  const centerWorldBefore = box.getCenter(new THREE.Vector3());
+  const offsetInRoot = modelRoot.worldToLocal(centerWorldBefore.clone());
+
+  model.position.sub(offsetInRoot);
+  model.updateMatrixWorld(true);
+  modelRoot.updateMatrixWorld(true);
+
+  return {
+    modelDelta: model.position.clone().sub(modelBefore),
+    rootDelta: new THREE.Vector3(),
+  };
+}
+
+/**
+ * Move the loaded model so its bounding-box center sits on {@link modelRoot}'s origin.
  * Compensates {@link modelRoot} position so the mesh stays in the same place on screen.
  *
  * @param {THREE.Object3D} modelRoot
@@ -21,30 +52,26 @@ export function captureAndApplyCenterPivot(modelRoot, model) {
   const box = new THREE.Box3().setFromObject(model);
   if (box.isEmpty()) return null;
 
-  const modelBefore = model.position.clone();
   const rootBefore = modelRoot.position.clone();
-
   const centerWorldBefore = box.getCenter(new THREE.Vector3());
-  const offsetInRoot = modelRoot.worldToLocal(centerWorldBefore.clone());
 
-  model.position.sub(offsetInRoot);
+  const localDelta = centerModelGeometryOnRoot(modelRoot, model);
+  if (!localDelta) return null;
 
-  model.updateMatrixWorld(true);
   const boxAfter = new THREE.Box3().setFromObject(model);
   const centerWorldAfter = boxAfter.getCenter(new THREE.Vector3());
   const worldDelta = centerWorldBefore.sub(centerWorldAfter);
   modelRoot.position.add(worldDelta);
-
   modelRoot.updateMatrixWorld(true);
 
   return {
-    modelDelta: model.position.clone().sub(modelBefore),
+    modelDelta: localDelta.modelDelta,
     rootDelta: modelRoot.position.clone().sub(rootBefore),
   };
 }
 
 /**
- * Undo a prior {@link captureAndApplyCenterPivot} using its returned deltas.
+ * Undo a prior center-pivot operation using its returned deltas.
  *
  * @param {THREE.Object3D} modelRoot
  * @param {THREE.Object3D} model

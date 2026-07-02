@@ -120,6 +120,8 @@ export const SLIDER_DEFAULT_PATHS = {
   fontExtrudeRevealSlideTime: 'fontExtrude.revealSlideTime',
   fontExtrudeRevealEmissiveStrength: 'fontExtrude.revealEmissiveStrength',
   fontExtrudeRevealEmissiveDecay: 'fontExtrude.revealEmissiveDecaySec',
+  fontExtrudeTrackingAnimatorAmountStart: 'fontExtrude.trackingAnimatorAmountPercent',
+  fontExtrudeTrackingAnimatorTime: 'fontExtrude.trackingAnimatorTimeSec',
   fontExtrudeConstantIntensity: 'fontExtrude.constantIntensity',
   fontExtrudeConstantSpeed: 'fontExtrude.constantSpeedSec',
   fontExtrudeConstantSpread: 'fontExtrude.constantSpread',

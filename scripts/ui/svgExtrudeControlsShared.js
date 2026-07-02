@@ -31,6 +31,7 @@ import {
   FONT_CONSTANT_TYPE_OPTIONS,
   DEFAULT_FONT_CONSTANT_TYPE,
 } from '../scene/fontTextConstantTypes.js';
+import { MAX_FONT_TRACKING_ANIMATOR_START } from '../scene/fontTextTrackingAnimation.js';
 import {
   clampSurfaceStrength,
   clampSurfaceUiScale,
@@ -144,8 +145,27 @@ export function buildFontExtrudeOutlineQualitySelectHtml(options = {}) {
             </label>`;
 }
 
-function buildFontExtrudeSectionTitleHtml(title) {
-  return `<div class="block-title font-extrude-section-title">${title}</div>`;
+/**
+ * @param {string} title
+ * @param {string} [resetKey] — `data-reset` value; adds a subsection reset icon when set.
+ */
+function buildFontExtrudeSectionTitleHtml(title, resetKey) {
+  if (!resetKey) {
+    return `<div class="block-title font-extrude-section-title">${title}</div>`;
+  }
+  return `<div class="block-title font-extrude-section-title has-reset">
+    <span>${title}</span>
+    <button
+      type="button"
+      class="block-reset-btn"
+      data-reset="${resetKey}"
+      aria-label="Reset ${title}"
+      data-tooltip="Reset ${title} settings"
+    >
+      <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+      <span class="sr-only">Reset ${title}</span>
+    </button>
+  </div>`;
 }
 
 const PANEL_BLOCK_DIVIDER_HTML = '<div class="panel-block-divider" aria-hidden="true"></div>';
@@ -1291,7 +1311,8 @@ function buildFontConstantTypeOptionsHtml() {
 /** All 3D shape controls — visible before first generate (depth applies on generate). */
 export const FONT_EXTRUDE_SHAPE_CONTROLS_HTML = `
           ${PANEL_BLOCK_DIVIDER_HTML}
-          ${buildFontExtrudeSectionTitleHtml('3D Shape')}
+          <div class="font-extrude-reset-scope" data-reset-scope="font-extrude-3d-shape">
+          ${buildFontExtrudeSectionTitleHtml('3D Shape', 'font-extrude-3d-shape')}
           ${buildExtrudeDepthSliderHtml({
             id: 'fontExtrudeMeshDepth',
             outputKey: 'fontExtrudeMeshDepth',
@@ -1320,7 +1341,8 @@ export const FONT_EXTRUDE_SHAPE_CONTROLS_HTML = `
               tooltip: 'Edge bevel size — max 10% of extrusion depth',
             },
           })}
-          ${buildFontExtrudeOutlineQualitySelectHtml()}`;
+          ${buildFontExtrudeOutlineQualitySelectHtml()}
+          </div>`;
 
 /** Reveal animation — only visible once 3D text exists. */
 export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
@@ -1342,6 +1364,27 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                 <input id="fontExtrudeRevealDuration" type="range" min="0" max="5" step="0.1" value="2" />
                 <span class="value" data-output="fontExtrudeRevealDuration">2.0s</span>
               </label>
+              <label id="fontExtrudeRevealStaggerEasingFamilyLine" class="select-line font-extrude-reveal-stagger-easing-family">
+                <span data-tooltip="Curve for stagger timing across the full reveal — ease out widens gaps between later letters or words (decelerating arrival)">Easing</span>
+                <select id="fontExtrudeRevealStaggerEasingFamily" aria-label="Reveal stagger easing curve">
+                  <option value="linear" selected>Linear</option>
+                  <option value="sine">Sine</option>
+                  <option value="quad">Quad</option>
+                  <option value="cubic">Cubic</option>
+                  <option value="quart">Quart</option>
+                  <option value="quint">Quint</option>
+                  <option value="expo">Expo</option>
+                  <option value="circ">Circ</option>
+                </select>
+              </label>
+              <label id="fontExtrudeRevealStaggerEasingTypeLine" class="select-line is-muted font-extrude-reveal-stagger-easing-type">
+                <span data-tooltip="Ease in packs more arrivals at the start; ease out spreads them toward the end; in-out blends both">Type</span>
+                <select id="fontExtrudeRevealStaggerEasingType" aria-label="Reveal stagger easing type" disabled>
+                  <option value="in">In</option>
+                  <option value="out" selected>Out</option>
+                  <option value="inOut">In-out</option>
+                </select>
+              </label>
               <label class="slider-line font-extrude-reveal-slide-depth">
                 <span data-tooltip="How far each letter starts in depth before sliding into place">Slide Depth</span>
                 <input id="fontExtrudeRevealSlideDepth" type="range" min="0" max="2.5" step="0.01" value="0.18" />
@@ -1360,6 +1403,52 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                 </select>
               </label>
               ${PANEL_BLOCK_DIVIDER_HTML}
+              <div class="font-extrude-tracking-animator" id="fontExtrudeTrackingAnimator" role="group" aria-label="Tracking animation">
+                <label class="slider-line slider-line--toggle-only font-extrude-tracking-animator-enabled">
+                  <span data-tooltip="Letters widen at the start of the clip, then settle to your generated spacing — not available with circular wrap">Tracking Animator</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="fontExtrudeTrackingAnimatorEnabled" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Tracking animator</span>
+                  </label>
+                </label>
+                <label class="slider-line font-extrude-tracking-animator-amount-start font-extrude-tracking-animator-detail" hidden>
+                  <span data-tooltip="Extra letter-spacing at the start of the animation (100% = +${MAX_FONT_TRACKING_ANIMATOR_START}) — independent of Letter Spacing; settles to your master value when tracking time ends">Amount Start</span>
+                  <input id="fontExtrudeTrackingAnimatorAmountStart" type="range" min="0" max="100" step="1" value="0" />
+                  <span class="value" data-output="fontExtrudeTrackingAnimatorAmountStart">0%</span>
+                </label>
+                <label class="slider-line font-extrude-tracking-animator-time font-extrude-tracking-animator-detail" hidden>
+                  <span data-tooltip="Seconds to settle from Amount Start back to Letter Spacing — always starts at full Amount Start; shorter = faster settle, not less travel">Tracking Time</span>
+                  <input id="fontExtrudeTrackingAnimatorTime" type="range" min="0.1" max="5" step="0.1" value="1.5" />
+                  <span class="value" data-output="fontExtrudeTrackingAnimatorTime">1.5s</span>
+                </label>
+                <label id="fontExtrudeTrackingAnimatorEasingFamilyLine" class="select-line font-extrude-tracking-animator-easing-family font-extrude-tracking-animator-detail" hidden>
+                  <span data-tooltip="Curve for the tracking settle — ease out decelerates into your generated spacing.">Easing</span>
+                  <select id="fontExtrudeTrackingAnimatorEasingFamily" aria-label="Tracking animation easing curve">
+                    <option value="linear" selected>Linear</option>
+                    <option value="sine">Sine</option>
+                    <option value="quad">Quad</option>
+                    <option value="cubic">Cubic</option>
+                    <option value="quart">Quart</option>
+                    <option value="quint">Quint</option>
+                    <option value="expo">Expo</option>
+                    <option value="circ">Circ</option>
+                  </select>
+                </label>
+                <label id="fontExtrudeTrackingAnimatorEasingTypeLine" class="select-line is-muted font-extrude-tracking-animator-easing-type font-extrude-tracking-animator-detail" hidden>
+                  <span data-tooltip="Ease in accelerates from the wide start; ease out decelerates into generated spacing; in-out blends both.">Type</span>
+                  <select id="fontExtrudeTrackingAnimatorEasingType" aria-label="Tracking animation easing type" disabled>
+                    <option value="in">In</option>
+                    <option value="out" selected>Out</option>
+                    <option value="inOut">In-out</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+`;
+
+/** Optional emissive flash on reveal — after primary motion drivers in the shelf. */
+export const FONT_EXTRUDE_REVEAL_EMISSIVE_HTML = `
               <div class="font-extrude-reveal-emissive" role="group" aria-label="Emissive reveal">
                 <label class="slider-line slider-line--toggle-only font-extrude-reveal-emissive-slam">
                   <span data-tooltip="Each letter reveals with emissive glow, then fades to rest after it lands">Emissive Slam</span>
@@ -1384,15 +1473,14 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                   <input type="color" id="fontExtrudeRevealEmissiveColor" class="color-chip" value="#c4ff00" />
                 </label>
               </div>
-            </div>
 `;
 
 /** Looping motion — composes with reveal; only visible once 3D text exists. */
 export const FONT_EXTRUDE_CONSTANT_CONTROLS_HTML = `
             <div class="font-extrude-constant" id="fontExtrudeConstant">
               <label class="select-line font-extrude-constant-type">
-                <span data-tooltip="Continuous looping motion layered on reveal — runs live in viewport and export">Constant Type</span>
-                <select id="fontExtrudeConstantType" aria-label="Constant animation type">
+                <span data-tooltip="Continuous looping motion layered on reveal — runs live in viewport and export">Motion type</span>
+                <select id="fontExtrudeConstantType" aria-label="Looping motion type">
                   ${buildFontConstantTypeOptionsHtml()}
                 </select>
               </label>
@@ -1414,41 +1502,51 @@ export const FONT_EXTRUDE_CONSTANT_CONTROLS_HTML = `
             </div>
 `;
 
-/** Combined reveal + constant preview — after all animation settings. */
-export const FONT_EXTRUDE_PREVIEW_CONTROLS_HTML = `
-            <div class="font-extrude-preview" id="fontExtrudePreview">
-              <div class="font-extrude-reveal-preview animation-timeline">
-                <div class="animation-transport-btns">
-                  <button
-                    type="button"
-                    id="fontExtrudeRevealPlay"
-                    class="animation-play-btn"
-                    disabled
-                    aria-label="Play text animation preview"
-                    data-tooltip="Play text animation preview"
-                  >
-                    <i class="fa-solid fa-play" aria-hidden="true"></i>
-                    <span class="sr-only">Play or pause</span>
-                  </button>
-                  <div class="font-extrude-reveal-loop-control" data-tooltip="When off, preview plays once and stops">
-                    <span class="font-extrude-reveal-loop-label">Loop</span>
-                    <label class="effect-toggle font-extrude-reveal-loop-toggle">
-                      <input type="checkbox" id="fontExtrudeRevealLoop" checked />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                    </label>
+/** Floating shelf dock — 3D type reveal + looping motion preview (Object tab, separate from GLB Animation block). */
+export const FONT_EXTRUDE_ANIMATION_PREVIEW_DOCK_HTML = `
+          <div
+            id="fontExtrudeAnimationPreviewDock"
+            class="font-extrude-animation-preview-dock"
+            hidden
+            aria-hidden="true"
+          >
+            <div class="font-extrude-animation-preview-dock__inner">
+              <div class="font-extrude-reset-scope" data-reset-scope="font-extrude-preview">
+              ${buildFontExtrudeSectionTitleHtml('Preview', 'font-extrude-preview')}
+              <div class="animation-timeline">
+                <div class="animation-controls">
+                  <div class="animation-transport-btns">
+                    <button
+                      type="button"
+                      id="fontExtrudeRevealPlay"
+                      class="animation-play-btn"
+                      disabled
+                      aria-label="Play text animation preview"
+                      data-tooltip="Play text animation preview"
+                    >
+                      <i class="fa-solid fa-play" aria-hidden="true"></i>
+                      <span class="sr-only">Play or pause</span>
+                    </button>
+                    <div class="font-extrude-reveal-loop-control" data-tooltip="When off, preview plays once and stops">
+                      <span class="font-extrude-reveal-loop-label">Loop</span>
+                      <label class="effect-toggle font-extrude-reveal-loop-toggle">
+                        <input type="checkbox" id="fontExtrudeRevealLoop" checked />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                      </label>
+                    </div>
                   </div>
+                  <input
+                    type="range"
+                    id="fontExtrudeRevealScrub"
+                    min="0"
+                    max="1"
+                    step="0.001"
+                    value="1"
+                    disabled
+                    aria-label="Text animation preview progress"
+                  />
+                  <span class="font-extrude-reveal-time" id="fontExtrudeRevealTime">0.0s</span>
                 </div>
-                <input
-                  type="range"
-                  id="fontExtrudeRevealScrub"
-                  min="0"
-                  max="1"
-                  step="0.001"
-                  value="1"
-                  disabled
-                  aria-label="Text animation preview progress"
-                />
-                <span class="font-extrude-reveal-time" id="fontExtrudeRevealTime">0.0s</span>
               </div>
               <div class="font-extrude-preview-transport-btns">
                 <button
@@ -1470,8 +1568,17 @@ export const FONT_EXTRUDE_PREVIEW_CONTROLS_HTML = `
                   Reset animations
                 </button>
               </div>
+              </div>
             </div>
-`;
+          </div>`;
+
+/** Mount 3D type animation preview dock beside the export video preview dock. */
+export function ensureFontExtrudeAnimationPreviewDockMounted() {
+  if (document.getElementById('fontExtrudeAnimationPreviewDock')) return;
+  const anchor = document.getElementById('exportVideoPreviewDock');
+  if (!anchor?.parentElement) return;
+  anchor.insertAdjacentHTML('afterend', FONT_EXTRUDE_ANIMATION_PREVIEW_DOCK_HTML);
+}
 
 /** Surface material — shown in Appearance after the first 3D text generate. */
 export const FONT_EXTRUDE_SURFACE_POST_GEN_HTML = `
@@ -1492,13 +1599,16 @@ export const FONT_EXTRUDE_SURFACE_POST_GEN_HTML = `
 export const FONT_EXTRUDE_POST_GEN_CONTROLS_HTML = `
           <div id="fontExtrudePostGen" class="font-extrude-post-gen" hidden>
             ${PANEL_BLOCK_DIVIDER_HTML}
-            ${buildFontExtrudeSectionTitleHtml('Reveal')}
+            <div class="font-extrude-reset-scope" data-reset-scope="font-extrude-reveal">
+            ${buildFontExtrudeSectionTitleHtml('Reveal', 'font-extrude-reveal')}
             ${FONT_EXTRUDE_ANIMATION_CONTROLS_HTML}
+            </div>
             ${PANEL_BLOCK_DIVIDER_HTML}
-            ${buildFontExtrudeSectionTitleHtml('Constant')}
+            <div class="font-extrude-reset-scope" data-reset-scope="font-extrude-looping-motion">
+            ${buildFontExtrudeSectionTitleHtml('Looping Motion', 'font-extrude-looping-motion')}
             ${FONT_EXTRUDE_CONSTANT_CONTROLS_HTML}
+            </div>
             ${PANEL_BLOCK_DIVIDER_HTML}
-            ${buildFontExtrudeSectionTitleHtml('Preview')}
-            ${FONT_EXTRUDE_PREVIEW_CONTROLS_HTML}
+            ${FONT_EXTRUDE_REVEAL_EMISSIVE_HTML}
           </div>
 `;

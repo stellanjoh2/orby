@@ -104,7 +104,7 @@ export class UIHelpers {
     const cleaned = String(text)
       .trim()
       .replace(/,/g, '.')
-      .replace(/\s*(°|×|%|K|m)$/i, '')
+      .replace(/\s*(°|×|%|K|m|s)$/i, '')
       .trim();
     if (!cleaned || cleaned === '-' || cleaned === '.') return NaN;
     return parseFloat(cleaned);
@@ -141,7 +141,7 @@ export class UIHelpers {
   }
 
   /**
-   * Click a slider value label to type an exact value; double-click to reset to default.
+   * Click a slider value label to type an exact value; Alt+click to reset to default.
    */
   setupValueLabelInlineEdit() {
     if (this._valueLabelEditBound) return;
@@ -151,31 +151,26 @@ export class UIHelpers {
     const root = this.ui?.dom?.panelsContainer ?? document;
     const resolveValueLabel = (event) =>
       event.target.closest('.value[data-output], #svgExtrudeColorDepths .value');
-    const EDIT_DELAY_MS = 250;
-    /** @type {{ label: Element, timer: number } | null} */
-    let pendingEdit = null;
-
-    const clearPendingEdit = () => {
-      if (!pendingEdit) return;
-      clearTimeout(pendingEdit.timer);
-      pendingEdit = null;
-    };
 
     root.addEventListener('click', (event) => {
       const label = resolveValueLabel(event);
       if (!label) return;
-      if (label.classList.contains('is-editing')) return;
       if (event.target.closest('.value-inline-input')) return;
 
+      if (label.classList.contains('is-editing')) return;
+
+      if (event.altKey) {
+        event.preventDefault();
+        const slider = this.resolveSliderForValueLabel(label);
+        if (slider) this.resetRangeSliderToDefault(slider);
+        return;
+      }
+
+      // Second click of a double-click is handled by dblclick (select all).
+      if (event.detail > 1) return;
+
       event.preventDefault();
-      clearPendingEdit();
-      pendingEdit = {
-        label,
-        timer: window.setTimeout(() => {
-          pendingEdit = null;
-          this.startValueLabelEdit(label);
-        }, EDIT_DELAY_MS),
-      };
+      this.startValueLabelEdit(label);
     });
 
     root.addEventListener('dblclick', (event) => {
@@ -184,16 +179,13 @@ export class UIHelpers {
       event.preventDefault();
 
       if (label.classList.contains('is-editing')) {
-        if (event.target.closest('.value-inline-input')) return;
-        this.cancelValueLabelEdit();
-      } else {
-        clearPendingEdit();
+        const input = label.querySelector('.value-inline-input');
+        input?.focus();
+        input?.select();
+        return;
       }
 
-      const slider = this.resolveSliderForValueLabel(label);
-      if (slider) {
-        this.resetRangeSliderToDefault(slider);
-      }
+      this.startValueLabelEdit(label);
     });
   }
 
@@ -611,7 +603,8 @@ export class UIHelpers {
     const value = parseFloat(slider.value) || 0;
     
     // Detect if this is a centered slider (min < 0 and max > 0)
-    const isCentered = min < 0 && max > 0;
+    const fillMinToValue = sliderLine?.classList.contains('slider-line--fill-min-to-value');
+    const isCentered = min < 0 && max > 0 && !fillMinToValue;
     
     if (isCentered) {
       // Center-outward fill: fill from center point outward

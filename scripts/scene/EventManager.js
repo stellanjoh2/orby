@@ -377,8 +377,10 @@ export class EventManager {
       s.syncExportVideoPreviewSettings(payload),
     );
     eventBus.on('export:movement-preview-stop', (payload = {}) => {
-      if (s.exportMovementPreview?.isActive?.()) {
-        s.exportMovementPreview.stop({ silent: payload?.silent ?? true });
+      if (!s.exportMovementPreview?.isActive?.()) return;
+      s.exportMovementPreview.stop({ silent: payload?.silent ?? true });
+      if (typeof payload.toast === 'string' && payload.toast) {
+        s.ui?.showToast?.(payload.toast, 2800, { notification: false });
       }
     });
 

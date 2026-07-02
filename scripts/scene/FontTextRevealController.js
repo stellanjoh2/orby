@@ -16,9 +16,11 @@ import {
   DEFAULT_FONT_REVEAL_SLIDE_DEPTH,
   DEFAULT_FONT_REVEAL_SLIDE_TIME,
   normalizeFontRevealSlideDirection,
+  normalizeFontRevealStaggerEasing,
   isFontRevealAnimationActive,
   normalizeFontRevealType,
   normalizeFontRevealUnit,
+  isRevealGlyphVisibleAtExportProgress,
   resetRevealGlyphPose,
 } from './fontTextRevealTypes.js';
 import {
@@ -35,6 +37,23 @@ import {
   normalizeFontRevealEmissiveSlamEnabled,
   restoreRevealGlyphEmissive,
 } from './fontTextRevealEmissive.js';
+import {
+  applyTrackingAnimatorToGlyphStates,
+  buildLineRestYBaselines,
+  clampFontTrackingAnimatorTimeSec,
+  computeAnimatedTrackingValue,
+  computeScrubTrackingMotionElapsed,
+  computeTrackingAnimatorAmountFromPercent,
+  computeTrackingAnimatorProgress,
+  computeTypographyLineBoundsFromRest,
+  DEFAULT_FONT_TRACKING_ANIMATOR_TIME_SEC,
+  isFontTrackingAnimatorModel,
+  normalizeFontLineHeight,
+  normalizeFontTrackingAnimatorEnabled,
+  normalizeFontTrackingAnimatorEasing,
+  resolveFontTrackingAnimatorAmountPercent,
+} from './fontTextTrackingAnimation.js';
+import { FONT_EXTRUDE_TARGET_CAP_HEIGHT } from '../import/extrudeDetail.js';
 
 export {
   DEFAULT_FONT_REVEAL_DURATION_SEC,
@@ -91,6 +110,7 @@ export class FontTextRevealController {
    *     playing: boolean,
    *   }) => void,
    *   onNeedRender?: () => void,
+   *   onTypographyLayoutChange?: () => void,
    *   reapplyMaterialEmissive?: () => void,
    * }} [options]
    * @param {() => void} [options.reapplyMaterialEmissive] Re-apply Mesh → Emissive slider to live materials (no event loop).
@@ -99,11 +119,13 @@ export class FontTextRevealController {
     stateStore,
     onPreviewTimeUpdate = null,
     onNeedRender = null,
+    onTypographyLayoutChange = null,
     reapplyMaterialEmissive = null,
   } = {}) {
     this.stateStore = stateStore;
     this.onPreviewTimeUpdate = onPreviewTimeUpdate;
     this.onNeedRender = onNeedRender;
+    this.onTypographyLayoutChange = onTypographyLayoutChange;
     this._reapplyMaterialEmissive = reapplyMaterialEmissive;
     /** @type {THREE.Object3D[]} */
     this._glyphGroups = [];
@@ -128,6 +150,10 @@ export class FontTextRevealController {
     /** @type {THREE.Object3D | null} */
     this._boundModel = null;
     this._elapsed = 0;
+    /** Export-only tracking clock. */
+    this._trackingElapsed = 0;
+    /** Viewport tracking animator clock — independent of reveal duration. */
+    this._trackingMotionElapsed = 0;
     this._exportDriveActive = false;
     /** @type {'idle' | 'playing' | 'paused'} */
     this._previewMode = 'idle';
@@ -139,6 +165,10 @@ export class FontTextRevealController {
     this._constantController = null;
     /** Resume reveal preview when {@link #applyPauseAll} clears after pausing a playing preview. */
     this._resumeRevealWhenPauseAllClears = false;
+    /** Hold tracking at the Amount start pose while tuning (until play / reset). */
+    this._trackingAmountPreviewPinned = false;
+    /** @type {Map<number, number>} Average rest Y per line — baked at bind for live line-height. */
+    this._lineRestYBaselines = new Map();
   }
 
   /** @param {import('./FontTextConstantController.js').FontTextConstantController | null} controller */
@@ -171,9 +201,11 @@ export class FontTextRevealController {
    */
   getPreviewDurationSec() {
     const revealLen = this.isEnabled() ? this._revealFullySettledElapsedSec() : 0;
+    const trackingLen = this.isTrackingAnimatorActive() ? this.getTrackingAnimatorTimeSec() : 0;
     const constLen = this._activeConstantCycleSec();
-    if (constLen <= 0) return revealLen || this.getDurationSec();
-    const base = Math.max(revealLen, constLen);
+    const motionLen = Math.max(revealLen, trackingLen);
+    if (constLen <= 0) return motionLen || this.getDurationSec();
+    const base = Math.max(motionLen, constLen);
     const cycles = Math.max(1, Math.ceil(base / constLen - 1e-6));
     return cycles * constLen;
   }
@@ -223,6 +255,11 @@ export class FontTextRevealController {
     return normalizeFontRevealSlideDirection(raw ?? DEFAULT_FONT_REVEAL_SLIDE_DIRECTION);
   }
 
+  getRevealStaggerEasing() {
+    const raw = this.stateStore?.getState()?.fontExtrude?.revealStaggerEasing;
+    return normalizeFontRevealStaggerEasing(raw);
+  }
+
   isLoopEnabled() {
     const loop = this.stateStore?.getState()?.fontExtrude?.revealLoop;
     return loop !== false;
@@ -258,6 +295,204 @@ export class FontTextRevealController {
     );
   }
 
+  _isTrackingAnimatorConfigured() {
+    if (!normalizeFontTrackingAnimatorEnabled(
+      this.stateStore?.getState()?.fontExtrude?.trackingAnimatorEnabled,
+    )) {
+      return false;
+    }
+    if (!isFontTrackingAnimatorModel(this._boundModel)) return false;
+    return this._glyphStates.length > 0;
+  }
+
+  isTrackingAnimatorActive() {
+    if (!this._isTrackingAnimatorConfigured()) return false;
+    if (this.getTrackingAnimatorTimeSec() <= 0) return false;
+    const amountIncrease = computeTrackingAnimatorAmountFromPercent(
+      this.getMasterTracking(),
+      this.getTrackingAnimatorAmountPercent(),
+    );
+    return amountIncrease > 1e-6;
+  }
+
+  isTrackingAmountPreviewPinned() {
+    return this._trackingAmountPreviewPinned;
+  }
+
+  isPreviewAnimationActive() {
+    return (
+      this.isEnabled()
+      || this.isTrackingAnimatorActive()
+      || (this._constantController?.isEnabled?.() ?? false)
+    );
+  }
+
+  getBakedTracking() {
+    const fromModel = Number(this._boundModel?.userData?.orbyFontGeneratedTracking);
+    return Number.isFinite(fromModel) ? fromModel : 0;
+  }
+
+  /** Current letter-spacing master value (typography slider). */
+  getMasterTracking() {
+    const fromState = Number(this.stateStore?.getState()?.fontExtrude?.tracking);
+    if (Number.isFinite(fromState)) return fromState;
+    return this.getBakedTracking();
+  }
+
+  /** @deprecated use {@link getBakedTracking} */
+  getGeneratedTracking() {
+    return this.getBakedTracking();
+  }
+
+  /**
+   * @param {number} elapsedSec
+   * @param {{ trackingPreviewElapsed?: number }} [options]
+   */
+  _resolveTrackingMotionElapsed(elapsedSec, options = {}) {
+    if (this._trackingAmountPreviewPinned && this._previewMode !== 'playing') return 0;
+    if (Number.isFinite(options.trackingPreviewElapsed)) {
+      return Math.max(0, options.trackingPreviewElapsed);
+    }
+    if (this._exportDriveActive) {
+      return Math.max(0, this._trackingElapsed);
+    }
+    const trackingTime = this.getTrackingAnimatorTimeSec();
+    if (
+      (this._previewMode === 'playing' || this._previewMode === 'paused' || this._previewMode === 'idle')
+      && this._isTrackingAnimatorConfigured()
+      && trackingTime > 0
+    ) {
+      const motion = Math.max(0, this._trackingMotionElapsed);
+      if (this._previewMode === 'idle' && motion >= trackingTime - 1e-4) {
+        return trackingTime;
+      }
+      return motion;
+    }
+    if (this._previewMode === 'idle') {
+      return Math.max(0, this._elapsed);
+    }
+    return Math.max(0, elapsedSec);
+  }
+
+  _resetTrackingClock() {
+    this._trackingMotionElapsed = 0;
+    this._trackingElapsed = 0;
+  }
+
+  /** When Tracking Time shrinks, restart from Amount Start — never inherit old progress. */
+  _reconcileTrackingMotionToTime() {
+    const trackingTime = this.getTrackingAnimatorTimeSec();
+    if (trackingTime <= 0) {
+      this._resetTrackingClock();
+      return;
+    }
+    if (this._trackingMotionElapsed > trackingTime + 1e-4) {
+      this._resetTrackingClock();
+    }
+  }
+
+  _advanceTrackingMotion(delta) {
+    if (!this.isTrackingAnimatorActive()) return;
+    const d = typeof delta === 'number' && Number.isFinite(delta) ? delta : 0;
+    if (d <= 0) return;
+    const trackingTime = this.getTrackingAnimatorTimeSec();
+    if (trackingTime <= 0) return;
+    this._trackingMotionElapsed = Math.min(this._trackingMotionElapsed + d, trackingTime);
+  }
+
+  /** Idle pose clocks — reveal settled + tracking settled can differ in length. */
+  _syncIdleCompositeClocks() {
+    if (this.isEnabled()) {
+      this._elapsed = this._revealFullySettledElapsedSec();
+    } else {
+      this._elapsed = 0;
+    }
+    if (this.isTrackingAnimatorActive()) {
+      const trackingTime = this.getTrackingAnimatorTimeSec();
+      this._trackingMotionElapsed = trackingTime;
+      this._trackingElapsed = trackingTime;
+    } else {
+      this._trackingMotionElapsed = 0;
+      this._trackingElapsed = this._elapsed;
+    }
+  }
+
+  /** Phase-zero clocks for preview restart / reset animations. */
+  _resetCompositeClocks() {
+    this._elapsed = 0;
+    this._trackingMotionElapsed = 0;
+    this._trackingElapsed = 0;
+  }
+
+  _clearTrackingAmountPreviewPin() {
+    this._trackingAmountPreviewPinned = false;
+  }
+
+  getBakedAlign() {
+    const align = this._boundModel?.userData?.orbyFontGeneratedAlign;
+    return align === 'center' || align === 'right' ? align : 'left';
+  }
+
+  /** @deprecated use {@link getBakedAlign} */
+  getGeneratedAlign() {
+    return this.getBakedAlign();
+  }
+
+  /** Current horizontal alignment (typography select). */
+  getMasterAlign() {
+    const fromState = this.stateStore?.getState()?.fontExtrude?.align;
+    if (fromState === 'center' || fromState === 'right' || fromState === 'left') {
+      return fromState;
+    }
+    return this.getBakedAlign();
+  }
+
+  getBakedLineHeight() {
+    const fromModel = Number(this._boundModel?.userData?.orbyFontGeneratedLineHeight);
+    if (Number.isFinite(fromModel)) return normalizeFontLineHeight(fromModel);
+    const inferred = this._inferBakedLineHeightFromRestBaselines();
+    if (Number.isFinite(inferred)) return normalizeFontLineHeight(inferred);
+    return normalizeFontLineHeight(this.stateStore?.getState()?.fontExtrude?.lineHeight ?? 1);
+  }
+
+  /** Legacy meshes without baked metadata — infer multiplier from rest line spacing. */
+  _inferBakedLineHeightFromRestBaselines() {
+    if (this._lineRestYBaselines.size <= 1) return NaN;
+    const y0 = this._lineRestYBaselines.get(0);
+    const y1 = this._lineRestYBaselines.get(1);
+    if (y0 === undefined || y1 === undefined) return NaN;
+    const spacing = Math.abs(y1 - y0);
+    if (spacing < 1e-8) return NaN;
+    return spacing / FONT_EXTRUDE_TARGET_CAP_HEIGHT;
+  }
+
+  /** Current line-height multiplier (typography slider). */
+  getMasterLineHeight() {
+    const fromState = Number(this.stateStore?.getState()?.fontExtrude?.lineHeight);
+    if (Number.isFinite(fromState)) return normalizeFontLineHeight(fromState);
+    return this.getBakedLineHeight();
+  }
+
+  getLayoutFontSize() {
+    const size = Number(this._boundModel?.userData?.orbyFontLayoutFontSize);
+    return Number.isFinite(size) && size > 0 ? size : 72;
+  }
+
+  getTrackingAnimatorAmountPercent() {
+    const fontState = this.stateStore?.getState()?.fontExtrude;
+    return resolveFontTrackingAnimatorAmountPercent(fontState, this.getMasterTracking());
+  }
+
+  getTrackingAnimatorTimeSec() {
+    const raw = this.stateStore?.getState()?.fontExtrude?.trackingAnimatorTimeSec;
+    return clampFontTrackingAnimatorTimeSec(raw ?? DEFAULT_FONT_TRACKING_ANIMATOR_TIME_SEC);
+  }
+
+  getTrackingAnimatorEasing() {
+    const raw = this.stateStore?.getState()?.fontExtrude?.trackingAnimatorEasing;
+    return normalizeFontTrackingAnimatorEasing(raw);
+  }
+
   isPreviewPlaying() {
     return this._previewMode === 'playing';
   }
@@ -283,7 +518,11 @@ export class FontTextRevealController {
   }
 
   _revealTimingOptions() {
-    return { slideDepth: this.getSlideDepth(), slideTime: this.getSlideTime() };
+    return {
+      slideDepth: this.getSlideDepth(),
+      slideTime: this.getSlideTime(),
+      staggerEasing: this.getRevealStaggerEasing(),
+    };
   }
 
   _revealEmissiveDecaySec() {
@@ -447,7 +686,11 @@ export class FontTextRevealController {
       return;
     }
     if (this.isEnabled()) {
-      this.applyAtTime(this._revealFullySettledElapsedSec());
+      this._syncIdleCompositeClocks();
+      this.applyAtTime(this._elapsed);
+    } else {
+      this._resetGlyphs();
+      this._applyTypographyTracking(0, {});
     }
   }
 
@@ -469,7 +712,8 @@ export class FontTextRevealController {
     if (this._exportDriveActive) return false;
     if (scene?.exportMovementPreview?.isActive?.()) return false;
     if (scene?.animationController?.isExportSessionActive?.()) return false;
-    return this._previewMode === 'playing' && this.isEnabled();
+    if (this._previewMode !== 'playing') return false;
+    return this.isEnabled() || this.isTrackingAnimatorActive();
   }
 
   /**
@@ -489,6 +733,7 @@ export class FontTextRevealController {
    */
   bindModel(model) {
     this._stopPreviewLoop();
+    this._clearTrackingAmountPreviewPin();
     this._constantController?.beginModelTransition?.();
     this._glyphGroups = [];
     this._glyphStates = [];
@@ -499,14 +744,18 @@ export class FontTextRevealController {
     this._lineGlyphCounts = [];
     this._lineHasCircularGlyph = [];
     this._lineCount = 0;
+    this._lineRestYBaselines = new Map();
     this._lineGroupMeta = new Map();
     this._wordGroupMeta = new Map();
+    /** @type {Map<number, { minX: number, maxX: number, width: number }> | null} */
+    this._typographyLayoutBounds = null;
+    this._typographyParagraphWidth = 1;
     this._previewMode = 'idle';
     this._resumeRevealWhenPauseAllClears = false;
 
     if (!isFontExtrudeRevealModel(model)) {
       this._boundModel = null;
-      this._elapsed = 0;
+      this._resetCompositeClocks();
       this._constantController?.onModelBound?.();
       this._notifyPreviewTime();
       return;
@@ -532,6 +781,8 @@ export class FontTextRevealController {
     this._buildGlyphStates();
     this._buildWordGroupMeta();
     this._buildLineGroupMeta();
+    this._buildLineRestYBaselines();
+    this._buildTypographyLayoutBounds();
     this.syncMaterialEmissiveBaseline();
 
     this._showIdlePose();
@@ -544,18 +795,28 @@ export class FontTextRevealController {
 
   /**
    * Snap reveal + constant animations back to their rest starting pose (phase zero).
-   * @param {{ resumeConstant?: boolean }} [options]
+   * @param {{ resumeConstant?: boolean, showSettledIdle?: boolean }} [options]
    */
-  resetAllAnimations({ resumeConstant = true } = {}) {
+  resetAllAnimations({ resumeConstant = true, showSettledIdle = false } = {}) {
     if (!this.ensureBoundToModel(this._boundModel)) return;
 
     if (this.isPreviewPlaying()) {
       this._stopPreviewLoop();
     }
+    this._clearTrackingAmountPreviewPin();
     this._previewMode = 'idle';
-    this._elapsed = this.isEnabled() ? this._revealFullySettledElapsedSec() : 0;
+    this._resetCompositeClocks();
 
     this._constantController?.resetAnimation?.();
+    if (
+      showSettledIdle
+      && (this.isEnabled() || this.isTrackingAnimatorActive())
+    ) {
+      this._syncIdleCompositeClocks();
+      this.applyAtTime(this._elapsed);
+    } else {
+      this.applyAtTime(0);
+    }
     if (resumeConstant && !this.isPauseAll()) {
       this._constantController?.resumeLiveUpdates?.();
     }
@@ -652,6 +913,13 @@ export class FontTextRevealController {
     }
   }
 
+  _buildLineRestYBaselines() {
+    this._lineRestYBaselines = buildLineRestYBaselines(
+      this._glyphStates,
+      this._glyphLineIndices,
+    );
+  }
+
   _buildLineGroupMeta() {
     this._lineGroupMeta = new Map();
     if (!this._glyphStates.length) return;
@@ -725,8 +993,31 @@ export class FontTextRevealController {
         restScale: group.scale.clone(),
         slideDistance,
         meshMaterials,
+        lastTypographyX: 0,
+        lastTypographyY: 0,
       };
     });
+  }
+
+  /** Canonical ink bounds at bind — immune to Shader Lab geometry/material rebuild drift. */
+  _buildTypographyLayoutBounds() {
+    this._typographyLayoutBounds = null;
+    this._typographyParagraphWidth = 1;
+    if (!this._glyphStates.length) return;
+
+    for (const state of this._glyphStates) {
+      resetRevealGlyphPose(state);
+      state.lastTypographyX = 0;
+      state.lastTypographyY = 0;
+    }
+    this._boundModel?.updateMatrixWorld(true);
+    const { boundsByLine, paragraphWidth } = computeTypographyLineBoundsFromRest(
+      this._glyphStates,
+      this._glyphLineIndices,
+      this._lineGlyphCounts,
+    );
+    this._typographyLayoutBounds = boundsByLine;
+    this._typographyParagraphWidth = paragraphWidth;
   }
 
   /** @param {THREE.Object3D} model */
@@ -829,10 +1120,11 @@ export class FontTextRevealController {
     this._lineGlyphCounts = [];
     this._lineHasCircularGlyph = [];
     this._lineCount = 0;
+    this._lineRestYBaselines = new Map();
     this._lineGroupMeta = new Map();
     this._wordGroupMeta = new Map();
     this._boundModel = null;
-    this._elapsed = 0;
+    this._resetCompositeClocks();
     this._exportDriveActive = false;
     this._previewMode = 'idle';
     this._resumeRevealWhenPauseAllClears = false;
@@ -848,10 +1140,14 @@ export class FontTextRevealController {
     const target = model ?? this._boundModel;
     if (!this.ensureBoundToModel(target)) return false;
     if (this.isPauseAll()) return false;
+    this._clearTrackingAmountPreviewPin();
     const duration = this.getPreviewDurationSec();
 
-    if (this._previewMode === 'idle' || this._elapsed >= Math.max(0, duration - 1e-4)) {
-      this._elapsed = 0;
+    const atTimelineEnd = this._elapsed >= Math.max(0, duration - 1e-4);
+    const atTimelineStart =
+      this._elapsed <= 1e-4 && this._trackingMotionElapsed <= 1e-4;
+    if (this._previewMode !== 'paused' || atTimelineEnd || atTimelineStart) {
+      this._resetCompositeClocks();
       this.applyAtTime(0);
     }
 
@@ -860,7 +1156,10 @@ export class FontTextRevealController {
     this._constantController?.setPreviewElapsed?.(this._elapsed);
 
     this._previewMode = 'playing';
-    this._startPreviewLoop();
+    this._stopPreviewLoop();
+    if (this.isPreviewAnimationActive()) {
+      this._startPreviewLoop();
+    }
     this._notifyPreviewTime();
     this._requestRender();
     return true;
@@ -933,9 +1232,12 @@ export class FontTextRevealController {
     if (!this.ensureBoundToModel(target)) return false;
 
     this._previewMode = 'playing';
-    this._elapsed = 0;
+    this._resetCompositeClocks();
     this.applyAtTime(0);
-    this._startPreviewLoop();
+    this._stopPreviewLoop();
+    if (this.isPreviewAnimationActive()) {
+      this._startPreviewLoop();
+    }
     this._notifyPreviewTime();
     this._requestRender();
     return true;
@@ -949,11 +1251,15 @@ export class FontTextRevealController {
     const target = model ?? this._boundModel;
     if (!this.ensureBoundToModel(target)) return false;
 
+    this._clearTrackingAmountPreviewPin();
     const duration = this.getPreviewDurationSec();
     const p = Math.max(0, Math.min(1, Number(progress) || 0));
     this._previewMode = 'paused';
     this._stopPreviewLoop();
     this._elapsed = p * duration;
+    const trackingTime = this.getTrackingAnimatorTimeSec();
+    this._trackingMotionElapsed = computeScrubTrackingMotionElapsed(this._elapsed, trackingTime);
+    this._trackingElapsed = this._trackingMotionElapsed;
     this._constantController?.setPreviewElapsed?.(this._elapsed);
     this.applyAtTime(this._elapsed);
     this._notifyPreviewTime();
@@ -971,7 +1277,7 @@ export class FontTextRevealController {
 
   /**
    * @param {number} elapsedSec
-   * @param {{ skipConstant?: boolean }} [options]
+   * @param {{ skipConstant?: boolean, trackingPreviewElapsed?: number }} [options]
    */
   applyAtTime(elapsedSec, options = {}) {
     const duration = this.getDurationSec();
@@ -984,8 +1290,14 @@ export class FontTextRevealController {
     if (!revealActive) {
       for (const state of this._glyphStates) {
         resetRevealGlyphPose(state);
+        state.lastTypographyX = 0;
+        state.lastTypographyY = 0;
       }
-    } else {
+    }
+
+    this._applyTypographyTracking(elapsedSec, options);
+
+    if (revealActive) {
       const slideDepth = this.getSlideDepth();
       const slideTime = this.getSlideTime();
       const slideDirection = this.getSlideDirection();
@@ -993,7 +1305,11 @@ export class FontTextRevealController {
       const emissiveStrength = this.getEmissiveSlamStrength();
       const emissiveDecaySec = this.getEmissiveSlamDecaySec();
       const emissiveColor = this.getEmissiveSlamColor();
-      const timing = { slideDepth, slideTime };
+      const timing = {
+        slideDepth,
+        slideTime,
+        staggerEasing: this.getRevealStaggerEasing(),
+      };
       const useWordGroup = this.getRevealUnit() === 'word' && this._wordGroupMeta.size > 0;
       for (let i = 0; i < count; i += 1) {
         const state = this._glyphStates[i];
@@ -1043,6 +1359,7 @@ export class FontTextRevealController {
           totalDurationSec: duration,
           slideDepth,
           slideTime,
+          staggerEasing: timing.staggerEasing,
         });
       }
     }
@@ -1053,9 +1370,60 @@ export class FontTextRevealController {
     this._boundModel?.updateMatrixWorld?.(true);
   }
 
+  /**
+   * Live letter-spacing + optional tracking animator — offsets glyph groups from baked layout.
+   * @param {number} elapsedSec
+   * @param {{ trackingPreviewElapsed?: number }} [options]
+   */
+  _applyTypographyTracking(elapsedSec, options = {}) {
+    if (!this._glyphStates.length || !isFontTrackingAnimatorModel(this._boundModel)) return;
+
+    const bakedTracking = this.getBakedTracking();
+    const masterTracking = this.getMasterTracking();
+    let targetTracking = masterTracking;
+
+    if (this._isTrackingAnimatorConfigured()) {
+      const motionElapsed = this._resolveTrackingMotionElapsed(elapsedSec, options);
+      const percent = this.getTrackingAnimatorAmountPercent();
+      const amountIncrease = computeTrackingAnimatorAmountFromPercent(
+        masterTracking,
+        percent,
+      );
+      const durationSec = this.getTrackingAnimatorTimeSec();
+      const progress = computeTrackingAnimatorProgress(
+        motionElapsed,
+        durationSec,
+        this.getTrackingAnimatorEasing(),
+      );
+      targetTracking = computeAnimatedTrackingValue(
+        masterTracking,
+        amountIncrease,
+        progress,
+      );
+    }
+
+    applyTrackingAnimatorToGlyphStates(this._glyphStates, {
+      animatedTracking: targetTracking,
+      generatedTracking: bakedTracking,
+      bakedAlign: this.getBakedAlign(),
+      masterAlign: this.getMasterAlign(),
+      layoutFontSize: this.getLayoutFontSize(),
+      lineIndices: this._glyphLineIndices,
+      lineGlyphIndices: this._glyphLineGlyphIndices,
+      lineGlyphCounts: this._lineGlyphCounts,
+      bakedLineHeight: this.getBakedLineHeight(),
+      masterLineHeight: this.getMasterLineHeight(),
+      lineRestYBaselines: this._lineRestYBaselines,
+      layoutBounds: this._typographyLayoutBounds,
+      paragraphWidth: this._typographyParagraphWidth,
+    });
+  }
+
   _resetGlyphs() {
     for (const state of this._glyphStates) {
       resetRevealGlyphPose(state);
+      state.lastTypographyX = 0;
+      state.lastTypographyY = 0;
     }
     this._boundModel?.updateMatrixWorld?.(true);
   }
@@ -1063,8 +1431,8 @@ export class FontTextRevealController {
   /** Settle glyph groups before voxel SAT sampling (reveal offsets distort the grid). */
   snapGlyphsForVoxelization() {
     if (!this._boundModel || !this._glyphStates.length) return;
-    if (this.isEnabled()) {
-      this._elapsed = this._revealFullySettledElapsedSec();
+    if (this.isEnabled() || this.isTrackingAnimatorActive()) {
+      this._syncIdleCompositeClocks();
       this.applyAtTime(this._elapsed, { skipConstant: true });
     } else {
       this._resetGlyphs();
@@ -1073,17 +1441,24 @@ export class FontTextRevealController {
   }
 
   _showIdlePose() {
-    if (this.isEnabled()) {
-      this._elapsed = this._revealFullySettledElapsedSec();
+    if (
+      this.isEnabled()
+      || this.isTrackingAnimatorActive()
+      || this._constantController?.isEnabled?.()
+    ) {
+      this._syncIdleCompositeClocks();
       this.applyAtTime(this._elapsed);
-      return;
-    }
-    this._elapsed = 0;
-    if (this._constantController?.isEnabled?.()) {
+    } else {
+      this._resetCompositeClocks();
       this.applyAtTime(0);
-      return;
     }
-    this._resetGlyphs();
+    this._syncStudioPlacementAfterIdlePose();
+  }
+
+  /** Re-center font block on studio origin after idle typography/reveal pose settles. */
+  _syncStudioPlacementAfterIdlePose() {
+    if (this._previewMode === 'playing' || this._previewMode === 'paused') return;
+    this.onTypographyLayoutChange?.();
   }
 
   _notifyPreviewTime() {
@@ -1105,7 +1480,7 @@ export class FontTextRevealController {
     const tick = (now) => {
       this._previewRaf = 0;
       if (this.isPauseAll()) return;
-      if (this._previewMode !== 'playing' || !this.isEnabled()) return;
+      if (this._previewMode !== 'playing' || !this.isPreviewAnimationActive()) return;
 
       const delta = Math.max(0, (now - this._previewLastTs) / 1000);
       this._previewLastTs = now;
@@ -1132,7 +1507,7 @@ export class FontTextRevealController {
   update(delta) {
     if (this._previewRaf) return;
     if (this.isPauseAll()) return;
-    if (this._previewMode !== 'playing' || !this.isEnabled()) return;
+    if (this._previewMode !== 'playing' || !this.isPreviewAnimationActive()) return;
 
     // Single rule for every combination of settings: advance the reveal and the
     // constant together, then wrap (or stop, if Loop is off) at the composite
@@ -1141,13 +1516,14 @@ export class FontTextRevealController {
     const previewLen = this.getPreviewDurationSec();
     const d = typeof delta === 'number' && Number.isFinite(delta) ? delta : 0;
     this._elapsed += d;
+    this._advanceTrackingMotion(d);
     this._constantController?.advance(d);
 
     if (this._elapsed >= previewLen) {
       if (this.isLoopEnabled()) {
-        this._elapsed = 0;
+        this._resetCompositeClocks();
         this._constantController?.setPreviewElapsed?.(0);
-        this.applyAtTime(0);
+        this.applyAtTime(0, { trackingPreviewElapsed: 0 });
       } else {
         this._elapsed = previewLen;
         this._previewMode = 'paused';
@@ -1192,8 +1568,93 @@ export class FontTextRevealController {
   /**
    * @param {THREE.Object3D | null | undefined} [model]
    */
-  _applySettingsChange(model) {
-    this.ensureBoundToModel(model ?? this._boundModel);
+  _applyLiveTypographyChange(model) {
+    if (!this.ensureBoundToModel(model ?? this._boundModel)) return;
+    if (this._previewMode === 'playing' || this._previewMode === 'paused') {
+      this.applyAtTime(this._elapsed);
+    } else {
+      this._syncIdleCompositeClocks();
+      this.applyAtTime(this._elapsed);
+      this._syncStudioPlacementAfterIdlePose();
+    }
+    this._notifyPreviewTime();
+    this._requestRender();
+  }
+
+  _ensurePreviewLoopRunning() {
+    if (this._previewMode !== 'playing') return;
+    if (!this.isPreviewAnimationActive()) return;
+    this._startPreviewLoop();
+  }
+
+  /**
+   * @param {THREE.Object3D | null | undefined} [model]
+   */
+  onTypographyTrackingChange(model) {
+    this._applyLiveTypographyChange(model);
+  }
+
+  /**
+   * @param {THREE.Object3D | null | undefined} [model]
+   */
+  onTypographyAlignChange(model) {
+    this._applyLiveTypographyChange(model);
+  }
+
+  /**
+   * @param {THREE.Object3D | null | undefined} [model]
+   */
+  onTypographyLineHeightChange(model) {
+    this._applyLiveTypographyChange(model);
+  }
+
+  /**
+   * @param {THREE.Object3D | null | undefined} [model]
+   * @param {{ pinTrackingAmountPreview?: boolean, resetPreview?: boolean, resetTrackingClock?: boolean }} [options]
+   */
+  onTrackingAnimatorChange(model, options = {}) {
+    if (!this.ensureBoundToModel(model ?? this._boundModel)) {
+      this._notifyPreviewTime();
+      return;
+    }
+    const inPreview =
+      this._previewMode === 'playing' || this._previewMode === 'paused';
+    const wasPlaying = this._previewMode === 'playing';
+    if (options.resetPreview) {
+      this._previewMode = 'idle';
+      this._stopPreviewLoop();
+      this._resetCompositeClocks();
+      this._constantController?.setPreviewElapsed?.(0);
+    }
+    if (options.resetTrackingClock) {
+      this._resetTrackingClock();
+    } else {
+      this._reconcileTrackingMotionToTime();
+    }
+    if (options.pinTrackingAmountPreview && !inPreview) {
+      this._trackingAmountPreviewPinned = true;
+    } else if (inPreview) {
+      this._clearTrackingAmountPreviewPin();
+    } else if (options.resetTrackingClock) {
+      // Keep Amount Start pinned while tuning Tracking Time / easing at idle (see UI handlers).
+    } else {
+      this._clearTrackingAmountPreviewPin();
+    }
+    this._applySettingsChange(model, { ...options, skipEnsureBound: true });
+    if (wasPlaying) {
+      this._previewLastTs = performance.now();
+      this._ensurePreviewLoopRunning();
+    }
+  }
+
+  /**
+   * @param {THREE.Object3D | null | undefined} [model]
+   * @param {{ trackingPreviewElapsed?: number, skipEnsureBound?: boolean, resetPreview?: boolean, resetTrackingClock?: boolean }} [options]
+   */
+  _applySettingsChange(model, options = {}) {
+    if (!options.skipEnsureBound) {
+      this.ensureBoundToModel(model ?? this._boundModel);
+    }
     if (this._glyphStates.length && !this.isEmissiveSlamEnabled()) {
       this._restoreAllGlyphEmissive();
     }
@@ -1204,7 +1665,7 @@ export class FontTextRevealController {
       this._notifyPreviewTime();
       return;
     }
-    if (!this.isEnabled()) {
+    if (!this.isEnabled() && !this.isTrackingAnimatorActive()) {
       this._previewMode = 'idle';
       this._stopPreviewLoop();
       if (this._constantController?.isEnabled?.()) {
@@ -1223,9 +1684,16 @@ export class FontTextRevealController {
       // back when only the reveal duration is being nudged mid-preview.
       this._elapsed = Math.min(this._elapsed, this.getPreviewDurationSec());
       this.applyAtTime(this._elapsed);
+    } else if (options.resetPreview) {
+      this.applyAtTime(this._elapsed, options);
+      this._syncStudioPlacementAfterIdlePose();
+    } else if (options.resetTrackingClock) {
+      this.applyAtTime(this._elapsed, { ...options, trackingPreviewElapsed: 0 });
+      this._syncStudioPlacementAfterIdlePose();
     } else {
-      this._elapsed = this._revealFullySettledElapsedSec();
-      this.applyAtTime(this._elapsed);
+      this._syncIdleCompositeClocks();
+      this.applyAtTime(this._elapsed, options);
+      this._syncStudioPlacementAfterIdlePose();
     }
     this._notifyPreviewTime();
     this._requestRender();
@@ -1239,8 +1707,9 @@ export class FontTextRevealController {
     this.ensureBoundToModel(model ?? this._boundModel);
     this._constantController?.beginExportDrive?.();
     const revealActive = this.isEnabled();
+    const trackingActive = this.isTrackingAnimatorActive();
     const constantActive = this._constantController?.isEnabled?.() ?? false;
-    if (!revealActive && !constantActive) {
+    if (!revealActive && !constantActive && !trackingActive) {
       this._exportDriveActive = false;
       return;
     }
@@ -1264,13 +1733,90 @@ export class FontTextRevealController {
    * @param {number} exportTimeSec
    * @param {THREE.Object3D | null | undefined} [model]
    */
+  /**
+   * @param {number} exportTimeSec
+   * @param {THREE.Object3D | null | undefined} [model]
+   * @returns {boolean}
+   */
+  isFullyHiddenAtExportTime(exportTimeSec, model) {
+    if (!this.ensureBoundToModel(model ?? this._boundModel)) return false;
+    if (!this.isEnabled() || this._glyphStates.length === 0) return false;
+
+    const duration = this.getDurationSec();
+    if (duration <= 0) return false;
+
+    const type = this.getRevealType();
+    const elapsed = this._resolveExportRevealElapsed(Math.max(0, exportTimeSec));
+    const timing = this._revealTimingOptions();
+    const slideDepth = this.getSlideDepth();
+
+    for (let i = 0; i < this._glyphStates.length; i += 1) {
+      const { slotIndex, slotCount } = this._resolveRevealSlot(i);
+      const eased = computeGlyphRevealEase(
+        type,
+        slotIndex,
+        slotCount,
+        elapsed,
+        duration,
+        timing,
+      );
+      const landLinear = computeGlyphSlotProgress(
+        slotIndex,
+        slotCount,
+        elapsed,
+        duration,
+        timing,
+      );
+      const slideProgress = computeGlyphSlideProgress(
+        slotIndex,
+        slotCount,
+        elapsed,
+        duration,
+        timing,
+      );
+      if (
+        isRevealGlyphVisibleAtExportProgress(type, {
+          eased,
+          landLinear,
+          slideProgress,
+          slideDepth,
+        })
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * First export frame index where at least one glyph is visible.
+   *
+   * @param {number} startFrameIndex
+   * @param {number} totalFrames
+   * @param {number} fps
+   * @param {THREE.Object3D | null | undefined} [model]
+   * @returns {number}
+   */
+  findFirstVisibleExportFrameIndex(startFrameIndex, totalFrames, fps, model) {
+    const start = Math.max(0, Math.round(startFrameIndex));
+    const frames = Math.max(1, Math.round(totalFrames));
+    const rate = Math.max(1, fps);
+    if (!this.isFullyHiddenAtExportTime(start / rate, model)) return start;
+    for (let i = start + 1; i < frames; i += 1) {
+      if (!this.isFullyHiddenAtExportTime(i / rate, model)) return i;
+    }
+    return start;
+  }
+
   applyExportTime(exportTimeSec, model) {
     this.ensureBoundToModel(model ?? this._boundModel);
     const revealActive = this.isEnabled();
+    const trackingActive = this.isTrackingAnimatorActive();
     const constantActive = this._constantController?.isEnabled?.() ?? false;
-    if (!revealActive && !constantActive) return;
+    if (!revealActive && !constantActive && !trackingActive) return;
     this._exportDriveActive = true;
     const elapsed = Math.max(0, exportTimeSec);
+    this._trackingElapsed = elapsed;
     this._constantController?.setExportElapsed?.(elapsed);
     this._elapsed = revealActive
       ? this._resolveExportRevealElapsed(elapsed)

@@ -93,6 +93,9 @@ export class VideoExporter {
     beginFontTextRevealExportDrive = () => {},
     applyFontTextRevealExportFrame = () => {},
     endFontTextRevealExportDrive = () => {},
+    /** Pop/scale/fade reveals can hide all glyphs at export t=0 — preview capture may advance. */
+    isFontRevealFullyHiddenAtExportTime = () => false,
+    findFirstVisibleRevealExportFrameIndex = (startFrameIndex) => startFrameIndex,
     /** Dust Field point sprites are sized in absolute framebuffer pixels — scale for export size. */
     setDustFieldCaptureScale = () => {},
     getCurrentModel,
@@ -140,6 +143,8 @@ export class VideoExporter {
     this.beginFontTextRevealExportDrive = beginFontTextRevealExportDrive;
     this.applyFontTextRevealExportFrame = applyFontTextRevealExportFrame;
     this.endFontTextRevealExportDrive = endFontTextRevealExportDrive;
+    this.isFontRevealFullyHiddenAtExportTime = isFontRevealFullyHiddenAtExportTime;
+    this.findFirstVisibleRevealExportFrameIndex = findFirstVisibleRevealExportFrameIndex;
     this.setDustFieldCaptureScale = setDustFieldCaptureScale;
     this.getCurrentModel = getCurrentModel;
     this.getCurrentFile = getCurrentFile;
@@ -1296,6 +1301,26 @@ export class VideoExporter {
     });
     timing.fps = fps;
     timing.durationSec = durationSec;
+
+    let revealPreviewAdjusted = false;
+    const requestedPreviewFrameIndex = timing.frameIndex;
+    if (
+      opts.showThumbnail
+      && !Number.isFinite(opts.previewFrameIndex)
+      && typeof this.findFirstVisibleRevealExportFrameIndex === 'function'
+    ) {
+      const adjustedFrameIndex = this.findFirstVisibleRevealExportFrameIndex(
+        timing.frameIndex,
+        totalFrames,
+        fps,
+      );
+      if (adjustedFrameIndex !== timing.frameIndex) {
+        timing.frameIndex = adjustedFrameIndex;
+        timing.t = adjustedFrameIndex / Math.max(1, totalFrames - 1);
+        revealPreviewAdjusted = true;
+      }
+    }
+
     const exportTimeSec = resolveExportTimeSecFromFrame(timing.frameIndex, fps);
     const cameraLinearT = resolveExportCameraMovementLinearT(
       exportTimeSec,
@@ -1425,6 +1450,12 @@ export class VideoExporter {
       this.ui?.showToast?.(
         `Capture preview saved (${sizeNote}${alphaNote}, frame ${timing.frameIndex + 1}/${totalFrames})`,
         3600,
+        { notification: false },
+      );
+    } else if (revealPreviewAdjusted) {
+      this.ui?.showToast?.(
+        `Text reveal hasn't started at frame ${requestedPreviewFrameIndex + 1} — preview shows frame ${timing.frameIndex + 1}/${totalFrames}`,
+        4200,
         { notification: false },
       );
     }

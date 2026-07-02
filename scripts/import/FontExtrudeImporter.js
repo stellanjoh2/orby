@@ -36,6 +36,7 @@ import {
 } from './fontExtrudeBevelNormals.js';
 import { fontExtrudeHoleCapLooksFilled } from './fontExtrudeValidate.js';
 import { flipFontShapeHoles, opentypePathHasArea, opentypePathToShapes } from './opentypePathToShape.js';
+import { normalizeFontCircularGlyphGroupGeometry } from './fontCircularGeometryNormalize.js';
 import { applyFontCircularRingTransforms } from '../scene/fontCircularLayout.js';
 
 const DEFAULT_GLYPH_FILL = '#808080';
@@ -73,6 +74,8 @@ export class FontExtrudeImporter {
     this._detailLevel = 'high';
     /** @type {import('../scene/fontCircularLayout.js').FontCircularLayoutResult['circular'] | null} */
     this._circularLayout = null;
+    /** @type {{ minX: number, minY: number, maxX: number, maxY: number } | null} */
+    this._layoutInkBounds = null;
   }
 
   /**
@@ -82,6 +85,7 @@ export class FontExtrudeImporter {
   buildFromLayout(layout, options = {}) {
     this._glyphEntries = [];
     this._circularLayout = layout?.circular?.enabled ? layout.circular : null;
+    this._layoutInkBounds = layout?.inkBounds ?? null;
     const layoutLines = layout?.lines || [];
     /** @type {number[]} */
     const lineGlyphCounts = layoutLines.map((line) =>
@@ -427,7 +431,7 @@ export class FontExtrudeImporter {
       );
       applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
     } else {
-      this._normalizeFontGeometrySpace(group, this._layoutFontSize);
+      this._normalizeFontGeometrySpace(group, this._layoutFontSize, this._layoutInkBounds);
       applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
     }
     applyExtrudeBoxUvsToGroup(group);
@@ -542,7 +546,7 @@ export class FontExtrudeImporter {
   }
 
   /**
-   * Per-glyph normalize for circular wrap — pivot on the 2D cap baseline only (never 3D bbox).
+   * Per-glyph normalize for circular wrap — pivot on the 2D layout baseline only (never 3D bbox).
    * Keeps every letter upright on the same XZ ring plane.
    * @param {THREE.Group} group
    * @param {number} layoutFontSize
@@ -553,31 +557,18 @@ export class FontExtrudeImporter {
 
     group.children.forEach((glyphGroup) => {
       if (!glyphGroup.userData?.orbyFontGlyphGroup) return;
-
-      glyphGroup.children.forEach((child) => {
-        if (!child.isMesh || !child.geometry) return;
-        child.geometry.scale(uniformScale, uniformScale, 1);
-        child.geometry.rotateX(Math.PI);
-        child.geometry.computeBoundingBox();
-        const bb = child.geometry.boundingBox;
-        if (bb) {
-          const pivotX = (bb.min.x + bb.max.x) * 0.5;
-          const pivotY = bb.min.y;
-          child.geometry.translate(-pivotX, -pivotY, 0);
-        }
-        child.geometry.computeBoundingBox();
-        child.geometry.computeBoundingSphere();
-      });
-
-      glyphGroup.rotation.set(0, 0, 0);
+      normalizeFontCircularGlyphGroupGeometry(glyphGroup, uniformScale);
     });
   }
 
   /**
    * Scale by em height so adding lines/words does not shrink individual glyphs
    * (unlike SVG import, which fits the whole asset into ~2 units).
+   * @param {THREE.Group} group
+   * @param {number} layoutFontSize
+   * @param {{ minX: number, minY: number, maxX: number, maxY: number } | null} [layoutInkBounds]
    */
-  _normalizeFontGeometrySpace(group, layoutFontSize) {
+  _normalizeFontGeometrySpace(group, layoutFontSize, layoutInkBounds = null) {
     const bounds = new THREE.Box3().setFromObject(group);
     if (bounds.isEmpty()) return;
     const center = new THREE.Vector3();
@@ -585,10 +576,16 @@ export class FontExtrudeImporter {
 
     const em = Number(layoutFontSize) > 0 ? Number(layoutFontSize) : 72;
     const uniformScale = FONT_EXTRUDE_TARGET_CAP_HEIGHT / em;
+    // Match left-canonical extrude layout (minX = 0 per line) — live align/tracking
+    // assumes ink starts at the left edge, not paragraph horizontal center.
+    const anchorX = layoutInkBounds ? layoutInkBounds.minX : center.x;
+    const anchorY = layoutInkBounds
+      ? (layoutInkBounds.minY + layoutInkBounds.maxY) * 0.5
+      : center.y;
 
     group.traverse((child) => {
       if (!child.isMesh || !child.geometry) return;
-      child.geometry.translate(-center.x, -center.y, -center.z);
+      child.geometry.translate(-anchorX, -anchorY, -center.z);
       child.geometry.scale(uniformScale, uniformScale, 1);
       child.geometry.rotateX(Math.PI);
       child.geometry.computeBoundingBox();

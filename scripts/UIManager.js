@@ -52,7 +52,14 @@ import { AnimationControls } from './ui/AnimationControls.js';
 import { ExportPreviewControls } from './ui/ExportPreviewControls.js';
 import { ExportSectionControls } from './ui/ExportSectionControls.js';
 import { FontExtrudeUI } from './ui/FontExtrudeUI.js';
-import { ensureSvgExtrudeCoreControlsMounted, ensureSvgExtrudeSurfaceControlsMounted, ensureBaseSurfaceControlsMounted, ensureBaseGlassSurfaceControlsMounted, ensureBackdropSurfaceControlsMounted } from './ui/svgExtrudeControlsShared.js';
+import {
+  ensureFontExtrudeAnimationPreviewDockMounted,
+  ensureSvgExtrudeCoreControlsMounted,
+  ensureSvgExtrudeSurfaceControlsMounted,
+  ensureBaseSurfaceControlsMounted,
+  ensureBaseGlassSurfaceControlsMounted,
+  ensureBackdropSurfaceControlsMounted,
+} from './ui/svgExtrudeControlsShared.js';
 import { ResetControls } from './ui/ResetControls.js';
 import { BackgroundGradientControls } from './ui/BackgroundGradientControls.js';
 import { BackgroundImageControls } from './ui/BackgroundImageControls.js';
@@ -338,6 +345,7 @@ export class UIManager {
   cacheDom() {
     const q = (sel) => document.querySelector(sel);
     ensureSvgExtrudeCoreControlsMounted();
+    ensureFontExtrudeAnimationPreviewDockMounted();
     ensureSvgExtrudeSurfaceControlsMounted();
     ensureBaseSurfaceControlsMounted();
     ensureBaseGlassSurfaceControlsMounted();
@@ -379,6 +387,7 @@ export class UIManager {
     this.dom.shelfScrollbar = q('.shelf-scrollbar');
     this.dom.shelfScrollbarThumb = q('.shelf-scrollbar-thumb');
     this.dom.exportVideoPreviewDock = q('#exportVideoPreviewDock');
+    this.dom.fontExtrudeAnimationPreviewDock = q('#fontExtrudeAnimationPreviewDock');
     this.dom.toastTemplate = document.querySelector('#toastTemplate');
     this.dom.messageAlertModal = q('#messageAlertModal');
     this.dom.messageAlertTitle = q('#messageAlertTitle');
@@ -896,6 +905,7 @@ export class UIManager {
     this.exportPreviewControls.bind();
     this.exportSectionControls.bind();
     this.syncExportVideoPreviewDock?.();
+    this.syncFontExtrudeAnimationPreviewDock?.();
     this.watermark.bind();
     this.resetControls.bind();
     
@@ -2804,7 +2814,67 @@ export class UIManager {
     const show = videoOpen && exportTabActive;
     dock.hidden = !show;
     dock.setAttribute('aria-hidden', show ? 'false' : 'true');
-    this.dom.shelf?.classList.toggle('has-export-preview-dock', show);
+    const shelf = this.dom.shelf;
+    shelf?.classList.toggle('has-export-preview-dock', show);
+    if (!show) {
+      shelf?.style.removeProperty('--export-preview-dock-reserve');
+      this._syncShelfPreviewDockScrollReserve();
+      return;
+    }
+    requestAnimationFrame(() => {
+      if (dock.hidden) return;
+      const height = dock.offsetHeight;
+      if (height > 0) {
+        shelf?.style.setProperty('--export-preview-dock-reserve', `${height}px`);
+      }
+      this._syncShelfPreviewDockScrollReserve();
+    });
+  }
+
+  /** Bottom dock — Object tab, Generate from Font open, after first 3D text generate. */
+  syncFontExtrudeAnimationPreviewDock() {
+    const dock = this.dom.fontExtrudeAnimationPreviewDock;
+    if (!dock) return;
+    const fontState = this.stateStore?.getState()?.fontExtrude;
+    const meshTabActive = this.activeTab === 'mesh';
+    const panelOpen = !!fontState?.panelOpen;
+    const hasFontMesh = !!this.fontExtrudeUI?.hasFontMeshForPreviewDock?.();
+    const show = meshTabActive && panelOpen && hasFontMesh;
+    dock.hidden = !show;
+    dock.setAttribute('aria-hidden', show ? 'false' : 'true');
+    const shelf = this.dom.shelf;
+    shelf?.classList.toggle('has-font-animation-preview-dock', show);
+    if (!show) {
+      shelf?.style.removeProperty('--font-animation-preview-dock-reserve');
+      this._syncShelfPreviewDockScrollReserve();
+      return;
+    }
+    requestAnimationFrame(() => {
+      if (dock.hidden) return;
+      const height = dock.offsetHeight;
+      if (height > 0) {
+        shelf?.style.setProperty('--font-animation-preview-dock-reserve', `${height}px`);
+      }
+      this._syncShelfPreviewDockScrollReserve();
+    });
+  }
+
+  /** Pick the taller visible preview dock reserve for shelf scroll padding. */
+  _syncShelfPreviewDockScrollReserve() {
+    const shelf = this.dom.shelf;
+    if (!shelf) return;
+    const exportReserve = parseFloat(
+      shelf.style.getPropertyValue('--export-preview-dock-reserve') || '0',
+    );
+    const fontReserve = parseFloat(
+      shelf.style.getPropertyValue('--font-animation-preview-dock-reserve') || '0',
+    );
+    const reserve = Math.max(exportReserve, fontReserve);
+    if (reserve > 0) {
+      shelf.style.setProperty('--shelf-preview-dock-reserve', `${reserve}px`);
+    } else {
+      shelf.style.removeProperty('--shelf-preview-dock-reserve');
+    }
   }
 
   /**

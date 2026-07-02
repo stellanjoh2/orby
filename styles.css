@@ -675,6 +675,8 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions
 #isoPanUnlock.ghost-btn,
 #creativeLookPauseAnimations.ghost-btn,
 #exportPreviewPauseAll.ghost-btn,
+#fontExtrudePauseAllAnimations.ghost-btn,
+#fontExtrudeResetAnimations.ghost-btn,
 #lensFlareKeyLightConnect.ghost-btn,
 .slider-snap-btn {
   color: var(--text-dim);
@@ -689,6 +691,8 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions
 #isoPanUnlock.ghost-btn:hover:not(:disabled):not(.is-disabled),
 #creativeLookPauseAnimations.ghost-btn:hover:not(:disabled):not(.is-disabled),
 #exportPreviewPauseAll.ghost-btn:hover:not(:disabled):not(.is-disabled),
+#fontExtrudePauseAllAnimations.ghost-btn:hover:not(:disabled):not(.is-disabled),
+#fontExtrudeResetAnimations.ghost-btn:hover:not(:disabled):not(.is-disabled),
 #lensFlareKeyLightConnect.ghost-btn:hover:not(:disabled):not(.is-disabled),
 .slider-snap-btn:hover:not(:disabled):not(.is-disabled) {
   background: var(--accent);
@@ -4159,6 +4163,9 @@ html:not(.mobile-landing) .shelf .is-muted .slider-line input[type='range']::-mo
 }
 
 html:not(.mobile-landing) .shelf .slider-line .value-inline-input {
+  width: calc(4.25rem * var(--studio-ui-scale));
+  min-width: calc(2.75rem * var(--studio-ui-scale));
+  max-width: calc(4.25rem * var(--studio-ui-scale));
   height: calc(16px * var(--studio-ui-scale));
   border-radius: calc(4px * var(--studio-ui-scale));
 }
@@ -4751,15 +4758,13 @@ a.about-highlight:focus-visible {
   flex-direction: column;
 }
 
-/* Export video preview — docked below scroll area (AE-style), not buried in foldout */
+/* Export video preview — floats over scroll area (AE-style), content scrolls behind */
 .export-video-preview-dock {
   flex: 0 0 auto;
-  margin: 0 calc(-1 * var(--shelf-panel-gutter));
+  margin: 0;
   padding: var(--shelf-panel-gutter);
-  border-top: 1px solid color-mix(in srgb, var(--text-dim) 18%, transparent);
   background: #252525;
-  border-bottom-left-radius: var(--app-settings-chrome-radius);
-  border-bottom-right-radius: var(--app-settings-chrome-radius);
+  border-radius: var(--app-settings-chrome-radius);
 }
 
 .export-video-preview-dock[hidden] {
@@ -4772,6 +4777,10 @@ a.about-highlight:focus-visible {
   gap: var(--shelf-panel-gutter);
 }
 
+.export-video-preview-dock .block-title.export-section-title {
+  margin-bottom: 0;
+}
+
 .export-video-preview-dock .ghost-btn {
   font-size: var(--shelf-label-font-size);
 }
@@ -4780,14 +4789,87 @@ a.about-highlight:focus-visible {
   margin-bottom: 0;
 }
 
-.shelf.has-export-preview-dock .panels {
+/* 3D type animation preview — Object tab shelf dock (reveal + looping motion) */
+.font-extrude-animation-preview-dock {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: var(--shelf-panel-gutter);
+  background: #252525;
+  border-radius: var(--app-settings-chrome-radius);
+}
+
+.font-extrude-animation-preview-dock[hidden] {
+  display: none;
+}
+
+.font-extrude-animation-preview-dock__inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--shelf-panel-gutter);
+}
+
+.font-extrude-animation-preview-dock .block-title.font-extrude-section-title {
+  margin-bottom: 0;
+}
+
+.font-extrude-animation-preview-dock .ghost-btn {
+  font-size: var(--shelf-label-font-size);
+}
+
+.font-extrude-animation-preview-dock .animation-timeline {
+  margin-bottom: 0;
+}
+
+.font-extrude-animation-preview-dock .animation-transport-btns {
+  gap: 0.5rem;
+}
+
+.font-extrude-animation-preview-dock .font-extrude-preview-transport-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0;
+}
+
+.font-extrude-animation-preview-dock .font-extrude-pause-all-btn,
+.font-extrude-animation-preview-dock .font-extrude-reset-animations-btn {
+  margin-top: 0;
+}
+
+/* Reset-scope wrapper must not flatten the dock's column rhythm */
+.font-extrude-animation-preview-dock .font-extrude-reset-scope {
+  display: contents;
+}
+
+.shelf.has-export-preview-dock {
+  --export-preview-dock-reserve: calc(
+    2 * var(--shelf-panel-gutter) + var(--shelf-panel-gutter) + 2.6rem + 2.6rem + 1.75rem
+  );
+}
+
+.shelf.has-font-animation-preview-dock {
+  --font-animation-preview-dock-reserve: calc(
+    2 * var(--shelf-panel-gutter) + var(--shelf-panel-gutter) + 2.6rem + 2.6rem + 1.75rem
+  );
+}
+
+.shelf.has-export-preview-dock .export-video-preview-dock,
+.shelf.has-font-animation-preview-dock .font-extrude-animation-preview-dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+}
+
+.shelf:is(.has-export-preview-dock, .has-font-animation-preview-dock) .panels {
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
 
-.shelf.has-export-preview-dock .shelf-scroll {
-  /* Keep last export card clear of the dock seam */
-  --shelf-scroll-end-pad: calc(0.85rem + var(--shelf-vertical-extra));
+.shelf:is(.has-export-preview-dock, .has-font-animation-preview-dock) .shelf-scroll {
+  /* Reserve dock height so last card can scroll clear; content passes under the overlay */
+  --shelf-scroll-end-pad: var(--shelf-preview-dock-reserve);
 }
 
 .panels {
@@ -5016,6 +5098,17 @@ a.about-highlight:focus-visible {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 500;
+}
+
+.block-title.font-extrude-section-title.has-reset {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.block-title.font-extrude-section-title.has-reset > span:first-child {
+  min-width: 0;
 }
 
 .subsection .block-title,
@@ -5853,7 +5946,6 @@ button.advanced-info-doc-btn {
 /* Trailing [hidden] placeholders (e.g. font Circular wrap → post-gen) are not :last-child */
 :is(.panel-block, .subsection, .effect-foldout, .export-option-group)
   > :is(.slider-line, .color-line, .select-line, .map-slot-row):not(:has(~ :not([hidden]))),
-.effect-foldout :is(.slider-line, .color-line, .select-line, .map-slot-row):not(:has(~ :not([hidden]))),
 :is(.panel-block, .subsection, .effect-foldout)
   > :is(.slider-line, .color-line, .select-line):has(+ .effect-foldout, + .clip-planes-foldout),
 :is(.panel-block, .subsection, .effect-foldout)
@@ -6009,7 +6101,7 @@ button.advanced-info-doc-btn {
 }
 
 .color-line span:first-child,
-.select-line span:first-child {
+.select-line > span:first-child {
   letter-spacing: -0.01em;
   color: var(--text-dim);
 }
@@ -6569,19 +6661,27 @@ button.advanced-info-doc-btn {
   cursor: text;
 }
 
+.slider-line:has(> input[type='range']) .value:not(.is-editing) {
+  min-width: 2.25rem;
+  padding-block: 1px;
+}
+
 .slider-line .value.is-editing {
-  padding: 0 0 0 8px;
-  display: flex;
+  padding: 0;
+  display: inline-flex;
   align-items: center;
   justify-content: flex-end;
+  width: auto;
+  max-width: none;
   box-sizing: border-box;
 }
 
 .slider-line .value-inline-input {
   display: block;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
+  flex: 0 0 auto;
+  width: 4.25rem;
+  min-width: 2.75rem;
+  max-width: 4.25rem;
   height: 16px;
   min-height: 0;
   box-sizing: border-box;
@@ -6693,8 +6793,8 @@ button.advanced-info-doc-btn {
 }
 
 /*
- * Font Extrude — flat control stack (match SVG Extrude): display:contents mounts,
- * standard row margin-bottom, panel-block-divider between sections.
+ * Font Extrude — post-gen mounts use block/flex stacks; standard row gap or flex row-gap,
+ * panel-block-divider between sections.
  */
 [data-subsection='font-extrude'] .extrude-bevel-group {
   display: contents;
@@ -6719,16 +6819,32 @@ button.advanced-info-doc-btn {
   display: block;
 }
 
-[data-subsection='font-extrude'] .font-extrude-constant {
-  display: block;
-}
-
-[data-subsection='font-extrude'] .font-extrude-preview {
-  display: block;
-}
-
+[data-subsection='font-extrude'] .font-extrude-constant,
 [data-subsection='font-extrude'] .font-extrude-reveal-emissive {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--shelf-section-gap);
+}
+
+/*
+ * Reveal rows — explicit rhythm (animation ends with tracking; emissive mounts after looping motion).
+ */
+[data-subsection='font-extrude'] .font-extrude-animation > :is(.slider-line, .select-line) {
+  margin-bottom: var(--shelf-section-gap);
+}
+
+[data-subsection='font-extrude'] .font-extrude-animation > :is(.slider-line, .select-line):has(+ .panel-block-divider) {
+  margin-bottom: 0;
+}
+
+/*
+ * Flex row-gap owns rhythm inside emissive / constant mounts — zero row margins so foldout
+ * “trailing row” rules cannot collapse those stacks.
+ */
+[data-subsection='font-extrude']
+  :is(.font-extrude-constant, .font-extrude-reveal-emissive)
+  > :is(.slider-line, .color-line, .select-line) {
+  margin-bottom: 0;
 }
 
 #fontExtrudePanel.panel-block:has(.effect-foldout--expanded) {
@@ -9580,41 +9696,100 @@ body.ui-hidden .shelf {
     color-mix(in srgb, var(--brand-primary) 55%, transparent);
 }
 
+.font-extrude-family-trigger--opening {
+  opacity: 0.55;
+  cursor: wait;
+}
+
 .font-extrude-family-trigger-label {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: inherit;
+  color: var(--text);
 }
 
-.font-extrude-family-listbox {
-  margin: 0;
-  padding: 0.35rem 0;
-  list-style: none;
-  border-radius: 8px;
-  border: 1px solid var(--stroke);
-  background: rgba(22, 22, 24, 0.98);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-  overflow-y: auto;
+/* Figma-style font panel — portaled on body; pops left of shelf */
+/* Never render the picker panel inside the shelf — it must live in #orby-font-picker-portal */
+.shelf .font-extrude-family-panel,
+.font-extrude-family-picker .font-extrude-family-panel {
+  display: none !important;
+}
+
+#orby-font-picker-portal {
+  position: static;
+  z-index: 12000;
+}
+
+#orby-font-picker-portal .font-extrude-family-panel {
+  display: none;
+  position: fixed;
+  z-index: 12000;
+  min-width: 0;
+  box-sizing: border-box;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: var(--app-settings-chrome-radius);
+  border: none;
+  background: var(--ui-frosted-bg);
+  backdrop-filter: blur(var(--ui-frosted-blur));
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+#orby-font-picker-portal .font-extrude-family-panel.is-open {
+  display: flex;
+}
+
+.font-extrude-family-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  padding: 0.65rem 0.75rem 0.45rem;
+}
+
+.font-extrude-family-panel-title {
+  font-size: var(--shelf-headline-font-size);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.font-extrude-family-panel-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.font-extrude-family-panel-close:hover,
+.font-extrude-family-panel-close:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
   outline: none;
 }
 
-.font-extrude-family-listbox:focus {
-  border-color: var(--accent);
-}
-
-.font-extrude-family-listbox--floating {
-  min-width: 12rem;
-}
-
-.font-extrude-family-search-item {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 0.35rem 0.5rem 0.4rem;
-  margin: 0;
-  background: rgba(22, 22, 24, 0.98);
+.font-extrude-family-panel-search-wrap {
+  position: relative;
+  flex-shrink: 0;
+  padding: 0.45rem 0.65rem 0.55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--stroke) 65%, transparent);
+  background: color-mix(in srgb, var(--orby-black) 35%, transparent);
 }
 
 .font-extrude-family-search {
@@ -9622,40 +9797,137 @@ body.ui-hidden .shelf {
   box-sizing: border-box;
   border-radius: 8px;
   border: 1px solid var(--stroke);
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
   color: var(--text);
   font-family: inherit;
-  font-size: 0.9rem;
-  padding: 0.55rem 0.75rem;
+  font-size: 0.88rem;
+  padding: 0.5rem 0.65rem;
   outline: none;
 }
 
 .font-extrude-family-search:focus {
-  border-color: var(--accent);
-  background: rgba(255, 255, 255, 0.16);
+  border-color: var(--accent-border);
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.font-extrude-family-search::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+.font-extrude-family-list-scroll {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.font-extrude-family-listbox {
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  height: 100%;
+  overflow-y: auto;
+  outline: none;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.font-extrude-family-listbox::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none;
+}
+
+/* Match shelf .panels custom rail — 2px lime thumb, reveal on scroll only */
+.font-extrude-family-scrollbar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 2px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.font-extrude-family-scrollbar-thumb {
+  position: absolute;
+  left: 0;
+  width: 2px;
+  border-radius: 1px;
+  background: transparent;
+  will-change: transform;
+}
+
+.font-extrude-family-scrollbar.is-revealed .font-extrude-family-scrollbar-thumb {
+  background: var(--accent);
+}
+
+.font-extrude-family-listbox:focus-visible {
+  outline: none;
 }
 
 .font-extrude-family-option {
-  display: block;
-  padding: 0.5rem 0.75rem;
+  --font-extrude-family-check-col: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.65rem 0.42rem 0.5rem;
   margin: 0;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background 0.12s ease;
 }
 
 .font-extrude-family-option:hover,
 .font-extrude-family-option:focus {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   outline: none;
 }
 
 .font-extrude-family-option.is-selected {
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 2px 0 0 0 var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, rgba(255, 255, 255, 0.06));
+}
+
+.font-extrude-family-option.is-filtered-match.is-search-lead {
+  background: color-mix(in srgb, var(--accent) 22%, rgba(255, 255, 255, 0.06));
+}
+
+.font-extrude-family-option-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--font-extrude-family-check-col);
+  height: var(--font-extrude-family-check-col);
+  opacity: 0;
+}
+
+.font-extrude-family-option-check-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--orby-black);
+  font-size: 0.58rem;
+  line-height: 1;
+}
+
+.font-extrude-family-option-check-badge .fa-check {
+  font-size: 0.58rem;
+}
+
+.font-extrude-family-option.is-selected .font-extrude-family-option-check {
+  opacity: 1;
 }
 
 .font-extrude-family-option-label {
   display: block;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -9663,35 +9935,21 @@ body.ui-hidden .shelf {
   line-height: 1.3;
 }
 
+.font-extrude-family-option-label-text {
+  display: inline;
+}
+
+.font-extrude-family-option-mark {
+  padding: 0 0.05em;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--orby-black);
+  font-weight: 600;
+}
+
 .font-extrude-post-gen[hidden],
 .font-extrude-surface-post-gen[hidden] {
   display: none !important;
-}
-
-[data-subsection='font-extrude'] .font-extrude-reveal-preview.animation-timeline {
-  margin-bottom: 0;
-}
-
-[data-subsection='font-extrude'] .font-extrude-reveal-preview.animation-timeline .animation-transport-btns {
-  gap: 0.5rem;
-}
-
-[data-subsection='font-extrude'] .font-extrude-preview-transport-btns {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-self: flex-start;
-  margin-top: var(--shelf-section-gap);
-}
-
-[data-subsection='font-extrude'] .font-extrude-pause-all-btn,
-[data-subsection='font-extrude'] .font-extrude-reset-animations-btn {
-  margin-top: 0;
-}
-
-[data-subsection='font-extrude'] .font-extrude-pause-all-btn {
-  align-self: auto;
-  margin-top: 0;
 }
 
 .font-extrude-reveal-loop-control {

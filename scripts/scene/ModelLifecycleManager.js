@@ -200,8 +200,9 @@ export class ModelLifecycleManager {
     }
   }
 
-  setModel(object, animations) {
+  setModel(object, animations, options = {}) {
     const s = this.scene;
+    const resetTransform = options.resetTransform === true;
     this.clearModel();
     s.currentModel = object;
 
@@ -213,11 +214,25 @@ export class ModelLifecycleManager {
 
     s.materialController.prepareMesh(object);
     s._setupImportSmoothingForModel(object);
-    s.recenterPivot({ showToast: false });
+    const isFontModel =
+      object.userData?.orbyFontGenerated || isFontExtrudeRevealModel(object);
+    if (!isFontModel) {
+      s.centerImportAtStudioOrigin({ showToast: false });
+    }
 
     const wasFirstLoad = s.isFirstModelLoad;
     if (s.isFirstModelLoad) {
       s.isFirstModelLoad = false;
+    }
+    if (resetTransform) {
+      s.stateStore.batch(() => {
+        s.stateStore.set('xOffset', 0);
+        s.stateStore.set('yOffset', 0);
+        s.stateStore.set('zOffset', 0);
+        s.stateStore.set('rotationX', 0);
+        s.stateStore.set('rotationY', 0);
+        s.stateStore.set('rotationZ', 0);
+      });
     }
     const state = s.stateStore.getState();
 
@@ -235,8 +250,12 @@ export class ModelLifecycleManager {
     }
     s.transformController?.applyState(state);
     if (wasFirstLoad && !s._skipGroundGridAutoAlignOnNextModelLoad) {
-      s._cancelGroundGridBottomAlignAnimation();
-      s._alignGroundAndGridToCurrentModelBottom();
+      if (isFontModel) {
+        s._pendingFontGroundAlignAfterTypography = true;
+      } else {
+        s._cancelGroundGridBottomAlignAnimation();
+        s._alignGroundAndGridToCurrentModelBottom();
+      }
     }
     s._skipGroundGridAutoAlignOnNextModelLoad = false;
     s._updateHdriShadowReceiverContact();
@@ -356,15 +375,27 @@ export class ModelLifecycleManager {
           fadeExposure();
         }
 
+        this._scaleInMeshOnSpawn(object);
+
         if (wasFirstLoad && !s._skipCameraFlightOnNextModelLoad) {
           s.cameraController?.focusOnObjectAnimated(s.currentModel, 1.0);
         } else if (s.currentModel) {
           s.cameraController?.refreshModelBounds(s.currentModel);
         }
         s._skipCameraFlightOnNextModelLoad = false;
-        this._scaleInMeshOnSpawn(object);
       });
     });
+  }
+
+  _finalizeFontModelAfterTypography(object) {
+    const s = this.scene;
+    if (!object || s.currentModel !== object) return;
+    if (!object.userData?.orbyFontGenerated && !isFontExtrudeRevealModel(object)) return;
+
+    s.finalizeFontModelStudioPlacement?.({
+      alignGround: !!s._pendingFontGroundAlignAfterTypography,
+    });
+    s._pendingFontGroundAlignAfterTypography = false;
   }
 
   _scaleInMeshOnSpawn(object) {
@@ -383,7 +414,11 @@ export class ModelLifecycleManager {
       );
       if (revealDuration > 0) {
         object.visible = true;
-        s.fontTextRevealController?.resetAllAnimations?.({ resumeConstant: true });
+        s.fontTextRevealController?.resetAllAnimations?.({
+          resumeConstant: true,
+          showSettledIdle: true,
+        });
+        this._finalizeFontModelAfterTypography(object);
         return;
       }
     }
@@ -416,6 +451,7 @@ export class ModelLifecycleManager {
         object.scale.copy(targetScale);
         this._meshSpawnScaleRaf = 0;
         s.fontTextRevealController?.resetAllAnimations?.({ resumeConstant: true });
+        this._finalizeFontModelAfterTypography(object);
       }
     };
 
@@ -488,7 +524,7 @@ export class ModelLifecycleManager {
         svgExtrudeBevelAmount: svgExtrudeState.bevelAmount ?? 0,
         svgExtrudeDetail: svgExtrudeState.detail ?? 'high',
       });
-      this.setModel(asset.object, asset.animations ?? []);
+      this.setModel(asset.object, asset.animations ?? [], { resetTransform: true });
       this.applyAssetMetadata(asset);
       s._fbxImportBundle = null;
       const isFbx = this._configureFbxAfterLoad(file, asset.object);
@@ -553,7 +589,7 @@ export class ModelLifecycleManager {
         s.currentFile = sourceFile;
         s.ui.updateTitle(sourceFile.name);
       }
-      this.setModel(asset.object, asset.animations ?? []);
+      this.setModel(asset.object, asset.animations ?? [], { resetTransform: true });
       this.applyAssetMetadata(asset);
       s._fbxImportBundle = files;
       const isFbx = this._configureFbxAfterLoad(sourceFile, asset.object);

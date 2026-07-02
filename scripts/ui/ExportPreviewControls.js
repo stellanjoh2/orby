@@ -51,6 +51,7 @@ export class ExportPreviewControls {
     this.ui.dom.exportPreviewScrub?.addEventListener('pointerdown', () => {
       this._scrubbing = true;
       this.ui.dom.exportPreviewScrub?.classList.add('is-scrub-playing');
+      this._exportMovementPreview()?.pausePlayback?.();
     });
     this.ui.dom.exportPreviewScrub?.addEventListener('pointerup', () => {
       this._scrubbing = false;
@@ -339,10 +340,10 @@ export class ExportPreviewControls {
     if (!USE_CAPTURE_PREVIEW_ON_SCRUB) return;
     this._scrubCapturePendingT = t;
     clearTimeout(this._scrubCaptureTimer);
-    this._scrubCaptureTimer = setTimeout(
-      () => this._flushScrubCapturePreview(),
-      SCRUB_CAPTURE_DEBOUNCE_MS,
-    );
+    this._scrubCaptureTimer = setTimeout(() => {
+      if (this._scrubbing) return;
+      this._flushScrubCapturePreview();
+    }, SCRUB_CAPTURE_DEBOUNCE_MS);
   }
 
   _flushScrubCapturePreview() {

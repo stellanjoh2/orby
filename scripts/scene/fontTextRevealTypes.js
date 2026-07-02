@@ -4,6 +4,11 @@
  */
 
 import * as THREE from 'three';
+import {
+  DEFAULT_EXPORT_MOVEMENT_EASING,
+  easeExportMovementProgress,
+  normalizeExportMovementEasing,
+} from '../render/exportMovementEasing.js';
 import { restoreRevealGlyphEmissive } from './fontTextRevealEmissive.js';
 
 /**
@@ -22,10 +27,12 @@ import { restoreRevealGlyphEmissive } from './fontTextRevealEmissive.js';
  *     restEmissive: import('three').Color,
  *     restEmissiveIntensity: number,
  *   }>,
+ *   lastTypographyX?: number,
+ *   lastTypographyY?: number,
  * }} RevealGlyphState
  */
 
-/** @typedef {'none' | 'scale' | 'fade' | 'slideUp' | 'slideDown' | 'drop' | 'pop' | 'rotate' | 'elastic'} FontRevealTypeId */
+/** @typedef {'none' | 'scale' | 'fade' | 'slideUp' | 'slideDown' | 'drop' | 'dropSmooth' | 'pop' | 'rotate' | 'elastic'} FontRevealTypeId */
 /** @typedef {'back' | 'front'} FontRevealSlideDirection */
 /** @typedef {'character' | 'word'} FontRevealUnitId */
 
@@ -49,6 +56,7 @@ export const DEFAULT_FONT_REVEAL_SLIDE_DEPTH = 0.18;
 /** Per-glyph animation length as a multiple of stagger slot (>1 overlaps the next letter). */
 export const DEFAULT_FONT_REVEAL_SLIDE_TIME = 1.3;
 export const DEFAULT_FONT_REVEAL_SLIDE_DIRECTION = 'back';
+export const DEFAULT_FONT_REVEAL_STAGGER_EASING = DEFAULT_EXPORT_MOVEMENT_EASING;
 export const MIN_FONT_REVEAL_SLIDE_DEPTH = 0;
 export const MAX_FONT_REVEAL_SLIDE_DEPTH = 2.5;
 export const MIN_FONT_REVEAL_SLIDE_TIME = 0.1;
@@ -89,9 +97,15 @@ export const FONT_REVEAL_TYPE_OPTIONS = [
   },
   {
     id: 'drop',
-    label: 'Drop',
+    label: 'Drop Bounce',
     ease: 'bounce.out',
     tooltip: 'Fall from above and bounce into place — pairs well with Emissive Slam',
+  },
+  {
+    id: 'dropSmooth',
+    label: 'Drop Smooth',
+    ease: 'quart.out',
+    tooltip: 'Fall from above and settle softly — ease out quart, no bounce',
   },
   {
     id: 'pop',
@@ -229,6 +243,50 @@ function computeDropImpactSquashY(landLinear) {
   return Math.max(0.82, 1 - first - second);
 }
 
+const REVEAL_VISIBILITY_EPSILON = 0.001;
+
+/**
+ * Whether a glyph would be drawn at the given reveal progress (export / preview math only).
+ *
+ * @param {FontRevealTypeId | unknown} type
+ * @param {{
+ *   eased?: number,
+ *   landLinear?: number,
+ *   slideProgress?: number,
+ *   slideDepth?: number,
+ * }} [progress]
+ * @returns {boolean}
+ */
+export function isRevealGlyphVisibleAtExportProgress(type, progress = {}) {
+  const normalized = normalizeFontRevealType(type);
+  if (!isFontRevealAnimationActive(normalized)) return true;
+
+  const eased = Number(progress.eased) || 0;
+  const landLinear = Math.max(0, Math.min(1, Number(progress.landLinear) || 0));
+  const slideProgress = Math.max(0, Math.min(1, Number(progress.slideProgress) || 0));
+  const slideDepth = clampFontRevealSlideDepth(progress.slideDepth);
+
+  switch (normalized) {
+    case 'fade':
+      return eased > REVEAL_VISIBILITY_EPSILON;
+    case 'slideUp':
+    case 'slideDown':
+    case 'drop':
+    case 'dropSmooth':
+      return Math.max(0, Math.min(1, eased)) > REVEAL_VISIBILITY_EPSILON;
+    case 'pop':
+    case 'elastic':
+      return Math.max(0, eased) > REVEAL_VISIBILITY_EPSILON;
+    case 'rotate': {
+      const rotateLinear = slideDepth > 0 ? slideProgress : landLinear;
+      return easeSlideSoftOut(rotateLinear) > REVEAL_VISIBILITY_EPSILON;
+    }
+    case 'scale':
+    default:
+      return Math.max(0, Math.min(1, eased)) > REVEAL_VISIBILITY_EPSILON;
+  }
+}
+
 /** @param {FontRevealTypeId} type @param {number} t @returns {number} */
 export function easeForRevealType(type, t) {
   if (type === 'none') return 1;
@@ -242,6 +300,8 @@ export function easeForRevealType(type, t) {
       return easeElasticOut(clamped);
     case 'drop':
       return easeBounceOut(clamped);
+    case 'dropSmooth':
+      return easeSlideSoftOut(clamped);
     case 'slideUp':
     case 'slideDown':
       return easeSlideSoftOut(clamped);
@@ -253,8 +313,13 @@ export function easeForRevealType(type, t) {
   }
 }
 
+/** @param {unknown} value */
+export function normalizeFontRevealStaggerEasing(value) {
+  return normalizeExportMovementEasing(value ?? DEFAULT_FONT_REVEAL_STAGGER_EASING);
+}
+
 /**
- * @typedef {{ slideDepth?: number, slideTime?: number }} FontRevealTimingOptions
+ * @typedef {{ slideDepth?: number, slideTime?: number, staggerEasing?: string }} FontRevealTimingOptions
  */
 
 /**
@@ -282,6 +347,35 @@ export function computeGlyphRevealSlotSec(totalDurationSec, glyphCount, timing =
 }
 
 /**
+ * Wall-clock time when one glyph's reveal starts.
+ * Linear stagger is the default; non-linear curves redistribute starts across reveal duration.
+ * @param {number} glyphIndex
+ * @param {number} glyphCount
+ * @param {number} totalDurationSec
+ * @param {FontRevealTimingOptions} [timing]
+ * @returns {number}
+ */
+export function computeGlyphRevealStartSec(
+  glyphIndex,
+  glyphCount,
+  totalDurationSec,
+  timing = {},
+) {
+  if (totalDurationSec <= 0 || glyphCount <= 0) return 0;
+  if (glyphCount === 1) return 0;
+  const slot = computeGlyphRevealSlotSec(totalDurationSec, glyphCount, timing);
+  const maxStart = (glyphCount - 1) * slot;
+  const staggerIndex = glyphIndex / (glyphCount - 1);
+  // Map index → start time via complement so "ease out" decelerates later slots
+  // (direct ease(index) bunches arrivals at the end — opposite of GSAP stagger feel).
+  const easedIndex = 1 - easeExportMovementProgress(
+    1 - staggerIndex,
+    normalizeFontRevealStaggerEasing(timing.staggerEasing),
+  );
+  return easedIndex * maxStart;
+}
+
+/**
  * Wall-clock time when one glyph's reveal (and depth slide, if any) completes.
  * @param {number} glyphIndex
  * @param {number} glyphCount
@@ -296,8 +390,8 @@ export function computeGlyphRevealLandSec(
   timing = {},
 ) {
   const slot = computeGlyphRevealSlotSec(totalDurationSec, glyphCount, timing);
-  const glyphTime = resolveGlyphRevealTime(timing);
-  return glyphIndex * slot + slot * glyphTime;
+  const start = computeGlyphRevealStartSec(glyphIndex, glyphCount, totalDurationSec, timing);
+  return start + computeGlyphRevealWindowSec(slot, timing);
 }
 
 /**
@@ -328,7 +422,8 @@ export function computeGlyphSlotProgress(
 ) {
   if (totalDurationSec <= 0 || glyphCount <= 0) return 1;
   const slot = computeGlyphRevealSlotSec(totalDurationSec, glyphCount, timing);
-  const elapsedInGlyph = elapsedSec - glyphIndex * slot;
+  const start = computeGlyphRevealStartSec(glyphIndex, glyphCount, totalDurationSec, timing);
+  const elapsedInGlyph = elapsedSec - start;
   if (elapsedInGlyph <= 0) return 0;
   const revealWindowSec = computeGlyphRevealWindowSec(slot, timing);
   const t = elapsedInGlyph / Math.max(0.001, revealWindowSec);
@@ -383,7 +478,8 @@ export function computeGlyphSlideProgress(
 ) {
   if (totalDurationSec <= 0 || glyphCount <= 0) return 1;
   const slot = computeGlyphRevealSlotSec(totalDurationSec, glyphCount, timing);
-  const elapsedInGlyph = elapsedSec - glyphIndex * slot;
+  const start = computeGlyphRevealStartSec(glyphIndex, glyphCount, totalDurationSec, timing);
+  const elapsedInGlyph = elapsedSec - start;
   if (elapsedInGlyph <= 0) return 0;
   const slideDurationSec = computeGlyphRevealWindowSec(slot, timing);
   return Math.min(1, elapsedInGlyph / Math.max(0.001, slideDurationSec));
@@ -493,8 +589,13 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
   const useWordGroup = !!wordPivot?.center;
   const wordCenter = wordPivot?.center;
   const activeSlideDistance = useWordGroup ? wordPivot.slideDistance : slideDistance;
+  const typographyX = Number(state.lastTypographyX) || 0;
+  const typographyY = Number(state.lastTypographyY) || 0;
+  const baseX = restPosition.x + typographyX;
+  const baseY = restPosition.y + typographyY;
+  const baseZ = restPosition.z;
 
-  group.position.copy(restPosition);
+  group.position.set(baseX, baseY, baseZ);
   group.rotation.x = restRotationX;
   group.rotation.y = restRotationY;
   group.rotation.z = restRotationZ;
@@ -520,19 +621,18 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
       const yOffset = activeSlideDistance * (1 - slideEased);
       group.position.y =
         type === 'slideUp'
-          ? restPosition.y - yOffset
-          : restPosition.y + yOffset;
+          ? baseY - yOffset
+          : baseY + yOffset;
       group.visible = slideEased > 0.001;
       break;
     }
 
-    case 'drop': {
+    case 'drop':
+    case 'dropSmooth': {
       const dropEased = Math.max(0, Math.min(1, e));
       const yOffset = activeSlideDistance * (1 - dropEased);
-      group.position.y = restPosition.y + yOffset;
-      if (useWordGroup) {
-        group.scale.copy(restScale);
-      } else {
+      group.position.y = baseY + yOffset;
+      if (type === 'drop' && !useWordGroup) {
         const squashY = computeDropImpactSquashY(landLinear);
         group.scale.set(restScale.x, restScale.y * squashY, restScale.z);
       }
@@ -544,7 +644,7 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
     case 'elastic': {
       const s = Math.max(0, e);
       if (useWordGroup && wordCenter) {
-        copyWordScaledPosition(group.position, restPosition, wordCenter, s);
+        copyWordScaledPosition(group.position, group.position, wordCenter, s);
         applyRevealScale(group, restScale, s);
       } else {
         applyRevealScale(group, restScale, s);
@@ -558,7 +658,7 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
       const rotateEased = easeSlideSoftOut(rotateLinear);
       const angleDelta = _ROTATE_Y_START * (1 - rotateEased);
       if (useWordGroup && wordCenter) {
-        copyWordRotatedPosition(group.position, restPosition, wordCenter, angleDelta);
+        copyWordRotatedPosition(group.position, group.position, wordCenter, angleDelta);
       }
       group.rotation.y = restRotationY + angleDelta;
       group.visible = rotateEased > 0.001;
@@ -569,7 +669,7 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
     default: {
       const s = Math.max(0, Math.min(1, e));
       if (useWordGroup && wordCenter) {
-        copyWordScaledPosition(group.position, restPosition, wordCenter, s);
+        copyWordScaledPosition(group.position, group.position, wordCenter, s);
         applyRevealScale(group, restScale, s);
       } else {
         applyRevealScale(group, restScale, s);

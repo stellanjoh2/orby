@@ -3,7 +3,7 @@ import { ORBY_LIME } from '../constants.js';
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 import {
   computeGlyphRevealLandSec,
-  computeGlyphRevealSlotSec,
+  computeGlyphRevealStartSec,
   easeSlideSoftOut,
 } from './fontTextRevealTypes.js';
 
@@ -56,7 +56,7 @@ export function normalizeFontRevealEmissiveColor(value) {
  * @param {number} elapsedSec
  * @param {number} totalDurationSec
  * @param {number} decaySec
- * @param {{ slideDepth?: number, slideTime?: number }} [timing]
+ * @param {{ slideDepth?: number, slideTime?: number, staggerEasing?: string }} [timing]
  */
 export function computeGlyphEmissiveSlamFactor(
   glyphIndex,
@@ -67,8 +67,12 @@ export function computeGlyphEmissiveSlamFactor(
   timing = {},
 ) {
   if (decaySec <= 0 || glyphCount <= 0 || totalDurationSec <= 0) return 0;
-  const slot = computeGlyphRevealSlotSec(totalDurationSec, glyphCount, timing);
-  const slotStart = glyphIndex * slot;
+  const slotStart = computeGlyphRevealStartSec(
+    glyphIndex,
+    glyphCount,
+    totalDurationSec,
+    timing,
+  );
   const landElapsed = computeGlyphRevealLandSec(
     glyphIndex,
     glyphCount,
@@ -198,7 +202,7 @@ export function restoreRevealGlyphEmissive(state) {
  * @param {number} elapsedSec
  * @param {number} totalDurationSec
  * @param {number} decaySec
- * @param {{ slideDepth?: number, slideTime?: number }} [timing]
+ * @param {{ slideDepth?: number, slideTime?: number, staggerEasing?: string }} [timing]
  */
 export function areAllGlyphEmissiveSlamSettled(
   glyphCount,
