@@ -194,6 +194,24 @@ export class MeshControls {
       this.ui.uiSounds?.playSelect?.();
       this.eventBus.emit('mesh:recenter-pivot');
     });
+    this.ui.inputs.hideObjectBtn?.addEventListener('click', () => {
+      if (!this.ui.inputs.hideObjectBtn?.disabled) {
+        this.ui.uiSounds?.playSelect?.();
+      }
+      const next = !this.stateStore.getState().objectHidden;
+      this.stateStore.set('objectHidden', next);
+      this.eventBus.emit('mesh:object-hidden', next);
+    });
+    this.eventBus.on('scene:model-load-complete', (payload) => {
+      if (payload?.success === false) return;
+      this.syncHideObjectButton({
+        hidden: !!this.stateStore.getState().objectHidden,
+        hasModel: true,
+      });
+    });
+    this.eventBus.on('scene:model-cleared', () => {
+      this.syncHideObjectButton({ hidden: false, hasModel: false });
+    });
     this.ui.inputs.stlSmoothShading?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
       this.stateStore.set('advanced.stlSmoothShading', enabled);
@@ -1475,6 +1493,25 @@ export class MeshControls {
     }
   }
 
+  syncHideObjectButton({ hidden, hasModel } = {}) {
+    const btn = this.ui.inputs.hideObjectBtn;
+    if (!btn) return;
+
+    const state = this.stateStore.getState();
+    const isHidden = hidden ?? !!state.objectHidden;
+    const modelLoaded = hasModel ?? !!window.orby?.scene?.currentModel;
+
+    btn.disabled = !modelLoaded;
+    btn.classList.toggle('is-active', isHidden);
+    btn.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
+    btn.innerHTML = isHidden
+      ? '<i class="fa-solid fa-eye" aria-hidden="true"></i> Object hidden'
+      : '<i class="fa-solid fa-eye" aria-hidden="true"></i> Hide Object';
+    btn.dataset.tooltip = isHidden
+      ? 'Show the mesh again in the viewport and exports'
+      : 'Hide the loaded mesh from the viewport and exports';
+  }
+
   sync(state) {
     this.syncTransformSliders({
       scale: state.scale,
@@ -1855,6 +1892,8 @@ export class MeshControls {
     this.ui.inputs.shading.forEach((input) => {
       input.checked = input.value === state.shading;
     });
+
+    this.syncHideObjectButton({ hidden: !!state.objectHidden });
 
     // Wireframe mode now uses the overlay system, so overlay controls are always enabled
     // Users can adjust "Always on" and "Only visible faces" even when in Wireframe mode

@@ -310,6 +310,9 @@ body[data-theme='aqua'] {
   --orby-app-bg: #000000;
   /* FAQ panels, tooltips — softer than app black so hints don’t read as errors */
   --orby-surface-muted: #202020;
+  /* Neutral control fills — buttons, slider rails, toggle tracks, selects */
+  --ui-control-surface: rgba(255, 255, 255, 0.15);
+  --ui-control-surface-hover: rgba(255, 255, 255, 0.22);
   /* Frosted dark chrome — shelf, toasts, and other main-UI overlays */
   --ui-frosted-blur: 15px;
 }
@@ -327,11 +330,11 @@ body[data-theme='violet'] {
   --bg: var(--orby-app-bg);
   --panel: #0d081f;
   --panel-alt: #160c2f;
-  /* Shelf hierarchy: dark frosted shell; cards slightly lifted (controls ghost 0.15 brightest) */
+  /* Shelf hierarchy: dark frosted shell; cards slightly lifted (--ui-control-surface brightest) */
   --ui-frosted-bg: rgba(8, 8, 8, 0.78);
   --shelf-bg: var(--ui-frosted-bg);
   --shelf-card-bg: rgba(255, 255, 255, 0.054);
-  --stroke: rgba(255, 255, 255, 0.15);
+  --stroke: var(--ui-control-surface);
   --text: #f5f1ff;
   --text-dim: rgba(245, 241, 255, 0.6);
   
@@ -375,7 +378,7 @@ body[data-theme='aqua'] {
   --ui-frosted-bg: rgba(8, 8, 8, 0.82);
   --shelf-bg: var(--ui-frosted-bg);
   --shelf-card-bg: rgba(255, 255, 255, 0.048);
-  --stroke: rgba(255, 255, 255, 0.15);
+  --stroke: var(--ui-control-surface);
   --text: #f1f4ff;
   --text-dim: rgba(241, 244, 255, 0.6);
   
@@ -502,7 +505,7 @@ body.orby-not-found-active.orby-not-found-fade-ready #webgl {
     rgba(10, 8, 20, 0.74) 0%,
     rgba(3, 2, 8, 0.66) 100%
   );
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--stroke);
   border-radius: 18px;
   padding: clamp(1rem, 2vw, 1.5rem) clamp(1.1rem, 3vw, 2rem);
   box-shadow:
@@ -648,7 +651,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions
 .ghost-btn {
   border-radius: 12px;
   border: none;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--ui-control-surface);
   color: var(--text);
   padding: 0.75rem 1.25rem;
   font-family: inherit;
@@ -746,7 +749,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions
   height: 2.6rem;
   border-radius: 50%;
   border: none;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--ui-control-surface);
   color: var(--text-dim);
   opacity: 0.6;
   display: inline-flex;
@@ -1008,7 +1011,7 @@ html.orby-sr-on .orby-sr,
   width: 100%;
   min-height: 300px;
   padding: 1rem;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--ui-control-surface);
   border: 1px solid var(--stroke);
   border-radius: 8px;
   color: var(--text);
@@ -1234,7 +1237,7 @@ html.orby-sr-on .orby-sr,
 .bug-report-field select {
   width: 100%;
   border-radius: 8px;
-  border: 1px solid var(--stroke);
+  border: none;
   color: var(--text);
   font-family: inherit;
   font-size: 0.9rem;
@@ -1245,6 +1248,12 @@ html.orby-sr-on .orby-sr,
 .bug-report-field input {
   padding: 0.55rem 0.75rem;
   background: rgba(255, 255, 255, 0.12);
+  border: none;
+}
+
+.bug-report-field select {
+  border: none;
+  background-color: rgba(255, 255, 255, 0.12);
 }
 
 /* Match shelf .select-line chevron: extra right inset so the arrow doesn’t hug the edge */
@@ -1268,12 +1277,10 @@ html.orby-sr-on .orby-sr,
 }
 
 .bug-report-field input:focus {
-  border-color: var(--accent);
   background: rgba(255, 255, 255, 0.16);
 }
 
 .bug-report-field select:focus {
-  border-color: var(--accent);
   background-color: rgba(255, 255, 255, 0.16);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -1399,7 +1406,7 @@ html.orby-sr-on .orby-sr,
   width: min(14rem, 78%);
   height: 3px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--ui-control-surface);
   overflow: hidden;
 }
 
@@ -1427,7 +1434,7 @@ html.orby-sr-on .orby-sr,
 .bug-report-severity-trigger {
   width: 100%;
   border-radius: 8px;
-  border: 1px solid var(--stroke);
+  border: none;
   color: var(--text);
   font-family: inherit;
   font-size: 0.9rem;
@@ -1448,7 +1455,6 @@ html.orby-sr-on .orby-sr,
 }
 
 .bug-report-severity-trigger:focus {
-  border-color: var(--accent);
   background-color: rgba(255, 255, 255, 0.16);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -1457,7 +1463,7 @@ html.orby-sr-on .orby-sr,
 }
 
 .bug-report-severity-trigger:focus-visible {
-  border-color: var(--accent);
+  outline: none;
 }
 
 .bug-report-severity-trigger-inner {
@@ -1495,7 +1501,7 @@ html.orby-sr-on .orby-sr,
   padding: 0.35rem 0;
   list-style: none;
   border-radius: 8px;
-  border: 1px solid var(--stroke);
+  border: none;
   background: rgba(22, 22, 24, 0.98);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   max-height: min(16rem, 70vh);
@@ -1504,7 +1510,7 @@ html.orby-sr-on .orby-sr,
 }
 
 .bug-report-severity-listbox:focus {
-  border-color: var(--accent);
+  outline: none;
 }
 
 .bug-report-severity-list-option {
@@ -1657,7 +1663,7 @@ html.orby-sr-on .orby-sr,
 }
 
 .bug-report-content .bug-report-modal-btn.ghost-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--ui-control-surface);
   color: var(--text);
 }
 
@@ -1718,7 +1724,7 @@ html.orby-sr-on .orby-sr,
   padding: 0.5rem 1rem;
   border-radius: 999px; /* Fully rounded */
   border: none;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--ui-control-surface);
   color: var(--text);
   font-family: inherit;
   font-size: var(--ui-accent-action-font-size);
@@ -2386,7 +2392,7 @@ html.safari-browser .orby-magic-btn::before {
   padding: var(--ui-hero-pill-pad-block) var(--ui-hero-pill-pad-inline);
   border-radius: 999px;
   border: none;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--ui-control-surface);
   color: var(--text);
   font-family: inherit;
   font-size: var(--ui-hero-pill-font-size);
@@ -3911,7 +3917,7 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
   /* Figma-style pill slider — track height = thumb diameter */
   --shelf-slider-size: 12px;
   --shelf-slider-size-muted: 10px;
-  --shelf-slider-track-bg: rgba(255, 255, 255, 0.14);
+  --shelf-slider-track-bg: var(--ui-control-surface);
   --shelf-slider-track-bg-muted: color-mix(in srgb, var(--text-dim) 28%, transparent);
   /* WebKit centering: margin-top = (trackH − thumbH) / 2. Pill rail: track === thumb → 0. */
   --shelf-slider-thumb-offset: calc((var(--shelf-slider-size) - var(--shelf-slider-size)) / 2);
@@ -3953,7 +3959,7 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
   --shelf-hdri-sphere-img: 78px;
   --shelf-hdri-sphere-ring: 92px;
   --shelf-hdri-grid-gap-x: 1rem;
-  --shelf-hdri-grid-gap-y: calc(34px + var(--shelf-vertical-extra)); /* thumbnail edge-to-edge @ 2560×1440 */
+  --shelf-hdri-grid-gap-y: 32px; /* thumbnail edge-to-edge @ 2560×1440 */
   /* Shader Lab + Object Display pickers — smaller (4-up / dense grids) */
   --shelf-picker-sphere-img: 54px;
   --shelf-picker-sphere-ring: 70px;
@@ -4018,7 +4024,7 @@ html:not(.mobile-landing) .shelf {
   --shelf-hdri-sphere-img: round(78px * var(--studio-ui-scale), 1px);
   --shelf-hdri-sphere-ring: round(92px * var(--studio-ui-scale), 1px);
   --shelf-hdri-grid-gap-x: calc(1rem * var(--studio-ui-scale));
-  --shelf-hdri-grid-gap-y: round(calc(34px * var(--studio-ui-scale) + var(--shelf-vertical-extra)), 1px);
+  --shelf-hdri-grid-gap-y: round(calc(32px * var(--studio-ui-scale)), 1px);
   --shelf-picker-sphere-img: round(54px * var(--studio-ui-scale), 1px);
   --shelf-picker-sphere-ring: round(70px * var(--studio-ui-scale), 1px);
   --shelf-sphere-ring-border: round(3px * var(--studio-ui-scale), 1px);
@@ -4162,6 +4168,28 @@ html:not(.mobile-landing) .shelf .is-muted .slider-line input[type='range']::-mo
   transform: translateY(var(--shelf-slider-thumb-offset, 0));
 }
 
+html:not(.mobile-landing) .shelf .slider-line--temperature input[type='range'],
+html:not(.mobile-landing) .shelf .slider-line--tint input[type='range'],
+html:not(.mobile-landing) .shelf .slider-line--saturation input[type='range'] {
+  height: var(--shelf-gradient-rail-thumb-size);
+}
+
+html:not(.mobile-landing) .shelf .slider-line--temperature input[type='range']::-webkit-slider-thumb,
+html:not(.mobile-landing) .shelf .slider-line--tint input[type='range']::-webkit-slider-thumb,
+html:not(.mobile-landing) .shelf .slider-line--saturation input[type='range']::-webkit-slider-thumb {
+  width: var(--shelf-gradient-rail-thumb-size);
+  height: var(--shelf-gradient-rail-thumb-size);
+  margin-top: var(--shelf-gradient-rail-thumb-offset);
+}
+
+html:not(.mobile-landing) .shelf .slider-line--temperature input[type='range']::-moz-range-thumb,
+html:not(.mobile-landing) .shelf .slider-line--tint input[type='range']::-moz-range-thumb,
+html:not(.mobile-landing) .shelf .slider-line--saturation input[type='range']::-moz-range-thumb {
+  width: var(--shelf-gradient-rail-thumb-size);
+  height: var(--shelf-gradient-rail-thumb-size);
+  transform: translateY(var(--shelf-gradient-rail-thumb-offset));
+}
+
 html:not(.mobile-landing) .shelf .slider-line .value-inline-input {
   width: calc(4.25rem * var(--studio-ui-scale));
   min-width: calc(2.75rem * var(--studio-ui-scale));
@@ -4227,7 +4255,9 @@ html:not(.mobile-landing) .shelf #creativeLookGrid .hdri-grid {
 }
 
 #creativeLookGrid .hdri-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* Fixed tracks — match Object Display; equal H/V edge-to-edge via --shelf-picker-grid-gap */
+  grid-template-columns: repeat(4, var(--shelf-picker-sphere-ring));
+  justify-content: center;
   justify-items: center;
   align-items: center;
   gap: var(--shelf-picker-grid-gap);
@@ -4272,8 +4302,7 @@ html:not(.mobile-landing) .shelf .select-line select {
 }
 
 html:not(.mobile-landing) .shelf .select-line select:focus-visible {
-  box-shadow: inset 0 0 0 var(--shelf-select-inner-stroke, 2px)
-    color-mix(in srgb, var(--brand-primary) 55%, transparent);
+  background-color: var(--ui-control-surface-hover);
 }
 
 html:not(.mobile-landing) .shelf .font-extrude-family-trigger {
@@ -4287,8 +4316,7 @@ html:not(.mobile-landing) .shelf .font-extrude-family-trigger {
 }
 
 html:not(.mobile-landing) .shelf .font-extrude-family-trigger:focus-visible {
-  box-shadow: inset 0 0 0 var(--shelf-select-inner-stroke, 2px)
-    color-mix(in srgb, var(--brand-primary) 55%, transparent);
+  background-color: var(--ui-control-surface-hover);
 }
 
 /* Segmented pills (Turntable, etc.) — min-height/padding were root rem */
@@ -5364,7 +5392,7 @@ a.about-highlight:focus-visible {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(255, 255, 255, 0.25); /* Default unchecked color - checked state will override */
+  background-color: var(--ui-control-surface); /* unchecked — checked state overrides */
   border-radius: 999px;
   transition: background-color 0.3s ease;
   cursor: pointer;
@@ -5395,7 +5423,7 @@ a.about-highlight:focus-visible {
 }
 
 .effect-toggle:hover .effect-indicator {
-  background-color: rgba(255, 255, 255, 0.3);
+  background-color: var(--ui-control-surface-hover);
 }
 
 /* Muted blocks: checked toggles stay readable but not full lime (guides off + letterbox on, etc.). */
@@ -5404,7 +5432,7 @@ a.about-highlight:focus-visible {
   background-color: color-mix(
     in srgb,
     var(--brand-primary) 40%,
-    rgba(255, 255, 255, 0.24)
+    var(--ui-control-surface)
   ) !important;
 }
 
@@ -5413,13 +5441,13 @@ a.about-highlight:focus-visible {
   background-color: color-mix(
     in srgb,
     var(--brand-primary) 48%,
-    rgba(255, 255, 255, 0.28)
+    var(--ui-control-surface-hover)
   ) !important;
 }
 
 .subsection.is-muted .effect-toggle:hover input:not(:checked) + .effect-indicator,
 .panel-block.is-muted .effect-toggle:hover input:not(:checked) + .effect-indicator {
-  background-color: rgba(255, 255, 255, 0.22) !important;
+  background-color: var(--ui-control-surface-hover) !important;
 }
 
 .effect-toggle input:focus-visible + .effect-indicator {
@@ -5462,7 +5490,7 @@ a.about-highlight:focus-visible {
   cursor: pointer;
   letter-spacing: -0.01em;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--ui-control-surface);
   transition: color 0.2s, background 0.2s, opacity 0.2s, box-shadow 0.2s ease;
   opacity: 0.6;
   display: flex;
@@ -5508,7 +5536,9 @@ a.about-highlight:focus-visible {
 /* Object Display — 4-up; smaller picker tokens than Studio HDRI */
 .mode-icons {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* Fixed tracks — 1fr columns stretch and widen horizontal gaps vs row gap */
+  grid-template-columns: repeat(4, var(--shelf-picker-sphere-ring));
+  justify-content: center;
   justify-items: center;
   align-items: center;
   padding: 0;
@@ -6183,8 +6213,7 @@ button.advanced-info-doc-btn {
   -webkit-appearance: none;
   /* Native popup list on Windows/Chromium reads color-scheme from the select, not :root */
   color-scheme: dark;
-  /* Match unchecked toggle track fill — lighter grays read thinner than the switch */
-  background-color: rgba(255, 255, 255, 0.25);
+  background-color: var(--ui-control-surface);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.45rem center;
@@ -6200,8 +6229,7 @@ button.advanced-info-doc-btn {
 
 .select-line select:focus-visible {
   outline: none;
-  box-shadow: inset 0 0 0 var(--shelf-select-inner-stroke, 2px)
-    color-mix(in srgb, var(--brand-primary) 55%, transparent);
+  background-color: var(--ui-control-surface-hover);
 }
 
 .select-line > .value:empty {
@@ -6299,12 +6327,12 @@ button.advanced-info-doc-btn {
   border-radius: calc(var(--shelf-slider-size, 12px) / 2);
   background: linear-gradient(
     to right,
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 0%,
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-start, 0%),
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) 0%,
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-end, 0%),
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 100%
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) var(--slider-fill-end, 0%),
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) 100%
   );
   transition: background 0.2s ease;
 }
@@ -6313,12 +6341,12 @@ button.advanced-info-doc-btn {
 .slider-line input[type='range']:is(:active, :focus-visible)::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 0%,
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-start, 0%),
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) 0%,
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-end, 0%),
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 100%
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) var(--slider-fill-end, 0%),
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) 100%
   );
 }
 
@@ -6368,12 +6396,12 @@ button.advanced-info-doc-btn {
   border-radius: calc(var(--shelf-slider-size, 12px) / 2);
   background: linear-gradient(
     to right,
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 0%,
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-start, 0%),
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) 0%,
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-end, 0%),
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 100%
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) var(--slider-fill-end, 0%),
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) 100%
   );
   border: none;
   transition: background 0.2s ease;
@@ -6383,12 +6411,12 @@ button.advanced-info-doc-btn {
 .slider-line input[type='range']:is(:active, :focus-visible)::-moz-range-track {
   background: linear-gradient(
     to right,
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 0%,
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-start, 0%),
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) 0%,
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) var(--slider-fill-end, 0%),
-    var(--shelf-slider-track-bg, rgba(255, 255, 255, 0.14)) 100%
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) var(--slider-fill-end, 0%),
+    var(--shelf-slider-track-bg, var(--ui-control-surface)) 100%
   );
 }
 
@@ -6445,19 +6473,24 @@ button.advanced-info-doc-btn {
   --rail-gradient: linear-gradient(90deg, #36d681, #f6f2ff, #d56bff);
 }
 
-/* Thumb drop shadow — stronger on the bright Kelvin/tint rails where a soft
-   shadow otherwise washes out against the light gradient stops. */
-.slider-line {
-  --thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
-}
-
-.slider-line--temperature,
-.slider-line--tint {
-  --thumb-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
-}
-
 .slider-line--saturation {
   --rail-gradient: linear-gradient(90deg, #525252, #949494, var(--orby-purple-bright, #9d80ff));
+}
+
+/* Gradient-rail sliders — match .orby-color-picker__hue-thumb: white hollow ring on the rail */
+.slider-line--temperature,
+.slider-line--tint,
+.slider-line--saturation {
+  --shelf-gradient-rail-thumb-size: calc(14px * var(--studio-ui-scale, 1));
+  --shelf-gradient-rail-thumb-border: calc(2px * var(--studio-ui-scale, 1));
+  --shelf-gradient-rail-thumb-offset: calc(
+    (var(--shelf-slider-size, 12px) - var(--shelf-gradient-rail-thumb-size)) / 2
+  );
+}
+
+/* Thumb drop shadow — solid lime thumbs on standard shelf sliders */
+.slider-line {
+  --thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 .slider-line--temperature input[type='range']::-webkit-slider-runnable-track,
@@ -6625,6 +6658,117 @@ button.advanced-info-doc-btn {
   box-shadow:
     0 0 0 1px rgba(120, 120, 120, 0.95),
     var(--thumb-shadow);
+}
+
+/* Gradient-rail sliders — taller hit area so the ring thumb is not clipped by the input box */
+.slider-line--temperature input[type='range'],
+.slider-line--tint input[type='range'],
+.slider-line--saturation input[type='range'] {
+  height: var(--shelf-gradient-rail-thumb-size);
+}
+
+.slider-line--temperature input[type='range']::-webkit-slider-thumb,
+.slider-line--tint input[type='range']::-webkit-slider-thumb,
+.slider-line--saturation input[type='range']::-webkit-slider-thumb {
+  width: var(--shelf-gradient-rail-thumb-size);
+  height: var(--shelf-gradient-rail-thumb-size);
+  margin-top: var(--shelf-gradient-rail-thumb-offset);
+  background: transparent;
+  background-color: transparent;
+  border: var(--shelf-gradient-rail-thumb-border) solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.slider-line--temperature input[type='range']::-moz-range-thumb,
+.slider-line--tint input[type='range']::-moz-range-thumb,
+.slider-line--saturation input[type='range']::-moz-range-thumb {
+  width: var(--shelf-gradient-rail-thumb-size);
+  height: var(--shelf-gradient-rail-thumb-size);
+  background: transparent;
+  background-color: transparent;
+  border: var(--shelf-gradient-rail-thumb-border) solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  transform: translateY(var(--shelf-gradient-rail-thumb-offset));
+}
+
+.slider-line--temperature input[type='range']:is(:hover, :active)::-webkit-slider-thumb,
+.slider-line--tint input[type='range']:is(:hover, :active)::-webkit-slider-thumb,
+.slider-line--saturation input[type='range']:is(:hover, :active)::-webkit-slider-thumb {
+  transform: scale(1.083);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.slider-line--temperature input[type='range']:is(:hover, :active)::-moz-range-thumb,
+.slider-line--tint input[type='range']:is(:hover, :active)::-moz-range-thumb,
+.slider-line--saturation input[type='range']:is(:hover, :active)::-moz-range-thumb {
+  transform: translateY(var(--shelf-gradient-rail-thumb-offset)) scale(1.083);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.subsection.is-muted .slider-line--temperature input[type='range']::-webkit-slider-thumb,
+.panel-block.is-muted .slider-line--temperature input[type='range']::-webkit-slider-thumb,
+.slider-line--temperature.is-muted input[type='range']::-webkit-slider-thumb,
+.is-muted .slider-line--temperature input[type='range']::-webkit-slider-thumb,
+.subsection.is-muted .slider-line--tint input[type='range']::-webkit-slider-thumb,
+.panel-block.is-muted .slider-line--tint input[type='range']::-webkit-slider-thumb,
+.slider-line--tint.is-muted input[type='range']::-webkit-slider-thumb,
+.is-muted .slider-line--tint input[type='range']::-webkit-slider-thumb,
+.subsection.is-muted .slider-line--saturation input[type='range']::-webkit-slider-thumb,
+.panel-block.is-muted .slider-line--saturation input[type='range']::-webkit-slider-thumb,
+.slider-line--saturation.is-muted input[type='range']::-webkit-slider-thumb,
+.is-muted .slider-line--saturation input[type='range']::-webkit-slider-thumb {
+  width: var(--shelf-gradient-rail-thumb-size);
+  height: var(--shelf-gradient-rail-thumb-size);
+  margin-top: var(--shelf-gradient-rail-thumb-offset);
+  background: transparent !important;
+  background-color: transparent !important;
+  border: var(--shelf-gradient-rail-thumb-border) solid #999;
+  box-shadow: none !important;
+}
+
+.subsection.is-muted .slider-line--temperature input[type='range']::-moz-range-thumb,
+.panel-block.is-muted .slider-line--temperature input[type='range']::-moz-range-thumb,
+.slider-line--temperature.is-muted input[type='range']::-moz-range-thumb,
+.is-muted .slider-line--temperature input[type='range']::-moz-range-thumb,
+.subsection.is-muted .slider-line--tint input[type='range']::-moz-range-thumb,
+.panel-block.is-muted .slider-line--tint input[type='range']::-moz-range-thumb,
+.slider-line--tint.is-muted input[type='range']::-moz-range-thumb,
+.is-muted .slider-line--tint input[type='range']::-moz-range-thumb,
+.subsection.is-muted .slider-line--saturation input[type='range']::-moz-range-thumb,
+.panel-block.is-muted .slider-line--saturation input[type='range']::-moz-range-thumb,
+.slider-line--saturation.is-muted input[type='range']::-moz-range-thumb,
+.is-muted .slider-line--saturation input[type='range']::-moz-range-thumb {
+  width: var(--shelf-gradient-rail-thumb-size);
+  height: var(--shelf-gradient-rail-thumb-size);
+  background: transparent !important;
+  background-color: transparent !important;
+  border: var(--shelf-gradient-rail-thumb-border) solid #999;
+  box-shadow: none !important;
+  transform: translateY(var(--shelf-gradient-rail-thumb-offset));
+}
+
+.slider-line--temperature input[type='range']:is(:disabled, .is-disabled-handle)::-webkit-slider-thumb,
+.slider-line--tint input[type='range']:is(:disabled, .is-disabled-handle)::-webkit-slider-thumb,
+.slider-line--saturation input[type='range']:is(:disabled, .is-disabled-handle)::-webkit-slider-thumb {
+  width: var(--shelf-gradient-rail-thumb-size);
+  height: var(--shelf-gradient-rail-thumb-size);
+  margin-top: var(--shelf-gradient-rail-thumb-offset);
+  background: transparent !important;
+  background-color: transparent !important;
+  border: var(--shelf-gradient-rail-thumb-border) solid #999;
+  box-shadow: none !important;
+}
+
+.slider-line--temperature input[type='range']:is(:disabled, .is-disabled-handle)::-moz-range-thumb,
+.slider-line--tint input[type='range']:is(:disabled, .is-disabled-handle)::-moz-range-thumb,
+.slider-line--saturation input[type='range']:is(:disabled, .is-disabled-handle)::-moz-range-thumb {
+  width: var(--shelf-gradient-rail-thumb-size);
+  height: var(--shelf-gradient-rail-thumb-size);
+  background: transparent !important;
+  background-color: transparent !important;
+  border: var(--shelf-gradient-rail-thumb-border) solid #999;
+  box-shadow: none !important;
+  transform: translateY(var(--shelf-gradient-rail-thumb-offset));
 }
 
 .slider-line .value {
@@ -7313,7 +7457,7 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 
 .rotation-notch {
   border: none;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--ui-control-surface);
   color: var(--text);
   width: 26px;
   height: 22px;
@@ -7425,6 +7569,14 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   word-break: break-word;
 }
 
+.stats-block .mesh-info-actions {
+  margin-top: 1rem;
+}
+
+.stats-block .mesh-info-actions .hide-object-btn {
+  width: 100%;
+}
+
 .animation-controls {
   display: flex;
   gap: var(--shelf-section-gap);
@@ -7485,12 +7637,12 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   border-radius: 1px;
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--ui-control-surface) 0%,
+    var(--ui-control-surface) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--ui-control-surface) var(--slider-fill-end, 0%),
+    var(--ui-control-surface) 100%
   );
   transition: background 0.2s ease;
 }
@@ -7500,12 +7652,12 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 .animation-timeline #fontExtrudeRevealScrub:is(:active, :focus-visible, .is-scrub-playing)::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--ui-control-surface) 0%,
+    var(--ui-control-surface) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--ui-control-surface) var(--slider-fill-end, 0%),
+    var(--ui-control-surface) 100%
   );
 }
 
@@ -7517,12 +7669,12 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   border-radius: 1px;
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--ui-control-surface) 0%,
+    var(--ui-control-surface) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--ui-control-surface) var(--slider-fill-end, 0%),
+    var(--ui-control-surface) 100%
   );
   border: none;
   transition: background 0.2s ease;
@@ -7533,12 +7685,12 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 .animation-timeline #fontExtrudeRevealScrub:is(:active, :focus-visible, .is-scrub-playing)::-moz-range-track {
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--ui-control-surface) 0%,
+    var(--ui-control-surface) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--ui-control-surface) var(--slider-fill-end, 0%),
+    var(--ui-control-surface) 100%
   );
 }
 
@@ -7856,7 +8008,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   transform: translate(-50%, -50%);
   z-index: 0;
   border: none;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--ui-control-surface);
   box-shadow: none;
   transition: background 0.2s ease;
 }
@@ -8025,7 +8177,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   letter-spacing: -0.01em;
   font-size: var(--shelf-headline-font-size);
   color: var(--text);
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--ui-control-surface);
   cursor: pointer;
   transition: box-shadow 0.2s, color 0.2s, opacity 0.2s, background 0.2s;
   text-align: center;
@@ -8424,7 +8576,7 @@ input[type='range'] {
   appearance: none;
   height: 2px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--ui-control-surface);
   outline: none;
 }
 
@@ -9675,7 +9827,7 @@ body.ui-hidden .shelf {
   line-height: var(--shelf-dropdown-pill-height, var(--orby-dropdown-height));
   appearance: none;
   -webkit-appearance: none;
-  background-color: rgba(255, 255, 255, 0.25);
+  background-color: var(--ui-control-surface);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.45rem center;
@@ -9692,8 +9844,7 @@ body.ui-hidden .shelf {
 
 .font-extrude-family-trigger:focus-visible {
   outline: none;
-  box-shadow: inset 0 0 0 var(--shelf-select-inner-stroke, 2px)
-    color-mix(in srgb, var(--brand-primary) 55%, transparent);
+  background-color: var(--ui-control-surface-hover);
 }
 
 .font-extrude-family-trigger--opening {
@@ -9807,7 +9958,7 @@ body.ui-hidden .shelf {
 
 .font-extrude-family-search:focus {
   border-color: var(--accent-border);
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--ui-control-surface);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
@@ -9994,5 +10145,384 @@ body.ui-hidden .shelf {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ── Orby color picker — custom popover for shelf color chips ── */
+#orby-color-picker-portal {
+  position: fixed;
+  inset: 0;
+  z-index: 12001;
+  pointer-events: none;
+}
+
+.orby-color-picker {
+  --orby-color-picker-gap-x: calc(8px * var(--studio-ui-scale, 1));
+  --orby-color-picker-gap-y: calc(14px * var(--studio-ui-scale, 1));
+  --orby-color-picker-recent-gap: var(--orby-color-picker-gap-x);
+  --orby-color-picker-pad: calc(14px * var(--studio-ui-scale, 1));
+  --orby-color-picker-pad-x: var(--orby-color-picker-pad);
+  --orby-color-picker-radius: var(--app-settings-chrome-radius);
+  --orby-color-picker-control-radius: calc(6px * var(--studio-ui-scale, 1));
+  --orby-color-picker-scale-w: calc(58px * var(--studio-ui-scale, 1));
+  /* Hue rail — same layering as shelf gradient sliders: pill track + larger ring thumb on top */
+  --orby-color-picker-hue-track-height: calc(12px * var(--studio-ui-scale, 1));
+  --orby-color-picker-hue-thumb-size: calc(14px * var(--studio-ui-scale, 1));
+  --orby-color-picker-hue-thumb-border: calc(2px * var(--studio-ui-scale, 1));
+  position: fixed;
+  z-index: 12001;
+  box-sizing: border-box;
+  border-radius: var(--orby-color-picker-radius);
+  border: none;
+  background: var(--shelf-card-bg);
+  backdrop-filter: blur(var(--ui-frosted-blur));
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+.orby-color-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(8px * var(--studio-ui-scale, 1));
+  flex-shrink: 0;
+  padding: var(--orby-color-picker-pad) var(--orby-color-picker-pad-x);
+}
+
+.orby-color-picker__title.block-title {
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  line-height: 1;
+  font-size: var(--shelf-label-font-size);
+}
+
+.orby-color-picker__close.close-btn {
+  width: calc(1.25rem * var(--studio-ui-scale, 1));
+  height: calc(1.25rem * var(--studio-ui-scale, 1));
+  margin: 0;
+  flex-shrink: 0;
+  align-self: center;
+  border-radius: calc(4px * var(--studio-ui-scale, 1));
+}
+
+.orby-color-picker__close.close-btn::before,
+.orby-color-picker__close.close-btn::after {
+  height: calc(0.65rem * var(--studio-ui-scale, 1));
+}
+
+.orby-color-picker__close.close-btn:hover {
+  color: var(--accent);
+  background: transparent;
+}
+
+.orby-color-picker__close.close-btn:focus-visible {
+  color: var(--accent);
+  background: transparent;
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.orby-color-picker__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--orby-color-picker-gap-y);
+  padding: var(--orby-color-picker-pad) var(--orby-color-picker-pad-x)
+    var(--orby-color-picker-pad);
+  --orby-color-picker-control-height: calc(30px * var(--studio-ui-scale, 1));
+}
+
+.orby-color-picker__sv {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 0;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+  background-clip: padding-box;
+  flex-shrink: 0;
+}
+
+.orby-color-picker__sv-thumb,
+.orby-color-picker__hue-thumb {
+  position: absolute;
+  box-sizing: border-box;
+  width: var(--orby-color-picker-hue-thumb-size, 14px);
+  height: var(--orby-color-picker-hue-thumb-size, 14px);
+  border: var(--orby-color-picker-hue-thumb-border, 2px) solid #fff;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.orby-color-picker__hue {
+  --hue-ratio: 0;
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  height: var(--orby-color-picker-hue-thumb-size);
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: none;
+  overflow: visible;
+}
+
+.orby-color-picker__hue-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: var(--orby-color-picker-hue-track-height);
+  transform: translateY(-50%);
+  border-radius: 999px;
+  overflow: hidden;
+  background: linear-gradient(
+    to right,
+    #f00 0%,
+    #ff0 17%,
+    #0f0 33%,
+    #0ff 50%,
+    #00f 67%,
+    #f0f 83%,
+    #f00 100%
+  );
+  pointer-events: none;
+}
+
+.orby-color-picker__hue-thumb {
+  top: 50%;
+  left: calc(
+    var(--orby-color-picker-hue-thumb-size, 14px) / 2 +
+      (100% - var(--orby-color-picker-hue-thumb-size, 14px)) * var(--hue-ratio, 0)
+  );
+}
+
+.orby-color-picker__inputs {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) var(--orby-color-picker-scale-w);
+  align-items: stretch;
+  gap: var(--orby-color-picker-gap-x);
+  width: 100%;
+}
+
+.orby-color-picker__eyedropper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: var(--orby-color-picker-control-height);
+  height: var(--orby-color-picker-control-height);
+  min-width: var(--orby-color-picker-control-height);
+  align-self: center;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color 0.12s ease;
+}
+
+.orby-color-picker__eyedropper:hover,
+.orby-color-picker__eyedropper:focus-visible {
+  color: var(--accent);
+  background: transparent;
+  outline: none;
+}
+
+.orby-color-picker__eyedropper:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 1px;
+}
+
+.orby-color-picker__eyedropper i {
+  display: block;
+  font-size: calc(16px * var(--studio-ui-scale, 1));
+  line-height: 1;
+}
+
+.orby-color-picker[data-color-scale='hex'] .orby-color-picker__fields-wrap {
+  min-width: calc(7ch + 2 * 8px * var(--studio-ui-scale, 1));
+}
+
+.orby-color-picker__fields-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.orby-color-picker__fields-wrap .orby-color-picker__fields {
+  display: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--orby-color-picker-gap-x);
+  min-width: 0;
+  width: 100%;
+}
+
+.orby-color-picker__fields-wrap .orby-color-picker__fields.is-visible {
+  display: grid;
+}
+
+.orby-color-picker__fields--hex {
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+}
+
+.orby-color-picker[data-color-scale='hex'] .orby-color-picker__fields-wrap .orby-color-picker__fields {
+  width: 100%;
+}
+
+.orby-color-picker__scale-combo {
+  position: relative;
+  flex: 0 0 var(--orby-color-picker-scale-w);
+  width: var(--orby-color-picker-scale-w);
+  min-width: var(--orby-color-picker-scale-w);
+}
+
+.orby-color-picker__hex,
+.orby-color-picker__channel,
+.orby-color-picker__scale-trigger {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  height: var(--orby-color-picker-control-height);
+  padding: 0 calc(8px * var(--studio-ui-scale, 1));
+  border-radius: var(--orby-color-picker-control-radius);
+  border: none;
+  background: var(--ui-control-surface);
+  color: var(--text);
+  font: inherit;
+  font-size: calc(12px * var(--studio-ui-scale, 1));
+  line-height: 1.2;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.orby-color-picker__hex {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  text-align: left;
+  width: 100%;
+  min-width: calc(7ch + 2 * 8px * var(--studio-ui-scale, 1));
+  max-width: none;
+}
+
+.orby-color-picker__channel {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.orby-color-picker__scale-trigger {
+  padding-left: calc(6px * var(--studio-ui-scale, 1));
+  padding-right: calc(18px * var(--studio-ui-scale, 1));
+  cursor: pointer;
+  text-align: center;
+  background-color: var(--ui-control-surface);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-dim) 50%),
+    linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+  background-position:
+    calc(100% - 10px) calc(50% - 2px),
+    calc(100% - 6px) calc(50% - 2px);
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+}
+
+.orby-color-picker__scale-combo.is-open .orby-color-picker__scale-trigger,
+.orby-color-picker__scale-trigger:hover,
+.orby-color-picker__scale-trigger:focus-visible {
+  outline: none;
+  background-color: var(--ui-control-surface-hover);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-dim) 50%),
+    linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+  background-position:
+    calc(100% - 10px) calc(50% - 2px),
+    calc(100% - 6px) calc(50% - 2px);
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+}
+
+.orby-color-picker__scale-list {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + calc(4px * var(--studio-ui-scale, 1)));
+  right: 0;
+  min-width: 100%;
+  margin: 0;
+  padding: calc(4px * var(--studio-ui-scale, 1)) 0;
+  list-style: none;
+  border: none;
+  border-radius: var(--orby-color-picker-control-radius);
+  background: color-mix(in srgb, var(--orby-black) 8%, rgb(22, 22, 24));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.orby-color-picker__scale-option {
+  padding: calc(6px * var(--studio-ui-scale, 1)) calc(10px * var(--studio-ui-scale, 1));
+  font-size: calc(12px * var(--studio-ui-scale, 1));
+  line-height: 1.2;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.orby-color-picker__scale-option:hover,
+.orby-color-picker__scale-option:focus-visible {
+  background: var(--ui-control-surface);
+  outline: none;
+}
+
+.orby-color-picker__scale-option.is-selected {
+  color: var(--accent);
+}
+
+.orby-color-picker__hex:focus-visible,
+.orby-color-picker__channel:focus-visible {
+  outline: none;
+  background-color: var(--ui-control-surface-hover);
+}
+
+.orby-color-picker__recent {
+  display: flex;
+  flex-direction: column;
+  gap: calc(14px * var(--studio-ui-scale, 1));
+}
+
+.orby-color-picker__recent-rule {
+  height: 1px;
+  background: color-mix(in srgb, var(--stroke, rgba(255, 255, 255, 0.12)) 70%, transparent);
+}
+
+.orby-color-picker__recent-swatches {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--orby-color-picker-recent-gap);
+}
+
+.orby-color-picker__recent-swatch {
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.orby-color-picker__recent-swatch:hover {
+  transform: scale(1.06);
+}
+
+.orby-color-picker__recent-swatch:focus-visible {
+  outline: none;
+  transform: scale(1.06);
+  box-shadow: 0 0 0 2px var(--ui-control-surface-hover);
 }
 

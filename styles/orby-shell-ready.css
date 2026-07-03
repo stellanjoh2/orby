@@ -94,7 +94,7 @@
   padding: 0.5rem 1rem;
   border-radius: 999px;
   border: none;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--ui-control-surface);
   color: #ececec;
   font-family: inherit;
   font-size: 0.875rem;

@@ -1444,12 +1444,12 @@ button {
   border-radius: 1px;
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--ui-control-surface) 0%,
+    var(--ui-control-surface) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--ui-control-surface) var(--slider-fill-end, 0%),
+    var(--ui-control-surface) 100%
   );
   transition: background 0.2s ease;
 }
@@ -1457,12 +1457,12 @@ button {
 .orby-mobile-fx-grade input[type='range']:is(:active, :focus-visible)::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--ui-control-surface) 0%,
+    var(--ui-control-surface) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--ui-control-surface) var(--slider-fill-end, 0%),
+    var(--ui-control-surface) 100%
   );
 }
 
@@ -1472,12 +1472,12 @@ button {
   border-radius: 1px;
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--ui-control-surface) 0%,
+    var(--ui-control-surface) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--ui-control-surface) var(--slider-fill-end, 0%),
+    var(--ui-control-surface) 100%
   );
   border: none;
   transition: background 0.2s ease;
@@ -1486,12 +1486,12 @@ button {
 .orby-mobile-fx-grade input[type='range']:is(:active, :focus-visible)::-moz-range-track {
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    var(--ui-control-surface) 0%,
+    var(--ui-control-surface) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.15) 100%
+    var(--ui-control-surface) var(--slider-fill-end, 0%),
+    var(--ui-control-surface) 100%
   );
 }
 
@@ -1740,11 +1740,11 @@ button {
 }
 
 .orby-mobile-app .orby-mobile-fx-toggle.is-muted .effect-toggle input:disabled + .effect-indicator {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: var(--ui-control-surface);
 }
 
 .orby-mobile-app .orby-mobile-fx-toggle.is-muted .effect-toggle input:disabled:checked + .effect-indicator {
-  background-color: color-mix(in srgb, var(--brand-primary) 40%, rgba(255, 255, 255, 0.24));
+  background-color: color-mix(in srgb, var(--brand-primary) 40%, var(--ui-control-surface));
 }
 
 .orby-mobile-app .orby-mobile-fx-toggle.is-muted .effect-toggle input:disabled + .effect-indicator::before {
@@ -1798,7 +1798,7 @@ button {
 .orby-mobile-app .effect-toggle .effect-indicator {
   position: absolute;
   inset: 0;
-  background-color: rgba(255, 255, 255, 0.25);
+  background-color: var(--ui-control-surface);
   border-radius: 999px;
   transition: background-color 0.28s ease;
   cursor: pointer;

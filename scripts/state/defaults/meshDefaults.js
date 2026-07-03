@@ -15,5 +15,7 @@ export function createMeshDefaults() {
     moveWidgetEnabled: false,
     rotateWidgetEnabled: false,
     scaleWidgetEnabled: false,
+    /** Hide the loaded mesh from viewport and exports (background-only renders). */
+    objectHidden: false,
   };
 }

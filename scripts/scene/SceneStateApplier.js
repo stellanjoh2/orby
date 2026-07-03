@@ -46,6 +46,12 @@ function createStateApplySteps() {
       },
     },
     {
+      id: 'object-hidden',
+      apply: (s, state) => {
+        s.setObjectHidden(!!state.objectHidden, { updateUi: true });
+      },
+    },
+    {
       id: 'camera-orbit-handheld',
       apply: (s, state) => {
         s.setCameraAutoOrbit(state.camera?.autoOrbit ?? 'off', { silent: true });

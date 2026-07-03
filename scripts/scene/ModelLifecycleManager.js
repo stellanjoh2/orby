@@ -102,6 +102,9 @@ export class ModelLifecycleManager {
     s.eventBus.emit('ui:advanced-glass-visible', { visible: false });
     s._emitImportSmoothingControlsVisibility();
     s.eventBus.emit('ui:center-pivot-enabled', { enabled: false });
+    s.stateStore.set('objectHidden', false);
+    if (s.modelRoot) s.modelRoot.visible = true;
+    s.ui.meshControls?.syncHideObjectButton?.({ hidden: false, hasModel: false });
     s.eventBus.emit('scene:model-cleared');
   }
 
@@ -303,6 +306,7 @@ export class ModelLifecycleManager {
     });
     s.ui.syncAnimationJointScale({ visible: false, enabled: false, value: state.animation?.jointScale ?? 0.5 });
     s.refreshBoneHelpers();
+    s.setObjectHidden(!!state.objectHidden, { updateUi: true });
     if (state.fresnel?.enabled) {
       s.materialController?.setFresnelSettings(state.fresnel);
     }
@@ -375,14 +379,13 @@ export class ModelLifecycleManager {
           fadeExposure();
         }
 
-        this._scaleInMeshOnSpawn(object);
-
         if (wasFirstLoad && !s._skipCameraFlightOnNextModelLoad) {
           s.cameraController?.focusOnObjectAnimated(s.currentModel, 1.0);
         } else if (s.currentModel) {
           s.cameraController?.refreshModelBounds(s.currentModel);
         }
         s._skipCameraFlightOnNextModelLoad = false;
+        this._scaleInMeshOnSpawn(object);
       });
     });
   }

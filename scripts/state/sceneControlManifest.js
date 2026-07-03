@@ -68,6 +68,7 @@ export const SCENE_CONTROL_MANIFEST = [
   { event: 'mesh:reverse-normals', apply: 'setReverseNormals' },
   { event: 'mesh:stl-smoothing', apply: 'applyImportSmoothingFromState', noArg: true },
   { event: 'mesh:recenter-pivot', apply: 'recenterPivot', defaultArg: {} },
+  { event: 'mesh:object-hidden', apply: 'setObjectHidden', coerce: 'bool' },
   { event: 'mesh:uv-checker', apply: 'setUvCheckerEnabled' },
   { event: 'mesh:uv-checker-scale', apply: 'setUvCheckerScale' },
   { event: 'mesh:uv-checker-style', apply: 'setUvCheckerStyle' },

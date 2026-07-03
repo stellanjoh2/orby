@@ -170,6 +170,7 @@ const MESH_TAB_RESET_PATHS = [
   ...RESET_DIRTY_PATHS.transform,
   'autoRotate',
   'autoRotateDirection',
+  'objectHidden',
   'clay',
   'fresnel',
   'subsurface',
@@ -582,6 +583,7 @@ export class ResetControls {
       this.eventBus.emit('mesh:rotationZ', defaults.rotationZ ?? 0);
       this.eventBus.emit('mesh:auto-rotate', defaults.autoRotate);
       this.eventBus.emit('mesh:auto-rotate-direction', defaults.autoRotateDirection ?? 'forward');
+      this.eventBus.emit('mesh:object-hidden', defaults.objectHidden ?? false);
       this.eventBus.emit('mesh:clay-color', defaults.clay.color);
       this.eventBus.emit('mesh:clay-normal-map', defaults.clay.normalMap);
       // Emit material reset events

@@ -34,8 +34,10 @@ export class EventManager {
    */
   setTransformWidgetEnabled(s, control, enabled) {
     if (!control) return;
-    control.visible = enabled;
-    if (enabled && s.currentModel && s.modelRoot) {
+    const objectHidden = !!s.stateStore?.getState()?.objectHidden;
+    const show = enabled && !objectHidden;
+    control.visible = show;
+    if (show && s.currentModel && s.modelRoot) {
       control.attach(s.modelRoot);
     } else if (!enabled) {
       control.detach();

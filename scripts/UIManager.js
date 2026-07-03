@@ -75,6 +75,7 @@ import { BugReportController } from './ui/BugReportController.js';
 import { ShelfOverlaySuppression } from './ui/ShelfOverlaySuppression.js';
 import { UISounds } from './ui/UISounds.js';
 import { UIManagerModalOverlays } from './ui/UIManagerModalOverlays.js';
+import { OrbyColorPickerController } from './ui/OrbyColorPickerController.js';
 import { mergeAberrationSettings } from './render/chromaticAberration.js';
 import { creativeLookPresetSupportsMaterialPbrSliders } from './render/CreativeLookMaterials.js';
 import { inferToastCaution, resolveToastIconKind } from './ui/toastVariant.js';
@@ -191,6 +192,10 @@ export class UIManager {
     if (this._studioUiReady) return;
 
     this.helpers = new UIHelpers(this.eventBus, this.stateStore, this);
+    this.colorPickerController = new OrbyColorPickerController({
+      stateStore: this.stateStore,
+      helpers: this.helpers,
+    });
     this.meshControls = new MeshControls(this.eventBus, this.stateStore, this, this.helpers);
     this.fbxMapSlotsControls = new FbxMapSlotsControls(this.eventBus, this.stateStore, this);
     this.mapInspectControls = new MapInspectControls(this.eventBus, this.stateStore, this);
@@ -503,6 +508,7 @@ export class UIManager {
       normalView: q('#normalView'),
       normalViewMode: q('#normalViewMode'),
       centerPivotBtn: q('#centerPivotBtn'),
+      hideObjectBtn: q('#hideObjectBtn'),
       stlSmoothingControls: q('#stlSmoothingControls'),
       stlSmoothShading: q('#stlSmoothShading'),
       stlSmoothingAngle: q('#stlSmoothingAngle'),
@@ -908,7 +914,8 @@ export class UIManager {
     this.syncFontExtrudeAnimationPreviewDock?.();
     this.watermark.bind();
     this.resetControls.bind();
-    
+    this.colorPickerController?.attach(document);
+
     // Setup slider utilities
     this.helpers.setupSliderKeyboardSupport();
     this.helpers.setupSliderFillUpdates();

@@ -4722,6 +4722,53 @@ export class SceneManager {
     return next;
   }
 
+  setObjectHidden(hidden, { updateUi = true } = {}) {
+    const next = !!hidden;
+    this.stateStore.set('objectHidden', next);
+
+    if (this.modelRoot) {
+      this.modelRoot.visible = !next;
+    }
+    this._syncTransformControlsForObjectHidden();
+
+    if (updateUi) {
+      this.ui.meshControls?.syncHideObjectButton?.({
+        hidden: next,
+        hasModel: !!this.currentModel,
+      });
+    }
+
+    this.requestRender();
+    return next;
+  }
+
+  _syncTransformControlsForObjectHidden() {
+    const state = this.stateStore.getState();
+    const objectHidden = !!state.objectHidden;
+
+    if (this.transformControlsTranslate) {
+      const show = !!state.moveWidgetEnabled && !objectHidden;
+      this.transformControlsTranslate.visible = show;
+      if (show && this.modelRoot) {
+        this.transformControlsTranslate.attach(this.modelRoot);
+      }
+    }
+    if (this.transformControlsRotate) {
+      const show = !!state.rotateWidgetEnabled && !objectHidden;
+      this.transformControlsRotate.visible = show;
+      if (show && this.modelRoot) {
+        this.transformControlsRotate.attach(this.modelRoot);
+      }
+    }
+    if (this.transformControlsScale) {
+      const show = !!state.scaleWidgetEnabled && !objectHidden;
+      this.transformControlsScale.visible = show;
+      if (show && this.modelRoot) {
+        this.transformControlsScale.attach(this.modelRoot);
+      }
+    }
+  }
+
   applyCameraPreset(preset) {
     if (this.currentModel) {
       this.currentModel.updateMatrixWorld(true);

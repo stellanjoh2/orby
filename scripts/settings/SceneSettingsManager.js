@@ -357,6 +357,10 @@ export class SceneSettingsManager {
         this.stateStore.set('autoRotateDirection', direction);
         this.eventBus.emit('mesh:auto-rotate-direction', direction);
       }
+      if (payload.objectHidden !== undefined) {
+        this.stateStore.set('objectHidden', !!payload.objectHidden);
+        this.eventBus.emit('mesh:object-hidden', !!payload.objectHidden);
+      }
       if (payload.clay) {
         this.stateStore.set('clay', payload.clay);
         this.eventBus.emit('mesh:clay-color', payload.clay.color);
