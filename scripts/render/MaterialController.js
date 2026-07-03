@@ -128,6 +128,7 @@ import {
 } from '../import/fbxMapSlotsSettings.js';
 import { syncFbxOrmPackingOnMaterial } from './fbxOrmPackingShader.js';
 import { isTextureImageReady } from '../utils/textureReady.js';
+import { effectiveRoughnessWithHdriBlur } from './hdriBlur.js';
 import { NormalViewOverlay } from './NormalViewOverlay.js';
 import { UvCheckerOverlay } from './UvCheckerOverlay.js';
 import { MapInspectPreview } from './MapInspectPreview.js';
@@ -1248,10 +1249,16 @@ export class MaterialController {
         authored.roughness < 1e-6;
       if (mapPlaceholderScalars) {
         target.metalness = THREE.MathUtils.clamp(globalM, 0, 1);
-        target.roughness = THREE.MathUtils.clamp(globalR, 0, 1);
+        target.roughness = effectiveRoughnessWithHdriBlur(
+          THREE.MathUtils.clamp(globalR, 0, 1),
+          this._lastHdriBlurriness,
+        );
       } else {
         target.metalness = THREE.MathUtils.clamp(authored.metalness * globalM, 0, 1);
-        target.roughness = THREE.MathUtils.clamp(authored.roughness * globalR, 0, 1);
+        target.roughness = effectiveRoughnessWithHdriBlur(
+          THREE.MathUtils.clamp(authored.roughness * globalR, 0, 1),
+          this._lastHdriBlurriness,
+        );
       }
       if (authored.hasMrMaps && importMat) {
         if (importMat.metalnessMap && !target.metalnessMap) {
@@ -1268,7 +1275,7 @@ export class MaterialController {
     }
 
     target.metalness = globalM;
-    target.roughness = globalR;
+    target.roughness = effectiveRoughnessWithHdriBlur(globalR, this._lastHdriBlurriness);
     const hasMrMaps = this._importMaterialHasMrMaps(importMat);
     if (hasMrMaps && importMat) {
       if (importMat.metalnessMap && !target.metalnessMap) {
@@ -2323,13 +2330,19 @@ export class MaterialController {
             tSub > SUBSURFACE_EPS
               ? new THREE.MeshPhysicalMaterial({
                   color: clayColor,
-                  roughness: this.materialSettings.roughness,
+                  roughness: effectiveRoughnessWithHdriBlur(
+                    this.materialSettings.roughness,
+                    this._lastHdriBlurriness,
+                  ),
                   metalness: this.materialSettings.metalness,
                   side: THREE.DoubleSide,
                 })
               : new THREE.MeshStandardMaterial({
                   color: clayColor,
-                  roughness: this.materialSettings.roughness,
+                  roughness: effectiveRoughnessWithHdriBlur(
+                    this.materialSettings.roughness,
+                    this._lastHdriBlurriness,
+                  ),
                   metalness: this.materialSettings.metalness,
                   side: THREE.DoubleSide,
                 });
@@ -4548,7 +4561,10 @@ export class MaterialController {
       : this.materialSettings.metalness;
     cloned.roughness = importMat.roughnessMap
       ? 1
-      : this.materialSettings.roughness;
+      : effectiveRoughnessWithHdriBlur(
+          this.materialSettings.roughness,
+          this._lastHdriBlurriness,
+        );
     cloned.userData.orbyFbxSlotMaps = true;
     cloned.needsUpdate = true;
     return cloned;
@@ -4750,7 +4766,10 @@ export class MaterialController {
                 m.color.copy(adjustedColor);
                 if (origMat?.userData?.orbyFbxSlotMaps) {
                   m.metalness = this.materialSettings.metalness;
-                  m.roughness = this.materialSettings.roughness;
+                  m.roughness = effectiveRoughnessWithHdriBlur(
+                    this.materialSettings.roughness,
+                    this._lastHdriBlurriness,
+                  );
                 } else {
                   this._applyShadedMetalRoughness(m, origMat);
                 }
@@ -4816,7 +4835,10 @@ export class MaterialController {
             mat.color.copy(adjustedColor);
             if (original?.userData?.orbyFbxSlotMaps) {
               mat.metalness = this.materialSettings.metalness;
-              mat.roughness = this.materialSettings.roughness;
+              mat.roughness = effectiveRoughnessWithHdriBlur(
+                this.materialSettings.roughness,
+                this._lastHdriBlurriness,
+              );
             } else {
               this._applyShadedMetalRoughness(mat, original);
             }
@@ -5422,6 +5444,36 @@ export class MaterialController {
   }
 
   /**
+   * Sync shaded roughness when HDRI blur changes (blur is mixed into roughness, not env map).
+   * @param {THREE.Object3D} child
+   * @param {THREE.Material} material
+   * @param {number} [matIndex]
+   * @returns {boolean} true when roughness changed
+   */
+  _syncShadedMaterialRoughnessForHdriBlur(child, material, matIndex = 0) {
+    if (
+      this.currentShading !== 'shaded' ||
+      !material ||
+      (!material.isMeshStandardMaterial && !material.isMeshPhysicalMaterial)
+    ) {
+      return false;
+    }
+    const original = this.originalMaterials.get(child);
+    if (!original) return false;
+    const origMat = Array.isArray(original) ? original[matIndex] : original;
+    const prevRoughness = material.roughness;
+    if (origMat?.userData?.orbyFbxSlotMaps) {
+      material.roughness = effectiveRoughnessWithHdriBlur(
+        this.materialSettings.roughness,
+        this._lastHdriBlurriness,
+      );
+    } else {
+      this._applyShadedMetalRoughness(material, origMat);
+    }
+    return Math.abs((material.roughness ?? 0) - (prevRoughness ?? 0)) > 1e-4;
+  }
+
+  /**
    * Sync clay roughness, metalness, and tint from sliders. Returns true if anything changed.
    * @param {THREE.Material} mat
    */
@@ -5430,7 +5482,10 @@ export class MaterialController {
       return false;
     }
     let dirty = false;
-    const targetRoughness = this.materialSettings.roughness;
+    const targetRoughness = effectiveRoughnessWithHdriBlur(
+      this.materialSettings.roughness,
+      this._lastHdriBlurriness,
+    );
     const targetMetalness = this.materialSettings.metalness;
     const tintedClayColor = this.getClayColorWithBrightness();
     if (mat.roughness === 0 || Math.abs(mat.roughness - targetRoughness) > 0.01) {
@@ -5685,8 +5740,7 @@ export class MaterialController {
       return;
     }
 
-    // For non-clay materials, only sync environment map/intensity.
-    // Keep user-authored material surface values (metalness/roughness) intact while editing HDRI.
+    // For non-clay materials, sync environment map/intensity and shaded roughness vs HDRI blur.
     const state = this.stateStore?.getState();
     const rawGlassRef = state?.advanced?.glassReflection;
     const glassEnvMul = Number.isFinite(Number(rawGlassRef))
@@ -5702,7 +5756,7 @@ export class MaterialController {
         ? child.material
         : [child.material];
 
-      materials.forEach((material) => {
+      materials.forEach((material, matIdx) => {
         if (!material) return;
 
         if (material.userData?.orbyCreativeLook === 'chrome') {
@@ -5897,6 +5951,11 @@ export class MaterialController {
 
           const envChanged = material.envMap !== envTexture;
           material.envMap = envTexture;
+          const roughnessChanged = this._syncShadedMaterialRoughnessForHdriBlur(
+            child,
+            material,
+            matIdx,
+          );
           if (material.envMapIntensity !== undefined) {
             const glassBoost =
               this.isWindowMesh(child) ||
@@ -5916,10 +5975,10 @@ export class MaterialController {
             }
             const intChanged = material.envMapIntensity !== envMul;
             material.envMapIntensity = envMul;
-            if (!envChanged && !intChanged) {
+            if (!envChanged && !intChanged && !roughnessChanged) {
               return;
             }
-          } else if (!envChanged) {
+          } else if (!envChanged && !roughnessChanged) {
             return;
           }
 

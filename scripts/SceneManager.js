@@ -60,6 +60,7 @@ import { TopologyWarningsOverlay } from './render/TopologyWarningsOverlay.js';
 import { JointNameLabelsController } from './render/JointNameLabelsController.js';
 import { MaterialController } from './render/MaterialController.js';
 import { isMaterialObjectSurfaceEnabled } from './render/SvgExtrudeSurfaceShader.js';
+import { effectiveRoughnessWithHdriBlur } from './render/hdriBlur.js';
 import { applyStaticAnimationFrameZero } from './render/bakeStaticSkinnedGeometry.js';
 import { confirmVoxelHdHighPolyAlert } from './render/voxelHdHighPolyAlert.js';
 import { willApplyVoxelHdGeometry } from './mesh/voxelizationMeshAdvice.js';
@@ -2209,11 +2210,7 @@ export class SceneManager {
       }
       const baseR = mat.userData?.referenceBaseRoughness;
       if (baseR !== undefined && mat.roughness !== undefined) {
-        if (blur > 0) {
-          mat.roughness = Math.min(1, baseR + (1 - baseR) * blur);
-        } else {
-          mat.roughness = baseR;
-        }
+        mat.roughness = effectiveRoughnessWithHdriBlur(baseR, blur);
       }
       mat.needsUpdate = true;
     }

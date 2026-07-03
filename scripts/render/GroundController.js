@@ -20,6 +20,7 @@ import {
   ORBY_LIME,
 } from '../constants.js';
 import { BaseGlassSeparableBlur } from './BaseGlassSeparableBlur.js';
+import { effectiveRoughnessWithHdriBlur } from './hdriBlur.js';
 import { resetRendererFullViewport } from './resetRendererFullViewport.js';
 import { STUDIO_BACKDROP_SHADOW_REACH_PADDING } from '../config/shadowQuality.js';
 import {
@@ -183,13 +184,6 @@ const clampDegrees = (value) => {
   if (!Number.isFinite(n)) return 0;
   return ((n % 360) + 360) % 360;
 };
-
-function effectiveRoughnessWithHdriBlur(baseRoughness, hdriBlurriness) {
-  const r = clamp01(baseRoughness);
-  const b = clamp01(hdriBlurriness);
-  if (b <= 0) return r;
-  return Math.min(1, r + (1 - r) * b);
-}
 
 /**
  * Outer rim curve from (baseRadius, -height) to (topRadius, 0), bulging slightly past the
