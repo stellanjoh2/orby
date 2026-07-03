@@ -20,6 +20,7 @@ import {
 } from '../import/fbxMaterialReport.js';
 import { isBoneOnlyArmature } from '../import/bvhArmatureBounds.js';
 import { deferSpinnerPaint } from '../utils/viewportLoadSpinner.js';
+import { isMaterialObjectSurfaceEnabled } from '../render/SvgExtrudeSurfaceShader.js';
 
 /** Modal copy after loading `.fbx` — FBX material/textures path is still WIP in Orby. */
 const FBX_IMPORT_WIP_ALERT_BODY =
@@ -186,13 +187,14 @@ export class ModelLifecycleManager {
       },
       { updateState: false },
     );
-    const surfacePreset = svgState.surfacePreset ?? 'none';
-    if (surfacePreset !== 'none') {
-      s.setSvgExtrudeSurface(
+    const matState = s.stateStore.getState().material || {};
+    if (isMaterialObjectSurfaceEnabled(matState)) {
+      s.setObjectSurface(
         {
-          preset: surfacePreset,
-          scale: svgState.surfaceScale ?? 1,
-          strength: svgState.surfaceStrength ?? 1,
+          enabled: true,
+          preset: matState.surfacePreset,
+          scale: matState.surfaceScale ?? 1,
+          strength: matState.surfaceStrength ?? 1,
         },
         { updateState: false },
       );
@@ -274,8 +276,11 @@ export class ModelLifecycleManager {
           state.material?.brightness ??
           state.diffuseBrightness ??
           DEFAULT_MATERIAL_BRIGHTNESS,
+        metalness: state.material?.metalness,
+        roughness: state.material?.roughness,
         emissive: state.material?.emissive ?? 0.0,
       },
+      preserveSessionMaterialMr: !wasFirstLoad,
     });
     s.setShading(state.shading);
     s.ui.meshControls?.sync(s.stateStore.getState());
@@ -401,6 +406,23 @@ export class ModelLifecycleManager {
     s._pendingFontGroundAlignAfterTypography = false;
   }
 
+  /** Surface must compile on visible lit materials — same rebuild path as a shading toggle. */
+  _presentObjectSurfaceAfterModelVisible() {
+    const s = this.scene;
+    if (!s.currentModel?.visible) return;
+    const matState = s.stateStore.getState().material || {};
+    if (!isMaterialObjectSurfaceEnabled(matState)) {
+      s._refreshViewportAfterOverlayChange?.();
+      return;
+    }
+    const mode = s.currentShading ?? matState.shading ?? s.stateStore.getState().shading;
+    if (mode === 'shaded' || mode === 'clay') {
+      s.setShading(mode);
+      return;
+    }
+    s._refreshViewportAfterOverlayChange?.();
+  }
+
   _scaleInMeshOnSpawn(object, options = {}) {
     const s = this.scene;
     if (!object || s.currentModel !== object) return;
@@ -417,6 +439,7 @@ export class ModelLifecycleManager {
       );
       if (revealDuration > 0) {
         object.visible = true;
+        this._presentObjectSurfaceAfterModelVisible();
         s.fontTextRevealController?.resetAllAnimations?.({
           resumeConstant: true,
           showSettledIdle: true,
@@ -427,6 +450,7 @@ export class ModelLifecycleManager {
     }
     if (options.animateSpawn === false) {
       object.visible = true;
+      this._presentObjectSurfaceAfterModelVisible();
       s.fontTextRevealController?.resetAllAnimations?.({ resumeConstant: true });
       this._finalizeFontModelAfterTypography(object);
       return;
@@ -441,6 +465,7 @@ export class ModelLifecycleManager {
     const startTime = performance.now();
 
     object.visible = true;
+    this._presentObjectSurfaceAfterModelVisible();
     s.fontTextRevealController?.resetAllAnimations?.({ resumeConstant: false });
     object.scale.set(
       targetScale.x * 0.001,
@@ -453,12 +478,14 @@ export class ModelLifecycleManager {
       const t = Math.min(1, (performance.now() - startTime) / duration);
       const m = easeOutExpo(t);
       object.scale.set(targetScale.x * m, targetScale.y * m, targetScale.z * m);
+      s.requestRender();
 
       if (t < 1) {
         this._meshSpawnScaleRaf = requestAnimationFrame(tick);
       } else {
         object.scale.copy(targetScale);
         this._meshSpawnScaleRaf = 0;
+        this._presentObjectSurfaceAfterModelVisible();
         s.fontTextRevealController?.resetAllAnimations?.({ resumeConstant: true });
         this._finalizeFontModelAfterTypography(object);
       }

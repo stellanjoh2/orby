@@ -833,11 +833,25 @@ export class ResetControls {
               this.stateStore.set('material.metalness', defaults.material?.metalness ?? mrDefaults.metalness);
               this.stateStore.set('material.roughness', defaults.material?.roughness ?? mrDefaults.roughness);
               this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
+              this.stateStore.set('material.surfacePreset', defaults.material?.surfacePreset ?? 'none');
+              this.stateStore.set('material.surfaceScale', defaults.material?.surfaceScale ?? 1);
+              this.stateStore.set('material.surfaceStrength', defaults.material?.surfaceStrength ?? 1);
+              this.stateStore.set('material.surfaceEnabled', defaults.material?.surfaceEnabled ?? false);
+              this.stateStore.set(
+                'material.surfaceLastPreset',
+                defaults.material?.surfaceLastPreset ?? 'galvanizedSteel',
+              );
             });
             this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? mrDefaults.brightness);
             this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? mrDefaults.metalness);
             this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? mrDefaults.roughness);
             this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
+            this.eventBus.emit('mesh:object-surface', {
+              enabled: false,
+              preset: 'none',
+              scale: defaults.material?.surfaceScale ?? 1,
+              strength: defaults.material?.surfaceStrength ?? 1,
+            });
             this.ui.syncUIFromState();
             break;
           }

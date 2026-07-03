@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { relinkOuterShaderPatchesAfterSurface } from './SvgExtrudeSurfaceShader.js';
 
 export const DEFAULT_SHADOW_OPACITY = 0.25;
 
@@ -169,6 +170,9 @@ export function applyShadowTintToMaterial(material, options = {}) {
     stash.uniforms.color.value.set(colorHex);
     stash.uniforms.strength.value = strength;
     stash.uniforms.opacity.value = opacity;
+    if (material.userData?.svgExtrudeProceduralPatched) {
+      relinkOuterShaderPatchesAfterSurface(material);
+    }
     return;
   }
 

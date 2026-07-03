@@ -4,6 +4,11 @@ import {
   ORBY_BLACK,
   ORBY_LIME,
 } from '../../constants.js';
+import {
+  DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
+  DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
+  DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
+} from '../../import/extrudeDefaults.js';
 
 /** Material sliders, clay, wireframe, fresnel, subsurface, diagnostics, Shader Lab. */
 export function createMaterialDefaults() {
@@ -17,6 +22,16 @@ export function createMaterialDefaults() {
       importHasMrMaps: false,
       /** True when import carries per-material PBR factors (sliders scale authored values; 1.0 = file). */
       importUsesAuthoredPbr: false,
+      /** Triplanar normal-map surface detail for eligible imports (Object → Material). */
+      surfacePreset: DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
+      surfaceScale: DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
+      surfaceStrength: DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
+      /** Set at load — shape library or untextured imports; not persisted in presets. */
+      surfaceEligible: false,
+      /** Object → Material surface (toggle + foldout). */
+      surfaceEnabled: false,
+      /** Restored when re-enabling surface after the toggle was turned off. */
+      surfaceLastPreset: 'galvanizedSteel',
     },
     advanced: {
       reverseNormals: false,

@@ -1,16 +1,5 @@
 /* Object → Shape Library — shelf entry + floating left panel */
 
-#shapeLibraryShelfBlock .shape-library-shelf-copy {
-  margin: 0 0 0.75rem;
-  color: var(--text-dim);
-  font-size: 0.82rem;
-  line-height: 1.45;
-}
-
-.shape-library-open-btn {
-  width: 100%;
-}
-
 /* Floating panel — same shelf chrome language as map preview; fixed ~760px content width */
 .shape-library-panel {
   position: fixed;

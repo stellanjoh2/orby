@@ -37,8 +37,12 @@ import {
   clampSurfaceUiScale,
   creativeLookPresetSupportsSurfaceDetail,
   getSvgExtrudeSurfacePresetConfig,
+  isMaterialObjectSurfaceEnabled,
   surfaceUiScaleToShaderScale,
   SVG_EXTRUDE_SURFACE_PRESETS,
+  DEFAULT_SURFACE_NORMAL_MAP_PRESET,
+  normalizeSurfaceLastPresetId,
+  normalizeSurfacePresetId,
 } from '../render/SvgExtrudeSurfaceShader.js';
 
 function surfaceControlsBlockedByCreativeLook(state) {
@@ -73,7 +77,7 @@ function buildControlLabelWithDevBadge(label, tooltip) {
 }
 
 /**
- * Procedural surface library markup (single source for preset list + labels).
+ * Normal-map surface library markup (single source for preset list + labels).
  * @param {{
  *   presetId?: string,
  *   scaleId?: string,
@@ -94,12 +98,15 @@ export function buildSvgExtrudeSurfaceControlsHtml(ids = {}) {
   const presetAriaLabel = ids.presetAriaLabel ?? 'Extrude surface material';
   const presetLabel = ids.presetLabel ?? 'Surface';
   const strengthLabel = ids.strengthLabel ?? 'Strength';
-  const options = SVG_EXTRUDE_SURFACE_PRESETS.map(
+  const includeNoneOption = ids.includeNoneOption !== false;
+  const options = SVG_EXTRUDE_SURFACE_PRESETS.filter(
+    (p) => includeNoneOption || p.id !== 'none',
+  ).map(
     (p) => `<option value="${p.id}">${p.label}</option>`,
   ).join('');
   return `
             <label class="select-line">
-              <span data-tooltip="Procedural PBR surface detail — also modulates compatible Shader Lab presets (Holographic, Scanline, Plasma, Chrome, Glass)">${presetLabel}</span>
+              <span data-tooltip="Triplanar normal-map surface detail — also modulates compatible Shader Lab presets (Holographic, Scanline, Plasma, Chrome, Glass)">${presetLabel}</span>
               <select id="${presetId}" aria-label="${presetAriaLabel}">
                 ${options}
               </select>
@@ -671,38 +678,182 @@ export function syncBackdropSurfaceControls(ctx, state, canEdit) {
 /** Mount shared surface controls into the SVG Extrude panel (replaces static index.html copy). */
 export function ensureSvgExtrudeSurfaceControlsMounted() {
   const mount = document.getElementById('svgExtrudeSurfaceControlsMount');
+  if (mount) mount.remove();
+}
+
+/** Default preset when enabling surface from off. */
+export const DEFAULT_OBJECT_SURFACE_LAST_PRESET = DEFAULT_SURFACE_NORMAL_MAP_PRESET;
+
+/** Mount Object → Material surface controls (import / shape library). */
+export function ensureObjectSurfaceControlsMounted() {
+  const mount = document.getElementById('objectSurfaceControlsMount');
   if (!mount) return;
-  if (mount.dataset.mounted === '1' && mount.querySelector('#svgExtrudeSurfaceStrength')) {
+  if (mount.dataset.mounted === '1' && mount.querySelector('#objectSurfaceStrength')) {
     return;
   }
-  mount.innerHTML = buildSvgExtrudeSurfaceControlsHtml();
+  mount.innerHTML = buildSvgExtrudeSurfaceControlsHtml({
+    presetId: 'objectSurfacePreset',
+    scaleId: 'objectSurfaceScale',
+    scaleOutput: 'objectSurfaceScale',
+    strengthId: 'objectSurfaceStrength',
+    strengthOutput: 'objectSurfaceStrength',
+    presetAriaLabel: 'Object surface preset',
+    presetLabel: 'Preset',
+    includeNoneOption: false,
+  });
   mount.dataset.mounted = '1';
 }
 
-function emitSvgExtrudeSurface(eventBus, stateStore) {
-  const svg = stateStore.getState().svgExtrude || {};
-  eventBus.emit('mesh:svg-extrude-surface', {
-    preset: svg.surfacePreset ?? 'none',
-    scale: Number(svg.surfaceScale ?? 1) || 1.0,
-    strength: clampSurfaceStrength(svg.surfaceStrength ?? 1),
-  });
-}
-
-function syncSurfaceStrengthControl(ctx, svg, canEdit, state = null) {
+function syncObjectSurfaceStrengthControl(ctx, material, canEdit, state = null) {
   const { inputs, helpers, ui } = ctx;
   if (!inputs.surfaceStrength) return;
   const fullState = state ?? ctx.stateStore?.getState?.() ?? {};
   const blocked = surfaceControlsBlockedByCreativeLook(fullState);
   const clActive = surfaceControlsCreativeLookActive(fullState);
-  const config = getSvgExtrudeSurfacePresetConfig(svg.surfacePreset ?? 'none');
+  const config = getSvgExtrudeSurfacePresetConfig(material.surfacePreset ?? 'none');
   const isNormalMap = config.kind === 'normalMap';
   const strengthRelevant = isNormalMap || clActive;
-  const strength = clampSurfaceStrength(svg.surfaceStrength ?? 1);
+  const strength = clampSurfaceStrength(material.surfaceStrength ?? 1);
   if (document.activeElement !== inputs.surfaceStrength) {
     inputs.surfaceStrength.value = strength;
     helpers.updateValueLabel(inputs.surfaceStrengthOutputKey, strength, 'decimal');
   }
   ui.setControlDisabled(inputs.surfaceStrength, !canEdit || blocked || !strengthRelevant);
+}
+
+/**
+ * @param {Object} ctx
+ * @param {Record<string, HTMLElement | null>} ctx.inputs
+ * @param {import('../StateStore.js').StateStore} ctx.stateStore
+ * @param {import('../EventBus.js').EventBus} ctx.eventBus
+ * @param {import('../UIManager.js').UIManager} ctx.ui
+ * @param {import('./UIHelpers.js').UIHelpers} ctx.helpers
+ */
+export function bindObjectSurfaceControls(ctx) {
+  const { inputs, stateStore, eventBus, ui, helpers } = ctx;
+
+  inputs.surfaceEnabled?.addEventListener('change', (event) => {
+    const enabled = !!event.target.checked;
+    const mat = stateStore.getState().material || {};
+    let preset = mat.surfacePreset ?? 'none';
+    let lastPreset = mat.surfaceLastPreset;
+    if (enabled) {
+      if (preset === 'none') {
+        preset = normalizeSurfaceLastPresetId(mat.surfaceLastPreset);
+      }
+    } else if (preset !== 'none') {
+      lastPreset = preset;
+    }
+    eventBus.emit('mesh:object-surface', {
+      enabled,
+      preset: enabled ? preset : (mat.surfacePreset ?? 'none'),
+      scale: Number(mat.surfaceScale ?? 1) || 1.0,
+      strength: clampSurfaceStrength(mat.surfaceStrength ?? 1),
+      lastPreset,
+    });
+  });
+
+  inputs.surfacePreset?.addEventListener('change', (event) => {
+    ui.uiSounds?.playSelect?.();
+    const preset = event?.target?.value || DEFAULT_OBJECT_SURFACE_LAST_PRESET;
+    const mat = stateStore.getState().material || {};
+    eventBus.emit('mesh:object-surface', {
+      enabled: true,
+      preset,
+      scale: Number(mat.surfaceScale ?? 1) || 1.0,
+      strength: clampSurfaceStrength(mat.surfaceStrength ?? 1),
+      lastPreset: preset,
+    });
+    syncObjectSurfaceStrengthControl(
+      ctx,
+      { ...mat, surfacePreset: preset, surfaceEnabled: true },
+      true,
+    );
+  });
+
+  inputs.surfaceScale?.addEventListener('input', (event) => {
+    const value = parseFloat(event.target.value);
+    const scale = clampSurfaceUiScale(Number.isFinite(value) ? value : 1.0);
+    helpers.updateValueLabel(inputs.surfaceScaleOutputKey, formatSurfaceDetailLabel(scale), 'decimal');
+    const mat = stateStore.getState().material || {};
+    eventBus.emit('mesh:object-surface', {
+      enabled: isMaterialObjectSurfaceEnabled(mat),
+      preset: mat.surfacePreset ?? 'none',
+      scale,
+      strength: clampSurfaceStrength(mat.surfaceStrength ?? 1),
+    });
+  });
+  if (inputs.surfaceScale) helpers.enableSliderKeyboardStepping(inputs.surfaceScale);
+
+  inputs.surfaceStrength?.addEventListener('input', (event) => {
+    const value = parseFloat(event.target.value);
+    const strength = Number.isFinite(value) ? Math.max(0, Math.min(2, value)) : 1.0;
+    helpers.updateValueLabel(inputs.surfaceStrengthOutputKey, strength, 'decimal');
+    const mat = stateStore.getState().material || {};
+    eventBus.emit('mesh:object-surface', {
+      enabled: isMaterialObjectSurfaceEnabled(mat),
+      preset: mat.surfacePreset ?? 'none',
+      scale: Number(mat.surfaceScale ?? 1) || 1.0,
+      strength,
+    });
+  });
+  if (inputs.surfaceStrength) helpers.enableSliderKeyboardStepping(inputs.surfaceStrength);
+}
+
+/** Whether Object → Material surface controls should show for the current model. */
+export function resolveObjectSurfaceControlsVisible(state) {
+  const scene = window.orby?.scene;
+  if (!scene?.currentModel) return false;
+  const model = scene.currentModel;
+  const eligible =
+    scene.materialController?._modelSurfaceEligible?.(model) ??
+    !!state?.material?.surfaceEligible;
+  return eligible;
+}
+
+/**
+ * @param {Object} ctx
+ * @param {Record<string, unknown>} state
+ * @param {boolean} canEdit
+ */
+export function syncObjectSurfaceControls(ctx, state, canEdit) {
+  const { inputs, helpers, ui } = ctx;
+  const material = state.material || {};
+  const visible = resolveObjectSurfaceControlsVisible(state);
+  const section = document.getElementById('objectSurfaceSection');
+  const divider = document.getElementById('objectSurfaceDivider');
+  if (section) section.hidden = !visible;
+  if (divider) divider.hidden = !visible;
+  if (!visible) return;
+
+  const blocked = surfaceControlsBlockedByCreativeLook(state);
+  const surfaceOn = isMaterialObjectSurfaceEnabled(material);
+  const editable = canEdit && !blocked;
+  const foldoutEditable = editable && surfaceOn;
+
+  if (inputs.surfaceEnabled) {
+    inputs.surfaceEnabled.checked = surfaceOn;
+    ui.setControlDisabled(inputs.surfaceEnabled, !editable);
+  }
+
+  const preset = normalizeSurfacePresetId(material.surfacePreset ?? 'none');
+  const activePreset = preset !== 'none'
+    ? preset
+    : normalizeSurfaceLastPresetId(material.surfaceLastPreset);
+
+  if (inputs.surfacePreset && document.activeElement !== inputs.surfacePreset) {
+    inputs.surfacePreset.value = activePreset;
+    ui.setControlDisabled(inputs.surfacePreset, !foldoutEditable);
+  }
+  if (inputs.surfaceScale) {
+    const scale = clampSurfaceUiScale(Number(material.surfaceScale ?? 1) || 1.0);
+    if (document.activeElement !== inputs.surfaceScale) {
+      inputs.surfaceScale.value = scale;
+      helpers.updateValueLabel(inputs.surfaceScaleOutputKey, formatSurfaceDetailLabel(scale), 'decimal');
+    }
+    ui.setControlDisabled(inputs.surfaceScale, !foldoutEditable);
+  }
+  syncObjectSurfaceStrengthControl(ctx, material, foldoutEditable, state);
 }
 
 function readClampedExtrudeDepth(input) {
@@ -886,31 +1037,6 @@ export function bindSvgExtrudeControls(ctx) {
     stateStore.set('svgExtrude.detail', value);
     eventBus.emit('mesh:svg-extrude-detail', value);
   });
-
-  inputs.surfacePreset?.addEventListener('change', (event) => {
-    const preset = event?.target?.value || 'none';
-    stateStore.set('svgExtrude.surfacePreset', preset);
-    syncSurfaceStrengthControl(ctx, stateStore.getState().svgExtrude || {}, true);
-    emitSvgExtrudeSurface(eventBus, stateStore);
-  });
-
-  inputs.surfaceScale?.addEventListener('input', (event) => {
-    const value = parseFloat(event.target.value);
-    const scale = clampSurfaceUiScale(Number.isFinite(value) ? value : 1.0);
-    helpers.updateValueLabel(inputs.surfaceScaleOutputKey, formatSurfaceDetailLabel(scale), 'decimal');
-    stateStore.set('svgExtrude.surfaceScale', scale);
-    emitSvgExtrudeSurface(eventBus, stateStore);
-  });
-  if (inputs.surfaceScale) helpers.enableSliderKeyboardStepping(inputs.surfaceScale);
-
-  inputs.surfaceStrength?.addEventListener('input', (event) => {
-    const value = parseFloat(event.target.value);
-    const strength = Number.isFinite(value) ? Math.max(0, Math.min(2, value)) : 1.0;
-    helpers.updateValueLabel(inputs.surfaceStrengthOutputKey, strength, 'decimal');
-    stateStore.set('svgExtrude.surfaceStrength', strength);
-    emitSvgExtrudeSurface(eventBus, stateStore);
-  });
-  if (inputs.surfaceStrength) helpers.enableSliderKeyboardStepping(inputs.surfaceStrength);
 
   inputs.flipDirection?.addEventListener('change', (event) => {
     const enabled = !!event.target.checked;
@@ -1134,25 +1260,6 @@ export function syncSvgExtrudeControls(ctx, state, options = {}) {
     }
     ui.setControlDisabled(inputs.detail, !canEdit);
   }
-  if (inputs.surfacePreset) {
-    inputs.surfacePreset.value = svg.surfacePreset ?? 'none';
-    ui.setControlDisabled(
-      inputs.surfacePreset,
-      !canEdit || surfaceControlsBlockedByCreativeLook(state),
-    );
-  }
-  if (inputs.surfaceScale) {
-    const scale = clampSurfaceUiScale(Number(svg.surfaceScale ?? 1) || 1.0);
-    if (document.activeElement !== inputs.surfaceScale) {
-      inputs.surfaceScale.value = scale;
-      helpers.updateValueLabel(inputs.surfaceScaleOutputKey, formatSurfaceDetailLabel(scale), 'decimal');
-    }
-    ui.setControlDisabled(
-      inputs.surfaceScale,
-      !canEdit || surfaceControlsBlockedByCreativeLook(state),
-    );
-  }
-  syncSurfaceStrengthControl(ctx, svg, canEdit, state);
   if (inputs.flipDirection) {
     inputs.flipDirection.checked = !!svg.flipDirection;
     ui.setControlDisabled(inputs.flipDirection, !canEdit);
@@ -1579,21 +1686,6 @@ export function ensureFontExtrudeAnimationPreviewDockMounted() {
   if (!anchor?.parentElement) return;
   anchor.insertAdjacentHTML('afterend', FONT_EXTRUDE_ANIMATION_PREVIEW_DOCK_HTML);
 }
-
-/** Surface material — shown in Appearance after the first 3D text generate. */
-export const FONT_EXTRUDE_SURFACE_POST_GEN_HTML = `
-          <div id="fontExtrudeSurfacePostGen" class="font-extrude-surface-post-gen" hidden>
-            ${buildSvgExtrudeSurfaceControlsHtml({
-              presetId: 'fontExtrudeSurfacePreset',
-              scaleId: 'fontExtrudeSurfaceScale',
-              scaleOutput: 'fontExtrudeSurfaceScale',
-              strengthId: 'fontExtrudeSurfaceStrength',
-              strengthOutput: 'fontExtrudeSurfaceStrength',
-              presetAriaLabel: 'Font extrude surface material',
-              presetLabel: 'Material',
-              strengthLabel: 'Bump Strength',
-            })}
-          </div>`;
 
 /** Reveal animation — shown after the first 3D text generate. */
 export const FONT_EXTRUDE_POST_GEN_CONTROLS_HTML = `

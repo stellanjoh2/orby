@@ -59,6 +59,7 @@ import { MeshDiagnosticsController } from './render/MeshDiagnosticsController.js
 import { TopologyWarningsOverlay } from './render/TopologyWarningsOverlay.js';
 import { JointNameLabelsController } from './render/JointNameLabelsController.js';
 import { MaterialController } from './render/MaterialController.js';
+import { isMaterialObjectSurfaceEnabled } from './render/SvgExtrudeSurfaceShader.js';
 import { applyStaticAnimationFrameZero } from './render/bakeStaticSkinnedGeometry.js';
 import { confirmVoxelHdHighPolyAlert } from './render/voxelHdHighPolyAlert.js';
 import { willApplyVoxelHdGeometry } from './mesh/voxelizationMeshAdvice.js';
@@ -226,6 +227,8 @@ export class SceneManager {
     this._suppressResizeForExport = false;
     /** Guard overlapping offline capture preview requests (scrub debounce + button). */
     this._capturePreviewInFlight = false;
+    /** Keep rAF alive briefly after shader/material swaps (surface, overlays) while idle. */
+    this._viewportPresentationFrames = 0;
     this.eventBus.on('ui:panels-scrolling', (payload) => {
       this.setPanelsShelfScrolling(!!payload?.active);
     });
@@ -259,12 +262,10 @@ export class SceneManager {
   async enterBlankStudio(options = {}) {
     await this.ui.ensureStudioUiReady();
     await this.ensureStudioReady();
-    this.ui.setDropzoneVisible(false);
-    await this.syncViewportSize();
-    this.startRenderLoop();
     // Apply the minimal "blank canvas" snapshot (HDRI panorama hidden → solid
-    // black void, lights off, ground wireframe on). Routed through the canonical
-    // settings-restore path so every scene controller stays in sync.
+    // black void, lights off, ground wireframe on) before the viewport is shown.
+    // Bootstrap uses default hdriBackground:true; revealing WebGL first would flash
+    // the beach HDRI for a frame before this preset lands.
     try {
       await this.ui.sceneSettingsManager?.loadFromText(
         JSON.stringify(createBlankCanvasPreset()),
@@ -272,6 +273,9 @@ export class SceneManager {
     } catch (error) {
       console.error('Failed to apply blank canvas preset', error);
     }
+    this.ui.setDropzoneVisible(false);
+    await this.syncViewportSize();
+    this.startRenderLoop();
     this.ui.updateTitle('Blank canvas');
     this.ui.updateTopBarDetail('No model — generate text or import a file');
     this.ui.revealShelf({ skipSound: options.skipSound !== false });
@@ -707,6 +711,9 @@ export class SceneManager {
           });
         }
       },
+      onObjectSurfacePresentationRefresh: () => {
+        this._presentObjectSurfaceChange();
+      },
       onCreativeLookAsciiSync: () => this._syncCreativeLookAsciiPass(),
       prepareStaticVoxelPose: () => {
         if (!this.currentModel) return;
@@ -732,6 +739,9 @@ export class SceneManager {
       },
       onMaterialUpdate: () => {
         this.fontTextRevealController?.onMaterialBaselineChanged?.();
+      },
+      onPostShaderMaterialSync: () => {
+        this.wakeViewportPresentation(8);
       },
     });
 
@@ -2499,11 +2509,13 @@ export class SceneManager {
     if (!overlay) return;
     if (!on) {
       overlay.setEnabled(false);
+      this._refreshViewportAfterOverlayChange();
       return;
     }
     void withViewportLoadSpinner(this.ui, 'Loading UV checker', async () => {
       overlay.setEnabled(true, false);
       await overlay.rebuildAsync();
+      this._refreshViewportAfterOverlayChange();
     });
   }
 
@@ -2527,38 +2539,66 @@ export class SceneManager {
     void withViewportLoadSpinner(this.ui, 'Loading UV checker', async () => {
       overlay.setStyle(safe, false);
       await overlay.rebuildAsync();
+      this._refreshViewportAfterOverlayChange();
     });
   }
 
   setNormalViewEnabled(enabled) {
     const on = !!enabled;
-    this.stateStore.set('advanced.normalView', on);
     const overlay = this.materialController?.normalViewOverlay;
-    if (!overlay) return;
+    if (on && this.stateStore.peekState().advanced?.uvChecker) {
+      this.setUvCheckerEnabled(false);
+    }
+    if (!overlay) {
+      this.stateStore.set('advanced.normalView', on);
+      return;
+    }
     if (!on) {
+      this.stateStore.batch(() => {
+        this.stateStore.set('advanced.normalView', false);
+      });
       overlay.setEnabled(false);
+      this._refreshViewportAfterOverlayChange();
       return;
     }
     void withViewportLoadSpinner(this.ui, 'Loading normal view', async () => {
       overlay.setEnabled(true, false);
       await overlay.rebuildAsync();
+      this.stateStore.batch(() => {
+        this.stateStore.set('advanced.normalView', true);
+      });
+      this._refreshViewportAfterOverlayChange();
     });
   }
 
   setNormalViewMode(mode) {
     const allowed = ['geometry', 'tangent'];
     const safe = allowed.includes(mode) ? mode : 'geometry';
-    this.stateStore.set('advanced.normalViewMode', safe);
     const overlay = this.materialController?.normalViewOverlay;
-    if (!overlay) return;
+    if (!overlay) {
+      this.stateStore.set('advanced.normalViewMode', safe);
+      return;
+    }
     if (!overlay.enabled) {
+      this.stateStore.batch(() => {
+        this.stateStore.set('advanced.normalViewMode', safe);
+      });
       overlay.setMode(safe, false);
       return;
     }
     void withViewportLoadSpinner(this.ui, 'Loading normal view', async () => {
       overlay.setMode(safe, false);
       await overlay.rebuildAsync();
+      this.stateStore.batch(() => {
+        this.stateStore.set('advanced.normalViewMode', safe);
+      });
+      this._refreshViewportAfterOverlayChange();
     });
+  }
+
+  /** Wake idle render loop after diagnostic overlay rebuilds (normal view, UV checker, etc.). */
+  _refreshViewportAfterOverlayChange() {
+    this.wakeViewportPresentation(6);
   }
 
   updateUvCheckerOverlayTransforms() {
@@ -4280,21 +4320,80 @@ export class SceneManager {
   }
 
   setSvgExtrudeSurface(settings = {}, options = {}) {
-    const { updateState = true } = options;
-    if (updateState) {
-      if (settings.preset !== undefined) {
-        this.stateStore.set('svgExtrude.surfacePreset', settings.preset);
-      }
-      if (settings.scale !== undefined) {
-        this.stateStore.set('svgExtrude.surfaceScale', settings.scale);
-      }
-      if (settings.strength !== undefined) {
-        this.stateStore.set('svgExtrude.surfaceStrength', settings.strength);
-      }
+    const objectSettings = {
+      scale: settings.scale,
+      strength: settings.strength,
+    };
+    if (settings.preset !== undefined) {
+      objectSettings.preset = settings.preset;
+      objectSettings.enabled = settings.preset !== 'none';
     }
+    return this.setObjectSurface(objectSettings, options);
+  }
+
+  setObjectSurface(settings = {}, options = {}) {
+    const { updateState = true } = options;
+    const prevMaterial = this.stateStore.peekState()?.material || {};
+    const wasActive = isMaterialObjectSurfaceEnabled(prevMaterial);
+    let rebuildShadedMaterials = false;
+    if (updateState && this.currentModel) {
+      const nextMaterial = { ...prevMaterial };
+      if (settings.enabled !== undefined) {
+        nextMaterial.surfaceEnabled = !!settings.enabled;
+      }
+      if (settings.preset !== undefined) {
+        nextMaterial.surfacePreset = settings.preset;
+      }
+      const willBeActive = isMaterialObjectSurfaceEnabled(nextMaterial);
+      const mode = this.currentShading ?? this.stateStore.peekState().shading;
+      rebuildShadedMaterials =
+        !wasActive && willBeActive && (mode === 'shaded' || mode === 'clay');
+    }
+
+    this.stateStore.batch(() => {
+      if (updateState) {
+        if (settings.enabled !== undefined) {
+          this.stateStore.set('material.surfaceEnabled', !!settings.enabled);
+        }
+        if (settings.preset !== undefined) {
+          this.stateStore.set('material.surfacePreset', settings.preset);
+          if (settings.preset !== 'none') {
+            this.stateStore.set(
+              'material.surfaceLastPreset',
+              settings.lastPreset ?? settings.preset,
+            );
+          }
+        }
+        if (settings.scale !== undefined) {
+          this.stateStore.set('material.surfaceScale', settings.scale);
+        }
+        if (settings.strength !== undefined) {
+          this.stateStore.set('material.surfaceStrength', settings.strength);
+        }
+        if (settings.lastPreset !== undefined) {
+          this.stateStore.set('material.surfaceLastPreset', settings.lastPreset);
+        }
+      }
+      if (this.currentModel && !rebuildShadedMaterials) {
+        this.materialController?.reapplySvgExtrudeSurfaceShaders({ silentEligible: true });
+      }
+    });
     if (!this.currentModel) return;
-    this.materialController?.reapplySvgExtrudeSurfaceShaders();
-    this.materialController?.deferCreativeLookSurfaceResync?.();
+    if (rebuildShadedMaterials) {
+      const mode = this.currentShading ?? this.stateStore.peekState().shading;
+      this.setShading(mode);
+      return;
+    }
+    this._presentObjectSurfaceChange();
+  }
+
+  /** Repaint immediately after surface shader swaps (idle loop + async normal maps). */
+  _presentObjectSurfaceChange() {
+    this.materialController?.relinkObjectSurfacePresentation?.();
+    this.wakeViewportPresentation(8);
+    this.materialController?.deferCreativeLookSurfaceResync?.(() => {
+      this.wakeViewportPresentation(4);
+    });
   }
 
   /** Live update fill on font-generated meshes (no SVG “color override” toggle). */
@@ -4555,6 +4654,7 @@ export class SceneManager {
     this.setLightsShadowTwoSided(this.lightsShadowTwoSided);
     // Material instances are recreated when shading changes; reapply reverse mode.
     this.setReverseNormals(this.reverseNormalsEnabled);
+    this._refreshViewportAfterOverlayChange();
     if (clearReference) {
       this.ui?.syncUIFromState?.();
     }
@@ -5275,6 +5375,18 @@ export class SceneManager {
       return;
     }
     this.render();
+  }
+
+  /**
+   * Hold the idle render loop for several frames after material/shader edits so WebGL
+   * program recompiles paint while the camera is still (orbit damping is not required).
+   * @param {number} [frameCount]
+   */
+  wakeViewportPresentation(frameCount = 8) {
+    if (!this.isStudioReady) return;
+    const n = Math.max(1, Math.floor(Number(frameCount) || 1));
+    this._viewportPresentationFrames = Math.max(this._viewportPresentationFrames, n);
+    this.requestRender();
   }
 
   render() {

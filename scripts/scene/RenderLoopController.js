@@ -357,6 +357,10 @@ export class RenderLoopController {
 
     scene.render();
 
+    if (scene._viewportPresentationFrames > 0) {
+      scene._viewportPresentationFrames -= 1;
+    }
+
     for (const step of this._postRenderSteps) {
       if (step.when && !step.when(ctx, scene)) continue;
       step.run(delta, scene);

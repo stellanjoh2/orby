@@ -1,5 +1,5 @@
 /**
- * Object → Shape Library — left floating panel + viewport drag-and-drop.
+ * Object → Shape Library — shelf toggle + left floating panel + viewport drag-and-drop.
  */
 import {
   SHAPE_LIBRARY,
@@ -32,6 +32,8 @@ export class ShapeLibraryUI {
     /** @type {string | null} */
     this._activeDragShapeId = null;
     this._gridBuilt = false;
+    /** @type {(() => void) | null} */
+    this._stateUnsub = null;
   }
 
   mount() {
@@ -46,26 +48,29 @@ export class ShapeLibraryUI {
     block.id = 'shapeLibraryShelfBlock';
     block.innerHTML = `
       <div class="subsection" data-subsection="shape-library">
-        <div class="block-title">
-          <span>Shape Library</span>
+        <div class="block-title has-toggle">
+          <span
+            data-tooltip="Low-poly starter shapes — drag into the viewport or pick from the library grid"
+          >Shape Library</span>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <label class="effect-toggle" data-tooltip="Open or close the shape library panel">
+              <input type="checkbox" id="shapeLibraryPanelOpen" />
+              <span class="effect-indicator" aria-hidden="true"></span>
+              <span class="sr-only">Show Shape Library</span>
+            </label>
+          </div>
         </div>
-        <p class="shape-library-shelf-copy">
-          Low-poly starter shapes — drag into the viewport or pick from the library grid.
-        </p>
-        <button
-          type="button"
-          id="shapeLibraryOpenBtn"
-          class="accent-action-btn shape-library-open-btn"
-          data-tooltip="Open the shape library panel"
-        >
-          <i class="fa-solid fa-shapes" aria-hidden="true"></i>
-          <span>Open Shape Library</span>
-        </button>
       </div>
     `;
     anchor.insertBefore(block, fontPanel.nextSibling);
     this._shelfBlock = block;
-    this._openBtn = block.querySelector('#shapeLibraryOpenBtn');
+    this._panelOpenToggle = block.querySelector('#shapeLibraryPanelOpen');
+
+    if (this.ui.dom?.subsections) {
+      this.ui.dom.subsections['shape-library'] = block.querySelector(
+        '[data-subsection="shape-library"]',
+      );
+    }
   }
 
   bind() {
@@ -79,14 +84,23 @@ export class ShapeLibraryUI {
     this._dropTarget = document.querySelector('.viewport');
     this._webgl = document.getElementById('webgl');
 
-    this._openBtn?.addEventListener('click', () => this.openPanel());
-    this._panelClose?.addEventListener('click', () => this.closePanel());
+    this.syncFromState(this.stateStore.getState());
+    this._stateUnsub = this.stateStore.subscribe((state) => this.syncFromState(state));
+
+    this._panelOpenToggle?.addEventListener('change', (event) => {
+      this.ui.uiSounds?.playSelect();
+      const open = !!event.target.checked;
+      this.stateStore.set('shapeLibrary.panelOpen', open);
+    });
+    this._panelClose?.addEventListener('click', () => {
+      this.stateStore.set('shapeLibrary.panelOpen', false);
+    });
     bindFloatingPanelHeaderDrag(this._panelHeader, (event) => this._startPanelDrag(event));
 
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape' || !this._panelOpen) return;
       event.preventDefault();
-      this.closePanel();
+      this.stateStore.set('shapeLibrary.panelOpen', false);
     });
 
     document.addEventListener('dragend', () => {
@@ -97,7 +111,32 @@ export class ShapeLibraryUI {
     this._bindViewportDrop();
   }
 
+  /**
+   * @param {import('../StateStore.js').AppState | undefined} state
+   */
+  syncFromState(state) {
+    const open = !!state?.shapeLibrary?.panelOpen;
+    if (this._panelOpenToggle && this._panelOpenToggle.checked !== open) {
+      this._panelOpenToggle.checked = open;
+    }
+    if (open) this._showPanel();
+    else this._hidePanel();
+  }
+
   openPanel() {
+    this.stateStore.set('shapeLibrary.panelOpen', true);
+  }
+
+  closePanel() {
+    this.stateStore.set('shapeLibrary.panelOpen', false);
+  }
+
+  togglePanel() {
+    const open = !this.stateStore.getState()?.shapeLibrary?.panelOpen;
+    this.stateStore.set('shapeLibrary.panelOpen', open);
+  }
+
+  _showPanel() {
     if (!this._panel) return;
     this._panelOpen = true;
     this._panel.hidden = false;
@@ -108,15 +147,10 @@ export class ShapeLibraryUI {
     }
   }
 
-  closePanel() {
+  _hidePanel() {
     if (!this._panel) return;
     this._panelOpen = false;
     this._panel.hidden = true;
-  }
-
-  togglePanel() {
-    if (this._panelOpen) this.closePanel();
-    else this.openPanel();
   }
 
   _renderGrid() {

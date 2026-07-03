@@ -1,9 +1,6 @@
 import { deepEqual } from '../utils/deepEqual.js';
 import {
   buildFontExtrudeSvgExtrudeBaseline,
-  DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
-  DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
-  DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
 } from '../import/extrudeDefaults.js';
 import { createImportDefaults } from '../state/defaults/importDefaults.js';
 
@@ -21,9 +18,6 @@ export const FONT_EXTRUDE_RESET_DIRTY_PATHS = {
   ],
   'font-extrude-appearance': [
     'fontExtrude.fillColor',
-    'svgExtrude.surfacePreset',
-    'svgExtrude.surfaceScale',
-    'svgExtrude.surfaceStrength',
   ],
   'font-extrude-3d-shape': [
     'svgExtrude.depth',
@@ -79,9 +73,6 @@ const FONT_EXTRUDE_SUBSECTION_DEFAULTS = {
   },
   'font-extrude-appearance': {
     'fontExtrude.fillColor': FONT_DEFAULTS.fillColor,
-    'svgExtrude.surfacePreset': DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
-    'svgExtrude.surfaceScale': DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
-    'svgExtrude.surfaceStrength': DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
   },
   'font-extrude-3d-shape': {
     'svgExtrude.depth': FONT_SVG_BASELINE.depth,
@@ -181,11 +172,6 @@ export function applyFontExtrudeSubsectionReset(resetType, stateStore, eventBus,
       const fill = targets['fontExtrude.fillColor'];
       stateStore.set('svgExtrude.availableColors', [fill]);
       options.getScene?.()?.applyFontExtrudeFillColor?.(fill);
-      eventBus.emit('mesh:svg-extrude-surface', {
-        preset: targets['svgExtrude.surfacePreset'],
-        scale: targets['svgExtrude.surfaceScale'],
-        strength: targets['svgExtrude.surfaceStrength'],
-      });
       break;
     }
     case 'font-extrude-3d-shape': {

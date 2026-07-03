@@ -2,7 +2,7 @@
  * Shared rebuild path after {@link SvgExtrudeImporter} mutates geometry.
  */
 
-import { resetSvgExtrudeStateForFontExtrude } from '../import/extrudeDefaults.js';
+import { resetSvgExtrudeStateForFontExtrude, DEFAULT_SVG_EXTRUDE_SURFACE_PRESET, DEFAULT_SVG_EXTRUDE_SURFACE_SCALE, DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH } from '../import/extrudeDefaults.js';
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 
 /** @param {unknown} importer */
@@ -28,6 +28,19 @@ export function shouldClearSvgExtrudeLegacyForFontGeneration(scene) {
  */
 export function clearSvgExtrudeLegacyForFontGeneration(stateStore, eventBus) {
   resetSvgExtrudeStateForFontExtrude(stateStore, eventBus);
+  stateStore.batch(() => {
+    stateStore.set('material.surfacePreset', DEFAULT_SVG_EXTRUDE_SURFACE_PRESET);
+    stateStore.set('material.surfaceScale', DEFAULT_SVG_EXTRUDE_SURFACE_SCALE);
+    stateStore.set('material.surfaceStrength', DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH);
+    stateStore.set('material.surfaceEnabled', false);
+    stateStore.set('material.surfaceLastPreset', 'galvanizedSteel');
+  });
+  eventBus.emit('mesh:object-surface', {
+    enabled: false,
+    preset: DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
+    scale: DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
+    strength: DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
+  });
 }
 
 /** @param {unknown} importer */

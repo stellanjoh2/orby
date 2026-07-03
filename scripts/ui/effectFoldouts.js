@@ -3,6 +3,7 @@ import {
   isBloomTuningActive,
   isVignetteUiEnabled,
 } from '../constants.js';
+import { isMaterialObjectSurfaceEnabled } from '../render/SvgExtrudeSurfaceShader.js';
 import { isBackgroundFallbackActive } from '../render/backgroundFallback.js';
 import { getBackgroundMode } from '../render/backgroundMode.js';
 
@@ -73,6 +74,7 @@ export function applyMeshFoldouts(state, setOpen) {
   const wireframeActive = isWireframeSectionActive(state);
 
   setOpen('fresnel', !!state.fresnel?.enabled);
+  setOpen('object-surface', isMaterialObjectSurfaceEnabled(state.material));
   setOpen('grid', !!state.groundWire);
   setOpen('wireframe-settings', wireframeActive);
   setOpen('uv-checker', !!state.advanced?.uvChecker);
@@ -111,6 +113,7 @@ export function applyToggleSectionMute(state, setMuted) {
 
   // Object tab
   setMuted('fresnel', !state.fresnel?.enabled);
+  setMuted('object-surface', !isMaterialObjectSurfaceEnabled(state.material));
   setMuted('wireframe', !wireframeActive);
   setMuted(
     'creative-look',
@@ -118,6 +121,7 @@ export function applyToggleSectionMute(state, setMuted) {
   );
   setMuted('grid', !state.groundWire);
   setMuted('font-extrude', !state.fontExtrude?.panelOpen);
+  setMuted('shape-library', !state.shapeLibrary?.panelOpen);
 
   // Studio tab
   setMuted('hdri', !state.hdriEnabled);

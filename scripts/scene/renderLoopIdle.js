@@ -76,6 +76,8 @@ export function needsContinuousFrames(scene, ctx) {
 
   if (scene.ui?.helpers?.isViewportScrubActive?.()) return true;
 
+  if (scene._viewportPresentationFrames > 0) return true;
+
   return orbitControlsNeedFrame(scene.cameraController?.getControls?.());
 }
 

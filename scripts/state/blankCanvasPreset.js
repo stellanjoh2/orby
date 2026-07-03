@@ -34,6 +34,12 @@ export function createBlankCanvasPreset() {
       emissive: 0,
       importHasMrMaps: false,
       importUsesAuthoredPbr: false,
+      surfacePreset: 'none',
+      surfaceScale: 1,
+      surfaceStrength: 1,
+      surfaceEligible: false,
+      surfaceEnabled: false,
+      surfaceLastPreset: 'galvanizedSteel',
     },
     advanced: {
       reverseNormals: false,

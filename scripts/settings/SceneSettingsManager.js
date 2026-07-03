@@ -13,6 +13,10 @@ import { migrateLegacyGroundKeys } from '../state/migrateLegacyGroundKeys.js';
 import { mergeAberrationSettings } from '../render/chromaticAberration.js';
 import { resolveCreativeLookPresetChoice } from '../render/CreativeLookMaterials.js';
 import { normalizeStoredGoboScale } from '../render/GoboProjection.js';
+import {
+  normalizeSurfaceLastPresetId,
+  normalizeSurfacePresetId,
+} from '../render/SvgExtrudeSurfaceShader.js';
 import { resolveDiscGlowFromState } from '../render/LensFlareController.js';
 import { emitGodRaysStudioEvents } from '../GodRaysEffect.js';
 import { normalizeBackgroundGradient } from '../render/backgroundGradient/backgroundGradientDefaults.js';
@@ -300,7 +304,14 @@ export class SceneSettingsManager {
         this.eventBus.emit('mesh:shading', payload.shading);
       }
       if (payload.material !== undefined) {
-        this.stateStore.set('material', payload.material);
+        const material = { ...payload.material };
+        if (material.surfacePreset !== undefined) {
+          material.surfacePreset = normalizeSurfacePresetId(material.surfacePreset);
+        }
+        if (material.surfaceLastPreset !== undefined) {
+          material.surfaceLastPreset = normalizeSurfaceLastPresetId(material.surfaceLastPreset);
+        }
+        this.stateStore.set('material', material);
         if (payload.material.brightness !== undefined) {
           this.eventBus.emit('mesh:material-brightness', payload.material.brightness);
         }
@@ -312,6 +323,31 @@ export class SceneSettingsManager {
         }
         if (payload.material.emissive !== undefined) {
           this.eventBus.emit('mesh:material-emissive', payload.material.emissive);
+        }
+        if (
+          payload.material.surfacePreset !== undefined ||
+          payload.material.surfaceScale !== undefined ||
+          payload.material.surfaceStrength !== undefined ||
+          payload.material.surfaceEnabled !== undefined ||
+          payload.material.surfaceLastPreset !== undefined
+        ) {
+          const mat = this.stateStore.getState().material ?? {};
+          const enabled =
+            mat.surfaceEnabled === true
+            || (mat.surfaceEnabled !== false && (mat.surfacePreset ?? 'none') !== 'none');
+          this.eventBus.emit('mesh:object-surface', {
+            enabled,
+            preset: enabled ? (mat.surfacePreset ?? 'none') : 'none',
+            scale: Number(mat.surfaceScale ?? 1) || 1.0,
+            strength: Number(mat.surfaceStrength ?? 1) || 1.0,
+          });
+        }
+        const scene = window.orby?.scene;
+        if (scene?.materialController && scene.currentModel) {
+          this.stateStore.set(
+            'material.surfaceEligible',
+            scene.materialController._modelSurfaceEligible(scene.currentModel),
+          );
         }
       }
       // Legacy support
@@ -492,20 +528,31 @@ export class SceneSettingsManager {
         payload.svgExtrude?.surfaceScale !== undefined ||
         payload.svgExtrude?.surfaceStrength !== undefined
       ) {
-        if (payload.svgExtrude?.surfacePreset !== undefined) {
-          this.stateStore.set('svgExtrude.surfacePreset', payload.svgExtrude.surfacePreset);
+        const legacyPreset = normalizeSurfacePresetId(payload.svgExtrude?.surfacePreset ?? 'none');
+        const legacyScale = payload.svgExtrude?.surfaceScale ?? 1;
+        const legacyStrength = payload.svgExtrude?.surfaceStrength ?? 1;
+        const hasMaterialSurface =
+          payload.material?.surfacePreset !== undefined ||
+          payload.material?.surfaceEnabled !== undefined;
+        if (!hasMaterialSurface && legacyPreset !== 'none') {
+          this.stateStore.set('material.surfacePreset', legacyPreset);
+          this.stateStore.set('material.surfaceScale', legacyScale);
+          this.stateStore.set('material.surfaceStrength', legacyStrength);
+          this.stateStore.set('material.surfaceEnabled', true);
+          this.stateStore.set(
+            'material.surfaceLastPreset',
+            normalizeSurfaceLastPresetId(payload.svgExtrude?.surfacePreset),
+          );
         }
-        if (payload.svgExtrude?.surfaceScale !== undefined) {
-          this.stateStore.set('svgExtrude.surfaceScale', payload.svgExtrude.surfaceScale);
-        }
-        if (payload.svgExtrude?.surfaceStrength !== undefined) {
-          this.stateStore.set('svgExtrude.surfaceStrength', payload.svgExtrude.surfaceStrength);
-        }
-        const st = this.stateStore.getState().svgExtrude;
-        this.eventBus.emit('mesh:svg-extrude-surface', {
-          preset: st?.surfacePreset ?? 'none',
-          scale: st?.surfaceScale ?? 1.0,
-          strength: st?.surfaceStrength ?? 1.0,
+        this.stateStore.set('svgExtrude.surfacePreset', 'none');
+        this.stateStore.set('svgExtrude.surfaceScale', 1);
+        this.stateStore.set('svgExtrude.surfaceStrength', 1);
+        const mat = this.stateStore.getState().material || {};
+        this.eventBus.emit('mesh:object-surface', {
+          enabled: !!mat.surfaceEnabled || (mat.surfacePreset ?? 'none') !== 'none',
+          preset: mat.surfacePreset ?? 'none',
+          scale: Number(mat.surfaceScale ?? 1) || 1.0,
+          strength: Number(mat.surfaceStrength ?? 1) || 1.0,
         });
       }
       if (payload.advanced?.reverseNormals !== undefined) {

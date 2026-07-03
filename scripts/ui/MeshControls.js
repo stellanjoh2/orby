@@ -54,7 +54,9 @@ import {
 import {
   bindSvgExtrudeControls,
   bindExtrudeBevelControls,
+  bindObjectSurfaceControls,
   syncSvgExtrudeControls,
+  syncObjectSurfaceControls,
   renderSvgColorDepthControls,
 } from './svgExtrudeControlsShared.js';
 import {
@@ -112,6 +114,23 @@ export class MeshControls {
     if (wrap) wrap.hidden = !visible;
   }
 
+  _objectSurfaceCtx() {
+    return {
+      inputs: {
+        surfaceEnabled: this.ui.inputs.toggleObjectSurface,
+        surfacePreset: this.ui.inputs.objectSurfacePreset,
+        surfaceScale: this.ui.inputs.objectSurfaceScale,
+        surfaceScaleOutputKey: 'objectSurfaceScale',
+        surfaceStrength: this.ui.inputs.objectSurfaceStrength,
+        surfaceStrengthOutputKey: 'objectSurfaceStrength',
+      },
+      stateStore: this.stateStore,
+      eventBus: this.eventBus,
+      ui: this.ui,
+      helpers: this.helpers,
+    };
+  }
+
   _svgExtrudeCtx() {
     return {
       inputs: {
@@ -124,11 +143,6 @@ export class MeshControls {
         normalAngleOutputKey: 'svgExtrudeNormalAngle',
         hardEdgeAngle: this.ui.inputs.svgExtrudeHardEdgeAngle,
         hardEdgeAngleOutputKey: 'svgExtrudeHardEdgeAngle',
-        surfacePreset: this.ui.inputs.svgExtrudeSurfacePreset,
-        surfaceScale: this.ui.inputs.svgExtrudeSurfaceScale,
-        surfaceScaleOutputKey: 'svgExtrudeSurfaceScale',
-        surfaceStrength: this.ui.inputs.svgExtrudeSurfaceStrength,
-        surfaceStrengthOutputKey: 'svgExtrudeSurfaceStrength',
         flipDirection: this.ui.inputs.svgExtrudeFlipDirection,
         colorOverride: this.ui.inputs.svgExtrudeColorOverride,
         overrideColor: this.ui.inputs.svgExtrudeColor,
@@ -191,6 +205,7 @@ export class MeshControls {
 
     bindSvgExtrudeControls(this._svgExtrudeCtx());
     bindExtrudeBevelControls(this._svgExtrudeCtx());
+    bindObjectSurfaceControls(this._objectSurfaceCtx());
     this.ui.inputs.centerPivotBtn?.addEventListener('click', () => {
       this.ui.uiSounds?.playSelect?.();
       this.eventBus.emit('mesh:recenter-pivot');
@@ -266,14 +281,7 @@ export class MeshControls {
     }
     this.ui.inputs.normalView?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
-      const uvCheckerWasOn = enabled && !!this.stateStore.getState().advanced?.uvChecker;
-      this.stateStore.batch(() => {
-        this.stateStore.set('advanced.normalView', enabled);
-        if (uvCheckerWasOn) {
-          this.stateStore.set('advanced.uvChecker', false);
-        }
-      });
-      if (uvCheckerWasOn) {
+      if (enabled && !!this.stateStore.getState().advanced?.uvChecker) {
         this.eventBus.emit('mesh:uv-checker', false);
       }
       this.eventBus.emit('mesh:normal-view', enabled);
@@ -281,7 +289,6 @@ export class MeshControls {
     this.ui.inputs.normalViewMode?.addEventListener('change', (event) => {
       const allowed = ['geometry', 'tangent'];
       const mode = allowed.includes(event.target.value) ? event.target.value : 'geometry';
-      this.stateStore.set('advanced.normalViewMode', mode);
       this.eventBus.emit('mesh:normal-view-mode', mode);
     });
     this.ui.inputs.transparencyFix?.addEventListener('change', (event) => {
@@ -1561,6 +1568,7 @@ export class MeshControls {
       !!state.material?.importUsesAuthoredPbr,
       !!state.material?.importHasMrMaps,
     );
+    syncObjectSurfaceControls(this._objectSurfaceCtx(), state, !!window.orby?.scene?.currentModel);
     syncSvgExtrudeControls(this._svgExtrudeCtx(), state, { requireEnabled: true });
     if (this.ui.inputs.reverseNormals) {
       this.ui.inputs.reverseNormals.checked = !!state.advanced?.reverseNormals;

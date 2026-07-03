@@ -13,6 +13,7 @@ import {
   effectiveVignetteIntensity,
   cameraShadowsUiToShader,
 } from '../constants.js';
+import { isMaterialObjectSurfaceEnabled } from '../render/SvgExtrudeSurfaceShader.js';
 import { getBackgroundMode } from '../render/backgroundMode.js';
 import { normalizeBackgroundGradient } from '../render/backgroundGradient/backgroundGradientDefaults.js';
 
@@ -231,6 +232,24 @@ function createStateApplySteps() {
         if (state.material?.emissive !== undefined) {
           s.materialController.setMaterialEmissive(state.material.emissive);
         }
+        if (
+          state.material?.surfacePreset !== undefined ||
+          state.material?.surfaceScale !== undefined ||
+          state.material?.surfaceStrength !== undefined ||
+          state.material?.surfaceEnabled !== undefined ||
+          state.material?.surfaceLastPreset !== undefined
+        ) {
+          s.setObjectSurface(
+            {
+              enabled: state.material.surfaceEnabled,
+              preset: state.material.surfacePreset,
+              scale: state.material.surfaceScale,
+              strength: state.material.surfaceStrength,
+              lastPreset: state.material.surfaceLastPreset,
+            },
+            { updateState: false },
+          );
+        }
         if (state.diffuseBrightness !== undefined && state.material?.brightness === undefined) {
           s.materialController.setMaterialBrightness(state.diffuseBrightness);
         }
@@ -250,11 +269,10 @@ function createStateApplySteps() {
           await s.applyCreativeLookFromState(state.creativeLook, {
             skipStateStore: true,
           });
-          if (
-            state.creativeLook.enabled &&
-            state.svgExtrude?.surfacePreset &&
-            state.svgExtrude.surfacePreset !== 'none'
-          ) {
+        if (
+          state.creativeLook.enabled &&
+          isMaterialObjectSurfaceEnabled(state.material)
+        ) {
             s.materialController?.reapplyCreativeLookSurfaceShaders?.();
           }
         }
@@ -295,14 +313,6 @@ function createStateApplySteps() {
             {
               enabled: !!state.svgExtrude.colorOverride,
               color: state.svgExtrude.overrideColor ?? '#7ed321',
-            },
-            { updateState: false },
-          );
-          s.setSvgExtrudeSurface(
-            {
-              preset: state.svgExtrude.surfacePreset,
-              scale: state.svgExtrude.surfaceScale,
-              strength: state.svgExtrude.surfaceStrength,
             },
             { updateState: false },
           );

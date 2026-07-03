@@ -3,9 +3,6 @@ import { isTextureImageReady } from '../utils/textureReady.js';
 
 export const SVG_EXTRUDE_SURFACE_PRESETS = [
   { id: 'none', label: 'Default (smooth)', kind: 'none' },
-  { id: 'carPaint', label: 'Car paint (metallic flake)', kind: 'procedural', proceduralIndex: 1 },
-  { id: 'brushed', label: 'Brushed metal', kind: 'procedural', proceduralIndex: 2 },
-  { id: 'ceramic', label: 'Ceramic (micro-grain)', kind: 'procedural', proceduralIndex: 3 },
   {
     id: 'scratchedMetal',
     label: 'Scratched metal',
@@ -36,15 +33,17 @@ export const SVG_EXTRUDE_SURFACE_PRESETS = [
   },
 ];
 
+/** Default when re-enabling Object → Material surface. */
+export const DEFAULT_SURFACE_NORMAL_MAP_PRESET = 'galvanizedSteel';
+
+const REMOVED_PROCEDURAL_SURFACE_PRESETS = new Set(['carPaint', 'brushed', 'ceramic']);
+
 const PRESET_BY_ID = Object.fromEntries(
   SVG_EXTRUDE_SURFACE_PRESETS.map((p) => [p.id, p]),
 );
 
 const PRESET_TO_INDEX = {
   none: 0,
-  carPaint: 1,
-  brushed: 2,
-  ceramic: 3,
   scratchedMetal: 0,
   brushedIron: 0,
   dirtyMetal: 0,
@@ -89,8 +88,25 @@ export function resolveSvgExtrudeNormalStrength(config, surfaceStrength) {
   return base * clampSurfaceStrength(surfaceStrength);
 }
 
+export function normalizeSurfacePresetId(presetId) {
+  if (!presetId || presetId === 'none') return 'none';
+  if (REMOVED_PROCEDURAL_SURFACE_PRESETS.has(presetId)) return 'none';
+  return PRESET_BY_ID[presetId] ? presetId : 'none';
+}
+
+/** Maps legacy procedural ids and invalid values to a real normal-map preset. */
+export function normalizeSurfaceLastPresetId(presetId) {
+  const normalized = normalizeSurfacePresetId(presetId);
+  if (normalized !== 'none') return normalized;
+  if (!presetId || presetId === 'none') return DEFAULT_SURFACE_NORMAL_MAP_PRESET;
+  if (REMOVED_PROCEDURAL_SURFACE_PRESETS.has(presetId)) {
+    return DEFAULT_SURFACE_NORMAL_MAP_PRESET;
+  }
+  return PRESET_BY_ID[presetId] ? presetId : DEFAULT_SURFACE_NORMAL_MAP_PRESET;
+}
+
 export function getSvgExtrudeSurfacePresetConfig(presetId) {
-  return PRESET_BY_ID[presetId] ?? PRESET_BY_ID.none;
+  return PRESET_BY_ID[normalizeSurfacePresetId(presetId)] ?? PRESET_BY_ID.none;
 }
 
 export function getSvgExtrudeSurfacePresetIndex(presetId) {
@@ -183,6 +199,22 @@ function setNormalBoundsUniforms(uniformRefs, bounds) {
  * Hook that should run inside the SVG surface wrapper (Fresnel when both are active).
  * @param {THREE.Material} material
  */
+function resolveShadowInnerForSurfaceInsert(material) {
+  const inner = material.userData?.orbyShadowTint?.previousOnBeforeCompile;
+  if (typeof inner === 'function' && !inner.__orbyShadowTintPatch && !inner.__orbySvgSurfPatch) {
+    return inner;
+  }
+  return () => {};
+}
+
+function resolveGoboInnerForSurfaceInsert(material) {
+  const inner = material.userData?.orbyGobo?.previousOnBeforeCompile;
+  if (typeof inner === 'function' && !inner.__orbyGoboPatch && !inner.__orbySvgSurfPatch) {
+    return inner;
+  }
+  return () => {};
+}
+
 export function resolveSvgSurfacePreviousHook(material) {
   const live = material.onBeforeCompile;
 
@@ -193,18 +225,21 @@ export function resolveSvgSurfacePreviousHook(material) {
     }
   }
 
-  // Shadow tint / gobo must stay outside Fresnel in the compile chain — never skip them.
-  if (
-    material.userData?.shadowTintPatched &&
-    typeof material.userData.shadowTintOnBeforeCompile === 'function'
-  ) {
-    return material.userData.shadowTintOnBeforeCompile;
+  const shadowHook = material.userData?.shadowTintOnBeforeCompile;
+  if (material.userData?.shadowTintPatched && typeof shadowHook === 'function') {
+    // Shadow outer — insert surface under it, never surface -> shadow -> surface.
+    if (live === shadowHook) {
+      return resolveShadowInnerForSurfaceInsert(material);
+    }
+    return shadowHook;
   }
-  if (
-    material.userData?.goboPatched &&
-    typeof material.userData.goboOnBeforeCompile === 'function'
-  ) {
-    return material.userData.goboOnBeforeCompile;
+
+  const goboHook = material.userData?.goboOnBeforeCompile;
+  if (material.userData?.goboPatched && typeof goboHook === 'function') {
+    if (live === goboHook) {
+      return resolveGoboInnerForSurfaceInsert(material);
+    }
+    return goboHook;
   }
 
   if (
@@ -221,6 +256,128 @@ export function resolveSvgSurfacePreviousHook(material) {
     return stored;
   }
   return () => {};
+}
+
+/**
+ * Keep surface inside shadow/gobo when those patches are the live outer hook.
+ * @param {THREE.Material} material
+ * @returns {boolean} whether the chain was repaired
+ */
+export function ensureOrbySurfaceHookLinked(material) {
+  if (!material?.userData?.svgExtrudeProceduralPatched) return false;
+  const surfaceHook = material.userData.svgExtrudeProceduralOnBeforeCompile;
+  if (typeof surfaceHook !== 'function') return false;
+
+  let repaired = false;
+  const live = material.onBeforeCompile;
+  const shadowHook = material.userData?.shadowTintOnBeforeCompile;
+  const goboHook = material.userData?.goboOnBeforeCompile;
+
+  if (material.userData?.shadowTintPatched && typeof shadowHook === 'function') {
+    const stash = material.userData.orbyShadowTint;
+    if (stash && stash.previousOnBeforeCompile !== surfaceHook) {
+      stash.previousOnBeforeCompile = surfaceHook;
+      repaired = true;
+    }
+    if (live === surfaceHook) {
+      material.onBeforeCompile = shadowHook;
+      repaired = true;
+    }
+  } else if (material.userData?.goboPatched && typeof goboHook === 'function') {
+    const stash = material.userData.orbyGobo;
+    if (stash && stash.previousOnBeforeCompile !== surfaceHook) {
+      stash.previousOnBeforeCompile = surfaceHook;
+      repaired = true;
+    }
+    if (live === surfaceHook) {
+      material.onBeforeCompile = goboHook;
+      repaired = true;
+    }
+  }
+
+  if (repaired) {
+    material.needsUpdate = true;
+  }
+  return repaired;
+}
+
+/**
+ * Surface sync replaces `customProgramCacheKey`; shadow/gobo early-return paths skip re-wrap
+ * and the renderer can keep a pre-surface program until shading rebuilds materials.
+ * @param {THREE.Material} material
+ * @returns {boolean}
+ */
+export function relinkOuterShaderPatchesAfterSurface(material) {
+  if (!material?.userData?.svgExtrudeProceduralPatched) return false;
+  ensureOrbySurfaceHookLinked(material);
+  syncSvgExtrudeSurfaceProgramCacheKey(material);
+
+  let dirty = false;
+  const surfaceHook = material.userData.svgExtrudeProceduralOnBeforeCompile;
+
+  if (material.userData?.shadowTintPatched && material.userData.orbyShadowTint) {
+    const stash = material.userData.orbyShadowTint;
+    const shadowHook = material.userData.shadowTintOnBeforeCompile;
+    if (typeof surfaceHook === 'function' && stash.previousOnBeforeCompile !== surfaceHook) {
+      stash.previousOnBeforeCompile = surfaceHook;
+      dirty = true;
+    }
+    if (typeof shadowHook === 'function' && material.onBeforeCompile === surfaceHook) {
+      material.onBeforeCompile = shadowHook;
+      dirty = true;
+    }
+    const surfaceKeyFn = material.customProgramCacheKey.bind(material);
+    const colorHex = stash.color?.getHexString?.() ?? '080808';
+    material.customProgramCacheKey = function orbyShadowTintCacheKey() {
+      return `${surfaceKeyFn()}|orbyShadowTint:${colorHex}:${stash.strength}:${stash.opacity}`;
+    };
+    dirty = true;
+  }
+
+  if (material.userData?.goboPatched && material.userData.orbyGobo) {
+    const stash = material.userData.orbyGobo;
+    const goboHook = material.userData.goboOnBeforeCompile;
+    const shadowHook = material.userData.shadowTintOnBeforeCompile;
+    const innerForGobo =
+      material.userData?.shadowTintPatched && typeof shadowHook === 'function'
+        ? shadowHook
+        : surfaceHook;
+    if (typeof innerForGobo === 'function' && stash.previousOnBeforeCompile !== innerForGobo) {
+      stash.previousOnBeforeCompile = innerForGobo;
+      dirty = true;
+    }
+    if (typeof goboHook === 'function' && material.onBeforeCompile === surfaceHook) {
+      material.onBeforeCompile = goboHook;
+      dirty = true;
+    }
+  }
+
+  material.needsUpdate = true;
+  return dirty;
+}
+
+function installSurfaceCompileHook(material, hook, uniformRefs, innerPrevious) {
+  material.userData.svgExtrudeProceduralPrevious = innerPrevious;
+  material.userData.svgExtrudeProceduralUniforms = uniformRefs;
+  material.userData.svgExtrudeProceduralPatched = true;
+  material.userData.svgExtrudeProceduralOnBeforeCompile = hook;
+
+  const live = material.onBeforeCompile;
+  const shadowHook = material.userData?.shadowTintOnBeforeCompile;
+  const goboHook = material.userData?.goboOnBeforeCompile;
+
+  if (material.userData?.shadowTintPatched && typeof shadowHook === 'function' && live === shadowHook) {
+    material.userData.orbyShadowTint.previousOnBeforeCompile = hook;
+  } else if (material.userData?.goboPatched && typeof goboHook === 'function' && live === goboHook) {
+    material.userData.orbyGobo.previousOnBeforeCompile = hook;
+  } else {
+    material.onBeforeCompile = hook;
+  }
+
+  syncSvgExtrudeSurfaceProgramCacheKey(material);
+  material.needsUpdate = true;
+  ensureOrbySurfaceHookLinked(material);
+  ensureSvgExtrudeFresnelChain(material);
 }
 
 /**
@@ -434,6 +591,9 @@ const METALNESS_INJECT = /* glsl */ `	#include <metalnessmap_fragment>
 	}
 `;
 
+/** Surface body without metalness chunk — used when that include is absent from the shader. */
+const ORBY_SURFACE_BODY_INJECT = METALNESS_INJECT.replace('\t#include <metalnessmap_fragment>\n', '');
+
 const NORMAL_INJECT_AFTER_MAPS = /* glsl */ `	#include <normal_fragment_maps>
 	// orby_svg_norm
 	if ( uOrbyNormalStrength > 0.0001 ) {
@@ -544,6 +704,16 @@ function applyShaderPatches(shader, uniformRefs, { transmissionSafe = false } = 
       fs = fs.replace(mLine, METALNESS_INJECT);
     } else if (fs.indexOf('#include <metalnessmap_fragment>') !== -1) {
       fs = fs.replace('#include <metalnessmap_fragment>', METALNESS_INJECT);
+    } else {
+      const roughLine = '	#include <roughnessmap_fragment>';
+      if (fs.indexOf(roughLine) !== -1) {
+        fs = fs.replace(roughLine, `${roughLine}\n${ORBY_SURFACE_BODY_INJECT}`);
+      } else if (fs.indexOf('#include <roughnessmap_fragment>') !== -1) {
+        fs = fs.replace(
+          '#include <roughnessmap_fragment>',
+          `#include <roughnessmap_fragment>\n${ORBY_SURFACE_BODY_INJECT}`,
+        );
+      }
     }
   }
   if (!transmissionSafe && fs.indexOf('orby_svg_norm') === -1) {
@@ -667,8 +837,32 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
   const prevPreset = material.userData?.svgExtrudeSurfacePresetId;
   const prevScale = material.userData?.svgExtrudeProceduralScale;
   const prevStrength = material.userData?.svgExtrudeSurfaceStrength;
+  const prevTransmissionSafe = !!material.userData?.orbySurfaceTransmissionSafeWas;
   const presetOrScaleChanged = prevPreset !== presetId || prevScale !== scale;
   const strengthChanged = prevStrength !== surfaceStrength;
+  const hadPatch = !!material.userData?.svgExtrudeProceduralPatched;
+
+  if (hadPatch && prevPreset !== presetId) {
+    removeSvgExtrudeProceduralFromMaterial(material);
+  } else if (hadPatch && prevTransmissionSafe !== transmissionSafe) {
+    removeSvgExtrudeProceduralFromMaterial(material);
+  }
+
+  if (!material.userData?.svgExtrudeProceduralPatched) {
+    const previous = resolveSvgSurfacePreviousHook(material);
+    const hook = createOnBefore({ previous, uniformRefs, transmissionSafe });
+    installSurfaceCompileHook(material, hook, uniformRefs, previous);
+  } else {
+    material.userData.svgExtrudeProceduralUniforms = uniformRefs;
+    if (presetOrScaleChanged) {
+      material.needsUpdate = true;
+    } else if (strengthChanged) {
+      uniformRefs.uOrbyNormalStrength.value = normalStrength;
+    }
+    ensureOrbySurfaceHookLinked(material);
+    ensureSvgExtrudeFresnelChain(material);
+  }
+
   material.userData.svgExtrudeSurfacePresetId = presetId;
   material.userData.svgExtrudeProceduralPresetIndex = proceduralIndex;
   material.userData.svgExtrudeProceduralScale = scale;
@@ -676,41 +870,10 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
   if (opts.normalBounds) {
     material.userData.svgExtrudeNormalBounds = opts.normalBounds;
   }
-  const prevTransmissionSafe = !!material.userData?.orbySurfaceTransmissionSafeWas;
   material.userData.orbySurfaceTransmissionSafe = transmissionSafe;
   material.userData.orbySurfaceTransmissionSafeWas = transmissionSafe;
-
-  const hadPatch = !!material.userData?.svgExtrudeProceduralPatched;
-  const storedHook = material.userData?.svgExtrudeProceduralOnBeforeCompile;
-  const hookIsLive =
-    hadPatch && typeof storedHook === 'function' && material.onBeforeCompile === storedHook;
-
-  if (hadPatch && (!hookIsLive || prevTransmissionSafe !== transmissionSafe)) {
-    removeSvgExtrudeProceduralFromMaterial(material);
-  }
-
-  if (!material.userData?.svgExtrudeProceduralPatched) {
-    const previous = resolveSvgSurfacePreviousHook(material);
-    material.userData.svgExtrudeProceduralPrevious = previous;
-    const hook = createOnBefore({ previous, uniformRefs, transmissionSafe });
-    material.onBeforeCompile = hook;
-    material.userData.svgExtrudeProceduralUniforms = uniformRefs;
-    material.userData.svgExtrudeProceduralPatched = true;
-    material.userData.svgExtrudeProceduralOnBeforeCompile = hook;
-    syncSvgExtrudeSurfaceProgramCacheKey(material);
-    material.needsUpdate = true;
-    ensureSvgExtrudeFresnelChain(material);
-    return true;
-  }
-
-  material.userData.svgExtrudeProceduralUniforms = uniformRefs;
   syncSvgExtrudeSurfaceProgramCacheKey(material);
-  if (presetOrScaleChanged) {
-    material.needsUpdate = true;
-  } else if (strengthChanged) {
-    uniformRefs.uOrbyNormalStrength.value = normalStrength;
-  }
-  ensureSvgExtrudeFresnelChain(material);
+  material.needsUpdate = true;
   return true;
 }
 
@@ -774,30 +937,112 @@ export function removeSvgExtrudeProceduralFromMaterial(material) {
 }
 
 /**
+ * @deprecated SVG/file extrude surfaces use Object → Material (`material.surface*`).
+ * Delegates to {@link reapplyObjectSurfaceFromState}.
+ */
+export function reapplySvgExtrudeSurfaceFromState(model, storeLike, shadingOverride) {
+  reapplyObjectSurfaceFromState(model, storeLike, shadingOverride);
+}
+
+/** @deprecated Use reapplyObjectSurfaceFromState */
+export function reapplySvgExtrudeProceduralFromState(model, storeLike, shadingOverride) {
+  return reapplySvgExtrudeSurfaceFromState(model, storeLike, shadingOverride);
+}
+
+/** True when the loaded model is SVG file extrude (not generated 3D text). */
+export function modelIsSvgFileExtrude(model) {
+  if (!model) return false;
+  if (model.userData?.orbyFontGenerated) return false;
+  let found = false;
+  model.traverse((child) => {
+    if (found) return;
+    if (child.userData?.orbySvgExtrude && !child.userData?.orbyFontExtrude) found = true;
+  });
+  return found;
+}
+
+/** @deprecated Use {@link modelIsSvgFileExtrude} */
+export function modelUsesExtrudeSurfaceState(model) {
+  return modelIsSvgFileExtrude(model);
+}
+
+/**
+ * Surface preset source — Object → Material (`material.surface*`).
+ * @param {object} st
+ * @param {THREE.Object3D | null | undefined} [_model]
+ */
+export function resolveAppearanceSurfaceState(st, _model = null) {
+  return resolveMaterialAppearanceSurfaceState(st);
+}
+
+/** Whether Object → Material surface is actively applied. */
+export function isMaterialObjectSurfaceEnabled(material) {
+  if (!material) return false;
+  if (material.surfaceEnabled === true) return true;
+  if (material.surfaceEnabled === false) return false;
+  return (normalizeSurfacePresetId(material.surfacePreset ?? 'none')) !== 'none';
+}
+
+function resolveMaterialAppearanceSurfaceState(st) {
+  const material = st?.material;
+  if (!isMaterialObjectSurfaceEnabled(material)) {
+    return {
+      presetId: 'none',
+      scale: clampSurfaceUiScale(material?.surfaceScale ?? 1),
+      strength: clampSurfaceStrength(material?.surfaceStrength ?? 1),
+    };
+  }
+  return {
+    presetId: normalizeSurfacePresetId(material?.surfacePreset ?? 'none'),
+    scale: clampSurfaceUiScale(material?.surfaceScale ?? 1),
+    strength: clampSurfaceStrength(material?.surfaceStrength ?? 1),
+  };
+}
+
+/**
+ * Apply Object → Material surface onto eligible meshes (imports, shape library, font, SVG file extrude).
  * @param {THREE.Object3D} model
  * @param {{ getState: () => object } | { stateStore: { getState: () => object } }} storeLike
  * @param {string} [shadingOverride]
+ * @param {{ shouldApplyToMesh?: (child: THREE.Mesh) => boolean, onPresentationRefresh?: () => void, surfaceEligible?: boolean }} [options]
  */
-export function reapplySvgExtrudeSurfaceFromState(model, storeLike, shadingOverride) {
+export function reapplyObjectSurfaceFromState(model, storeLike, shadingOverride, options = {}) {
   if (!model || !storeLike) return;
   const st =
-    typeof storeLike.getState === 'function'
-      ? storeLike.getState()
-      : storeLike.stateStore?.getState?.();
+    typeof storeLike.peekState === 'function'
+      ? storeLike.peekState()
+      : typeof storeLike.getState === 'function'
+        ? storeLike.getState()
+        : storeLike.stateStore?.peekState?.() ?? storeLike.stateStore?.getState?.();
   if (!st) return;
+  const surfaceEligible =
+    options.surfaceEligible !== undefined
+      ? options.surfaceEligible
+      : st.material?.surfaceEligible;
+  if (!surfaceEligible) {
+    model.traverse((child) => {
+      if (!child.isMesh) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach((m) => removeSvgExtrudeProceduralFromMaterial(m));
+    });
+    return;
+  }
+
   const shading = shadingOverride ?? st.shading;
-  const presetId = st.svgExtrude?.surfacePreset ?? 'none';
+  const { presetId, scale, strength } = resolveAppearanceSurfaceState(st, model);
   const config = getSvgExtrudeSurfacePresetConfig(presetId);
-  const scale = clampSurfaceUiScale(st.svgExtrude?.surfaceScale ?? 1);
-  const strength = clampSurfaceStrength(st.svgExtrude?.surfaceStrength ?? 1);
   const stripSurface =
     shading === 'textures' ||
     shading === 'wireframe' ||
-    !st.svgExtrude?.enabled ||
+    !isMaterialObjectSurfaceEnabled(st.material) ||
     config.kind === 'none';
+  const shouldApply =
+    typeof options.shouldApplyToMesh === 'function'
+      ? options.shouldApplyToMesh
+      : (child) => !!child?.isMesh;
 
   model.traverse((child) => {
-    if (!child.isMesh || !child.userData?.orbySvgExtrude) return;
+    if (!shouldApply(child)) return;
     const mats = Array.isArray(child.material) ? child.material : [child.material];
     if (stripSurface) {
       mats.forEach((m) => removeSvgExtrudeProceduralFromMaterial(m));
@@ -807,10 +1052,13 @@ export function reapplySvgExtrudeSurfaceFromState(model, storeLike, shadingOverr
       mats.forEach((m) => {
         if (
           st.creativeLook?.enabled &&
-          m?.userData?.orbyCreativeLook === 'glass'
-          || m?.userData?.orbyCreativeLook === 'holo-glass'
-          || m?.userData?.orbyCreativeLook === 'crystal-gem'
+          (m?.userData?.orbyCreativeLook === 'glass'
+            || m?.userData?.orbyCreativeLook === 'holo-glass'
+            || m?.userData?.orbyCreativeLook === 'crystal-gem')
         ) {
+          return;
+        }
+        if (m?.userData?.orbyCreativeLook && st.creativeLook?.enabled) {
           return;
         }
         if (m?.isMeshStandardMaterial || m?.isMeshPhysicalMaterial) {
@@ -824,11 +1072,11 @@ export function reapplySvgExtrudeSurfaceFromState(model, storeLike, shadingOverr
       });
     }
   });
-}
 
-/** @deprecated Use reapplySvgExtrudeSurfaceFromState */
-export function reapplySvgExtrudeProceduralFromState(model, storeLike, shadingOverride) {
-  return reapplySvgExtrudeSurfaceFromState(model, storeLike, shadingOverride);
+  if (config.kind === 'normalMap' && typeof options.onPresentationRefresh === 'function') {
+    const tex = getNormalMapTexture(config.normalMapUrl);
+    scheduleObjectSurfaceRefreshWhenTextureReady(tex, options.onPresentationRefresh);
+  }
 }
 
 /** Shared GLSL helpers for procedural + triplanar surface detail. */
@@ -931,7 +1179,7 @@ export function applyOrbySurfaceUniformStateToMaterial(material, state) {
   return true;
 }
 
-/** Shader Lab presets that read Appearance → Material / Surface (svgExtrude.surfacePreset). */
+/** Shader Lab presets that read Object → Material / Surface (material.surfacePreset). */
 export function creativeLookPresetSupportsSurfaceDetail(preset) {
   let p = typeof preset === 'string' ? preset.trim() : '';
   if (p === 'glass-holo') p = 'holographic';
@@ -1093,18 +1341,29 @@ float orbyCreativeSurfaceMix(vec3 worldPos) {
 `;
 
 function scheduleCreativeLookSurfaceResyncWhenTextureReady(model, storeLike, texture) {
-  if (!texture?.isTexture || isTextureImageReady(texture)) return;
-  if (texture.userData?.orbyCreativeSurfaceResyncHooked) return;
-  texture.userData.orbyCreativeSurfaceResyncHooked = true;
-  const resync = () => {
+  scheduleObjectSurfaceRefreshWhenTextureReady(texture, () => {
     syncCreativeLookSurfaceToModel(model, storeLike);
-  };
+  });
+}
+
+/**
+ * Re-apply + repaint once a triplanar normal map finishes loading.
+ * @param {import('three').Texture | null | undefined} texture
+ * @param {(() => void) | undefined} callback
+ */
+export function scheduleObjectSurfaceRefreshWhenTextureReady(texture, callback) {
+  if (!texture?.isTexture || typeof callback !== 'function') return;
+  if (isTextureImageReady(texture)) return;
+  const hookKey = 'orbyObjectSurfaceRefreshHooked';
+  if (texture.userData?.[hookKey]) return;
+  texture.userData[hookKey] = true;
   const prev = texture.onUpdate;
   texture.onUpdate = () => {
     if (typeof prev === 'function') prev();
     if (isTextureImageReady(texture)) {
       texture.onUpdate = prev;
-      resync();
+      delete texture.userData[hookKey];
+      callback();
     }
   };
 }
@@ -1123,9 +1382,7 @@ export function syncCreativeLookSurfaceToModel(model, storeLike) {
   if (!st?.creativeLook?.enabled) return;
   if (!creativeLookPresetSupportsSurfaceDetail(st.creativeLook.preset)) return;
 
-  const presetId = st.svgExtrude?.surfacePreset ?? 'none';
-  const scale = clampSurfaceUiScale(st.svgExtrude?.surfaceScale ?? 1);
-  const strength = clampSurfaceStrength(st.svgExtrude?.surfaceStrength ?? 1);
+  const { presetId, scale, strength } = resolveAppearanceSurfaceState(st, model);
   const config = getSvgExtrudeSurfacePresetConfig(presetId);
   if (config.kind === 'none') {
     model.traverse((child) => {
@@ -1198,8 +1455,12 @@ export function syncCreativeLookSurfaceToModel(model, storeLike) {
  * @param {THREE.Object3D} model
  * @param {{ getState: () => object } | { stateStore: { getState: () => object } }} storeLike
  */
-export function deferCreativeLookSurfaceResync(model, storeLike) {
+export function deferCreativeLookSurfaceResync(model, storeLike, onAfterSync) {
   if (!model || !storeLike) return;
-  queueMicrotask(() => syncCreativeLookSurfaceToModel(model, storeLike));
-  requestAnimationFrame(() => syncCreativeLookSurfaceToModel(model, storeLike));
+  const run = () => {
+    syncCreativeLookSurfaceToModel(model, storeLike);
+    onAfterSync?.();
+  };
+  queueMicrotask(run);
+  requestAnimationFrame(run);
 }

@@ -238,6 +238,24 @@
                       <span class="sr-only">Toggle normal maps in shaded and clay modes</span>
                     </label>
                   </div>
+                  <div class="panel-block-divider" id="objectSurfaceDivider" hidden aria-hidden="true"></div>
+                  <div id="objectSurfaceSection" class="subsection object-surface-subsection" data-subsection="object-surface" hidden>
+                    <div class="block-title has-toggle">
+                      <span data-tooltip="Triplanar normal-map micro-detail — scratched metal, galvanized steel, and similar">Surface</span>
+                      <label class="effect-toggle" data-tooltip="Add procedural surface detail on eligible meshes">
+                        <input type="checkbox" id="toggleObjectSurface" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable object surface detail</span>
+                      </label>
+                    </div>
+                    <div
+                      class="effect-foldout effect-foldout--collapsed"
+                      data-effect-foldout="object-surface"
+                      aria-hidden="true"
+                    >
+                      <div id="objectSurfaceControlsMount" class="object-surface-controls surface-controls-mount"></div>
+                    </div>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="fresnel">
@@ -873,7 +891,6 @@
                     />
                   </label>
                   </div>
-                  <div id="svgExtrudeSurfaceControlsMount" class="svg-extrude-surface-controls surface-controls-mount"></div>
                 </div>
               </div>
 
@@ -1549,7 +1566,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.888 · 2026-07-03 13:14:01 UTC</div>
+              <div class="info-version-tag">v0.5.889 · 2026-07-03 14:14:51 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>

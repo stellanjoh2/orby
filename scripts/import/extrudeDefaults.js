@@ -122,11 +122,6 @@ export function resetSvgExtrudeState(stateStore, eventBus, storeDefaults = {}) {
     enabled: svg.colorOverride,
     color: svg.overrideColor,
   });
-  eventBus.emit('mesh:svg-extrude-surface', {
-    preset: svg.surfacePreset,
-    scale: svg.surfaceScale,
-    strength: svg.surfaceStrength,
-  });
 }
 
 /**

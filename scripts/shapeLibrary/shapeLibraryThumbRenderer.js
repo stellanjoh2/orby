@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/GLTFLoader.js';
 import { ORBY_BLACK } from '../constants.js';
+import { applyShapeLibraryPresentationTilt } from './shapeLibraryCatalog.js';
 
 const loader = new GLTFLoader();
 /** @type {Map<string, Promise<string>>} */
@@ -125,6 +126,7 @@ async function renderShapeLibraryThumbOnce(glbUrl, sizePx) {
   const maxDim = Math.max(...box.getSize(new THREE.Vector3()).toArray(), 0.001);
   root.position.sub(center);
   root.scale.multiplyScalar(1.35 / maxDim);
+  applyShapeLibraryPresentationTilt(root);
 
   const { renderer, scene, camera, modelMount } = ensureThumbStudio(sizePx);
   modelMount.clear();

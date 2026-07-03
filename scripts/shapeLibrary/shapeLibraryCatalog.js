@@ -6,9 +6,26 @@ export const SHAPE_LIBRARY_PANEL_WIDTH_PX = 760;
 
 /** @typedef {{ id: string, glbUrl: string, sourceId: string, label: string }} ShapeLibraryEntry */
 
-const SHAPE_LIBRARY_ASSET_VERSION = 3;
+const SHAPE_LIBRARY_ASSET_VERSION = 7;
 const shapeLibraryGlbUrl = (file) =>
   `./assets/3D-assets/shape-library/${file}?v=${SHAPE_LIBRARY_ASSET_VERSION}`;
+
+/** Presentation tilt for library thumbs + initial viewport insert (radians). Not baked into GLB normals. */
+export const SHAPE_LIBRARY_PRESENTATION_TILT_RAD = Object.freeze({
+  x: -0.18,
+  y: 0.42,
+  z: 0,
+});
+
+/** @param {import('three').Object3D | null | undefined} object3D */
+export function applyShapeLibraryPresentationTilt(object3D) {
+  if (!object3D) return;
+  object3D.rotation.set(
+    SHAPE_LIBRARY_PRESENTATION_TILT_RAD.x,
+    SHAPE_LIBRARY_PRESENTATION_TILT_RAD.y,
+    SHAPE_LIBRARY_PRESENTATION_TILT_RAD.z,
+  );
+}
 
 /** @type {readonly ShapeLibraryEntry[]} */
 const SHAPE_LIBRARY_PROTOTYPES = [

@@ -4,7 +4,7 @@
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/GLTFLoader.js';
 import { registerKHRMaterialsPbrSpecularGlossiness } from '../render/gltfKHRSpecularGlossinessPlugin.js';
 import { normalizeImportScale } from '../import/normalizeImportScale.js';
-import { findShapeLibraryEntry } from './shapeLibraryCatalog.js';
+import { findShapeLibraryEntry, applyShapeLibraryPresentationTilt } from './shapeLibraryCatalog.js';
 
 function configureGLTFLoader(loader) {
   registerKHRMaterialsPbrSpecularGlossiness(loader);
@@ -88,6 +88,7 @@ export class ShapeLibraryController {
           '',
           (gltf) => {
             normalizeImportScale(gltf.scene);
+            applyShapeLibraryPresentationTilt(gltf.scene);
             gltf.scene.userData.orbyShapeLibrary = true;
             gltf.scene.userData.orbyShapeLibraryId = entry.id;
             resolve({

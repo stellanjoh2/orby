@@ -65,6 +65,7 @@ export const SCENE_CONTROL_MANIFEST = [
   },
   { event: 'mesh:svg-extrude-flip-direction', apply: 'setSvgExtrudeFlipDirection' },
   { event: 'mesh:svg-extrude-surface', apply: 'setSvgExtrudeSurface', defaultArg: {} },
+  { event: 'mesh:object-surface', apply: 'setObjectSurface', defaultArg: {} },
   { event: 'mesh:reverse-normals', apply: 'setReverseNormals' },
   { event: 'mesh:stl-smoothing', apply: 'applyImportSmoothingFromState', noArg: true },
   { event: 'mesh:recenter-pivot', apply: 'recenterPivot', defaultArg: {} },

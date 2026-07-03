@@ -905,7 +905,9 @@ html.orby-sr-on .orby-sr,
   align-items: center;
   justify-content: center;
   z-index: 10000;
-  backdrop-filter: blur(8px);
+  --modal-backdrop-blur: 8px;
+  backdrop-filter: blur(var(--modal-backdrop-blur));
+  -webkit-backdrop-filter: blur(var(--modal-backdrop-blur));
   padding: 2rem;
   margin: 0;
   box-sizing: border-box;
@@ -6924,7 +6926,6 @@ button.advanced-info-doc-btn {
  * mount wrappers participate in subsection rhythm via display: contents.
  */
 [data-subsection='svg-extrude'] #svgExtrudeCoreControlsMount,
-[data-subsection='svg-extrude'] #svgExtrudeSurfaceControlsMount,
 [data-subsection='svg-extrude'] .extrude-bevel-group {
   display: contents;
 }

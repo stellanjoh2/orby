@@ -57,10 +57,10 @@ import { ShapeLibraryController } from './shapeLibrary/ShapeLibraryController.js
 import {
   ensureFontExtrudeAnimationPreviewDockMounted,
   ensureSvgExtrudeCoreControlsMounted,
-  ensureSvgExtrudeSurfaceControlsMounted,
   ensureBaseSurfaceControlsMounted,
   ensureBaseGlassSurfaceControlsMounted,
   ensureBackdropSurfaceControlsMounted,
+  ensureObjectSurfaceControlsMounted,
 } from './ui/svgExtrudeControlsShared.js';
 import { ResetControls } from './ui/ResetControls.js';
 import { BackgroundGradientControls } from './ui/BackgroundGradientControls.js';
@@ -365,10 +365,10 @@ export class UIManager {
     const q = (sel) => document.querySelector(sel);
     ensureSvgExtrudeCoreControlsMounted();
     ensureFontExtrudeAnimationPreviewDockMounted();
-    ensureSvgExtrudeSurfaceControlsMounted();
     ensureBaseSurfaceControlsMounted();
     ensureBaseGlassSurfaceControlsMounted();
     ensureBackdropSurfaceControlsMounted();
+    ensureObjectSurfaceControlsMounted();
     this.dom.canvas = q('#webgl');
     this.dom.viewport = q('.viewport');
     this.dom.exportPreviewBanner = q('#viewportExportPreviewBanner');
@@ -515,9 +515,6 @@ export class UIManager {
       svgExtrudeColorOverride: q('#svgExtrudeColorOverride'),
       svgExtrudeColor: q('#svgExtrudeColor'),
       svgExtrudeColorDepths: q('#svgExtrudeColorDepths'),
-      svgExtrudeSurfacePreset: q('#svgExtrudeSurfacePreset'),
-      svgExtrudeSurfaceScale: q('#svgExtrudeSurfaceScale'),
-      svgExtrudeSurfaceStrength: q('#svgExtrudeSurfaceStrength'),
       reverseNormals: q('#reverseNormals'),
       normalView: q('#normalView'),
       normalViewMode: q('#normalViewMode'),
@@ -542,6 +539,10 @@ export class UIManager {
       advancedGlassControls: q('#advancedGlassControls'),
       clayColor: q('#clayColor'),
       clayNormalMap: q('#clayNormalMap'),
+      toggleObjectSurface: q('#toggleObjectSurface'),
+      objectSurfacePreset: q('#objectSurfacePreset'),
+      objectSurfaceScale: q('#objectSurfaceScale'),
+      objectSurfaceStrength: q('#objectSurfaceStrength'),
       toggleSubsurface: q('#toggleSubsurface'),
       subsurfaceTranslucency: q('#subsurfaceTranslucency'),
       subsurfaceScatterTint: q('#subsurfaceScatterTint'),

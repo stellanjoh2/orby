@@ -115,7 +115,9 @@ import {
   deferCreativeLookSurfaceResync,
   syncSvgExtrudeSurfaceProgramCacheKey,
   getSvgExtrudeSurfacePresetConfig,
-  reapplySvgExtrudeSurfaceFromState,
+  reapplyObjectSurfaceFromState,
+  relinkOuterShaderPatchesAfterSurface,
+  isMaterialObjectSurfaceEnabled,
   removeSvgExtrudeProceduralFromMaterial,
 } from './SvgExtrudeSurfaceShader.js';
 import { materialMatchesFbxGroup } from '../import/fbxMaterialReport.js';
@@ -295,12 +297,16 @@ export class MaterialController {
     modelRoot,
     onShadingChanged = null,
     onMaterialUpdate = null,
+    /** After deferred emissive / import resync following {@link setShading}. */
+    onPostShaderMaterialSync = null,
     /** Optional `(out?: THREE.Vector3) => THREE.Vector3` — world-space direction **toward** key light for creative **toon**. */
     getCreativeLookKeyLightDir = null,
     /** Optional `() => { lightScale, ambientFloor }` — studio rig strength for toon / PS2 Crush. */
     getCreativeLookToonLightScalars = null,
     /** Called after creative ShaderMaterials are (re)built — e.g. `renderer.compile(scene, camera)` to avoid first-draw hitches. */
     afterCreativeLookMaterialRebuild = null,
+    /** Wake viewport + optional compile after Object → Material surface preset swaps. */
+    onObjectSurfacePresentationRefresh = null,
     /** Glass / Chrome — ensure HDRI Render Backdrop is on `scene.background` before materials build. */
     onNeedsTransmissionBackdrop = null,
     /** Called when ASCII Art live uniforms change — sync screen-space glyph pass. */
@@ -314,9 +320,11 @@ export class MaterialController {
     this.modelRoot = modelRoot;
     this.onShadingChanged = onShadingChanged;
     this.onMaterialUpdate = onMaterialUpdate;
+    this.onPostShaderMaterialSync = onPostShaderMaterialSync;
     this.getCreativeLookKeyLightDir = getCreativeLookKeyLightDir;
     this.getCreativeLookToonLightScalars = getCreativeLookToonLightScalars;
     this.afterCreativeLookMaterialRebuild = afterCreativeLookMaterialRebuild;
+    this.onObjectSurfacePresentationRefresh = onObjectSurfacePresentationRefresh;
     this.onNeedsTransmissionBackdrop = onNeedsTransmissionBackdrop;
     this.onCreativeLookAsciiSync = onCreativeLookAsciiSync;
     this.prepareStaticVoxelPose = prepareStaticVoxelPose;
@@ -442,19 +450,27 @@ export class MaterialController {
         icl.patternScale,
       ),
     };
+    const matFromState = {
+      ...(this.stateStore?.getState()?.material ?? {}),
+      ...(initialState.material ?? {}),
+    };
     this.materialSettings = {
       brightness:
-        initialState.material?.brightness ??
+        matFromState.brightness ??
         initialState.diffuseBrightness ??
         DEFAULT_MATERIAL_BRIGHTNESS,
-      metalness: 0.0,
-      roughness: DEFAULT_MATERIAL_ROUGHNESS,
-      emissive: initialState.material?.emissive ?? 0.0,
+      metalness: Number.isFinite(matFromState.metalness) ? matFromState.metalness : 0.0,
+      roughness: Number.isFinite(matFromState.roughness)
+        ? matFromState.roughness
+        : DEFAULT_MATERIAL_ROUGHNESS,
+      emissive: matFromState.emissive ?? 0.0,
     };
     this.originalMaterials = new WeakMap();
     this._appliedCreativeLookPreset = null;
     this.prepareMesh(model);
-    this._syncImportPbrFromModel(model);
+    this._syncImportPbrFromModel(model, {
+      preserveSession: initialState.preserveSessionMaterialMr === true,
+    });
     this.stateStore?.set(
       'material.importHasMrMaps',
       this._modelHasImportMrMaps(model),
@@ -463,7 +479,55 @@ export class MaterialController {
       'material.importUsesAuthoredPbr',
       this._modelHasAuthoredPbrMaterials(model),
     );
+    this.stateStore?.set('material.surfaceEligible', this._modelSurfaceEligible(model));
+    this._migrateLegacyExtrudeSurfaceStateToMaterial();
     // Note: Fresnel will be applied by setShading, which is called after setModel
+  }
+
+  _modelHasImportSurfaceBlockingMaps(object) {
+    if (!object) return false;
+    let blocking = false;
+    this._forEachImportMaterial(object, (m) => {
+      if (blocking) return;
+      if (
+        m.map?.isTexture ||
+        m.normalMap?.isTexture ||
+        m.metalnessMap?.isTexture ||
+        m.roughnessMap?.isTexture
+      ) {
+        blocking = true;
+      }
+    });
+    return blocking;
+  }
+
+  _modelSurfaceEligible(object) {
+    if (!object) return false;
+    if (object.userData?.orbyShapeLibrary) return true;
+    if (object.userData?.orbyFontGenerated || this._isFontExtrudeModel(object)) return true;
+    if (object.userData?.orbySvgExtrude && !this._isFontExtrudeModel(object)) return true;
+    return !this._modelHasImportSurfaceBlockingMaps(object);
+  }
+
+  /** Move legacy `svgExtrude.surface*` onto `material.surface*` (font + SVG file extrude saves). */
+  _migrateLegacyExtrudeSurfaceStateToMaterial() {
+    const st = this.stateStore?.getState?.();
+    if (!st || !this.currentModel) return;
+    const matPreset = st.material?.surfacePreset ?? 'none';
+    const svgPreset = st.svgExtrude?.surfacePreset ?? 'none';
+    if (svgPreset === 'none') return;
+    if (isMaterialObjectSurfaceEnabled(st.material) || matPreset !== 'none') return;
+    this.stateStore.batch(() => {
+      this.stateStore.set('material.surfacePreset', svgPreset);
+      this.stateStore.set('material.surfaceScale', st.svgExtrude?.surfaceScale ?? 1);
+      this.stateStore.set('material.surfaceStrength', st.svgExtrude?.surfaceStrength ?? 1);
+      this.stateStore.set('material.surfaceEnabled', true);
+      this.stateStore.set('material.surfaceLastPreset', svgPreset);
+      this.stateStore.set('svgExtrude.surfacePreset', 'none');
+      this.stateStore.set('svgExtrude.surfaceScale', 1);
+      this.stateStore.set('svgExtrude.surfaceStrength', 1);
+    });
+    this.reapplySvgExtrudeSurfaceShaders();
   }
 
   prepareMesh(object) {
@@ -1148,9 +1212,13 @@ export class MaterialController {
     return null;
   }
 
-  /** On mesh load, set global MR sliders to neutral multipliers (1.0 = as-authored). */
-  _syncImportPbrFromModel(model) {
+  /**
+   * On first PBR import, set global MR sliders to neutral multipliers (1.0 = as-authored).
+   * When replacing a model, session slider values are kept (see preserveSession).
+   */
+  _syncImportPbrFromModel(model, options = {}) {
     if (!this._modelHasAuthoredPbrMaterials(model)) return;
+    if (options.preserveSession) return;
     const neutral = IMPORT_MATERIAL_MR_MULTIPLIER;
     this.materialSettings.metalness = neutral;
     this.materialSettings.roughness = neutral;
@@ -2459,11 +2527,16 @@ export class MaterialController {
     if (mode === 'shaded') {
       if (this.materialSettings?.emissive > 0) {
         this.updateMaterials();
+        this.onPostShaderMaterialSync?.();
       } else {
-        queueMicrotask(() => this.resyncEmissiveFromImportedMaterials());
+        queueMicrotask(() => {
+          this.resyncEmissiveFromImportedMaterials();
+          this.onPostShaderMaterialSync?.();
+        });
       }
     } else if (this.materialSettings?.emissive > 0 && mode !== 'wireframe' && mode !== 'textures') {
       this.updateMaterials();
+      this.onPostShaderMaterialSync?.();
     }
 
     if (this.onShadingChanged) {
@@ -4369,6 +4442,9 @@ export class MaterialController {
             }
           }
         });
+        if (isMaterialObjectSurfaceEnabled(this.stateStore.getState().material)) {
+          this.reapplySvgExtrudeSurfaceShaders();
+        }
       } else {
         // Fallback to recreating materials if no model loaded
         this.setShading('clay');
@@ -5192,22 +5268,75 @@ export class MaterialController {
 
   /**
    * SVG brushed/car-paint hooks must sit inside shadow tint; re-apply tint after surface patches.
+   * @param {{ silentEligible?: boolean }} [options]
    */
-  reapplySvgExtrudeSurfaceShaders() {
+  reapplySvgExtrudeSurfaceShaders(options = {}) {
     if (!this.currentModel) return;
+    const eligible = this._modelSurfaceEligible(this.currentModel);
+    if (options.silentEligible) {
+      this.stateStore?._writePath('material.surfaceEligible', eligible);
+    } else {
+      this.stateStore?.set('material.surfaceEligible', eligible);
+    }
     // SVG surface wraps Fresnel in onBeforeCompile — patch Fresnel before re-applying surface.
     if (this.fresnelSettings?.enabled) {
       this.applyFresnelToModel(this.currentModel);
     }
-    reapplySvgExtrudeSurfaceFromState(
+    const present = typeof this.onObjectSurfacePresentationRefresh === 'function'
+      ? this.onObjectSurfacePresentationRefresh
+      : undefined;
+    const onPresentationRefresh = present
+      ? () => {
+          if (this.currentModel) {
+            this.currentModel.traverse((child) => {
+              if (!child.isMesh || !child.material) return;
+              const mats = Array.isArray(child.material) ? child.material : [child.material];
+              mats.forEach((m) => {
+                if (m?.userData?.svgExtrudeProceduralPatched) {
+                  m.needsUpdate = true;
+                }
+              });
+            });
+          }
+          present();
+        }
+      : undefined;
+    reapplyObjectSurfaceFromState(
       this.currentModel,
       this.stateStore,
       this.currentShading,
+      {
+        surfaceEligible: eligible,
+        shouldApplyToMesh: (child) => {
+          if (!child?.isMesh) return false;
+          if (this.isWindowMesh(child)) return false;
+          return true;
+        },
+        onPresentationRefresh,
+      },
     );
-    if (this.shadowTintStrength > 0) {
-      this.applyShadowTintToObject(this.currentModel);
-    }
+    // Shadow tint hooks wrap surface — re-sync even at strength 0 (patch stays on materials).
+    this.applyShadowTintToObject(this.currentModel);
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh || !child.material) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach((m) => relinkOuterShaderPatchesAfterSurface(m));
+    });
     this.reapplyCreativeLookSurfaceShaders();
+  }
+
+  /** Force program cache + hook relink after surface toggles (shadow early-return skips re-wrap). */
+  relinkObjectSurfacePresentation() {
+    if (!this.currentModel) return;
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh || !child.material) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach((m) => {
+        if (m?.userData?.svgExtrudeProceduralPatched) {
+          relinkOuterShaderPatchesAfterSurface(m);
+        }
+      });
+    });
   }
 
   /** Appearance → Material surface onto compatible Shader Lab presets (holographic, chrome, etc.). */
@@ -5217,9 +5346,9 @@ export class MaterialController {
   }
 
   /** Retry surface uniform bind after Shader Lab async material builds. */
-  deferCreativeLookSurfaceResync() {
+  deferCreativeLookSurfaceResync(onAfterSync) {
     if (!this.currentModel) return;
-    deferCreativeLookSurfaceResync(this.currentModel, this.stateStore);
+    deferCreativeLookSurfaceResync(this.currentModel, this.stateStore, onAfterSync);
   }
 
   applyFresnelToModel(root) {
@@ -6528,6 +6657,7 @@ export class MaterialController {
     this.originalMaterials = new WeakMap();
     this.stateStore?.set('material.importHasMrMaps', false);
     this.stateStore?.set('material.importUsesAuthoredPbr', false);
+    this.stateStore?.set('material.surfaceEligible', false);
   }
 
   getClaySettings() {

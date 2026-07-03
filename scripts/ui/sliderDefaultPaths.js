@@ -31,8 +31,6 @@ export const SLIDER_DEFAULT_PATHS = {
   svgExtrudeNormalAngle: 'svgExtrude.normalAngle',
   svgExtrudeHardEdgeAngle: 'svgExtrude.hardEdgeAngle',
   lightsShadowNormalBias: 'lightsShadowNormalBias',
-  svgExtrudeSurfaceScale: 'svgExtrude.surfaceScale',
-  svgExtrudeSurfaceStrength: 'svgExtrude.surfaceStrength',
   lensFlareRotation: 'lensFlare.rotation',
   lensFlareHeight: 'lensFlare.height',
   lensFlareHalo: 'lensFlare.haloIntensity',

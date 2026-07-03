@@ -87,5 +87,8 @@ export function createImportDefaults() {
       customFontAsset: null,
     },
     svgExtrude: { ...DEFAULT_SVG_EXTRUDE_STATE },
+    shapeLibrary: {
+      panelOpen: false,
+    },
   };
 }

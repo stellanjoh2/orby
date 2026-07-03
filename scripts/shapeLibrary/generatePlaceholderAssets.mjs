@@ -6,29 +6,39 @@ import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
+import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(__dirname, '../../assets/3D-assets/shape-library');
-/** Authoring target — every placeholder GLB is centered with this max axis length. */
-const PLACEHOLDER_TARGET_MAX_DIMENSION = 1;
+/** Uniform visual size in thumbs/viewport — bounding-sphere radius after centering. */
+const PLACEHOLDER_TARGET_BOUNDING_RADIUS = 0.5;
+/**
+ * Auto-smooth threshold for custom faceted meshes (Escher solid, etc.).
+ * Matches import/STL default — typical DCC hard-edge split is ~40°, not SVG curve tuning (~30°).
+ */
+const FACETED_MESH_CREASE_ANGLE_DEG = 40;
+
+/** @typedef {'preserve-authored' | 'smooth-curved' | 'crease-faceted'} PlaceholderNormalPolicy */
 
 /**
- * Center geometry on the origin and uniformly scale so max(x,y,z) === target.
+ * Center on origin and scale uniformly so bounding-sphere radius === target.
+ * (Max-axis fit makes cubes read larger than rings/crystals in the library grid.)
  * @param {THREE.BufferGeometry} geometry
- * @param {number} [target]
+ * @param {number} [targetRadius]
  */
-function centerAndFitMaxDimension(geometry, target = PLACEHOLDER_TARGET_MAX_DIMENSION) {
+function centerAndFitBoundingSphere(geometry, targetRadius = PLACEHOLDER_TARGET_BOUNDING_RADIUS) {
   geometry.computeBoundingBox();
   const box = geometry.boundingBox;
   if (!box) return geometry;
 
   const center = box.getCenter(new THREE.Vector3());
-  const size = box.getSize(new THREE.Vector3());
   geometry.translate(-center.x, -center.y, -center.z);
 
-  const maxDim = Math.max(size.x, size.y, size.z);
-  if (Number.isFinite(maxDim) && maxDim > 0) {
-    geometry.scale(target / maxDim, target / maxDim, target / maxDim);
+  geometry.computeBoundingSphere();
+  const radius = geometry.boundingSphere?.radius ?? 0;
+  if (Number.isFinite(radius) && radius > 0) {
+    const s = targetRadius / radius;
+    geometry.scale(s, s, s);
   }
 
   geometry.computeBoundingBox();
@@ -36,15 +46,116 @@ function centerAndFitMaxDimension(geometry, target = PLACEHOLDER_TARGET_MAX_DIME
   return geometry;
 }
 
-/** Shared presentation tilt baked into vertex positions for the library thumbs. */
-function bakePresentationTilt(geometry) {
-  const mesh = new THREE.Mesh(geometry);
-  mesh.rotation.set(-0.18, 0.42, 0);
-  mesh.updateMatrix();
-  geometry.applyMatrix4(mesh.matrix);
-  geometry.computeBoundingBox();
-  geometry.computeBoundingSphere();
-  return geometry;
+/**
+ * Weld verts that share the same position (torus radial wrap, etc.).
+ * mergeVertices keeps UV splits; for smooth curves we need a true position weld.
+ * @param {THREE.BufferGeometry} geometry
+ * @param {number} [epsilon]
+ * @returns {THREE.BufferGeometry}
+ */
+function weldCoincidentVertices(geometry, epsilon = 1e-6) {
+  const posAttr = geometry.getAttribute('position');
+  const normAttr = geometry.getAttribute('normal');
+  const uvAttr = geometry.getAttribute('uv');
+  const indexAttr = geometry.index;
+  if (!posAttr) return geometry;
+
+  const oldToNew = new Int32Array(posAttr.count).fill(-1);
+  /** @type {{ p: THREE.Vector3, normals: THREE.Vector3[], uv: THREE.Vector2 }[]} */
+  const buckets = [];
+
+  for (let i = 0; i < posAttr.count; i += 1) {
+    const point = new THREE.Vector3(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+    let bucketIndex = -1;
+    for (let b = 0; b < buckets.length; b += 1) {
+      if (buckets[b].p.distanceTo(point) <= epsilon) {
+        bucketIndex = b;
+        break;
+      }
+    }
+    if (bucketIndex < 0) {
+      bucketIndex = buckets.length;
+      buckets.push({
+        p: point,
+        normals: [],
+        uv: uvAttr
+          ? new THREE.Vector2(uvAttr.getX(i), uvAttr.getY(i))
+          : new THREE.Vector2(),
+      });
+    }
+    oldToNew[i] = bucketIndex;
+    if (normAttr) {
+      buckets[bucketIndex].normals.push(
+        new THREE.Vector3(normAttr.getX(i), normAttr.getY(i), normAttr.getZ(i)),
+      );
+    }
+  }
+
+  if (buckets.length === posAttr.count) return geometry;
+
+  const positions = new Float32Array(buckets.length * 3);
+  const normals = new Float32Array(buckets.length * 3);
+  const uvs = new Float32Array(buckets.length * 2);
+  for (let b = 0; b < buckets.length; b += 1) {
+    const bucket = buckets[b];
+    positions[b * 3] = bucket.p.x;
+    positions[b * 3 + 1] = bucket.p.y;
+    positions[b * 3 + 2] = bucket.p.z;
+    const avgNormal = new THREE.Vector3();
+    if (bucket.normals.length) {
+      for (const normal of bucket.normals) avgNormal.add(normal);
+      avgNormal.divideScalar(bucket.normals.length).normalize();
+    }
+    normals[b * 3] = avgNormal.x;
+    normals[b * 3 + 1] = avgNormal.y;
+    normals[b * 3 + 2] = avgNormal.z;
+    uvs[b * 2] = bucket.uv.x;
+    uvs[b * 2 + 1] = bucket.uv.y;
+  }
+
+  const welded = new THREE.BufferGeometry();
+  welded.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  welded.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  welded.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  const indexCount = indexAttr ? indexAttr.count : posAttr.count;
+  const indices = new Uint16Array(indexCount);
+  for (let i = 0; i < indexCount; i += 1) {
+    indices[i] = oldToNew[indexAttr ? indexAttr.getX(i) : i];
+  }
+  welded.setIndex(new THREE.BufferAttribute(indices, 1));
+  geometry.dispose();
+  return welded;
+}
+
+/**
+ * Final normal pass — policy per primitive type, not one global crease angle.
+ * @param {THREE.BufferGeometry} geometry
+ * @param {PlaceholderNormalPolicy} policy
+ * @returns {THREE.BufferGeometry}
+ */
+function finalizePlaceholderNormals(geometry, policy) {
+  switch (policy) {
+    case 'preserve-authored':
+      // BoxGeometry / ConeGeometry already split verts on hard edges — do not re-smooth.
+      return geometry;
+    case 'smooth-curved': {
+      // Torus wrap duplicates position with different UVs — weld before re-smoothing.
+      let geom = weldCoincidentVertices(geometry);
+      geom.computeVertexNormals();
+      return geom;
+    }
+    case 'crease-faceted': {
+      const creaseAngleRad = THREE.MathUtils.degToRad(FACETED_MESH_CREASE_ANGLE_DEG);
+      const creased = toCreasedNormals(geometry, creaseAngleRad);
+      if (creased !== geometry) {
+        geometry.dispose();
+        return creased;
+      }
+      return geometry;
+    }
+    default:
+      return geometry;
+  }
 }
 
 /** Low-poly Escher-style star (stellated octahedron compound). */
@@ -77,7 +188,6 @@ function buildEscherSolidGeometry() {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   assignSphericalUv(geo);
-  geo.computeVertexNormals();
   return geo;
 }
 
@@ -108,10 +218,26 @@ function ensureGeometryUv(geometry) {
 }
 
 const SHAPES = [
-  { file: 'box.glb', geometry: () => new THREE.BoxGeometry(1, 1, 1) },
-  { file: 'pyramid.glb', geometry: () => new THREE.ConeGeometry(0.78, 1.15, 4) },
-  { file: 'torus.glb', geometry: () => new THREE.TorusGeometry(0.58, 0.2, 10, 22) },
-  { file: 'escher.glb', geometry: buildEscherSolidGeometry },
+  {
+    file: 'box.glb',
+    geometry: () => new THREE.BoxGeometry(1, 1, 1),
+    normalPolicy: 'preserve-authored',
+  },
+  {
+    file: 'pyramid.glb',
+    geometry: () => new THREE.ConeGeometry(0.78, 1.15, 4),
+    normalPolicy: 'preserve-authored',
+  },
+  {
+    file: 'torus.glb',
+    geometry: () => new THREE.TorusGeometry(0.58, 0.2, 10, 22),
+    normalPolicy: 'smooth-curved',
+  },
+  {
+    file: 'escher.glb',
+    geometry: buildEscherSolidGeometry,
+    normalPolicy: 'crease-faceted',
+  },
 ];
 
 /**
@@ -287,22 +413,20 @@ function geometryToGlb(geometry, name) {
 await mkdir(OUT_DIR, { recursive: true });
 
 for (const shape of SHAPES) {
-  const geometry = shape.geometry();
-  geometry.computeVertexNormals();
-  centerAndFitMaxDimension(geometry);
-  bakePresentationTilt(geometry);
-  centerAndFitMaxDimension(geometry);
+  let geometry = shape.geometry();
+  centerAndFitBoundingSphere(geometry);
+  geometry = finalizePlaceholderNormals(geometry, shape.normalPolicy);
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
 
-  const box = geometry.boundingBox;
-  const size = box.getSize(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z);
+  const sphereRadius = geometry.boundingSphere?.radius ?? 0;
 
   const buffer = geometryToGlb(geometry, shape.file.replace('.glb', ''));
   const outPath = join(OUT_DIR, shape.file);
   await writeFile(outPath, buffer);
   geometry.dispose();
   console.log(
-    `Wrote ${outPath} (${buffer.length} bytes, maxDim=${maxDim.toFixed(3)})`,
+    `Wrote ${outPath} (${buffer.length} bytes, boundingRadius=${sphereRadius.toFixed(3)})`,
   );
 }
 

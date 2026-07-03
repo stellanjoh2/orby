@@ -9,7 +9,6 @@ import {
   syncSvgExtrudeControls,
   FONT_EXTRUDE_POST_GEN_CONTROLS_HTML,
   FONT_EXTRUDE_SHAPE_CONTROLS_HTML,
-  FONT_EXTRUDE_SURFACE_POST_GEN_HTML,
 } from './svgExtrudeControlsShared.js';
 import { normalizeFontBevelType } from '../import/extrudeBevel.js';
 import {
@@ -282,7 +281,6 @@ export class FontExtrudeUI {
             <span data-tooltip="Fill color for 2D preview and generated 3D text">Color</span>
             <input type="color" id="fontExtrudeFillColor" class="color-chip" value="#808080" />
           </label>
-          ${FONT_EXTRUDE_SURFACE_POST_GEN_HTML}
           </div>
           ${FONT_EXTRUDE_SHAPE_CONTROLS_HTML}
           <div class="panel-block-divider font-extrude-circular-divider" aria-hidden="true"></div>
@@ -368,14 +366,10 @@ export class FontExtrudeUI {
       circularWrapArc: block.querySelector('#fontExtrudeCircularWrapArc'),
       circularArcLine: block.querySelector('#fontExtrudeCircularArcLine'),
       postGen: block.querySelector('#fontExtrudePostGen'),
-      surfacePostGen: block.querySelector('#fontExtrudeSurfacePostGen'),
       meshDepth: block.querySelector('#fontExtrudeMeshDepth'),
       meshAngle: block.querySelector('#fontExtrudeMeshAngle'),
       hardEdgeAngle: block.querySelector('#fontExtrudeHardEdgeAngle'),
       bevelAmount: block.querySelector('#fontExtrudeBevelAmount'),
-      surfacePreset: block.querySelector('#fontExtrudeSurfacePreset'),
-      surfaceScale: block.querySelector('#fontExtrudeSurfaceScale'),
-      surfaceStrength: block.querySelector('#fontExtrudeSurfaceStrength'),
       fillColor: block.querySelector('#fontExtrudeFillColor'),
       revealDuration: block.querySelector('#fontExtrudeRevealDuration'),
       revealStaggerEasingFamily: block.querySelector('#fontExtrudeRevealStaggerEasingFamily'),
@@ -1001,9 +995,6 @@ export class FontExtrudeUI {
 
   syncPostGenControlsVisibility() {
     const show = this._hasFontMesh();
-    if (this.els.surfacePostGen) {
-      this.els.surfacePostGen.hidden = !show;
-    }
     if (this.els.postGen) {
       this.els.postGen.hidden = !show;
     }
@@ -1014,6 +1005,7 @@ export class FontExtrudeUI {
     }
     this._syncAnimationTransportButtons(this.stateStore.getState());
     this.ui.syncFontExtrudeAnimationPreviewDock?.();
+    this.ui.meshControls?.sync?.(this.stateStore.getState());
   }
 
   _fontAnimationPauseAllAvailable() {
@@ -1349,11 +1341,6 @@ export class FontExtrudeUI {
         hardEdgeAngleOutputKey: 'fontExtrudeHardEdgeAngle',
         bevelAmount: els.bevelAmount,
         bevelAmountOutputKey: 'fontExtrudeBevelAmount',
-        surfacePreset: els.surfacePreset,
-        surfaceScale: els.surfaceScale,
-        surfaceScaleOutputKey: 'fontExtrudeSurfaceScale',
-        surfaceStrength: els.surfaceStrength,
-        surfaceStrengthOutputKey: 'fontExtrudeSurfaceStrength',
       },
       stateStore: this.stateStore,
       eventBus: this.eventBus,
