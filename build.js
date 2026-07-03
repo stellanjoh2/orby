@@ -257,7 +257,12 @@ if (existsSync(join(__dirname, 'partials'))) {
   cpSync(join(__dirname, 'partials'), join(distDir, 'partials'), { recursive: true });
 }
 /** Shelf partials linked from index.html — must land in dist for GitHub Pages. */
-const SHELF_STYLE_PARTIALS = ['map-inspect.css', 'background-gradient.css', 'background-image.css'];
+const SHELF_STYLE_PARTIALS = [
+  'map-inspect.css',
+  'background-gradient.css',
+  'background-image.css',
+  'shape-library.css',
+];
 for (const name of SHELF_STYLE_PARTIALS) {
   const src = join(__dirname, 'styles', name);
   if (!existsSync(src)) continue;
