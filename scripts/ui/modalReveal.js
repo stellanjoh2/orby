@@ -23,13 +23,16 @@ export function snapModalHidden(modal, panel = null) {
   gsap.set(modal, { clearProps: 'clipPath,transform' });
 }
 
-/** * Full-viewport wipe + content lift. Uses clip-path and y only (no opacity on the overlay).
+/**
+ * Full-viewport wipe + content lift. Uses clip-path and y only (no opacity on the overlay).
  * @param {HTMLElement | null} modal
  * @param {HTMLElement | null} [panel]
+ * @param {{ revealBackdrop?: boolean }} [options] When false, backdrop is instant (blur only); only the panel animates.
  * @returns {Promise<void>}
  */
-export function animateModalOpen(modal, panel = null) {
+export function animateModalOpen(modal, panel = null, options = {}) {
   if (!modal) return Promise.resolve();
+  const revealBackdrop = options.revealBackdrop !== false;
   modalCloseInProgress.delete(modal);
   const content = panel ?? modal.querySelector('.load-settings-content');
   if (!content) {
@@ -46,7 +49,7 @@ export function animateModalOpen(modal, panel = null) {
 
   gsap.killTweensOf([modal, content]);
   modal.style.display = 'flex';
-  gsap.set(modal, { clipPath: 'inset(0 0 100% 0)' });
+  gsap.set(modal, { clipPath: revealBackdrop ? 'inset(0 0 100% 0)' : 'inset(0 0 0%)' });
   gsap.set(content, { y: 40, clipPath: 'inset(0 0 100% 0)' });
 
   return new Promise((resolve) => {
@@ -58,11 +61,10 @@ export function animateModalOpen(modal, panel = null) {
         resolve();
       },
     });
-    tl.to(modal, { clipPath: 'inset(0 0 0%)', duration: 0.22, ease: 'power2.out' }, 0).to(
-      content,
-      { y: 0, clipPath: 'inset(0 0 0%)', duration: 0.42 },
-      0.07,
-    );
+    if (revealBackdrop) {
+      tl.to(modal, { clipPath: 'inset(0 0 0%)', duration: 0.22, ease: 'power2.out' }, 0);
+    }
+    tl.to(content, { y: 0, clipPath: 'inset(0 0 0%)', duration: 0.42 }, revealBackdrop ? 0.07 : 0);
   });
 }
 

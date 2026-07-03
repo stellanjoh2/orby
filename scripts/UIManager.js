@@ -52,6 +52,8 @@ import { AnimationControls } from './ui/AnimationControls.js';
 import { ExportPreviewControls } from './ui/ExportPreviewControls.js';
 import { ExportSectionControls } from './ui/ExportSectionControls.js';
 import { FontExtrudeUI } from './ui/FontExtrudeUI.js';
+import { ShapeLibraryUI } from './ui/ShapeLibraryUI.js';
+import { ShapeLibraryController } from './shapeLibrary/ShapeLibraryController.js';
 import {
   ensureFontExtrudeAnimationPreviewDockMounted,
   ensureSvgExtrudeCoreControlsMounted,
@@ -249,6 +251,18 @@ export class UIManager {
     );
     this.fontExtrudeUI.mount();
     this.fontExtrudeUI.bind();
+    this.shapeLibraryController = new ShapeLibraryController(
+      this.eventBus,
+      () => window.orby?.scene,
+    );
+    this.shapeLibraryUI = new ShapeLibraryUI(
+      this.eventBus,
+      this.stateStore,
+      this,
+      this.shapeLibraryController,
+    );
+    this.shapeLibraryUI.mount();
+    this.shapeLibraryUI.bind();
     this.resetControls = new ResetControls(this.eventBus, this.stateStore, this, this.helpers);
     bindShaderLabBlockedClickHints({
       root: document.querySelector('.panels'),

@@ -18,6 +18,10 @@ import {
   watchPendingMapTextures,
 } from '../render/mapInspectTypes.js';
 import { ORBY_BLACK } from '../constants.js';
+import {
+  bindFloatingPanelHeaderDrag,
+  setFloatingPanelDragging,
+} from './floatingPanelHeaderDrag.js';
 
 export class MapInspectControls {
   /**
@@ -68,7 +72,7 @@ export class MapInspectControls {
     this._panelTabs = document.getElementById('mapPreviewPanelTabs');
     this._panelImage = document.getElementById('mapPreviewPanelImage');
     this._panelClose = document.getElementById('mapPreviewPanelClose');
-    this._panelDrag = document.getElementById('mapPreviewPanelDrag');
+    this._panelHeader = this._panel?.querySelector('.map-preview-panel__header') ?? null;
     this._fullsizeView = document.getElementById('mapFullsizeView');
     this._fullsizeViewport = document.getElementById('mapFullsizeViewport');
     this._fullsizeCanvas = document.getElementById('mapFullsizeCanvas');
@@ -102,7 +106,7 @@ export class MapInspectControls {
       }
     };
     window.addEventListener('resize', this._onFullsizeResize);
-    this._panelDrag?.addEventListener('pointerdown', (event) => this._startPanelDrag(event));
+    bindFloatingPanelHeaderDrag(this._panelHeader, (event) => this._startPanelDrag(event));
 
     this._onDisplayModeClick = (event) => {
       if (!this._pinnedSlot) return;
@@ -840,10 +844,11 @@ export class MapInspectControls {
    * @param {PointerEvent} event
    */
   _startPanelDrag(event) {
-    if (!this._panel || !this._panelDrag) return;
+    if (!this._panel) return;
     event.preventDefault();
 
     const panel = this._panel;
+    setFloatingPanelDragging(panel, true);
     const rect = panel.getBoundingClientRect();
     const offsetX = event.clientX - rect.left;
     const offsetY = event.clientY - rect.top;
@@ -873,6 +878,7 @@ export class MapInspectControls {
     };
 
     const onUp = (upEvent) => {
+      setFloatingPanelDragging(panel, false);
       panel.releasePointerCapture?.(upEvent.pointerId);
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);

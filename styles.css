@@ -307,7 +307,7 @@ body[data-theme='violet'],
 body[data-theme='aqua'] {
   /* Default near-black — surfaces, buttons on lime, scene background */
   --orby-black: #080808;
-  --orby-app-bg: #000000;
+  --orby-app-bg: #202020;
   /* FAQ panels, tooltips — softer than app black so hints don’t read as errors */
   --orby-surface-muted: #202020;
   /* Neutral control fills — buttons, slider rails, toggle tracks, selects */
@@ -1049,11 +1049,20 @@ html.orby-sr-on .orby-sr,
 }
 
 /* Dismissible long-message dialog (same shell as paste-settings / bug report) */
+.message-alert-modal {
+  /* Blur only — no dim scrim or animated darkening wipe */
+  background: transparent;
+}
+
 .message-alert-modal .message-alert-content {
   max-width: min(28rem, 92vw);
 }
 
 .message-alert-modal .load-settings-header h3 {
+  /* Brand headline at dialog scale — smaller than paste-settings (2rem) */
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   color: var(--warning);
 }
 
@@ -1079,6 +1088,18 @@ html.orby-sr-on .orby-sr,
 
 .message-alert-actions .accent-action-btn {
   min-width: 5.5rem;
+}
+
+/* Confirm dialogs — equal-width pill pair (Keep / Replace, Yes / No, …) */
+.message-alert-actions:has(#messageAlertCancel:not([hidden])) {
+  gap: 0.75rem;
+}
+
+.message-alert-actions:has(#messageAlertCancel:not([hidden])) button {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  border-radius: 999px;
 }
 
 .message-alert-actions.message-alert-actions--wide {

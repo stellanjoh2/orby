@@ -385,7 +385,7 @@ export class ModelLifecycleManager {
           s.cameraController?.refreshModelBounds(s.currentModel);
         }
         s._skipCameraFlightOnNextModelLoad = false;
-        this._scaleInMeshOnSpawn(object);
+        this._scaleInMeshOnSpawn(object, { animateSpawn: wasFirstLoad });
       });
     });
   }
@@ -401,7 +401,7 @@ export class ModelLifecycleManager {
     s._pendingFontGroundAlignAfterTypography = false;
   }
 
-  _scaleInMeshOnSpawn(object) {
+  _scaleInMeshOnSpawn(object, options = {}) {
     const s = this.scene;
     if (!object || s.currentModel !== object) return;
     if (object.userData?.orbyFontGenerated || isFontExtrudeRevealModel(object)) {
@@ -424,6 +424,12 @@ export class ModelLifecycleManager {
         this._finalizeFontModelAfterTypography(object);
         return;
       }
+    }
+    if (options.animateSpawn === false) {
+      object.visible = true;
+      s.fontTextRevealController?.resetAllAnimations?.({ resumeConstant: true });
+      this._finalizeFontModelAfterTypography(object);
+      return;
     }
     if (this._meshSpawnScaleRaf) {
       cancelAnimationFrame(this._meshSpawnScaleRaf);

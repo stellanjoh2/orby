@@ -138,6 +138,7 @@
     <link rel="stylesheet" href="./styles/background-gradient.css" />
     <link rel="stylesheet" href="./styles/background-image.css" />
     <link rel="stylesheet" href="./styles/map-inspect.css" />
+    <link rel="stylesheet" href="./styles/shape-library.css" />
     <link rel="stylesheet" href="./styles/marketing/09-scroll-cue-responsive.css" />
     <script>
       (function () {
@@ -556,6 +557,37 @@
               <div class="watermark-overlay__custom" id="watermarkOverlayCustom" role="img" aria-label="Custom logotype" hidden></div>
             </div>
             <div class="watermark-overlay__credit" id="watermarkOverlayCredit"></div>
+          </div>
+          <div
+            id="shapeLibraryPanel"
+            class="shape-library-panel"
+            hidden
+            role="dialog"
+            aria-modal="false"
+            aria-label="Shape library"
+          >
+            <div class="shape-library-panel__chrome">
+              <div class="load-settings-header shape-library-panel__header">
+                <button
+                  type="button"
+                  id="shapeLibraryPanelDrag"
+                  class="shape-library-panel__drag"
+                  aria-label="Drag panel"
+                >
+                  <span class="shape-library-panel__grip" aria-hidden="true"></span>
+                </button>
+                <p class="shape-library-panel__title">Shape Library</p>
+                <button
+                  type="button"
+                  id="shapeLibraryPanelClose"
+                  class="close-btn"
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div class="shape-library-panel__body">
+                <div id="shapeLibraryGrid" class="shape-library-grid" role="list"></div>
+              </div>
+            </div>
           </div>
           <div
             id="mapPreviewPanel"

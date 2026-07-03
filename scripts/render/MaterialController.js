@@ -32,6 +32,7 @@ import {
   creativeLookDefaultIntensity,
   creativeLookDefaultLiftCrush,
   creativeLookDefaultPatternScale,
+  creativeLookPresetResetsLiftCrushOnSwitch,
   creativeLookPatternScaleBounds,
   normalizeCreativeLookPatternScale,
   creativeLookPresetUsesShaderAnimation,
@@ -135,7 +136,6 @@ import {
 } from './ShadowTint.js';
 import {
   resolveWireframeSurfaceOffset,
-  WIREFRAME_EDGES_THRESHOLD_DEG,
   WIREFRAME_POLYGON_OFFSET_FACTOR,
   WIREFRAME_POLYGON_OFFSET_UNITS,
   DEFAULT_WIREFRAME_LINE_WIDTH,
@@ -3812,7 +3812,7 @@ export class MaterialController {
       || (
         nextPreset !== prevPreset
         && patch.liftCrush === undefined
-        && (isDitherPixelCreativeLookPreset(nextPreset) || nextPreset === 'glass')
+        && creativeLookPresetResetsLiftCrushOnSwitch(nextPreset)
       )
     ) {
       this.creativeLookSettings.liftCrush = creativeLookDefaultLiftCrush(nextPreset);
@@ -3946,7 +3946,9 @@ export class MaterialController {
           const tag = m?.userData?.orbyCreativeLook;
           if (
             creativeLookPresetUsesShaderAnimation(tag) &&
-            (m.uniforms?.uTime || m.userData?.orbyCreativeLook === 'holo-glass' || m.userData?.orbyCreativeLook === 'crystal-gem')
+            (m.uniforms?.uTime
+              || m.userData?.orbyCreativeLook === 'holo-glass'
+              || m.userData?.orbyCreativeLook === 'crystal-gem')
           ) {
             if (m.uniforms?.uTime) {
               m.uniforms.uTime.value = effectiveTime;
@@ -4927,11 +4929,10 @@ export class MaterialController {
   }
 
   _buildWireframeLineGeometry(sourceGeometry) {
-    // Low threshold: hide coplanar cap triangulation (~0°) but keep high-segment extrude ring edges.
-    const edges = new THREE.EdgesGeometry(sourceGeometry, WIREFRAME_EDGES_THRESHOLD_DEG);
+    const wireframe = new THREE.WireframeGeometry(sourceGeometry);
     const lineGeometry = new LineSegmentsGeometry();
-    lineGeometry.setPositions(edges.attributes.position.array);
-    edges.dispose();
+    lineGeometry.setPositions(wireframe.attributes.position.array);
+    wireframe.dispose();
     return lineGeometry;
   }
 

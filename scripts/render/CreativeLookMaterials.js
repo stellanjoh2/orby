@@ -143,6 +143,7 @@ import {
   CREATIVE_CRYSTAL_GEM_ENV_MAP_MUL,
   applyCreativeLookCrystalGemPerformanceTuning,
 } from './creativeLookCrystalGem.js';
+import { ORBY_SEAMLESS_FIELD_GLSL } from './creativeLookSeamlessField.js';
 import {
   THERMAL_DEFAULT_INTENSITY,
   THERMAL_DEFAULT_PATTERN_SCALE,
@@ -766,7 +767,17 @@ export function creativeLookDefaultLiftCrush(preset) {
   const id = normalizeCreativeLookPreset(preset);
   if (id === 'dither-crosshatch') return DITHER_CROSSHATCH_DEFAULT_LIFT_CRUSH;
   if (id === 'glass') return CREATIVE_GLASS_DEFAULT_LIFT_CRUSH;
+  if (id === 'holographic' || id === 'holo-topo') return HOLOGRAPHIC_DEFAULT_LIFT_CRUSH;
   return CREATIVE_LOOK_LIFT_CRUSH_DEFAULT;
+}
+
+/** Presets that snap Lift/Crush to {@link creativeLookDefaultLiftCrush} when selected in Shader Lab. */
+export function creativeLookPresetResetsLiftCrushOnSwitch(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  return isDitherPixelCreativeLookPreset(id)
+    || id === 'glass'
+    || id === 'holographic'
+    || id === 'holo-topo';
 }
 
 /**
@@ -1491,6 +1502,9 @@ export const CREATIVE_GLASS_ENV_MAP_MUL = 0.58;
 /** Default Lift/Crush when selecting Glass — tames transmission / env blowout. */
 export const CREATIVE_GLASS_DEFAULT_LIFT_CRUSH = -0.75;
 
+/** Default Lift/Crush when selecting Holographic — neutral grading (no shadow crush). */
+export const HOLOGRAPHIC_DEFAULT_LIFT_CRUSH = 0;
+
 export const CREATIVE_GLASS_BASE_SPECULAR_INTENSITY = 0.72;
 export const CREATIVE_GLASS_BASE_ATTENUATION_DISTANCE = 1.05;
 
@@ -2004,21 +2018,15 @@ void main() {
 
 /** Slow BW plasma: extreme contrast, mostly pure black/white with thin animated boundary (`uTime`). */
 const SPECTRAL_STORM_FRAGMENT = /* glsl */ `
-varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
 uniform float uTime;
 uniform float uPatternScale;
 uniform float uIntensity;
 uniform float uOpacity;
 
+${ORBY_SEAMLESS_FIELD_GLSL}
+
 void main() {
-  vec3 N = orbyCreativeSurfaceNormal(
-    normalize(vWorldNormal),
-    vWorldPosition,
-    vOrbyLocalPos,
-    vOrbyLocalNormal,
-    mat3(vOrbyWm0, vOrbyWm1, vOrbyWm2)
-  );
   vec3 p = vWorldPosition * (2.6 / max(uPatternScale, 0.001));
   float t = uTime;
   float inten = clamp(uIntensity, 0.0, 2.0);
@@ -2047,14 +2055,13 @@ void main() {
 
   vec3 col = vec3(bw);
 
-  vec3 V = normalize(cameraPosition - vWorldPosition);
-  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.2 - up * 0.6 + down * 1.0);
+  vec3 toCam = normalize(cameraPosition - vWorldPosition);
+  float viewAccent = orbySeamlessViewAccent(vWorldPosition, uPatternScale, toCam);
   float strobe = sin(t * (15.0 + up * 3.0 - down * 5.0) + dot(p, vec3(8.5, 5.3, 7.1))) * 0.5 + 0.5;
-  float rimGate = rim * (0.42 + 0.58 * strobe + up * 0.16 - down * 0.2);
+  float rimGate = viewAccent * (0.42 + 0.58 * strobe + up * 0.16 - down * 0.2);
   col = mix(col, vec3(1.0), rimGate * (0.82 + up * 0.23 - down * 0.47));
 
   col *= orbyCreativeSurfaceFilmMod(vWorldPosition, vOrbyLocalPos, vOrbyLocalNormal);
-
   gl_FragColor = vec4(col, uOpacity);
 }
 `;
@@ -2129,15 +2136,6 @@ vec3 cpNeonRamp(float phase) {
 }
 
 void main() {
-  vec3 N = orbyCreativeSurfaceNormal(
-    normalize(vWorldNormal),
-    vWorldPosition,
-    vOrbyLocalPos,
-    vOrbyLocalNormal,
-    mat3(vOrbyWm0, vOrbyWm1, vOrbyWm2)
-  );
-  float surfMod = orbyCreativeSurfaceFilmMod(vWorldPosition, vOrbyLocalPos, vOrbyLocalNormal);
-
   float inten = clamp(uIntensity, 0.0, 2.0);
   float d = inten - 1.0;
   float up = max(d, 0.0);
@@ -2185,24 +2183,14 @@ void main() {
 
   vec3 col = plasmaCol;
 
-  vec3 V = normalize(cameraPosition - vWorldPosition);
-  float ndv = max(dot(N, V), 1e-4);
-  float F = pow(1.0 - ndv, mix(2.9, 1.55, up));
-  float fresnelTight = pow(1.0 - ndv, 6.2);
-
-  vec3 L = normalize(vec3(0.38, 0.88, 0.42));
-  vec3 H = normalize(L + V);
-  float nh = max(dot(N, H), 0.0);
-  float specHi = pow(nh, 220.0 + up * 45.0);
-  float specLo = pow(nh, 68.0);
-  vec3 specTint = mix(vec3(0.68, 0.92, 1.05), vec3(1.0, 0.42, 0.95), F);
-  col += specTint * (specHi * 1.42 + specLo * 0.4) * (0.2 + F * 1.05) * inkGate;
-
-  col += fresnelTight * mix(vec3(0.12, 0.72, 1.0), vec3(1.0, 0.28, 0.88), field) * (0.34 + up * 0.24) * inkGate;
-  col += F * plasmaCol * (0.16 + up * 0.12) * inkGate;
+  vec3 toCam = normalize(cameraPosition - vWorldPosition);
+  float viewShimmer = sin(dot(p, toCam * 0.38 + vec3(0.22, 0.68, 0.42)) * 2.2 + t * 0.55) * 0.5 + 0.5;
+  col += mix(vec3(0.68, 0.92, 1.05), vec3(1.0, 0.42, 0.95), viewShimmer) * viewShimmer * inkGate * (0.22 + up * 0.12);
+  col += mix(vec3(0.12, 0.72, 1.0), vec3(1.0, 0.28, 0.88), field) * viewShimmer * viewShimmer * (0.28 + up * 0.18) * inkGate;
+  col += viewShimmer * plasmaCol * (0.12 + up * 0.1) * inkGate;
 
   col = max(col, CP_BASE * inkGate);
-  col *= surfMod;
+  col *= orbyCreativeSurfaceFilmMod(vWorldPosition, vOrbyLocalPos, vOrbyLocalNormal);
 
   gl_FragColor = vec4(col, uOpacity);
 }
@@ -2269,10 +2257,9 @@ void main() {
   vec3 groutCol = vec3(0.018, 0.022, 0.038);
   col = mix(col, groutCol, grout * 0.92);
 
-  vec3 N = normalize(vWorldNormal);
-  vec3 V = normalize(cameraPosition - vWorldPosition);
-  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.4);
-  col += rim * vec3(0.1, 0.34, 0.62) * (0.22 + grout * 0.18);
+  vec3 toCam = normalize(cameraPosition - vWorldPosition);
+  float viewAccent = sin(dot(p * 0.35, toCam * 0.4 + vec3(0.18, 0.62, 0.48)) * 2.0) * 0.5 + 0.5;
+  col += viewAccent * vec3(0.1, 0.34, 0.62) * (0.18 + grout * 0.14);
 
   gl_FragColor = vec4(col, uOpacity);
 }
@@ -2771,13 +2758,6 @@ float fsFbm(vec3 p) {
 }
 
 void main() {
-  vec3 N = orbyCreativeSurfaceNormal(
-    normalize(vWorldNormal),
-    vWorldPosition,
-    vOrbyLocalPos,
-    vOrbyLocalNormal,
-    mat3(vOrbyWm0, vOrbyWm1, vOrbyWm2)
-  );
   vec3 p = vWorldPosition * (1.65 / max(uPatternScale, 0.001));
   float t = uTime;
   float inten = clamp(uIntensity, 0.0, 2.0);
@@ -2818,22 +2798,22 @@ void main() {
   vec3 lines = lineCol * lineCore * (2.65 + up * 1.45 - down * 0.55);
   lines += lineCol * glow * (1.55 + up * 0.95 - down * 0.35);
 
-  vec3 V = normalize(cameraPosition - vWorldPosition);
-  float fresnel = pow(1.0 - max(dot(N, V), 0.0), 2.6);
-  lines += mix(lineColA, lineColB, fresnel) * fresnel * line * (0.62 + up * 0.38 - down * 0.22);
+  vec3 toCam = normalize(cameraPosition - vWorldPosition);
+  float viewAccent = sin(dot(q, toCam * 0.32 + vec3(0.2, 0.7, 0.45)) * 1.6 + t * 0.35) * 0.5 + 0.5;
+  lines += mix(lineColA, lineColB, viewAccent) * viewAccent * line * (0.52 + up * 0.32 - down * 0.18);
 
   float film = orbyCreativeSurfaceFilmMod(vWorldPosition, vOrbyLocalPos, vOrbyLocalNormal);
   lines *= film;
 
   vec3 col = FS_BASE + lines;
-  col += vec3(0.04, 0.34, 0.42) * pow(fresnel, 3.1) * (0.14 + up * 0.05 - down * 0.04);
+  col += vec3(0.04, 0.34, 0.42) * viewAccent * viewAccent * (0.12 + up * 0.05 - down * 0.04);
   col = min(col, vec3(3.2));
 
   gl_FragColor = vec4(col, uOpacity);
 }
 `;
 
-/** Holographic 2 — Holographic's artifact-free thin-film core, remixed to full-surface thermal chrome. */
+/** Holographic 2 — full-surface thermal chrome with Fresnel + specular lighting. */
 const HOLO_TOPO_FRAGMENT = /* glsl */ `
 varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;

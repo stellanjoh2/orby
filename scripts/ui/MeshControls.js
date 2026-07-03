@@ -18,6 +18,7 @@ import {
   creativeLookDefaultPatternScale,
   creativeLookFixedPatternScale,
   creativeLookPatternScaleBounds,
+  creativeLookPresetResetsLiftCrushOnSwitch,
   normalizeCreativeLookPatternScale,
   creativeLookPresetLocksIntensity,
   creativeLookPresetLocksMasterHue,
@@ -680,8 +681,7 @@ export class MeshControls {
           }
           if (
             resetDitherTuning
-            || isDitherPixelCreativeLookPreset(preset)
-            || normalizeCreativeLookPreset(preset) === 'glass'
+            || creativeLookPresetResetsLiftCrushOnSwitch(preset)
           ) {
             this.stateStore.set(
               'creativeLook.liftCrush',

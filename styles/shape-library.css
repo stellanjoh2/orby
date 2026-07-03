@@ -1,0 +1,236 @@
+/* Object → Shape Library — shelf entry + floating left panel */
+
+#shapeLibraryShelfBlock .shape-library-shelf-copy {
+  margin: 0 0 0.75rem;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.shape-library-open-btn {
+  width: 100%;
+}
+
+/* Floating panel — same shelf chrome language as map preview; fixed ~760px content width */
+.shape-library-panel {
+  position: fixed;
+  z-index: 120;
+  top: var(--shelf-inset, 48px);
+  left: var(--shelf-inset, 48px);
+  width: auto;
+  max-width: calc(100vw - 2 * var(--shelf-inset, 48px));
+  pointer-events: none;
+}
+
+.shape-library-panel[hidden] {
+  display: none !important;
+}
+
+.shape-library-panel__chrome {
+  display: flex;
+  flex-direction: column;
+  gap: var(--shelf-section-gap, 24px);
+  width: min(760px, calc(100vw - 2 * var(--shelf-inset, 48px) - 2.4rem));
+  max-width: 100%;
+  max-height: calc(100vh - 2 * var(--shelf-inset, 48px));
+  min-width: 0;
+  min-height: 0;
+  padding: var(--shelf-card-padding, 1.2rem);
+  border-radius: var(--app-settings-chrome-radius, 18px);
+  /* Opaque chrome — no backdrop-filter; blur over the live WebGL canvas is costly every frame. */
+  background: color-mix(in srgb, var(--orby-black) 92%, rgba(255, 255, 255, 0.04));
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+.shape-library-panel__header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  min-height: 2.25rem;
+  flex: 0 0 auto;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.shape-library-panel.is-panel-dragging .shape-library-panel__header {
+  cursor: grabbing;
+}
+
+.shape-library-panel__header .close-btn {
+  margin: -0.35rem -0.35rem 0 0;
+  cursor: pointer;
+}
+
+.shape-library-panel__drag {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: -0.35rem 0 0 -0.35rem;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: grab;
+  touch-action: none;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.shape-library-panel__drag:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--brand-primary) 14%, transparent);
+}
+
+.shape-library-panel__drag:active {
+  cursor: grabbing;
+}
+
+.shape-library-panel__grip {
+  width: 11px;
+  height: 11px;
+  background: radial-gradient(circle, currentColor 1.5px, transparent 1.6px);
+  background-size: 5.5px 5.5px;
+  opacity: 0.85;
+}
+
+.shape-library-panel__title {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.shape-library-panel__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.shape-library-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--shelf-picker-grid-gap, 0.55rem);
+  width: 100%;
+}
+
+.shape-library-tile {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--orby-black) 55%, rgba(255, 255, 255, 0.06));
+  cursor: grab;
+  overflow: hidden;
+  transition:
+    box-shadow 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.shape-library-tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px transparent;
+  pointer-events: none;
+  transition: box-shadow 0.15s ease;
+}
+
+.shape-library-tile:hover::after,
+.shape-library-tile:focus-visible::after {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.shape-library-tile:hover {
+  background: color-mix(in srgb, var(--accent) 10%, var(--orby-black));
+  transform: translateY(-1px);
+}
+
+.shape-library-tile:active {
+  cursor: grabbing;
+}
+
+.shape-library-tile:focus-visible {
+  outline: none;
+}
+
+.shape-library-tile__thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+}
+
+.shape-library-tile--pending {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--orby-black) 80%, #ff6ec7 20%),
+    color-mix(in srgb, var(--orby-black) 80%, #6ecbff 20%)
+  );
+}
+
+.shape-library-drag-ghost {
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  opacity: 0.92;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Viewport drop target while dragging a library shape */
+.viewport.is-shape-drop-target {
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--accent) 75%, transparent);
+}
+
+.viewport.is-shape-drop-target #webgl {
+  cursor: copy;
+}
+
+#webgl.is-shape-drop-target {
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--accent) 75%, transparent);
+  cursor: copy;
+}
+
+@media (max-width: 720px) {
+  .shape-library-panel {
+    max-width: calc(100vw - 2 * var(--shelf-inset, 24px));
+  }
+
+  .shape-library-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+html:not(.mobile-landing) .shape-library-panel {
+  top: calc(48px * var(--studio-ui-scale));
+  left: calc(48px * var(--studio-ui-scale));
+  max-width: calc(100vw - 96px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shape-library-panel__chrome {
+  max-height: calc(100vh - 96px * var(--studio-ui-scale));
+  padding: calc(16px + 3.2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
+  gap: calc(10px + 2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
+}

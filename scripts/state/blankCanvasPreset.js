@@ -1,9 +1,10 @@
+import { APP_BACKGROUND } from '../constants.js';
 import { DEFAULT_EXPORT_VIDEO_FPS } from '../render/exportVideoResolution.js';
 
 /**
  * "Blank canvas" preset — the exact scene snapshot applied when the homepage
  * "Blank canvas" link is used. A truly minimal void: HDRI lighting on but its
- * panorama hidden (solid black background), lights off, ground wireframe on.
+ * panorama hidden (solid default backdrop), lights off, ground wireframe on.
  *
  * Shape matches a Copy Settings / `.orby` export so it round-trips cleanly
  * through {@link SceneSettingsManager#loadFromText}. Returns a fresh object on
@@ -361,7 +362,7 @@ export function createBlankCanvasPreset() {
     antiAliasing: 'fxaa',
     renderQuality: 'medium',
     toneMapping: 'aces-filmic',
-    background: '#000000',
+    background: APP_BACKGROUND,
     backgroundSolidEnabled: true,
     backgroundGradient: {
       enabled: false,
@@ -370,7 +371,7 @@ export function createBlankCanvasPreset() {
       centerX: 50,
       centerY: 50,
       stops: [
-        { color: '#000000', position: 0 },
+        { color: APP_BACKGROUND, position: 0 },
         { color: '#c4ff00', position: 100 },
       ],
     },

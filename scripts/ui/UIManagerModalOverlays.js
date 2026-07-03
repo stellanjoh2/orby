@@ -97,7 +97,9 @@ export class UIManagerModalOverlays {
     };
     document.addEventListener('keydown', this._messageAlertKeydownHandler, true);
 
-    void animateModalOpen(this._ui.dom.messageAlertModal, this.getMessageAlertPanel()).then(() => {
+    void animateModalOpen(this._ui.dom.messageAlertModal, this.getMessageAlertPanel(), {
+      revealBackdrop: false,
+    }).then(() => {
       if (confirm) {
         this._ui.dom.messageAlertCancel?.focus();
       } else {

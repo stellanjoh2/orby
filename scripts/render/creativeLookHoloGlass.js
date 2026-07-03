@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ORBY_SEAMLESS_FIELD_GLSL } from './creativeLookSeamlessField.js';
 
 /**
  * Holo Glass reads too hot at default Object → Material brightness (~1.75).
@@ -43,60 +44,37 @@ uniform float uOrbyHoloTime;
 uniform float uOrbyHoloPatternScale;
 uniform float uOrbyHoloIntensity;
 
-vec3 orbyHoloGlassFilm(vec3 worldPos, vec3 worldNormal, vec3 viewDir) {
-  vec3 N = normalize(worldNormal);
-  vec3 V = normalize(viewDir);
-  float ndv = max(dot(N, V), 1e-4);
-  float F = 1.0 - ndv;
+${ORBY_SEAMLESS_FIELD_GLSL}
+
+vec3 orbyHoloGlassFilm(vec3 worldPos, vec3 viewDir) {
+  vec3 toCam = normalize(viewDir);
   float inten = clamp(uOrbyHoloIntensity, 0.0, 2.0);
   float d = inten - 1.0;
   float up = max(d, 0.0);
   float down = max(-d, 0.0);
+  float t = uOrbyHoloTime;
+  float sc = uOrbyHoloPatternScale;
 
-  float fresnelWide = pow(F, 1.22);
-  float fresnel = pow(F, 1.95);
-  float fresnelTight = pow(F, 4.6);
-
-  float sc = clamp(uOrbyHoloPatternScale, 0.1, 5.0);
-  float logMin = -3.321928094887362;
-  float logMax = 2.321928094887362;
-  float u = (log2(sc) - logMin) / (logMax - logMin);
-  float wFreq = mix(2.923, 0.25, u);
-  vec3 pw = worldPos * wFreq;
-  float t = uOrbyHoloTime * (wFreq / 1.35);
-
-  float oil =
-    sin(pw.x * 0.72 + t * 0.72) * cos(pw.y * 0.78 - t * 0.62) +
-    sin(pw.z * 0.68 + t * 0.42) * 0.45 +
-    sin(dot(pw, vec3(0.72, 1.02, 0.58)) * 1.05 + t * 0.85) * 0.35;
+  float oil = orbySeamlessOil(worldPos, sc, t);
   oil *= 1.0 - down * 0.42 + up * 0.68;
+  float flowLift = orbySeamlessFlowLift(worldPos, sc, t);
+  float viewShimmer = orbySeamlessViewShimmer(worldPos, sc, t, toCam);
+  float chromePulse = orbySeamlessChromePulse(worldPos, sc, t);
 
-  float film =
-    fresnel * (5.8 + up * 2.0 - down * 1.8) +
-    oil * (1.35 + up * 0.55 - down * 0.45) +
-    dot(N, vec3(0.15, 0.97, 0.18)) * (0.34 + up * 0.12 - down * 0.14) +
-    t * (0.42 + up * 0.18 - down * 0.18);
-
-  float chrom = fresnel * fresnel * (1.45 + up * 0.18 - down * 0.65);
+  float film = (oil * (1.35 + up * 0.55 - down * 0.45) + flowLift + t * 0.18) * mix(0.88, 1.12, inten * 0.5);
   vec3 phase = film * vec3(3.45, 4.15, 4.95) + vec3(0.0, 2.2, 5.0);
-  phase += vec3(chrom * 1.05, -chrom * 0.78, chrom * 0.92);
+  phase += vec3(viewShimmer * viewShimmer * 0.85, -viewShimmer * 0.62, viewShimmer * 0.72);
 
   vec3 holo = 0.5 + 0.53 * cos(phase);
-  holo *= 0.96 + 0.04 * sin(film * 4.2 + t * 1.15);
+  holo *= 0.96 + 0.04 * sin(film * 4.2 + t * 0.55);
   holo = pow(max(holo, vec3(0.0)), vec3(0.92 - down * 0.06 + up * 0.06));
 
-  float rimMix = fresnelWide * 0.78 + fresnel * 0.62 + fresnelTight * 0.42;
-  rimMix = clamp(rimMix * (1.0 + up * 0.32 - down * 0.52), 0.0, 1.0);
+  float rimMix = clamp(viewShimmer * 0.72 + oil * 0.22 + up * 0.18 - down * 0.12, 0.0, 1.0);
+  holo *= 0.84 + rimMix * 0.28 + chromePulse * 0.06;
+  holo += vec3(0.1, 0.48, 1.05) * viewShimmer * viewShimmer * 0.32;
+  holo += vec3(1.0, 0.28, 0.82) * chromePulse * 0.18;
 
-  vec3 specTint = mix(vec3(0.72, 0.94, 1.05), vec3(1.05, 0.58, 0.92), fresnel);
-  vec3 L = normalize(vec3(0.42, 0.9, 0.36));
-  vec3 H = normalize(L + V);
-  float nh = max(dot(N, H), 0.0);
-  holo += specTint * (pow(nh, 220.0) * 1.15 + pow(nh, 64.0) * 0.32) * (0.14 + fresnel * 0.88);
-  holo += fresnelTight * vec3(1.0, 0.28, 0.82) * (0.52 + up * 0.38 - down * 0.38);
-  holo += fresnel * vec3(0.1, 0.48, 1.05) * (0.42 + up * 0.22 - down * 0.22);
-
-  return holo * rimMix;
+  return holo;
 }
 `;
 
@@ -104,7 +82,6 @@ const HOLO_GLASS_FRAG_APPLY = /* glsl */ `
 {
   vec3 holo = orbyHoloGlassFilm(
     vOrbyHoloWorldPos,
-    vOrbyHoloWorldNormal,
     cameraPosition - vOrbyHoloWorldPos
   );
   outgoingLight.rgb = mix(outgoingLight.rgb, holo, clamp(length(holo) * 0.28, 0.0, 0.55));
@@ -263,7 +240,7 @@ export function attachCreativeLookHoloGlassShader(mat, opts = {}) {
 
   const prevKey = mat.customProgramCacheKey?.bind(mat);
   mat.customProgramCacheKey = function orbyHoloGlassCacheKey() {
-    return `${typeof prevKey === 'function' ? prevKey() : ''}:orbyHoloGlass`;
+    return `${typeof prevKey === 'function' ? prevKey() : ''}:orbyHoloGlassSeamless`;
   };
 
   mat.needsUpdate = true;
