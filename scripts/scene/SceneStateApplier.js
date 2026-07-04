@@ -340,7 +340,7 @@ function createStateApplySteps() {
     {
       id: 'background-tone-hdri-strength',
       apply: (s, state) => {
-        s.backgroundController?.setColor(state.background);
+        s.syncStudioBackgroundColor?.(state.background);
         s.backgroundController?.setSolidEnabled(getBackgroundMode(state) === 'solid');
         s.backgroundGradientController?.setConfig(
           normalizeBackgroundGradient(state.backgroundGradient ?? {}),

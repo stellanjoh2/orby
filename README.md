@@ -33,7 +33,7 @@ Orby is a free browser-based 3D viewer and virtual studio that runs in your brow
 - 🔄 **Scene settings import/export** and **`.orby` scene files** (settings + embedded model)
 - 🎭 **Multiple display modes**: Shaded, Unlit, Clay, Wireframe with overlay options
 - 🎮 **Full gamepad support** for console-like experience
-- 📱 **Touch-friendly [Orby Mobile](mobile/) preview** for phone workflows
+- 📱 **[Orby Mobile](mobile/)** — touch-first light studio for phone workflows (HDRI, Shader Lab looks, PNG export)
 - 🔒 **Your files stay local** — all 3D processing runs in your browser; nothing is uploaded
 - 🚫 **No accounts**, no login, no cookies, no ad pixels, no personal identifiers
 
@@ -68,13 +68,14 @@ For production builds and deployment, see [Development](#-development) and [BUIL
 - **GLB/GLTF** (`.glb`, `.gltf`) — **Primary format**. Recommended and most thoroughly tested. Supports animations, materials, and textures
 - **SVG** (`.svg`) — Extrude filled paths into 3D meshes (Object → SVG Extrude)
 - **Orby scene** (`.orby`) — Saved scene with settings and embedded model
-- **OBJ** (`.obj`) — Wavefront 3D object format (basic support)
-- **FBX** (`.fbx`) — Autodesk 3D format (basic support)
-- **STL** (`.stl`) — Stereolithography format (basic support)
+- **FBX** (`.fbx`) — Folder import with external textures; Phong/Lambert → PBR conversion; auto texture assignment from common DCC naming; **Map Slots** UI for albedo, normal, ORM, and more
+- **STL** (`.stl`) — Stereolithography meshes with import smoothing controls
+- **OBJ** (`.obj`) — Wavefront geometry (single-file load; no bundled MTL pipeline)
+- **BVH** (`.bvh`) — Motion-capture skeleton + animation preview
 
-**Note**: Orby is built and tested around `.glb` / `.gltf` and `.svg` extrusion. OBJ, FBX, and STL load with basic support; feature coverage varies by exporter. For the best experience, export as GLB.
+**Note**: GLB/glTF and SVG extrude are the primary, most-tested paths. FBX folder import is solid for typical game/DCC exports; OBJ is geometry-first. When in doubt, export as GLB.
 
-**Experimental**: `.usdz` may load text-USDA stages only (binary USDC — the usual Apple/exporter default — often shows up empty). Barely tested; prefer GLB.
+**Experimental**: USD/USDC/USDA/USDZ — newer loader path; coverage varies by stage contents. Prefer GLB for production work.
 
 Perfect for models exported from:
 - **AI-generated 3D**: Meshy, Tripo, Luma, CSM, Rodin, etc.
@@ -520,23 +521,13 @@ Orby requires a modern browser with WebGL 2.0 support:
 
 ### Mobile Support
 
-The full studio is designed for **desktop**. A touch-friendly **[Orby Mobile](mobile/)** preview is available for phone workflows, but the primary experience targets desktop browsers with a keyboard, mouse, or gamepad.
+The full **[Orby Studio](https://orby.studio/)** targets **desktop** — keyboard, mouse, and gamepad workflows with the complete shelf (SVG/font extrude, video export, scene files, and the full Shader Lab).
+
+**[Orby Mobile](mobile/)** is a dedicated touch-first app at `/mobile/` — not a stub. Drop a GLB, pick HDRI and Shader Lab looks, tune materials and post FX, export PNG, and hand off to desktop when you need the full studio. Viewport resizes cleanly on both desktop and mobile (window, fullscreen, and panel layout changes).
 
 ---
 
 ## ⚠️ Known Issues & Limitations
-
-### Window Resizing
-
-**Orby is not yet optimized for dynamic window resizing.** If you encounter black borders around the viewer after resizing your browser window:
-
-1. **Refresh your browser** at its current window size:
-   - **Mac**: `Cmd+R`
-   - **Windows/Linux**: `Ctrl+R`
-
-2. **For optimal experience**: Enter fullscreen mode (using the fullscreen button in the bottom-left corner or browser fullscreen), then refresh.
-
-The canvas size is calculated on page load and doesn't automatically update when the window is resized. This is a known limitation that will be addressed in a future update.
 
 ### Performance Considerations
 
@@ -550,7 +541,7 @@ The canvas size is calculated on page load and doesn't automatically update when
 - Some complex models with unusual material setups may not render perfectly.
 - Models with very large textures may take longer to load.
 - Certain GLTF extensions may not be fully supported.
-- **Format support**: While multiple formats are supported, `.glb` files are the primary tested format. OBJ, FBX, and STL may have limited feature support or compatibility issues. USDZ is experimental and largely untested.
+- **Format support**: GLB/glTF remains the most complete path (animations, extensions, embedded textures). FBX folder import handles typical external-texture workflows; edge cases (embedded-only FBX, exotic UV sets) may still need Map Slots tweaks. OBJ is geometry-only. USD stages are experimental.
 
 ### Browser-Specific Issues
 
@@ -576,7 +567,7 @@ orby/
 ├── support/             # Support & FAQ
 ├── legal/               # Privacy policy, terms
 ├── credits/             # Open-source attributions
-├── mobile/              # Orby Mobile preview
+├── apps/mobile/         # Orby Mobile (served at /mobile/)
 ├── api/                 # Vercel serverless routes (stats, bug reports)
 ├── e2e/                 # Playwright tests
 ├── index.html           # Studio entry (source)
@@ -719,7 +710,7 @@ Highlights include Three.js, GSAP, Lottie Web, N8AO, Font Awesome, JSZip, ImageT
 
 ### Model won't load
 
-- Check that the file format is supported (`.glb`, `.gltf`, `.svg`, `.orby`, `.obj`, `.fbx`, `.stl`; `.usdz` is experimental)
+- Check that the file format is supported (`.glb`, `.gltf`, `.svg`, `.orby`, `.fbx`, `.obj`, `.stl`, `.bvh`; USD/USDC/USDA/USDZ is experimental)
 - Ensure the file isn't corrupted
 - Try a different model to verify the viewer is working
 - Check browser console for error messages
@@ -764,7 +755,7 @@ Highlights include Three.js, GSAP, Lottie Web, N8AO, Font Awesome, JSZip, ImageT
 - **Transparency / glass**: Use **Advanced → Alpha** if windows, decals, or glass look wrong (solid, popping, or odd sorting). Try other display modes or material sliders if needed.
 - Try switching to different shading modes (Shaded, Unlit, Clay)
 - Adjust material brightness, metalness, and roughness sliders
-- Check if the model has texture files that need to be in the same directory (for OBJ/FBX)
+- Drop FBX with texture PNGs in the same folder (Orby auto-assigns common naming patterns); use **Object → Map Slots** to fix stragglers
 - **For best results**: Use `.glb` format, which has the most complete material and texture support
 
 ### Export not working
@@ -790,8 +781,7 @@ Highlights include Three.js, GSAP, Lottie Web, N8AO, Font Awesome, JSZip, ImageT
 See [PROJECT_PLAN.md](PROJECT_PLAN.md) for longer-term ideas.
 
 Current priorities:
-- Improved window resizing handling
-- Orby Mobile polish
+- Orby Mobile — expanded presets and desktop handoff
 - Additional HDRI environments
 - Performance optimizations
 

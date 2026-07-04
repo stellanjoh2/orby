@@ -408,6 +408,7 @@ export class ModelLifecycleManager {
       alignGround: !!s._pendingFontGroundAlignAfterTypography,
     });
     s._pendingFontGroundAlignAfterTypography = false;
+    s.fontTextRevealController?.reconcileTypographyToMaster?.(object);
   }
 
   /** Surface must compile on visible lit materials — same rebuild path as a shading toggle. */

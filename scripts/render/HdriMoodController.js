@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { ORBY_BLACK } from '../constants.js';
 
 export class HdriMoodController {
@@ -25,16 +24,10 @@ export class HdriMoodController {
     this.fallbackBackgroundColor = color;
   }
 
-  apply(style, { hdriBackgroundEnabled, hdriEnabled }) {
+  apply(style) {
     const state = this.getState?.() ?? {};
     if (!style) {
       this.groundController?.setSolidColor(state.groundSolidColor);
-      if (!hdriBackgroundEnabled || !hdriEnabled) {
-        this.renderer.setClearColor(
-          new THREE.Color(this.fallbackBackgroundColor),
-          1,
-        );
-      }
       if (state.bloom) this.updateBloom?.(state.bloom);
       if (state.grain) this.updateGrain?.(state.grain);
       return;
@@ -44,10 +37,7 @@ export class HdriMoodController {
       this.groundController?.setSolidColor(style.baseColor ?? style.podiumColor);
     }
 
-    if (style.background && (!hdriBackgroundEnabled || !hdriEnabled)) {
-      this.renderer.setClearColor(new THREE.Color(style.background), 1);
-      this.fallbackBackgroundColor = style.background;
-    }
+    // Flat backdrop color is owned by BackgroundController + studio Background panel.
 
     if (style.bloomTint && state.bloom) {
       const bloomState = {

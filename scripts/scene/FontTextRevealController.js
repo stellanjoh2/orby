@@ -729,12 +729,42 @@ export class FontTextRevealController {
   }
 
   /**
+   * Force 3D glyph spacing to match typography sliders after mesh generation or rebuild.
+   * Clears stale live offsets so baked tracking and master tracking reconcile to zero delta.
+   * @param {THREE.Object3D | null | undefined} model
+   */
+  reconcileTypographyToMaster(model) {
+    if (!isFontExtrudeRevealModel(model)) return;
+    this.bindModel(model);
+  }
+
+  /** Remove live typography offsets so a re-bind measures geometry rest, not shifted poses. */
+  _stripLiveTypographyOffsets() {
+    for (const state of this._glyphStates) {
+      const px = Number(state.lastTypographyX) || 0;
+      const py = Number(state.lastTypographyY) || 0;
+      if (Math.abs(px) > 1e-6 || Math.abs(py) > 1e-6) {
+        state.group.position.x -= px;
+        state.group.position.y -= py;
+      }
+      state.lastTypographyX = 0;
+      state.lastTypographyY = 0;
+    }
+    this._boundModel?.updateMatrixWorld(true);
+  }
+
+  /**
    * @param {THREE.Object3D | null | undefined} model
    */
   bindModel(model) {
     this._stopPreviewLoop();
     this._clearTrackingAmountPreviewPin();
     this._constantController?.beginModelTransition?.();
+
+    if (this._boundModel === model && this._glyphStates.length) {
+      this._stripLiveTypographyOffsets();
+    }
+
     this._glyphGroups = [];
     this._glyphStates = [];
     this._glyphWordIndices = null;

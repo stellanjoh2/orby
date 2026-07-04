@@ -286,3 +286,94 @@ test('live typography applies line-height offsets without re-extruding', () => {
   assert.ok(Math.abs(glyphStates[2].group.position.y - -4) < 1e-6);
   assert.ok(Math.abs(glyphStates[3].group.position.y - -4) < 1e-6);
 });
+
+test('resetting letter-spacing to baked value clears stale live offsets', () => {
+  const makeGlyph = (x) => ({
+    group: new THREE.Group(),
+    restPosition: new THREE.Vector3(x, 0, 0),
+    lastTypographyX: 0,
+    lastTypographyY: 0,
+  });
+  const glyphStates = [makeGlyph(0), makeGlyph(1.2)];
+  const spacingStep = trackingDeltaToWorldSpacing(500, 72);
+  glyphStates.forEach((state) => {
+    state.group.position.copy(state.restPosition);
+  });
+
+  applyTrackingAnimatorToGlyphStates(glyphStates, {
+    animatedTracking: 500,
+    generatedTracking: 0,
+    bakedAlign: 'left',
+    masterAlign: 'left',
+    layoutFontSize: 72,
+    lineIndices: [0, 0],
+    lineGlyphIndices: [0, 1],
+    lineGlyphCounts: [2],
+  });
+
+  assert.ok(Math.abs(glyphStates[1].group.position.x - (1.2 + spacingStep)) < 1e-6);
+
+  applyTrackingAnimatorToGlyphStates(glyphStates, {
+    animatedTracking: 0,
+    generatedTracking: 0,
+    bakedAlign: 'left',
+    masterAlign: 'left',
+    layoutFontSize: 72,
+    lineIndices: [0, 0],
+    lineGlyphIndices: [0, 1],
+    lineGlyphCounts: [2],
+  });
+
+  assert.ok(Math.abs(glyphStates[1].group.position.x - 1.2) < 1e-6);
+  assert.equal(glyphStates[1].lastTypographyX, 0);
+});
+
+test('re-bind must strip typography before measuring rest or spacing doubles', () => {
+  const makeGlyph = (x) => ({
+    group: new THREE.Group(),
+    restPosition: new THREE.Vector3(x, 0, 0),
+    lastTypographyX: 0,
+    lastTypographyY: 0,
+  });
+  const glyphStates = [makeGlyph(0), makeGlyph(1.2)];
+  glyphStates.forEach((state) => {
+    state.group.position.copy(state.restPosition);
+  });
+  const spacingStep = trackingDeltaToWorldSpacing(200, 72);
+  const trackingOptions = {
+    animatedTracking: 200,
+    generatedTracking: 0,
+    bakedAlign: 'left',
+    masterAlign: 'left',
+    layoutFontSize: 72,
+    lineIndices: [0, 0],
+    lineGlyphIndices: [0, 1],
+    lineGlyphCounts: [2],
+  };
+
+  applyTrackingAnimatorToGlyphStates(glyphStates, trackingOptions);
+  const expectedSecondX = 1.2 + spacingStep;
+  assert.ok(Math.abs(glyphStates[1].group.position.x - expectedSecondX) < 1e-6);
+
+  const pollutedStates = glyphStates.map((state) => ({
+    group: state.group,
+    restPosition: state.group.position.clone(),
+    lastTypographyX: 0,
+    lastTypographyY: 0,
+  }));
+  applyTrackingAnimatorToGlyphStates(pollutedStates, trackingOptions);
+  assert.ok(pollutedStates[1].group.position.x > expectedSecondX + spacingStep * 0.5);
+
+  glyphStates[1].group.position.x = 1.2;
+  glyphStates[0].group.position.x = 0;
+  glyphStates[0].lastTypographyX = 0;
+  glyphStates[1].lastTypographyX = 0;
+  const cleanStates = glyphStates.map((state) => ({
+    group: state.group,
+    restPosition: state.group.position.clone(),
+    lastTypographyX: 0,
+    lastTypographyY: 0,
+  }));
+  applyTrackingAnimatorToGlyphStates(cleanStates, trackingOptions);
+  assert.ok(Math.abs(cleanStates[1].group.position.x - expectedSecondX) < 1e-6);
+});

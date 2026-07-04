@@ -248,7 +248,7 @@ function copyLinePivotRotatedPositionZ(out, point, pivot, angleZ) {
  * }} options
  */
 export function applyConstantOffsetToGlyph(state, glyphIndex, glyphCount, elapsedSec, options) {
-  const { group, slideDistance, restPosition, restScale } = state;
+  const { group, slideDistance } = state;
   const type = normalizeFontConstantType(options.type);
   const intensity = clampFontConstantIntensityForType(type, options.intensity);
   const speedSec = clampFontConstantSpeedSec(options.speedSec);
@@ -286,7 +286,7 @@ export function applyConstantOffsetToGlyph(state, glyphIndex, glyphCount, elapse
         * FONT_CONSTANT_FLOAT_MOTION_SCALE
         * Math.sin(phase + Math.PI * 0.35);
       if (useLinePivotMotion) {
-        copyLinePivotRotatedPositionZ(group.position, restPosition, linePivot, tiltAngle);
+        copyLinePivotRotatedPositionZ(group.position, group.position, linePivot, tiltAngle);
         group.position.x += bobX;
         group.position.y += bobY;
       } else {
@@ -304,24 +304,18 @@ export function applyConstantOffsetToGlyph(state, glyphIndex, glyphCount, elapse
     case 'breathe': {
       const scaleMul = 1 + 0.08 * intensity * Math.sin(phase);
       if (useLinePivotMotion) {
-        copyLinePivotScaledPosition(group.position, restPosition, linePivot, scaleMul);
-        group.scale.set(
-          restScale.x * scaleMul,
-          restScale.y * scaleMul,
-          restScale.z * scaleMul,
-        );
-      } else {
-        group.scale.x *= scaleMul;
-        group.scale.y *= scaleMul;
-        group.scale.z *= scaleMul;
+        copyLinePivotScaledPosition(group.position, group.position, linePivot, scaleMul);
       }
+      group.scale.x *= scaleMul;
+      group.scale.y *= scaleMul;
+      group.scale.z *= scaleMul;
       break;
     }
 
     case 'sway': {
       const swayAngle = 0.05 * intensity * Math.sin(wavePhase);
       if (useLinePivotMotion) {
-        copyLinePivotRotatedPositionZ(group.position, restPosition, linePivot, swayAngle);
+        copyLinePivotRotatedPositionZ(group.position, group.position, linePivot, swayAngle);
       } else {
         group.rotation.z += swayAngle;
       }

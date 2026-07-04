@@ -259,6 +259,16 @@ export class SceneManager {
   }
 
   /**
+   * Clear the workspace and restore the blank-canvas preset (same as the homepage link).
+   * @param {{ skipSound?: boolean }} [options]
+   */
+  async resetScene(options = {}) {
+    this.clearModel();
+    this.currentFile = null;
+    await this.enterBlankStudio(options);
+  }
+
+  /**
    * Enter the studio with no model (HDRI + controls only) — for text tools / debugging.
    * @param {{ skipSound?: boolean }} [options]
    */
@@ -545,6 +555,8 @@ export class SceneManager {
     this._colorCheckerRestoreShading = null;
     /** Re-apply studio backdrop from state when Shader Lab turns on (no longer forces black). */
     this._creativeLookStudioBgSynced = false;
+    /** Last studio flat color pushed while Shader Lab is on — detect user edits. */
+    this._creativeLookStudioBgHex = null;
     /** Artistic presets (watercolour / sketch) temporarily use paper-white backdrop. */
     this._creativeLookArtisticPaperBg = false;
     /** Horizontal orbit reference (XZ), reused each frame like LightsController. */
@@ -3493,10 +3505,17 @@ export class SceneManager {
 
   applyHdriMood(preset) {
     const style = preset ? HDRI_MOODS[preset] : null;
-    this.hdriMood?.apply(style, {
-      hdriBackgroundEnabled: this.hdriBackgroundEnabled,
-      hdriEnabled: this.hdriEnabled,
-    });
+    this.hdriMood?.apply(style);
+  }
+
+  /** Studio flat backdrop — keep GPU clear color, env fallback, and Shader Lab in sync. */
+  syncStudioBackgroundColor(color) {
+    if (!color) return;
+    const hex = String(color).trim();
+    this.backgroundController?.setColor(hex);
+    this.environmentController?.setFallbackColor(hex);
+    this.hdriMood?.setFallbackBackgroundColor(hex);
+    this._creativeLookStudioBgHex = hex;
   }
 
   applyFresnelToModel(root) {
@@ -5242,11 +5261,10 @@ export class SceneManager {
     const studioGradient = state.backgroundGradient;
 
     const restoreStudioBackdrop = () => {
-      this.backgroundController?.setColor(studioBg);
+      this.syncStudioBackgroundColor(studioBg);
       if (studioGradient) {
         this.backgroundGradientController?.setConfig(studioGradient);
       }
-      this.environmentController?.setFallbackColor(studioBg);
       this._creativeLookArtisticPaperBg = false;
     };
 
@@ -5255,6 +5273,7 @@ export class SceneManager {
         restoreStudioBackdrop();
       }
       this._creativeLookStudioBgSynced = false;
+      this._creativeLookStudioBgHex = null;
       return;
     }
 
@@ -5282,12 +5301,12 @@ export class SceneManager {
       return;
     }
 
-    if (this._creativeLookStudioBgSynced) return;
-    this.backgroundController?.setColor(studioBg);
+    const studioBgChanged = this._creativeLookStudioBgHex !== studioBg;
+    if (this._creativeLookStudioBgSynced && !studioBgChanged) return;
+    this.syncStudioBackgroundColor(studioBg);
     if (studioGradient) {
       this.backgroundGradientController?.setConfig(studioGradient);
     }
-    this.environmentController?.setFallbackColor(studioBg);
     this._creativeLookStudioBgSynced = true;
   }
 

@@ -26,6 +26,10 @@ import {
   normalizeFontCircularWrapMode,
   clampFontCircularWrapArcDeg,
 } from './fontCircularLayout.js';
+import {
+  clampFontTrackingValue,
+  normalizeFontLineHeight,
+} from './fontTextTrackingAnimation.js';
 
 const DEFAULT_FONT_SIZE = 72;
 const PREVIEW_LAYOUT_WIDTH = 520;
@@ -406,12 +410,23 @@ export class FontExtrudeController {
       this.fontExtrudeImporter = new FontExtrudeImporter();
     }
 
-    const layout = await this.layoutTextAsync(text, { ...options, forExtrude: true });
+    const fontState = this.stateStore.getState()?.fontExtrude || {};
+    const resolvedLineHeight = normalizeFontLineHeight(
+      options.lineHeight ?? fontState.lineHeight ?? 1,
+    );
+    // Letter-spacing is never baked into extrude paths — the reveal controller applies
+    // the full master value live (see orbyFontGeneratedTracking = 0). Baking + live delta
+    // caused double spacing after re-generate when metadata and geometry drifted apart.
+    const layout = await this.layoutTextAsync(text, {
+      ...options,
+      tracking: 0,
+      lineHeight: resolvedLineHeight,
+      forExtrude: true,
+    });
     if (!layout.lines.length) {
       throw new Error('Text has no drawable paths');
     }
     const extrudeState = this.stateStore.getState()?.svgExtrude || {};
-    const fontState = this.stateStore.getState()?.fontExtrude || {};
     const fillColor = normalizeGlyphFillHex(
       options.fillColor ?? fontState.fillColor ?? DEFAULT_PREVIEW_FILL,
     );
@@ -437,15 +452,11 @@ export class FontExtrudeController {
     group.userData.orbyFontGenerated = true;
     group.userData.orbyFontExtrude = true;
     group.userData.orbyFontSourceText = text;
-    group.userData.orbyFontGeneratedTracking = Number(
-      options.tracking ?? this.stateStore.getState()?.fontExtrude?.tracking ?? 0,
-    );
+    group.userData.orbyFontGeneratedTracking = 0;
     // Extrude paths are always left-canonical (minX = 0 per line). Center/right/center
     // alignment is applied live on glyph groups — see fontTextTrackingAnimation.js.
     group.userData.orbyFontGeneratedAlign = 'left';
-    group.userData.orbyFontGeneratedLineHeight = Number(
-      options.lineHeight ?? fontState.lineHeight ?? 1,
-    );
+    group.userData.orbyFontGeneratedLineHeight = resolvedLineHeight;
     group.userData.orbyFontLayoutFontSize =
       Number(layout.fontSize) > 0 ? Number(layout.fontSize) : DEFAULT_FONT_SIZE;
     this.lastGeneratedGroup = group;
@@ -535,9 +546,9 @@ export class FontExtrudeController {
     if (!font) return { lines: [], width: 0, height: 0, fontSize: DEFAULT_FONT_SIZE };
 
     const fontSize = DEFAULT_FONT_SIZE;
-    const tracking = Number(options.tracking ?? 0);
+    const tracking = clampFontTrackingValue(options.tracking ?? 0);
     const kerning = normalizeFontKerningMode(options.kerning);
-    const lineHeightMul = Number(options.lineHeight ?? 1);
+    const lineHeightMul = normalizeFontLineHeight(options.lineHeight ?? 1);
     const fill =
       options.fillColor ??
       this.stateStore.getState()?.fontExtrude?.fillColor ??

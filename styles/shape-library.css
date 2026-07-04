@@ -51,8 +51,10 @@ body.ui-hidden .shape-library-panel:not([hidden]) .shape-library-panel__chrome {
   min-height: 0;
   padding: var(--shelf-card-padding, 1.2rem);
   border-radius: var(--app-settings-chrome-radius, 18px);
-  /* Opaque chrome — no backdrop-filter; blur over the live WebGL canvas is costly every frame. */
-  background: color-mix(in srgb, var(--orby-black) 92%, rgba(255, 255, 255, 0.04));
+  background: var(--shelf-bg, var(--ui-frosted-bg));
+  backdrop-filter: blur(var(--ui-frosted-blur, 15px));
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur, 15px));
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
   pointer-events: auto;
   box-sizing: border-box;
 }
@@ -150,7 +152,7 @@ body.ui-hidden .shape-library-panel:not([hidden]) .shape-library-panel__chrome {
   margin: 0;
   border: none;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--orby-black) 55%, rgba(255, 255, 255, 0.06));
+  background: var(--shelf-picker-tile-bg, rgba(255, 255, 255, 0.08));
   cursor: grab;
   overflow: hidden;
   transition:
@@ -175,7 +177,7 @@ body.ui-hidden .shape-library-panel:not([hidden]) .shape-library-panel__chrome {
 }
 
 .shape-library-tile:hover {
-  background: color-mix(in srgb, var(--accent) 10%, var(--orby-black));
+  background: var(--accent-muted);
   transform: translateY(-1px);
 }
 
@@ -249,6 +251,8 @@ html:not(.mobile-landing) body.ui-hidden .shape-library-panel:not([hidden]) {
 
 html:not(.mobile-landing) .shape-library-panel__chrome {
   max-height: calc(100vh - 96px * var(--studio-ui-scale));
+  backdrop-filter: blur(var(--ui-frosted-blur));
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
   padding: calc(16px + 3.2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
   gap: calc(10px + 2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
 }

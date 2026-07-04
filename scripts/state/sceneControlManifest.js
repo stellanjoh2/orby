@@ -286,7 +286,7 @@ export const SCENE_CONTROL_MANIFEST = [
   // ── Scene / background ────────────────────────────────────────────────────
   {
     event: 'scene:background',
-    apply: { controller: 'backgroundController', method: 'setColor' },
+    apply: 'syncStudioBackgroundColor',
   },
   {
     event: 'scene:background-solid-enabled',

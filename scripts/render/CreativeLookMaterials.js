@@ -1240,7 +1240,7 @@ export function formatCreativeLookPresetLabel(preset) {
     'ascii-art-4': 'ASCII 4',
     holographic: 'Holographic',
     'spectral-storm': 'Spectral Storm',
-    'chrome-plasma': 'Chrome Plasma',
+    'chrome-plasma': 'Neon Marbling',
     voronoi: 'Voronoi',
     'scanline-hologram': 'Scanline Hologram',
     'wire-pulse': 'Wire Pulse',
@@ -2066,7 +2066,7 @@ void main() {
 }
 `;
 
-/** Liquid chrome plasma — domain-warped neon marbling on Orby black with mirror Fresnel streaks. */
+/** Neon marbling — domain-warped cyan/magenta ink on Orby black with soft view shimmer. */
 const CHROME_PLASMA_FRAGMENT = /* glsl */ `
 varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
@@ -2164,7 +2164,7 @@ void main() {
 
   // Fine striations: single noise sample at high freq (was full FBM).
   float hair = abs(cpNoise(p * 4.8 + r * 2.4 + t * 0.28) - 0.5) * 2.0;
-  plasma += (0.5 - hair) * 0.14 * (0.65 + up * 0.35 - down * 0.25);
+  plasma += (0.5 - hair) * 0.07 * (0.65 + up * 0.35 - down * 0.25);
 
   float field = plasma * 0.62 + 0.5;
   field = pow(clamp(field, 0.0, 1.0), mix(2.15, 1.32, up) + down * 0.75);
@@ -2185,9 +2185,9 @@ void main() {
 
   vec3 toCam = normalize(cameraPosition - vWorldPosition);
   float viewShimmer = sin(dot(p, toCam * 0.38 + vec3(0.22, 0.68, 0.42)) * 2.2 + t * 0.55) * 0.5 + 0.5;
-  col += mix(vec3(0.68, 0.92, 1.05), vec3(1.0, 0.42, 0.95), viewShimmer) * viewShimmer * inkGate * (0.22 + up * 0.12);
-  col += mix(vec3(0.12, 0.72, 1.0), vec3(1.0, 0.28, 0.88), field) * viewShimmer * viewShimmer * (0.28 + up * 0.18) * inkGate;
-  col += viewShimmer * plasmaCol * (0.12 + up * 0.1) * inkGate;
+  col += mix(vec3(0.68, 0.92, 1.05), vec3(1.0, 0.42, 0.95), viewShimmer) * viewShimmer * inkGate * (0.11 + up * 0.06);
+  col += mix(vec3(0.12, 0.72, 1.0), vec3(1.0, 0.28, 0.88), field) * viewShimmer * viewShimmer * (0.14 + up * 0.09) * inkGate;
+  col += viewShimmer * plasmaCol * (0.06 + up * 0.05) * inkGate;
 
   col = max(col, CP_BASE * inkGate);
   col *= orbyCreativeSurfaceFilmMod(vWorldPosition, vOrbyLocalPos, vOrbyLocalNormal);

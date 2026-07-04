@@ -810,6 +810,7 @@ export class UIManager {
       exportVideoCameraSave: q('#exportVideoCameraSaveButton'),
       exportVideoCameraRestore: q('#exportVideoCameraRestoreButton'),
       copySceneButtons: document.querySelectorAll('.copy-scene-settings'),
+      resetSceneButtons: document.querySelectorAll('.reset-scene'),
       loadSceneButtons: document.querySelectorAll('.load-scene-settings'),
       saveOrbyButtons: document.querySelectorAll('.save-orby-scene'),
       loadOrbyButtons: document.querySelectorAll('.load-orby-scene'),

@@ -86,7 +86,7 @@ const MOBILE_SHADER_PRESETS = [
   { id: 'sketch', label: 'Sketch', thumb: 'images/creative-look-sketch.png' },
   { id: 'sketch-colour', label: 'Sketch Colour', thumb: 'images/creative-look-sketch-colour.png' },
   { id: 'gouache', label: 'Gouache', thumb: 'images/creative-look-gouache.png' },
-  { id: 'chrome-plasma', label: 'Chrome Plasma', thumb: 'images/creative-look-chrome-plasma.png' },
+  { id: 'chrome-plasma', label: 'Neon Marbling', thumb: 'images/creative-look-chrome-plasma.png' },
   { id: 'chrome', label: 'Chrome', thumb: 'images/creative-look-chrome.png' },
 ];
 

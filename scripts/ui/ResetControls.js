@@ -491,6 +491,32 @@ export class ResetControls {
       });
     });
 
+    const resetScene = async () => {
+      const confirmed = await this.ui.confirmMessageAlert(
+        'This will clear the current scene and restore a blank canvas. Any unsaved work will be lost.',
+        'Reset scene?',
+        {
+          cancelLabel: 'Keep scene',
+          okLabel: 'Reset scene',
+        },
+      );
+      if (!confirmed) return;
+      const scene = window.orby?.scene;
+      if (!scene?.resetScene) {
+        this.helpers.showToast('Studio not ready', 3200, { notification: false });
+        return;
+      }
+      try {
+        await scene.resetScene({ skipSound: false });
+      } catch (error) {
+        console.error('Failed to reset scene', error);
+        this.helpers.showToast('Could not reset scene', 3200, { notification: false });
+      }
+    };
+    this.ui.buttons.resetSceneButtons?.forEach((button) => {
+      button.addEventListener('click', resetScene);
+    });
+
     // Paste scene settings — show modal
     this.ui.buttons.loadSceneButtons?.forEach(button => {
       button.addEventListener('click', () => {

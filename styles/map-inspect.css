@@ -21,7 +21,7 @@
   margin: 0;
   border: none;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--shelf-picker-tile-bg, rgba(255, 255, 255, 0.08));
   cursor: pointer;
   overflow: hidden;
   transition:
@@ -142,9 +142,9 @@
   min-width: 0;
   padding: var(--shelf-card-padding, 1.2rem);
   border-radius: var(--app-settings-chrome-radius, 18px);
-  background: var(--shelf-bg, rgba(8, 8, 8, 0.78));
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
+  background: var(--shelf-bg, var(--ui-frosted-bg));
+  backdrop-filter: blur(var(--ui-frosted-blur, 15px));
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur, 15px));
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
   pointer-events: auto;
   box-sizing: border-box;
@@ -223,7 +223,7 @@
   padding: 0;
   border: none;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--shelf-picker-tile-bg, rgba(255, 255, 255, 0.08));
   cursor: pointer;
   overflow: hidden;
   transition:
@@ -254,7 +254,7 @@
   min-height: 0;
   border-radius: 6px;
   overflow: hidden;
-  background: var(--orby-black);
+  background: var(--shelf-picker-tile-bg, rgba(255, 255, 255, 0.08));
 }
 
 .map-preview-panel__image {
@@ -277,8 +277,8 @@ html:not(.mobile-landing) .map-preview-panel {
 }
 
 html:not(.mobile-landing) .map-preview-panel__chrome {
-  backdrop-filter: blur(calc(15px * var(--studio-ui-scale)));
-  -webkit-backdrop-filter: blur(calc(15px * var(--studio-ui-scale)));
+  backdrop-filter: blur(var(--ui-frosted-blur));
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
   padding: calc(16px + 3.2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
   gap: calc(10px + 2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
 }

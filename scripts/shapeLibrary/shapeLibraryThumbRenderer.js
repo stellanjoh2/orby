@@ -5,7 +5,6 @@
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/GLTFLoader.js';
-import { ORBY_BLACK } from '../constants.js';
 import { applyShapeLibraryPresentationTilt } from './shapeLibraryCatalog.js';
 
 const loader = new GLTFLoader();
@@ -48,16 +47,16 @@ function ensureThumbStudio(sizePx) {
   if (!sharedRenderer) {
     sharedRenderer = new THREE.WebGLRenderer({
       antialias: false,
-      alpha: false,
+      alpha: true,
       preserveDrawingBuffer: true,
     });
     sharedRenderer.setPixelRatio(1);
+    sharedRenderer.setClearColor(0x000000, 0);
     sharedRenderer.outputColorSpace = THREE.SRGBColorSpace;
     sharedRenderer.toneMapping = THREE.ACESFilmicToneMapping;
     sharedRenderer.toneMappingExposure = 1.05;
 
     sharedScene = new THREE.Scene();
-    sharedScene.background = new THREE.Color(ORBY_BLACK);
 
     sharedCamera = new THREE.PerspectiveCamera(34, 1, 0.05, 40);
     sharedCamera.position.set(1.35, 1.05, 1.65);

@@ -47,6 +47,7 @@ import {
   isFontTrackingAnimatorModel,
   MAX_FONT_TRACKING_VALUE,
   MIN_FONT_TRACKING_VALUE,
+  normalizeFontLineHeight,
   normalizeFontTrackingAnimatorEnabled,
   normalizeFontTrackingAnimatorEasing,
   resolveFontTrackingAnimatorAmountPercent,
@@ -2143,18 +2144,26 @@ export class FontExtrudeUI {
   getOptions() {
     const fontState = this.stateStore.getState()?.fontExtrude || {};
     const align =
-      this.els.align?.value === 'center' || this.els.align?.value === 'right'
-        ? this.els.align.value
-        : fontState.align === 'center' || fontState.align === 'right'
-          ? fontState.align
+      fontState.align === 'center' || fontState.align === 'right'
+        ? fontState.align
+        : this.els.align?.value === 'center' || this.els.align?.value === 'right'
+          ? this.els.align.value
           : 'left';
     const previewWidth = this._previewCssWidth || this.els.preview?.clientWidth || 520;
     const pad = this._previewLayoutPad();
     return {
       align,
-      tracking: Number(this.els.tracking?.value ?? fontState.tracking ?? 0),
+      tracking: clampFontTrackingValue(
+        Number.isFinite(Number(fontState.tracking))
+          ? Number(fontState.tracking)
+          : Number(this.els.tracking?.value ?? 0),
+      ),
       kerning: normalizeFontKerningMode(this.els.kerning?.value ?? fontState.kerning),
-      lineHeight: Number(this.els.lineHeight?.value ?? fontState.lineHeight ?? 1),
+      lineHeight: normalizeFontLineHeight(
+        Number.isFinite(Number(fontState.lineHeight))
+          ? Number(fontState.lineHeight)
+          : Number(this.els.lineHeight?.value ?? 1),
+      ),
       detail: normalizeFontExtrudeDetail(this.els.detail?.value ?? fontState.detail ?? 'high'),
       bevelType: normalizeFontBevelType(this.els.bevelType?.value ?? fontState.bevelType),
       fillColor: normalizeGlyphFillHex(
@@ -2344,6 +2353,7 @@ export class FontExtrudeUI {
       const group = await this.controller.generateMesh(text, options);
       const added = await this.controller.addToScene(group);
       if (!added) return;
+      scene.fontTextRevealController?.reconcileTypographyToMaster?.(added);
       if (normalizeFontCircularWrapEnabled(options.circularWrap?.enabled)) {
         this.stateStore.set('fontExtrude.trackingAnimatorEnabled', false);
       }

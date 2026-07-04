@@ -336,6 +336,7 @@ body[data-theme='violet'] {
   --ui-frosted-bg: rgba(8, 8, 8, 0.78);
   --shelf-bg: var(--ui-frosted-bg);
   --shelf-card-bg: rgba(255, 255, 255, 0.054);
+  --shelf-picker-tile-bg: rgba(255, 255, 255, 0.08);
   --stroke: var(--ui-control-surface);
   --text: #f5f1ff;
   --text-dim: rgba(245, 241, 255, 0.6);
@@ -380,6 +381,7 @@ body[data-theme='aqua'] {
   --ui-frosted-bg: rgba(8, 8, 8, 0.82);
   --shelf-bg: var(--ui-frosted-bg);
   --shelf-card-bg: rgba(255, 255, 255, 0.048);
+  --shelf-picker-tile-bg: rgba(255, 255, 255, 0.08);
   --stroke: var(--ui-control-surface);
   --text: #f1f4ff;
   --text-dim: rgba(241, 244, 255, 0.6);

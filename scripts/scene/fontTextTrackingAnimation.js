@@ -407,7 +407,25 @@ export function applyTrackingAnimatorToGlyphStates(glyphStates, options) {
     if (Math.abs(shift) > 1e-6) hasAlignShift = true;
   }
 
-  if (!hasTrackingDelta && !hasLineHeightDelta && !hasAlignShift) return;
+  let hasStaleTypographyOffsets = false;
+  for (const state of glyphStates) {
+    if (
+      Math.abs(Number(state.lastTypographyX) || 0) > 1e-6
+      || Math.abs(Number(state.lastTypographyY) || 0) > 1e-6
+    ) {
+      hasStaleTypographyOffsets = true;
+      break;
+    }
+  }
+
+  if (
+    !hasTrackingDelta
+    && !hasLineHeightDelta
+    && !hasAlignShift
+    && !hasStaleTypographyOffsets
+  ) {
+    return;
+  }
 
   for (let i = 0; i < glyphStates.length; i += 1) {
     const state = glyphStates[i];
