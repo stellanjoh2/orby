@@ -108,6 +108,12 @@ import {
 import { normalizeCreativeLookPresetParams } from './creativeLookPresetSliders.js';
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 import {
+  applyFontExtrudeTwoToneToMesh,
+  fontExtrudeTwoToneActive,
+  FONT_EXTRUDE_CAP_MATERIAL_INDEX,
+  FONT_EXTRUDE_SIDE_MATERIAL_INDEX,
+} from '../import/fontExtrudeTwoTone.js';
+import {
   applySvgExtrudeSurfaceToMaterial,
   computeExtrudeSurfaceMappingBounds,
   resolveOrbySurfaceUniformState,
@@ -6782,48 +6788,165 @@ export class MaterialController {
   }
 
   /**
-   * Live fill color for Type Creator meshes (preview + post-generate 3D).
-   * @param {string} hex
+   * Live face + extrude colors for Type Creator meshes (preview + post-generate 3D).
+   * @param {string} fillHex
+   * @param {string} [extrudeHex]
    */
-  setFontExtrudeFillColor(hex) {
+  setFontExtrudeColors(fillHex, extrudeHex) {
     if (!this.currentModel || !this._isFontExtrudeModel()) return;
-    const fillHex = normalizeGlyphFillHex(hex);
-    const baseColor = new THREE.Color(fillHex);
-    const visibleColor = this._diffuseColorWithBrightness(baseColor);
-    const linear = { r: baseColor.r, g: baseColor.g, b: baseColor.b };
+    const faceHex = normalizeGlyphFillHex(fillHex);
+    const sideHex = normalizeGlyphFillHex(extrudeHex ?? faceHex);
+    const twoTone = fontExtrudeTwoToneActive(faceHex, sideHex);
+    const faceBase = new THREE.Color(faceHex);
+    const sideBase = new THREE.Color(sideHex);
+    const faceVisible = this._diffuseColorWithBrightness(faceBase);
+    const sideVisible = this._diffuseColorWithBrightness(sideBase);
+    const faceLinear = { r: faceBase.r, g: faceBase.g, b: faceBase.b };
     const colorOverrideEnabled = !!this.stateStore?.getState()?.svgExtrude?.colorOverride;
 
     this.currentModel.traverse((child) => {
       if (!child.isMesh || !child.userData?.orbyFontExtrude) return;
 
-      child.userData.orbySvgBaseColor = fillHex;
-      child.userData.orbySvgGroupedColor = fillHex;
-      child.userData.orbySvgBaseColorLinear = linear;
+      child.userData.orbySvgBaseColor = faceHex;
+      child.userData.orbySvgGroupedColor = faceHex;
+      child.userData.orbySvgBaseColorLinear = faceLinear;
+      child.userData.orbyFontCapColor = faceHex;
+      child.userData.orbyFontExtrudeColor = sideHex;
 
       if (colorOverrideEnabled) return;
 
-      const patchBase = (mat) => {
+      if (twoTone && !child.userData.orbyExtrudeTwoTone) {
+        applyFontExtrudeTwoToneToMesh(child, faceHex, sideHex);
+        const baseline = Array.isArray(child.material)
+          ? child.material.map((mat) => mat.clone())
+          : child.material?.clone?.();
+        if (baseline) this.originalMaterials.set(child, baseline);
+      }
+
+      const patchCapBase = (mat) => {
         if (!mat?.color || mat.userData?.orbyCreativeLook) return;
-        mat.color.copy(baseColor);
+        mat.color.copy(faceBase);
         mat.needsUpdate = true;
       };
-      const patchVisible = (mat) => {
+      const patchSideBase = (mat) => {
         if (!mat?.color || mat.userData?.orbyCreativeLook) return;
-        mat.color.copy(visibleColor);
+        mat.color.copy(sideBase);
+        mat.needsUpdate = true;
+      };
+      const patchCapVisible = (mat) => {
+        if (!mat?.color || mat.userData?.orbyCreativeLook) return;
+        mat.color.copy(faceVisible);
+        mat.needsUpdate = true;
+      };
+      const patchSideVisible = (mat) => {
+        if (!mat?.color || mat.userData?.orbyCreativeLook) return;
+        mat.color.copy(sideVisible);
         mat.needsUpdate = true;
       };
 
       const original = this.originalMaterials.get(child);
-      if (original) {
-        if (Array.isArray(original)) original.forEach(patchBase);
-        else patchBase(original);
+      const isTwoTone = !!child.userData.orbyExtrudeTwoTone;
+      if (isTwoTone && Array.isArray(original)) {
+        patchCapBase(original[FONT_EXTRUDE_CAP_MATERIAL_INDEX]);
+        patchSideBase(original[FONT_EXTRUDE_SIDE_MATERIAL_INDEX]);
+      } else if (original) {
+        if (Array.isArray(original)) original.forEach(patchCapBase);
+        else patchCapBase(original);
       }
 
       const live = child.material;
-      if (Array.isArray(live)) live.forEach(patchVisible);
-      else patchVisible(live);
+      if (isTwoTone && Array.isArray(live)) {
+        patchCapVisible(live[FONT_EXTRUDE_CAP_MATERIAL_INDEX]);
+        patchSideVisible(live[FONT_EXTRUDE_SIDE_MATERIAL_INDEX]);
+      } else if (Array.isArray(live)) {
+        live.forEach(patchCapVisible);
+      } else {
+        patchCapVisible(live);
+      }
     });
 
+    this._presentExtrudeTwoToneSurfaceChange();
+  }
+
+  /**
+   * Color Override two-tone for imported SVG extrude (not Type Creator).
+   * @param {string} faceHex
+   * @param {string} extrudeHex
+   */
+  setSvgExtrudeOverrideColors(faceHex, extrudeHex) {
+    if (!this.currentModel || !this.currentModel.userData?.orbySvgExtrude) return;
+    const face = normalizeGlyphFillHex(faceHex);
+    const side = normalizeGlyphFillHex(extrudeHex ?? faceHex);
+    const twoTone = fontExtrudeTwoToneActive(face, side);
+    const faceBase = new THREE.Color(face);
+    const sideBase = new THREE.Color(side);
+    const faceVisible = this._diffuseColorWithBrightness(faceBase);
+    const sideVisible = this._diffuseColorWithBrightness(sideBase);
+    const faceLinear = { r: faceBase.r, g: faceBase.g, b: faceBase.b };
+
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh || !child.userData?.orbySvgExtrude || child.userData?.orbyFontExtrude) {
+        return;
+      }
+
+      child.userData.orbySvgBaseColor = face;
+      child.userData.orbySvgGroupedColor = face;
+      child.userData.orbySvgBaseColorLinear = faceLinear;
+
+      if (twoTone && !child.userData.orbyExtrudeTwoTone) {
+        applyFontExtrudeTwoToneToMesh(child, face, side);
+        const baseline = Array.isArray(child.material)
+          ? child.material.map((mat) => mat.clone())
+          : child.material?.clone?.();
+        if (baseline) this.originalMaterials.set(child, baseline);
+      }
+
+      const patchCapBase = (mat) => {
+        if (!mat?.color || mat.userData?.orbyCreativeLook) return;
+        mat.color.copy(faceBase);
+        mat.needsUpdate = true;
+      };
+      const patchSideBase = (mat) => {
+        if (!mat?.color || mat.userData?.orbyCreativeLook) return;
+        mat.color.copy(sideBase);
+        mat.needsUpdate = true;
+      };
+      const patchCapVisible = (mat) => {
+        if (!mat?.color || mat.userData?.orbyCreativeLook) return;
+        mat.color.copy(faceVisible);
+        mat.needsUpdate = true;
+      };
+      const patchSideVisible = (mat) => {
+        if (!mat?.color || mat.userData?.orbyCreativeLook) return;
+        mat.color.copy(sideVisible);
+        mat.needsUpdate = true;
+      };
+
+      const original = this.originalMaterials.get(child);
+      const isTwoTone = !!child.userData.orbyExtrudeTwoTone;
+      if (isTwoTone && Array.isArray(original)) {
+        patchCapBase(original[FONT_EXTRUDE_CAP_MATERIAL_INDEX]);
+        patchSideBase(original[FONT_EXTRUDE_SIDE_MATERIAL_INDEX]);
+      } else if (original) {
+        if (Array.isArray(original)) original.forEach(patchCapBase);
+        else patchCapBase(original);
+      }
+
+      const live = child.material;
+      if (isTwoTone && Array.isArray(live)) {
+        patchCapVisible(live[FONT_EXTRUDE_CAP_MATERIAL_INDEX]);
+        patchSideVisible(live[FONT_EXTRUDE_SIDE_MATERIAL_INDEX]);
+      } else if (Array.isArray(live)) {
+        live.forEach(patchCapVisible);
+      } else {
+        patchCapVisible(live);
+      }
+    });
+
+    this._presentExtrudeTwoToneSurfaceChange();
+  }
+
+  _presentExtrudeTwoToneSurfaceChange() {
     if (this.creativeLookSettings?.enabled) {
       this._applyCreativeLookOverride();
     } else {
@@ -6836,6 +6959,12 @@ export class MaterialController {
     if (this.onMaterialUpdate) {
       this.onMaterialUpdate();
     }
+  }
+
+  /** @deprecated — use {@link setFontExtrudeColors} */
+  setFontExtrudeFillColor(hex) {
+    const extrude = this.stateStore?.getState()?.fontExtrude?.extrudeColor ?? hex;
+    this.setFontExtrudeColors(hex, extrude);
   }
 
   isClayMaterial(mesh) {

@@ -43,6 +43,8 @@ export const DEFAULT_SVG_EXTRUDE_STATE = {
   flipDirection: false,
   colorOverride: false,
   overrideColor: DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
+  /** Side walls when Color Override two-tone is active (defaults to face override). */
+  overrideExtrudeColor: DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
   surfacePreset: DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
   surfaceScale: DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
   surfaceStrength: DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
@@ -71,6 +73,8 @@ export function resolveSvgExtrudeDefaults(source = {}) {
     flipDirection: !!svg.flipDirection,
     colorOverride: !!svg.colorOverride,
     overrideColor: svg.overrideColor ?? DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
+    overrideExtrudeColor:
+      svg.overrideExtrudeColor ?? svg.overrideColor ?? DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
     surfacePreset: svg.surfacePreset ?? DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
     surfaceScale: Number(svg.surfaceScale ?? DEFAULT_SVG_EXTRUDE_SURFACE_SCALE) || DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
     surfaceStrength:
@@ -104,6 +108,7 @@ export function resetSvgExtrudeState(stateStore, eventBus, storeDefaults = {}) {
     stateStore.set('svgExtrude.flipDirection', svg.flipDirection);
     stateStore.set('svgExtrude.colorOverride', svg.colorOverride);
     stateStore.set('svgExtrude.overrideColor', svg.overrideColor);
+    stateStore.set('svgExtrude.overrideExtrudeColor', svg.overrideExtrudeColor);
     stateStore.set('svgExtrude.surfacePreset', svg.surfacePreset);
     stateStore.set('svgExtrude.surfaceScale', svg.surfaceScale);
     stateStore.set('svgExtrude.surfaceStrength', svg.surfaceStrength);
@@ -121,7 +126,19 @@ export function resetSvgExtrudeState(stateStore, eventBus, storeDefaults = {}) {
   eventBus.emit('mesh:svg-extrude-color-override', {
     enabled: svg.colorOverride,
     color: svg.overrideColor,
+    extrudeColor: svg.overrideExtrudeColor,
   });
+}
+
+/** @param {string} [value] @param {string} [fallback] */
+export function normalizeSvgOverrideHex(
+  value,
+  fallback = DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
+) {
+  if (typeof value === 'string' && /^#[0-9A-Fa-f]{6}$/.test(value.trim())) {
+    return value.trim().toLowerCase();
+  }
+  return fallback;
 }
 
 /**
@@ -143,6 +160,7 @@ export function buildFontExtrudeSvgExtrudeBaseline(overrides = {}) {
     flipDirection: true,
     colorOverride: false,
     overrideColor: DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
+    overrideExtrudeColor: DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
     surfacePreset: DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
     surfaceScale: DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
     surfaceStrength: DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,

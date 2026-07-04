@@ -146,6 +146,7 @@ export class MeshControls {
         flipDirection: this.ui.inputs.svgExtrudeFlipDirection,
         colorOverride: this.ui.inputs.svgExtrudeColorOverride,
         overrideColor: this.ui.inputs.svgExtrudeColor,
+        overrideExtrudeColor: this.ui.inputs.svgExtrudeExtrudeColor,
         colorDepths: this.ui.inputs.svgExtrudeColorDepths,
       },
       stateStore: this.stateStore,

@@ -520,6 +520,7 @@ export class UIManager {
       svgExtrudeFlipDirection: q('#svgExtrudeFlipDirection'),
       svgExtrudeColorOverride: q('#svgExtrudeColorOverride'),
       svgExtrudeColor: q('#svgExtrudeColor'),
+      svgExtrudeExtrudeColor: q('#svgExtrudeExtrudeColor'),
       svgExtrudeColorDepths: q('#svgExtrudeColorDepths'),
       reverseNormals: q('#reverseNormals'),
       normalView: q('#normalView'),

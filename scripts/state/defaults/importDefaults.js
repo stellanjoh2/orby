@@ -31,8 +31,10 @@ export function createImportDefaults() {
       bevelType: 'straight',
       /** 0.15–3 — preview-only zoom (1× fills the box; higher may crop). */
       previewScale: 0.65,
-      /** Letter fill for 2D preview and 3D extrude. */
+      /** Letter fill for 2D preview and 3D extrude front faces / bevels. */
       fillColor: '#808080',
+      /** Side walls and extruded depth — dramatic two-tone when different from fillColor. */
+      extrudeColor: '#808080',
       /** Total seconds until the last character finishes scale-in (0 = off). */
       revealDurationSec: 2,
       /** @type {'none' | 'scale' | 'fade' | 'slideUp' | 'slideDown' | 'drop' | 'dropSmooth' | 'pop' | 'rotate' | 'elastic'} */

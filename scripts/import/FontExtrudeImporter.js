@@ -38,6 +38,10 @@ import { fontExtrudeHoleCapLooksFilled } from './fontExtrudeValidate.js';
 import { flipFontShapeHoles, opentypePathHasArea, opentypePathToShapes } from './opentypePathToShape.js';
 import { normalizeFontCircularGlyphGroupGeometry } from './fontCircularGeometryNormalize.js';
 import { applyFontCircularRingTransforms } from '../scene/fontCircularLayout.js';
+import {
+  applyFontExtrudeTwoToneToGroup,
+  fontExtrudeTwoToneActive,
+} from './fontExtrudeTwoTone.js';
 
 const DEFAULT_GLYPH_FILL = '#808080';
 
@@ -64,6 +68,7 @@ export class FontExtrudeImporter {
     this.currentColorDepths = {};
     this.currentColorOffsets = {};
     this.currentFillColor = DEFAULT_GLYPH_FILL;
+    this.currentExtrudeColor = DEFAULT_GLYPH_FILL;
     this.currentColorPalette = [DEFAULT_GLYPH_FILL];
     this.currentFlipDirection = false;
     this.currentBevelAmount = DEFAULT_EXTRUDE_BEVEL_AMOUNT;
@@ -134,6 +139,11 @@ export class FontExtrudeImporter {
     if (options.fillColor) {
       this.currentFillColor = normalizeGlyphFillHex(options.fillColor);
       this.currentColorPalette = [this.currentFillColor];
+    }
+    if (options.extrudeColor) {
+      this.currentExtrudeColor = normalizeGlyphFillHex(options.extrudeColor);
+    } else if (options.fillColor) {
+      this.currentExtrudeColor = this.currentFillColor;
     }
     this._layoutFontSize = Number(layout?.fontSize) > 0 ? Number(layout.fontSize) : 72;
     this._detailLevel = normalizeExtrudeDetail(options.detail ?? this._detailLevel);
@@ -259,6 +269,16 @@ export class FontExtrudeImporter {
 
   getFillColor() {
     return this.currentFillColor;
+  }
+
+  getExtrudeColor() {
+    return this.currentExtrudeColor;
+  }
+
+  setTwoToneColors(fillHex, extrudeHex) {
+    this.currentFillColor = normalizeGlyphFillHex(fillHex);
+    this.currentExtrudeColor = normalizeGlyphFillHex(extrudeHex);
+    this.currentColorPalette = [this.currentFillColor];
   }
 
   getFlipDirection() {
@@ -460,6 +480,10 @@ export class FontExtrudeImporter {
 
     if (this._circularLayout) {
       group.userData.orbyFontCircularWrap = true;
+    }
+
+    if (fontExtrudeTwoToneActive(this.currentFillColor, this.currentExtrudeColor)) {
+      applyFontExtrudeTwoToneToGroup(group, this.currentFillColor, this.currentExtrudeColor);
     }
 
     return group;

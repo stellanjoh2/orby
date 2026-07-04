@@ -58,6 +58,7 @@ const NOT_FOUND_PRESET = {
     flipDirection: false,
     colorOverride: false,
     overrideColor: '#7ed321',
+    overrideExtrudeColor: '#7ed321',
     surfacePreset: 'none',
     surfaceScale: 1,
     surfaceStrength: 1,

@@ -313,6 +313,10 @@ function createStateApplySteps() {
             {
               enabled: !!state.svgExtrude.colorOverride,
               color: state.svgExtrude.overrideColor ?? '#7ed321',
+              extrudeColor:
+                state.svgExtrude.overrideExtrudeColor
+                ?? state.svgExtrude.overrideColor
+                ?? '#7ed321',
             },
             { updateState: false },
           );

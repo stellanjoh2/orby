@@ -63,8 +63,16 @@ export function syncFontExtrudeFillOnImporter(scene) {
   const fillHex = normalizeGlyphFillHex(
     scene.stateStore.getState()?.fontExtrude?.fillColor ?? importer.getFillColor(),
   );
-  importer.currentFillColor = fillHex;
-  importer.currentColorPalette = [fillHex];
+  const extrudeHex = normalizeGlyphFillHex(
+    scene.stateStore.getState()?.fontExtrude?.extrudeColor ?? importer.getExtrudeColor?.() ?? fillHex,
+  );
+  if (typeof importer.setTwoToneColors === 'function') {
+    importer.setTwoToneColors(fillHex, extrudeHex);
+  } else {
+    importer.currentFillColor = fillHex;
+    importer.currentExtrudeColor = extrudeHex;
+    importer.currentColorPalette = [fillHex];
+  }
   const available = scene.stateStore.getState()?.svgExtrude?.availableColors ?? [];
   if (available.length !== 1 || available[0] !== fillHex) {
     scene.stateStore.set('svgExtrude.availableColors', [fillHex]);
@@ -115,11 +123,8 @@ export function rebuildSvgExtrudeMeshesAfterImporterChange(scene) {
   scene.materialController.prepareMesh(scene.currentModel);
   scene.setShading(scene.currentShading);
   const svgState = scene.stateStore.getState().svgExtrude || {};
-  const fillHex = syncFontExtrudeFillOnImporter(scene);
-  if (fillHex) {
-    scene.applyFontExtrudeFillColor(fillHex);
-  }
-  // Color override must run after fill sync — otherwise font fill overwrites the override.
+  syncFontExtrudeFillOnImporter(scene);
+  // Color override must run before font two-tone reapply — override wins when enabled.
   scene.setSvgExtrudeColorOverride(
     {
       enabled: !!svgState.colorOverride,
@@ -127,6 +132,19 @@ export function rebuildSvgExtrudeMeshesAfterImporterChange(scene) {
     },
     { updateState: false },
   );
+  const fillHex = normalizeGlyphFillHex(
+    scene.stateStore.getState()?.fontExtrude?.fillColor
+      ?? scene.svgExtrudeImporter?.getFillColor?.(),
+  );
+  const isFont =
+    !!scene.currentModel?.userData?.orbyFontGenerated ||
+    !!scene.materialController?._isFontExtrudeModel?.(scene.currentModel);
+  if (isFont && fillHex) {
+    const extrudeHex = normalizeGlyphFillHex(
+      scene.stateStore.getState()?.fontExtrude?.extrudeColor ?? fillHex,
+    );
+    scene.applyFontExtrudeColors(fillHex, extrudeHex);
+  }
   scene.setReverseNormals(scene.stateStore.getState().advanced?.reverseNormals ?? false);
   scene.refreshBoneHelpers();
   scene.cameraController?.refreshModelBounds?.(scene.currentModel);

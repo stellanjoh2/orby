@@ -18,6 +18,7 @@ export const FONT_EXTRUDE_RESET_DIRTY_PATHS = {
   ],
   'font-extrude-appearance': [
     'fontExtrude.fillColor',
+    'fontExtrude.extrudeColor',
   ],
   'font-extrude-3d-shape': [
     'svgExtrude.depth',
@@ -73,6 +74,7 @@ const FONT_EXTRUDE_SUBSECTION_DEFAULTS = {
   },
   'font-extrude-appearance': {
     'fontExtrude.fillColor': FONT_DEFAULTS.fillColor,
+    'fontExtrude.extrudeColor': FONT_DEFAULTS.extrudeColor,
   },
   'font-extrude-3d-shape': {
     'svgExtrude.depth': FONT_SVG_BASELINE.depth,
@@ -170,8 +172,9 @@ export function applyFontExtrudeSubsectionReset(resetType, stateStore, eventBus,
   switch (resetType) {
     case 'font-extrude-appearance': {
       const fill = targets['fontExtrude.fillColor'];
+      const extrude = targets['fontExtrude.extrudeColor'];
       stateStore.set('svgExtrude.availableColors', [fill]);
-      options.getScene?.()?.applyFontExtrudeFillColor?.(fill);
+      options.getScene?.()?.applyFontExtrudeColors?.(fill, extrude);
       break;
     }
     case 'font-extrude-3d-shape': {

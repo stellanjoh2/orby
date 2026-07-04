@@ -1,5 +1,6 @@
 import * as opentype from 'opentype';
 import { FontExtrudeImporter, normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
+import { fontExtrudeTwoToneActive } from '../import/fontExtrudeTwoTone.js';
 import { normalizeImportScale } from '../import/normalizeImportScale.js';
 import { opentypePathHasArea } from '../import/opentypePathToShape.js';
 import {
@@ -414,6 +415,9 @@ export class FontExtrudeController {
     const fillColor = normalizeGlyphFillHex(
       options.fillColor ?? fontState.fillColor ?? DEFAULT_PREVIEW_FILL,
     );
+    const extrudeColor = normalizeGlyphFillHex(
+      options.extrudeColor ?? fontState.extrudeColor ?? fillColor,
+    );
     const group = this.fontExtrudeImporter.buildFromLayout(layout, {
       sourceName: this.fontLabel || 'Text',
       depth: options.depth ?? extrudeState.depth ?? DEFAULT_EXTRUDE_DEPTH,
@@ -426,6 +430,7 @@ export class FontExtrudeController {
       flipDirection: FONT_EXTRUDE_FLIP_DIRECTION,
       detail: options.detail ?? fontState.detail ?? extrudeState.detail ?? 'high',
       fillColor,
+      extrudeColor,
       bevelAmount: options.bevelAmount ?? extrudeState.bevelAmount ?? DEFAULT_EXTRUDE_BEVEL_AMOUNT,
       bevelType: options.bevelType ?? fontState.bevelType ?? DEFAULT_FONT_BEVEL_TYPE,
     });
@@ -481,6 +486,9 @@ export class FontExtrudeController {
     const fillColor = normalizeGlyphFillHex(
       this.stateStore.getState()?.fontExtrude?.fillColor ?? DEFAULT_PREVIEW_FILL,
     );
+    const extrudeColor = normalizeGlyphFillHex(
+      this.stateStore.getState()?.fontExtrude?.extrudeColor ?? fillColor,
+    );
     this.stateStore.set('svgExtrude.availableColors', [fillColor]);
     normalizeImportScale(group);
     scene.modelLifecycle.setModel(group, []);
@@ -508,7 +516,7 @@ export class FontExtrudeController {
     });
     scene.svgExtrudeImporter = this.fontExtrudeImporter;
     scene.isSvgExtrudeModel = true;
-    scene.applyFontExtrudeFillColor?.(fillColor);
+    scene.applyFontExtrudeColors?.(fillColor, extrudeColor);
     scene.updateStatsUI(null, group, scene.currentAssetMetadata);
 
     this.eventBus.emit('font:generated', { group });
@@ -739,19 +747,33 @@ export class FontExtrudeController {
   /**
    * @param {CanvasRenderingContext2D} ctx
    * @param {ReturnType<FontExtrudeController['layoutTextAsync']>} layout
+   * @param {{ fillColor?: string, extrudeColor?: string }} [colors]
    */
-  drawPreview(ctx, layout) {
+  drawPreview(ctx, layout, colors = {}) {
     if (!ctx || !layout) return;
-    for (const line of layout.lines) {
-      for (const p of line.paths) {
-        const glyphPath = p.glyphPath;
-        if (!glyphPath?.draw) continue;
-        const prevFill = glyphPath.fill;
-        glyphPath.fill = p.fill || DEFAULT_PREVIEW_FILL;
-        glyphPath.draw(ctx);
-        glyphPath.fill = prevFill;
+    const fillColor = normalizeGlyphFillHex(colors.fillColor ?? DEFAULT_PREVIEW_FILL);
+    const extrudeColor = normalizeGlyphFillHex(colors.extrudeColor ?? fillColor);
+    const twoTone = fontExtrudeTwoToneActive(fillColor, extrudeColor);
+    const depthHint = Number(layout.fontSize) > 0 ? Number(layout.fontSize) * 0.055 : 4;
+    const drawPaths = (hex, dx = 0, dy = 0) => {
+      if (dx || dy) ctx.save();
+      if (dx || dy) ctx.translate(dx, dy);
+      for (const line of layout.lines) {
+        for (const p of line.paths) {
+          const glyphPath = p.glyphPath;
+          if (!glyphPath?.draw) continue;
+          const prevFill = glyphPath.fill;
+          glyphPath.fill = hex;
+          glyphPath.draw(ctx);
+          glyphPath.fill = prevFill;
+        }
       }
+      if (dx || dy) ctx.restore();
+    };
+    if (twoTone) {
+      drawPaths(extrudeColor, depthHint * 0.35, depthHint);
     }
+    drawPaths(fillColor);
   }
 
   hasModifiedTransforms(scene) {

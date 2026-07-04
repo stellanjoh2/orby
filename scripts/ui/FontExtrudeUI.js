@@ -278,8 +278,12 @@ export class FontExtrudeUI {
             </button>
           </div>
           <label class="color-line font-extrude-fill-color">
-            <span data-tooltip="Fill color for 2D preview and generated 3D text">Color</span>
+            <span data-tooltip="Front faces and bevels on generated 3D text">Face color</span>
             <input type="color" id="fontExtrudeFillColor" class="color-chip" value="#808080" />
+          </label>
+          <label class="color-line font-extrude-extrude-color">
+            <span data-tooltip="Extruded side walls and depth — pick a contrasting color for two-tone type">Extrude color</span>
+            <input type="color" id="fontExtrudeExtrudeColor" class="color-chip" value="#808080" />
           </label>
           </div>
           ${FONT_EXTRUDE_SHAPE_CONTROLS_HTML}
@@ -371,6 +375,7 @@ export class FontExtrudeUI {
       hardEdgeAngle: block.querySelector('#fontExtrudeHardEdgeAngle'),
       bevelAmount: block.querySelector('#fontExtrudeBevelAmount'),
       fillColor: block.querySelector('#fontExtrudeFillColor'),
+      extrudeColor: block.querySelector('#fontExtrudeExtrudeColor'),
       revealDuration: block.querySelector('#fontExtrudeRevealDuration'),
       revealStaggerEasingFamily: block.querySelector('#fontExtrudeRevealStaggerEasingFamily'),
       revealStaggerEasingType: block.querySelector('#fontExtrudeRevealStaggerEasingType'),
@@ -582,14 +587,28 @@ export class FontExtrudeUI {
     bindExtrudeBevelControls(this._fontExtrudeCtx());
 
     const onFillColorChange = () => {
-      const color = normalizeGlyphFillHex(els.fillColor?.value);
-      this.stateStore.set('fontExtrude.fillColor', color);
-      this.stateStore.set('svgExtrude.availableColors', [color]);
-      this.getScene()?.applyFontExtrudeFillColor?.(color);
+      const fillColor = normalizeGlyphFillHex(els.fillColor?.value);
+      const extrudeColor = normalizeGlyphFillHex(
+        els.extrudeColor?.value ?? this.stateStore.getState()?.fontExtrude?.extrudeColor,
+      );
+      this.stateStore.set('fontExtrude.fillColor', fillColor);
+      this.stateStore.set('svgExtrude.availableColors', [fillColor]);
+      this.getScene()?.applyFontExtrudeColors?.(fillColor, extrudeColor);
+      this.schedulePreview();
+    };
+    const onExtrudeColorChange = () => {
+      const extrudeColor = normalizeGlyphFillHex(els.extrudeColor?.value);
+      const fillColor = normalizeGlyphFillHex(
+        els.fillColor?.value ?? this.stateStore.getState()?.fontExtrude?.fillColor,
+      );
+      this.stateStore.set('fontExtrude.extrudeColor', extrudeColor);
+      this.getScene()?.applyFontExtrudeColors?.(fillColor, extrudeColor);
       this.schedulePreview();
     };
     els.fillColor?.addEventListener('input', onFillColorChange);
     els.fillColor?.addEventListener('change', onFillColorChange);
+    els.extrudeColor?.addEventListener('input', onExtrudeColorChange);
+    els.extrudeColor?.addEventListener('change', onExtrudeColorChange);
 
     els.revealDuration?.addEventListener('input', () => {
       const value = clampFontRevealDurationSec(els.revealDuration.value);
@@ -1355,6 +1374,10 @@ export class FontExtrudeUI {
     const fill = normalizeGlyphFillHex(state?.fontExtrude?.fillColor);
     if (this.els.fillColor && document.activeElement !== this.els.fillColor) {
       this.els.fillColor.value = fill;
+    }
+    const extrude = normalizeGlyphFillHex(state?.fontExtrude?.extrudeColor);
+    if (this.els.extrudeColor && document.activeElement !== this.els.extrudeColor) {
+      this.els.extrudeColor.value = extrude;
     }
     const revealDuration = clampFontRevealDurationSec(
       state?.fontExtrude?.revealDurationSec ?? DEFAULT_FONT_REVEAL_DURATION_SEC,
@@ -2137,6 +2160,9 @@ export class FontExtrudeUI {
       fillColor: normalizeGlyphFillHex(
         this.els.fillColor?.value ?? fontState.fillColor ?? '#808080',
       ),
+      extrudeColor: normalizeGlyphFillHex(
+        this.els.extrudeColor?.value ?? fontState.extrudeColor ?? '#808080',
+      ),
       maxWidth: Math.max(120, previewWidth - pad * 2),
       circularWrap: {
         enabled: normalizeFontCircularWrapEnabled(
@@ -2218,7 +2244,10 @@ export class FontExtrudeUI {
     ctx.translate(slotLeft, slotTop);
     ctx.scale(scale, scale);
     ctx.translate(-bounds.minX, -bounds.minY);
-    this.controller.drawPreview(ctx, layout);
+    this.controller.drawPreview(ctx, layout, {
+      fillColor: options.fillColor,
+      extrudeColor: options.extrudeColor,
+    });
     if (normalizeFontCircularWrapEnabled(options.circularWrap?.enabled)) {
       drawCircularArcSpanPreviewIndicator(ctx, layout, options.circularWrap);
     }

@@ -127,6 +127,7 @@ import { lightsAutoRotateDegreesPerSecond } from './config/lightsAutoRotate.js';
 import { ImageExporter } from './render/ImageExporter.js';
 import { CaptureSizeMismatchError } from './render/capture/captureReadback.js';
 import { normalizeGlyphFillHex } from './import/FontExtrudeImporter.js';
+import { fontExtrudeTwoToneActive } from './import/fontExtrudeTwoTone.js';
 import { VideoExporter } from './render/VideoExporter.js';
 import { ExportMovementPreview } from './render/ExportMovementPreview.js';
 import { resolveExportMeshAnimationTiming } from './render/exportVideoMovements.js';
@@ -176,6 +177,7 @@ import {
   DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
   MAX_EXTRUDE_DEPTH,
   MIN_EXTRUDE_DEPTH,
+  normalizeSvgOverrideHex,
 } from './import/extrudeDefaults.js';
 import { SceneMeshClickHandler } from './scene/SceneMeshClickHandler.js';
 import { SceneBoneHoverHandler } from './scene/SceneBoneHoverHandler.js';
@@ -4396,15 +4398,26 @@ export class SceneManager {
     });
   }
 
-  /** Live update fill on font-generated meshes (no SVG “color override” toggle). */
-  applyFontExtrudeFillColor(hex) {
-    const fillHex = normalizeGlyphFillHex(hex);
+  /** Live update face + extrude colors on font-generated meshes (no SVG “color override” toggle). */
+  applyFontExtrudeColors(fillHex, extrudeHex) {
+    const faceHex = normalizeGlyphFillHex(fillHex);
+    const sideHex = normalizeGlyphFillHex(extrudeHex ?? faceHex);
     const importer = this.svgExtrudeImporter;
-    if (importer && typeof importer.getFillColor === 'function') {
-      importer.currentFillColor = fillHex;
-      importer.currentColorPalette = [fillHex];
+    if (importer && typeof importer.setTwoToneColors === 'function') {
+      importer.setTwoToneColors(faceHex, sideHex);
+    } else if (importer && typeof importer.getFillColor === 'function') {
+      importer.currentFillColor = faceHex;
+      importer.currentExtrudeColor = sideHex;
+      importer.currentColorPalette = [faceHex];
     }
-    this.materialController?.setFontExtrudeFillColor?.(fillHex);
+    this.materialController?.setFontExtrudeColors?.(faceHex, sideHex);
+  }
+
+  /** @deprecated — use {@link applyFontExtrudeColors} */
+  applyFontExtrudeFillColor(hex) {
+    const extrude =
+      this.stateStore.getState()?.fontExtrude?.extrudeColor ?? hex;
+    this.applyFontExtrudeColors(hex, extrude);
   }
 
   setSvgExtrudeColorOverride(settings = {}, options = {}) {
@@ -4414,10 +4427,21 @@ export class SceneManager {
       : (settings.enabled !== undefined && settings.availableColors === undefined
         ? !!settings.enabled
         : false);
-    const color = settings.color || settings.overrideColor || DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR;
+    const color = normalizeSvgOverrideHex(
+      settings.color || settings.overrideColor || DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
+    );
+    const storedFace = this.stateStore.getState()?.svgExtrude?.overrideColor;
+    const extrudeColor = normalizeSvgOverrideHex(
+      settings.extrudeColor
+        ?? settings.overrideExtrudeColor
+        ?? storedFace
+        ?? color,
+      color,
+    );
     if (updateState) {
       this.stateStore.set('svgExtrude.colorOverride', enabled);
       this.stateStore.set('svgExtrude.overrideColor', color);
+      this.stateStore.set('svgExtrude.overrideExtrudeColor', extrudeColor);
     }
     this.applySvgExtrudeColors();
   }
@@ -4432,10 +4456,32 @@ export class SceneManager {
     if (!this.currentModel || !this.isSvgExtrudeModel) return;
     const svg = this.stateStore.getState().svgExtrude || {};
     const overrideEnabled = !!svg.colorOverride;
-    const overrideColor = new THREE.Color(svg.overrideColor || DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR);
+    const faceHex = normalizeSvgOverrideHex(svg.overrideColor);
+    const extrudeHex = normalizeSvgOverrideHex(svg.overrideExtrudeColor, faceHex);
+    const overrideTwoTone = overrideEnabled && fontExtrudeTwoToneActive(faceHex, extrudeHex);
+    const overrideColor = new THREE.Color(faceHex);
     const replacements = replacementsOverride || svg.colorReplacements || {};
+    const fontState = this.stateStore.getState()?.fontExtrude || {};
+    const fontTwoToneFromState = fontExtrudeTwoToneActive(
+      fontState.fillColor,
+      fontState.extrudeColor,
+    );
+
+    if (overrideTwoTone) {
+      this.materialController?.setSvgExtrudeOverrideColors?.(faceHex, extrudeHex);
+    }
+
     this.currentModel.traverse((child) => {
       if (!child.isMesh || !child.userData?.orbySvgExtrude) return;
+      if (overrideTwoTone && !child.userData?.orbyFontExtrude) return;
+      // Font two-tone uses face + extrude pickers — not the SVG per-fill recolor path.
+      if (
+        !overrideEnabled &&
+        child.userData?.orbyFontExtrude &&
+        (child.userData.orbyExtrudeTwoTone || fontTwoToneFromState)
+      ) {
+        return;
+      }
       let targetColor;
       if (overrideEnabled) {
         targetColor = overrideColor;
@@ -4464,7 +4510,9 @@ export class SceneManager {
       applyColor(originalMaterial);
       applyColor(child.material);
     });
-    this.materialController.updateMaterials();
+    if (!overrideTwoTone) {
+      this.materialController.updateMaterials();
+    }
   }
 
   setSvgExtrudeColorReplacements(colorReplacements = {}, options = {}) {
