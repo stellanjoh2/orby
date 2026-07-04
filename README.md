@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Website](https://img.shields.io/badge/Website-orby.studio-brightgreen)](https://orby.studio)
 [![Browser](https://img.shields.io/badge/Browser-Chrome%20%7C%20Firefox%20%7C%20Safari%20%7C%20Edge-blue)](https://github.com/stellanjoh2/orby)
-[![Version](https://img.shields.io/badge/Version-0.5.895-brightgreen)](https://github.com/stellanjoh2/orby)
+[![Version](https://img.shields.io/badge/Version-0.5.898-brightgreen)](https://github.com/stellanjoh2/orby)
 
 </div>
 
