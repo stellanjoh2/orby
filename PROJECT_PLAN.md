@@ -2,7 +2,7 @@
 
 This document tracks planned improvements, enhancements, and technical debt for the Orby 3D model viewer project.
 
-**Last Updated:** 2024
+**Last Updated:** July 2026
 
 ---
 
@@ -26,7 +26,7 @@ The codebase has been significantly refactored with:
   - Clean up test assets from repository
   - Keep them locally for development
 
-- [ ] **Add README.md**
+- [x] **Add README.md**
   - Project description
   - Setup instructions
   - Features list

@@ -2,11 +2,12 @@
 
 <div align="center">
 
-**A free browser-based 3D viewer and virtual studio. Drop a GLB, light it, export it — no account, no upload.**
+**A free browser-based 3D viewer and virtual studio. Drop a GLB or SVG, light it, export it — no account, no upload.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Website](https://img.shields.io/badge/Website-orby.studio-brightgreen)](https://orby.studio)
 [![Browser](https://img.shields.io/badge/Browser-Chrome%20%7C%20Firefox%20%7C%20Safari%20%7C%20Edge-blue)](https://github.com/stellanjoh2/orby)
-[![Version](https://img.shields.io/badge/Version-0.5.141-brightgreen)](https://github.com/stellanjoh2/orby)
+[![Version](https://img.shields.io/badge/Version-0.5.895-brightgreen)](https://github.com/stellanjoh2/orby)
 
 </div>
 
@@ -14,63 +15,64 @@
 
 ## ✨ Overview
 
-Orby is a free browser-based 3D viewer and virtual studio that runs entirely in your browser. Built for **AI-generated 3D** (Meshy, Tripo, Luma, CSM, etc.), **game assets**, **product visualization**, and client presentations.
+Orby is a free browser-based 3D viewer and virtual studio that runs in your browser. Built for **AI-generated 3D** (Meshy, Tripo, Luma, CSM, etc.), **game assets**, **product visualization**, logos, and client presentations.
 
-**No account, no upload** — drop your file and get full studio controls: HDR environments, depth of field, selective bloom, film grain, tonemapping, 3-point lighting, and real-time grading.
+**No account, no upload** — drop your file and get full studio controls: HDR environments, Look Filter presets, depth of field, selective & anamorphic bloom, film grain, tonemapping, 3-point lighting, Shader Lab, and real-time grading.
 
 ### 🎯 Key Highlights
 
 - ⚡ **Instant drag-and-drop loading** for your local files
+- 🧊 **SVG extrude** — flat vector artwork to 3D meshes with per-color depth
+- 🔤 **Font extrude** — live 3D text with custom fonts, bevels, and reveal animations
 - 🎬 **Full cinematic post-processing**: selective bloom, depth of field, film grain, chromatic aberration, professional tonemapping
 - 🌍 **HDR environments** with blur, rotation, intensity controls, and custom `.hdr` / `.exr` upload
 - 💡 **Custom 3-point studio lighting** that blends with image-based lighting
 - 🎨 **Real-time material controls**: brightness (up to 3.0), metalness, roughness, emissive glow
 - 📊 **Exposure histogram** with overexposure warnings
-- 🎥 **Auto-orbit camera** for screensaver-style presentations
-- 🔄 **Scene settings import/export** - save and share your setups
+- 🎥 **Auto-orbit camera** and **turntable export** (MP4 or PNG sequence)
+- 🔄 **Scene settings import/export** and **`.orby` scene files** (settings + embedded model)
 - 🎭 **Multiple display modes**: Shaded, Unlit, Clay, Wireframe with overlay options
 - 🎮 **Full gamepad support** for console-like experience
-- 📱 **100% client-side** – runs completely in your browser
-- 🔒 **Zero uploads, zero servers**, zero cloud storage
-- 🚫 **No accounts**, no login, no cookies, no analytics, no tracking
+- 📱 **Touch-friendly [Orby Mobile](mobile/) preview** for phone workflows
+- 🔒 **Your files stay local** — all 3D processing runs in your browser; nothing is uploaded
+- 🚫 **No accounts**, no login, no cookies, no ad pixels, no personal identifiers
 
 ---
 
 ## 🚀 Quick Start
 
-1. **Clone or download** this repository
+**Try it live:** [orby.studio](https://orby.studio) — drop a file and start customizing.
+
+**Run from source** (no build required for local development):
+
+1. **Clone** this repository
    ```bash
    git clone https://github.com/stellanjoh2/orby.git
    cd orby
    ```
 
-2. **Open** `index.html` in a modern web browser
+2. **Serve** the repo root (ES modules need a local server)
    ```bash
-   # Using Python
-   python -m http.server 8000
-   
-   # Using Node.js
-   npx serve
-   
-   # Or simply open index.html directly
+   npm run dev
+   # or: python3 -m http.server 8000
    ```
 
-3. **Drop** your 3D model file onto the canvas
+3. **Open** `http://localhost:8000` and drop a GLB, SVG, or other supported file onto the canvas.
 
-4. **Start** customizing!
-
-No build step, no installation, no dependencies to install. Just open and use.
+For production builds and deployment, see [Development](#-development) and [BUILD.md](BUILD.md).
 
 ---
 
 ## 📋 Supported File Formats
 
-- **GLB/GLTF** (`.glb`, `.gltf`) - **Primary format** - Recommended and most thoroughly tested. Supports animations, materials, and textures
-- **OBJ** (`.obj`) - Wavefront 3D object format (basic support)
-- **FBX** (`.fbx`) - Autodesk 3D format (basic support)
-- **STL** (`.stl`) - Stereolithography format (basic support)
+- **GLB/GLTF** (`.glb`, `.gltf`) — **Primary format**. Recommended and most thoroughly tested. Supports animations, materials, and textures
+- **SVG** (`.svg`) — Extrude filled paths into 3D meshes (Object → SVG Extrude)
+- **Orby scene** (`.orby`) — Saved scene with settings and embedded model
+- **OBJ** (`.obj`) — Wavefront 3D object format (basic support)
+- **FBX** (`.fbx`) — Autodesk 3D format (basic support)
+- **STL** (`.stl`) — Stereolithography format (basic support)
 
-**Note**: Orby is built and tested around `.glb` / `.gltf`. OBJ, FBX, and STL load with basic support; feature coverage varies by exporter. For the best experience, export as GLB.
+**Note**: Orby is built and tested around `.glb` / `.gltf` and `.svg` extrusion. OBJ, FBX, and STL load with basic support; feature coverage varies by exporter. For the best experience, export as GLB.
 
 **Experimental**: `.usdz` may load text-USDA stages only (binary USDC — the usual Apple/exporter default — often shows up empty). Barely tested; prefer GLB.
 
@@ -79,6 +81,35 @@ Perfect for models exported from:
 - **3D Software**: Blender, Maya, 3ds Max, Cinema 4D, Houdini
 - **Game Engines**: Unity, Unreal Engine, Godot
 - **Any standard 3D modeling software**
+
+---
+
+## 🧰 Tech Stack
+
+Orby is **vanilla ES modules** — no React/Vue framework. Full library attributions and licenses live on the **[Credits page](credits/)**.
+
+### Runtime (browser)
+
+| Layer | Technology |
+|-------|------------|
+| **Rendering** | [Three.js](https://threejs.org/) 0.167 — WebGL 2, loaders (GLB, FBX, OBJ, STL, USDZ), OrbitControls |
+| **Post-processing** | [postprocessing](https://github.com/pmndrs/postprocessing) (pmndrs) — bloom, DOF, light rays, composer pipeline |
+| **Ambient occlusion** | [N8AO](https://github.com/N8python/n8ao) — screen-space AO |
+| **Animation** | [GSAP](https://greensock.com/gsap/) — UI motion and panel transitions |
+| **Vector animation** | [Lottie Web](https://github.com/airbnb/lottie-web) — SVG logotype animations |
+| **Icons** | [Font Awesome](https://fontawesome.com/) — subset build |
+| **Extrude geometry** | [cdt2d](https://www.npmjs.com/package/cdt2d) + Earcut — SVG & font cap triangulation |
+| **Export** | [JSZip](https://stuk.github.io/jszip/) — turntable PNG sequences; [ImageTracer.js](https://github.com/jankovicsandras/imagetracerjs) — raster utilities |
+| **Typography** | Mattone (Collletttivo), Geist (Vercel) |
+
+### Tooling & deploy
+
+| Layer | Technology |
+|-------|------------|
+| **Bundler** | [esbuild](https://esbuild.github.io/) — production bundle (`npm run build` → `dist/`) |
+| **Tests** | Node test runner + [Playwright](https://playwright.dev/) e2e |
+| **Hosting** | [Vercel](https://vercel.com/) (primary) + [GitHub Pages](https://pages.github.com/) via GitHub Actions |
+| **API** | Vercel serverless — anonymous stats, bug reports; [Upstash Redis](https://upstash.com/) for rate limiting |
 
 ---
 
@@ -374,6 +405,22 @@ Import scene settings from JSON (paste into the dialog):
 - Instantly apply all settings at once
 - Restore complete scene configurations
 
+#### Save / Load `.orby` Scene
+Export a `.orby` file with your full settings **and** embedded model — distinct from copy/paste JSON. Drop a `.orby` file on the landing page to restore everything in one step.
+
+### Creation & Export
+
+#### SVG Extrude
+Drop an SVG to extrude filled paths into 3D geometry. Per-color depth layers, surface presets, and GLB export. See [Support → SVG extrude](support/#svg-extrude).
+
+#### Font Extrude
+Type live 3D text via **Object → Generate from Font** — custom fonts, tracking, bevels, and reveal animations. Separate engine from SVG extrude.
+
+#### Exports
+- **Still image** — PNG/JPEG at configurable resolution
+- **Turntable** — MP4 video or numbered PNG sequence (zip)
+- **GLB** — export extruded SVG/font geometry
+
 ---
 
 ## 🏗️ Architecture
@@ -441,16 +488,16 @@ Orby is built with a modular, controller-based architecture for maintainability 
 
 ## 🔒 Privacy
 
-Orby is **100% client-side** and **completely private**:
+Orby keeps your 3D work on your device:
 
-- ✅ **Zero uploads** - All processing happens in your browser
-- ✅ **Zero servers** - No backend, no cloud storage
-- ✅ **No accounts** - No login required
-- ✅ **No tracking** - No analytics, no cookies
-- ✅ **No data collection** - Your files never leave your device
-- ✅ **Close the tab** - Your model is instantly and permanently gone
+- ✅ **No file uploads** — all model loading, lighting, grading, and export run in your browser
+- ✅ **No accounts** — no login required
+- ✅ **No cookies or ad pixels** — no personal identifiers collected
+- ✅ **Close the tab** — your model is instantly and permanently gone from memory
 
-Your files never leave your device.
+The hosted site sends **anonymous aggregate counters** only (page visits and file-format totals — no filenames, no model data). See the [Privacy Policy](legal/privacy-policy.html) and public [Statistics](stats/) page for details. Bug reports are optional and go through a separate form.
+
+Your 3D files never leave your device.
 
 ---
 
@@ -473,7 +520,7 @@ Orby requires a modern browser with WebGL 2.0 support:
 
 ### Mobile Support
 
-⚠️ **Orby is not optimized for mobile devices.** While it may work on some mobile browsers, the experience is designed for desktop use. For the best experience, please use a desktop browser.
+The full studio is designed for **desktop**. A touch-friendly **[Orby Mobile](mobile/)** preview is available for phone workflows, but the primary experience targets desktop browsers with a keyboard, mouse, or gamepad.
 
 ---
 
@@ -518,54 +565,53 @@ The canvas size is calculated on page load and doesn't automatically update when
 
 ```
 orby/
-├── assets/
-│   ├── animations/      # Lottie animation files
-│   ├── hdris/           # HDRI environment maps
-│   ├── icons/           # Icons and logos
-│   ├── images/          # Texture assets and logotypes
-│   └── 3D-assets/       # Test 3D models
-├── scripts/
-│   ├── config/          # Configuration files
-│   ├── input/           # Input controllers
-│   ├── render/          # Render controllers
-│   ├── scene/           # Scene management
-│   ├── settings/        # Settings management
-│   ├── shaders/         # GLSL shader files
-│   ├── ui/              # UI controllers
-│   └── utils/           # Utility functions
-├── index.html           # Main HTML file
-├── styles.css           # Stylesheet
-├── VERSION              # Version file
-└── README.md            # This file
+├── scripts/             # ES module source — controllers, importers, UI
+│   ├── import/          # GLB, SVG, font extrude importers
+│   ├── render/          # Camera, post-processing, materials
+│   ├── scene/           # Scene loop, animation, transforms
+│   └── ui/              # Shelf panels, modals, controls
+├── partials/            # HTML partials stitched into index.html
+├── assets/              # HDRIs, fonts, icons, 3D test assets
+├── about/               # About page
+├── support/             # Support & FAQ
+├── legal/               # Privacy policy, terms
+├── credits/             # Open-source attributions
+├── mobile/              # Orby Mobile preview
+├── api/                 # Vercel serverless routes (stats, bug reports)
+├── e2e/                 # Playwright tests
+├── index.html           # Studio entry (source)
+├── styles.css           # Studio stylesheet
+├── build.js             # esbuild production bundle
+├── VERSION              # Release version (canonical)
+└── README.md
 ```
-
-### Key Technologies
-
-- **Three.js** - 3D rendering engine
-- **GSAP** - Animation library
-- **Font Awesome** - Icon library
-- **Lottie Web** - SVG animation library
 
 ### Running Locally
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/stellanjoh2/orby.git
-   cd orby
-   ```
+```bash
+git clone https://github.com/stellanjoh2/orby.git
+cd orby
+npm install          # first time only — hooks, test deps, build tools
+npm run dev          # http://localhost:8000
+```
 
-2. Open `index.html` in a web browser:
-   ```bash
-   # Using Python
-   python -m http.server 8000
-   
-   # Using Node.js
-   npx serve
-   
-   # Or simply open index.html directly
-   ```
+Edit files in `scripts/`, `partials/`, and `index.html` directly — changes are instant with the dev server. No build step needed for day-to-day development.
 
-3. Navigate to `http://localhost:8000` (if using a server)
+### Production Build
+
+```bash
+npm run build        # outputs minified bundle to dist/
+npm run preview      # serve dist/ locally
+```
+
+See [BUILD.md](BUILD.md) for deployment options (Vercel, GitHub Pages via Actions).
+
+### Tests
+
+```bash
+npm test             # unit tests
+npm run test:e2e:dimension   # Playwright export checks
+```
 
 ### Code Style
 
@@ -673,7 +719,7 @@ Highlights include Three.js, GSAP, Lottie Web, N8AO, Font Awesome, JSZip, ImageT
 
 ### Model won't load
 
-- Check that the file format is supported (`.glb`, `.gltf`, `.obj`, `.fbx`, `.stl`; `.usdz` is experimental)
+- Check that the file format is supported (`.glb`, `.gltf`, `.svg`, `.orby`, `.obj`, `.fbx`, `.stl`; `.usdz` is experimental)
 - Ensure the file isn't corrupted
 - Try a different model to verify the viewer is working
 - Check browser console for error messages
@@ -741,13 +787,12 @@ Highlights include Three.js, GSAP, Lottie Web, N8AO, Font Awesome, JSZip, ImageT
 
 ## 🗺️ Roadmap
 
-See [PROJECT_PLAN.md](PROJECT_PLAN.md) for planned improvements and features.
+See [PROJECT_PLAN.md](PROJECT_PLAN.md) for longer-term ideas.
 
 Current priorities:
 - Improved window resizing handling
-- Enhanced mobile support
+- Orby Mobile polish
 - Additional HDRI environments
-- More post-processing effects
 - Performance optimizations
 
 ---
