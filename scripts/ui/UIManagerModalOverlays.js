@@ -9,7 +9,10 @@ import {
   createBigMessageRevealTimeline,
   killBigMessageRevealTweens,
 } from './bigMessageHeadlineReveal.js';
-import { setOrbyPillButtonLabel, setOrbyPillButtonVariant } from './orbyPillButton.js';
+import {
+  setOrbyMagicButtonLabel,
+  setOrbyMagicButtonOnDarkVariant,
+} from './orbyMagicButton.js';
 
 /** Full-screen prompt — match BugReportController thank-you scrim */
 const ORBY_FULLSCREEN_SCRIM_IN = 0.22;
@@ -144,10 +147,11 @@ export class UIManagerModalOverlays {
 
     msg.innerHTML = messageHtml;
     msg.removeAttribute('aria-hidden');
-    setOrbyPillButtonLabel(noBtn, cancelLabel);
-    setOrbyPillButtonLabel(yesBtn, confirmLabel);
+    setOrbyMagicButtonLabel(noBtn, cancelLabel);
+    setOrbyMagicButtonLabel(yesBtn, confirmLabel);
     const confirmAccent = opts?.confirmVariant !== 'ghost';
-    setOrbyPillButtonVariant(yesBtn, confirmAccent ? 'accent' : 'ghost');
+    setOrbyMagicButtonOnDarkVariant(noBtn, 'outline');
+    setOrbyMagicButtonOnDarkVariant(yesBtn, confirmAccent ? 'solid' : 'outline');
 
     const plain = msg.textContent?.trim() ?? '';
     if (plain) layer.setAttribute('aria-label', plain);
@@ -298,7 +302,7 @@ export class UIManagerModalOverlays {
       if (noBtn) gsap.set(noBtn, { clearProps: 'opacity,transform' });
       if (yesBtn) {
         gsap.set(yesBtn, { clearProps: 'opacity,transform' });
-        setOrbyPillButtonVariant(yesBtn, 'ghost');
+        setOrbyMagicButtonOnDarkVariant(yesBtn, 'outline');
       }
       this._ui.endShelfOverlaySuppression();
     };
@@ -347,6 +351,7 @@ export class UIManagerModalOverlays {
           '<span class="brand-highlight">Return home?</span> This ends your session and resets the studio.',
         cancelLabel: 'Stay',
         confirmLabel: 'Go Home',
+        confirmVariant: 'ghost',
         onConfirm: () => {
           void this._ui.returnToHome();
         },

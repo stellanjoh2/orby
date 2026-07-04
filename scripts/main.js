@@ -12,6 +12,7 @@ import {
   isMobileLanding,
 } from './orbyMobileLanding.js';
 import { ensureShelfPanelsStitched } from './stitchIndexHtmlClient.js';
+import { UndoStateController } from './state/UndoStateController.js';
 
 /**
  * Safari has heavier repaint/compositing cost for large animated blur layers.
@@ -101,6 +102,14 @@ async function boot() {
   const scene = new SceneManager(eventBus, stateStore, ui);
   scene.setTooltipController(tooltips);
 
+  const undoState = new UndoStateController(eventBus, stateStore, {
+    showToast: (message, duration, options) => ui.showToast(message, duration, options),
+    syncControls: (state) => ui.syncControls(state),
+    restoreFontExtrudeSettings: (fontExtrude) =>
+      ui.fontExtrudeUI?.restoreFromSettings?.(fontExtrude),
+  });
+  undoState.bind();
+
   /** Gamepad poll loop — deferred until first studio entrance (see UIManager.ensureStudioUiReady). */
   let gamepad = null;
   function ensureGamepad() {
@@ -123,6 +132,8 @@ async function boot() {
     ui,
     scene,
     tooltips,
+    undoState,
+    undo: () => undoState.undo(),
     ensureGamepad,
     dev: {},
     get gamepad() {

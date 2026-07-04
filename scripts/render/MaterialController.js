@@ -6782,7 +6782,7 @@ export class MaterialController {
   }
 
   /**
-   * Live fill color for Generate from Font meshes (preview + post-generate 3D).
+   * Live fill color for Type Creator meshes (preview + post-generate 3D).
    * @param {string} hex
    */
   setFontExtrudeFillColor(hex) {

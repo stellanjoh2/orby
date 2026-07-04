@@ -143,6 +143,20 @@ export class StateStore {
     return this.getState();
   }
 
+  /**
+   * Replace the entire state tree in one notify (undo / settings restore).
+   * @param {object} nextState
+   */
+  replaceState(nextState) {
+    const cloned = deepClone(nextState);
+    migrateLegacyGroundKeys(cloned);
+    if (cloned.toneCurve !== undefined) {
+      cloned.toneCurve = normalizeToneCurve(cloned.toneCurve);
+    }
+    this.state = cloned;
+    this._notifyIfIdle();
+  }
+
   /** Read a default value at a dot-path. Returns `undefined` if the path is absent. */
   _readDefault(path) {
     const segments = path.split('.');

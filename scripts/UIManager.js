@@ -46,7 +46,7 @@ import { LensControls } from './ui/LensControls.js';
 import { ViewPresetsControls } from './ui/ViewPresetsControls.js';
 import { IsometricControls } from './ui/IsometricControls.js';
 import { GlobalControls } from './ui/GlobalControls.js';
-import { openInfoSectionTarget } from './ui/infoSections.js';
+import { initInfoPanelNavGuard, openInfoSectionTarget } from './ui/infoSections.js';
 import { ensureInfoPanelProseLoaded } from './ui/loadInfoPanelProse.js';
 import { AnimationControls } from './ui/AnimationControls.js';
 import { ExportPreviewControls } from './ui/ExportPreviewControls.js';
@@ -81,6 +81,7 @@ import { OrbyColorPickerController } from './ui/OrbyColorPickerController.js';
 import { mergeAberrationSettings } from './render/chromaticAberration.js';
 import { creativeLookPresetSupportsMaterialPbrSliders } from './render/CreativeLookMaterials.js';
 import { inferToastCaution, resolveToastIconKind } from './ui/toastVariant.js';
+import { normalizeIsometricState } from './camera/isometricPresets.js';
 
 /** Toasts longer than this use a dismissible dialog (OK) so they stay readable. */
 export const LONG_TOAST_CHAR_THRESHOLD = 110;
@@ -127,6 +128,10 @@ export class UIManager {
     this._activeToastTimer = null;
     /** Resolves the queued toast currently on screen (see _presentToast). */
     this._activeToastResolve = null;
+    /** @type {HTMLElement | null} */
+    this._isometricToastEl = null;
+    this._isometricToastDismissed = false;
+    this._isometricToastWasActive = false;
     /** Dropzone shell only until first model / .orby load. */
     this._studioUiReady = false;
     /** @type {Promise<void> | null} */
@@ -408,6 +413,7 @@ export class UIManager {
     this.dom.exportVideoPreviewDock = q('#exportVideoPreviewDock');
     this.dom.fontExtrudeAnimationPreviewDock = q('#fontExtrudeAnimationPreviewDock');
     this.dom.toastTemplate = document.querySelector('#toastTemplate');
+    this.dom.isometricToastTemplate = document.querySelector('#isometricToastTemplate');
     this.dom.messageAlertModal = q('#messageAlertModal');
     this.dom.messageAlertTitle = q('#messageAlertTitle');
     this.dom.messageAlertBody = q('#messageAlertBody');
@@ -957,6 +963,7 @@ export class UIManager {
 
     this.setupPanelsScrollbarReveal();
     this.modalOverlays.bind();
+    initInfoPanelNavGuard();
     this.bindUiSoundsPreference();
   }
 
@@ -1731,6 +1738,74 @@ export class UIManager {
         void this._drainToastQueue();
       }
     }
+  }
+
+  /**
+   * Persistent hint while isometric camera is on and pan is locked; dismissible.
+   * @param {object} [state]
+   */
+  syncIsometricCameraToast(state) {
+    const iso = normalizeIsometricState((state ?? this.stateStore.getState()).camera?.isometric);
+    const active = iso.enabled;
+
+    if (!active) {
+      this._isometricToastDismissed = false;
+      this._isometricToastWasActive = false;
+      this._removeIsometricToast();
+      return;
+    }
+
+    if (active && !this._isometricToastWasActive) {
+      this._isometricToastDismissed = false;
+    }
+    this._isometricToastWasActive = active;
+
+    if (iso.panUnlocked || this._isometricToastDismissed) {
+      this._removeIsometricToast();
+      return;
+    }
+
+    this._ensureIsometricToast();
+  }
+
+  _unlockIsometricPanFromToast() {
+    const iso = normalizeIsometricState(this.stateStore.getState().camera?.isometric);
+    if (!iso.enabled || iso.panUnlocked) {
+      this._removeIsometricToast();
+      return;
+    }
+    this.isometricControls?.togglePanUnlock?.();
+    this._removeIsometricToast();
+  }
+
+  _ensureIsometricToast() {
+    if (this._isometricToastEl?.isConnected) {
+      return this._isometricToastEl;
+    }
+
+    const template = this.dom.isometricToastTemplate?.content?.firstElementChild;
+    if (!template) return null;
+
+    const cluster = template.cloneNode(true);
+    const dismiss = cluster.querySelector('.toast-dismiss');
+    dismiss?.addEventListener('click', () => {
+      this._isometricToastDismissed = true;
+      this._removeIsometricToast();
+    });
+    cluster.querySelector('.toast-isometric-unlock-btn')?.addEventListener('click', () => {
+      this._unlockIsometricPanFromToast();
+    });
+
+    document.body.appendChild(cluster);
+    this._isometricToastEl = cluster;
+    return cluster;
+  }
+
+  _removeIsometricToast() {
+    if (this._isometricToastEl?.isConnected) {
+      this._isometricToastEl.remove();
+    }
+    this._isometricToastEl = null;
   }
 
   copySettingsToClipboard(message, payload) {
@@ -2853,7 +2928,7 @@ export class UIManager {
     });
   }
 
-  /** Bottom dock — Object tab, Generate from Font open, after first 3D text generate. */
+  /** Bottom dock — Object tab, Type Creator open, after first 3D text generate. */
   syncFontExtrudeAnimationPreviewDock() {
     const dock = this.dom.fontExtrudeAnimationPreviewDock;
     if (!dock) return;
@@ -3084,6 +3159,7 @@ export class UIManager {
     });
 
     const isoOn = !!currentState.camera?.isometric?.enabled;
+    this.syncIsometricCameraToast(currentState);
     this.setBlockMuted(
       'auto-orbit',
       isoOn || currentState.camera?.autoOrbit === 'off',

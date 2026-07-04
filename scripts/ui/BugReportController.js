@@ -3,6 +3,7 @@
  * API URL: meta[name="orby-bug-report-api"] or "/api/bug-report"; Turnstile: meta orby-turnstile-site-key + server secret.
  */
 import gsap from 'gsap';
+import { bindBugReportListbox } from './bugReportListbox.js';
 import { createBigMessageRevealTimeline, killBigMessageRevealTweens } from './bigMessageHeadlineReveal.js';
 import { animateModalClose, animateModalOpen, prefersReducedMotion } from './modalReveal.js';
 
@@ -104,8 +105,39 @@ export class BugReportController {
     this.severityTrigger = this.form.querySelector('#bugReportSeverityTrigger');
     this.severityListbox = this.form.querySelector('#bugReportSeverityListbox');
     this.severityHidden = this.form.querySelector('#bugReportSeverity');
-    this._severityDocCapture = false;
-    this._bindSeverityCombo();
+    this.categoryCombo = this.form.querySelector('#bugReportCategoryCombo');
+    this.categoryTrigger = this.form.querySelector('#bugReportCategoryTrigger');
+    this.categoryListbox = this.form.querySelector('#bugReportCategoryListbox');
+    this.categoryHidden = this.form.querySelector('#bugReportCategory');
+    this._categoryListbox = bindBugReportListbox({
+      comboEl: this.categoryCombo,
+      triggerEl: this.categoryTrigger,
+      listboxEl: this.categoryListbox,
+      hiddenEl: this.categoryHidden,
+      onOpen: () => this._closeSeverityListbox(),
+      onChange: (value, prev) => {
+        if (value !== prev) this.ui.uiSounds?.playSelect();
+      },
+      syncTrigger: (value) => {
+        const opt = this.categoryListbox?.querySelector(
+          `[role="option"][data-value="${CSS.escape(value)}"]`,
+        );
+        const textEl = this.categoryTrigger?.querySelector('.bug-report-combo-trigger-text');
+        if (textEl && opt) textEl.textContent = opt.textContent?.replace(/\s+/g, ' ')?.trim() ?? '';
+      },
+    });
+    this._severityListbox = bindBugReportListbox({
+      comboEl: this.severityCombo,
+      triggerEl: this.severityTrigger,
+      listboxEl: this.severityListbox,
+      hiddenEl: this.severityHidden,
+      onOpen: () => this._categoryListbox.close(),
+      onChange: (value, prev) => {
+        if (value !== prev) this.ui.uiSounds?.playSelect();
+        this.syncSendButton();
+      },
+      syncTrigger: (value) => this._syncSeverityTrigger(value),
+    });
 
     this.closeBtn?.addEventListener('click', () => this.close());
     this.cancelBtn?.addEventListener('click', () => this.close());
@@ -128,129 +160,41 @@ export class BugReportController {
   }
 
   _closeSeverityListbox() {
-    if (!this.severityListbox || !this.severityTrigger) return;
-    this.severityListbox.hidden = true;
-    this.severityTrigger.setAttribute('aria-expanded', 'false');
-    if (this._severityDocCapture) {
-      document.removeEventListener('pointerdown', this._onSeverityDocPointer, true);
-      this._severityDocCapture = false;
-    }
+    this._severityListbox?.close();
   }
 
-  _openSeverityListbox() {
-    if (!this.severityListbox || !this.severityTrigger) return;
-    this.severityListbox.hidden = false;
-    this.severityTrigger.setAttribute('aria-expanded', 'true');
-    if (!this._severityDocCapture) {
-      document.addEventListener('pointerdown', this._onSeverityDocPointer, true);
-      this._severityDocCapture = true;
-    }
-    queueMicrotask(() => this.severityListbox?.focus());
+  _closeCategoryListbox() {
+    this._categoryListbox?.close();
   }
 
-  /** @param {Event} e */
-  _onSeverityDocPointer = (e) => {
-    if (!this.severityCombo || !(e.target instanceof Node)) return;
-    if (this.severityCombo.contains(e.target)) return;
+  _closeBugReportListboxes() {
     this._closeSeverityListbox();
-  };
+    this._closeCategoryListbox();
+  }
 
-  syncSeverityFromHidden() {
-    const v = this.severityHidden?.value?.trim() ?? '';
-    if (!v || !this.severityListbox) return;
-    const opt = this.severityListbox.querySelector(`[role="option"][data-value="${CSS.escape(v)}"]`);
+  /** @param {string} value */
+  _syncSeverityTrigger(value) {
+    if (!value || !this.severityListbox) return;
+    const opt = this.severityListbox.querySelector(`[role="option"][data-value="${CSS.escape(value)}"]`);
     const labelEl = opt?.querySelector('.bug-report-severity-label');
     const labelPlain = opt?.textContent?.replace(/\s+/g, ' ')?.trim() ?? '';
     if (this.severityTrigger) {
       const dot = this.severityTrigger.querySelector('.bug-report-severity-dot');
-      if (dot) dot.setAttribute('data-severity', v);
+      if (dot) dot.setAttribute('data-severity', value);
       const textEl = this.severityTrigger.querySelector('.bug-report-severity-trigger-text');
       if (textEl) {
-        if (labelEl) {
-          textEl.innerHTML = labelEl.innerHTML;
-        } else if (labelPlain) {
-          textEl.textContent = labelPlain;
-        }
+        if (labelEl) textEl.innerHTML = labelEl.innerHTML;
+        else if (labelPlain) textEl.textContent = labelPlain;
       }
     }
-    this.severityListbox.querySelectorAll('[role="option"]').forEach((el) => {
-      const sel = el.getAttribute('data-value') === v;
-      el.setAttribute('aria-selected', sel ? 'true' : 'false');
-    });
-    this.syncSendButton();
   }
 
-  _setBugReportSeverity(value) {
-    if (!this.severityHidden || !value) return;
-    const prev = this.severityHidden.value;
-    if (value !== prev) this.ui.uiSounds?.playSelect();
-    this.severityHidden.value = value;
-    this.syncSeverityFromHidden();
+  syncSeverityFromHidden() {
+    this._severityListbox?.sync();
   }
 
-  _bindSeverityCombo() {
-    if (!this.severityCombo || !this.severityTrigger || !this.severityListbox || !this.severityHidden) return;
-
-    this.severityTrigger.addEventListener('click', () => {
-      const open = this.severityTrigger?.getAttribute('aria-expanded') === 'true';
-      if (open) this._closeSeverityListbox();
-      else this._openSeverityListbox();
-    });
-
-    this.severityTrigger.addEventListener('keydown', (e) => {
-      const open = this.severityTrigger?.getAttribute('aria-expanded') === 'true';
-      if (e.key === 'Escape' && open) {
-        e.preventDefault();
-        this._closeSeverityListbox();
-        return;
-      }
-      if ((e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') && !open) {
-        e.preventDefault();
-        this._openSeverityListbox();
-      }
-    });
-
-    this.severityListbox.addEventListener('click', (e) => {
-      const li = e.target?.closest?.('[role="option"]');
-      const val = li?.getAttribute?.('data-value');
-      if (!val) return;
-      this._setBugReportSeverity(val);
-      this._closeSeverityListbox();
-      this.severityTrigger?.focus();
-    });
-
-    this.severityListbox.addEventListener('keydown', (e) => {
-      const opts = [...this.severityListbox.querySelectorAll('[role="option"]')];
-      const cur = this.severityHidden.value;
-      let ix = opts.findIndex((o) => o.getAttribute('data-value') === cur);
-      if (ix < 0) ix = 0;
-
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        this._closeSeverityListbox();
-        this.severityTrigger?.focus();
-        return;
-      }
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        const n = Math.min(opts.length - 1, ix + 1);
-        this._setBugReportSeverity(opts[n].getAttribute('data-value') ?? '');
-        return;
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        const n = Math.max(0, ix - 1);
-        this._setBugReportSeverity(opts[n].getAttribute('data-value') ?? '');
-        return;
-      }
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        this._closeSeverityListbox();
-        this.severityTrigger?.focus();
-      }
-    });
-
-    this.syncSeverityFromHidden();
+  syncCategoryFromHidden() {
+    this._categoryListbox?.sync();
   }
 
   _ensureTurnstileScript() {
@@ -360,6 +304,7 @@ export class BugReportController {
     this._removeTurnstileWidget();
     this.form.reset();
     this.syncSeverityFromHidden();
+    this.syncCategoryFromHidden();
     this.setStatus('');
     this._sending = false;
     this.syncSendButton();
@@ -370,7 +315,7 @@ export class BugReportController {
     if (!this.modal || !this.form) return;
     if (!this.isOpen()) return;
     const panel = this.modal.querySelector('.load-settings-content');
-    this._closeSeverityListbox();
+    this._closeBugReportListboxes();
     gsap.killTweensOf([this.modal, panel].filter(Boolean));
     this.modal.style.display = 'none';
     if (panel) gsap.set(panel, { clearProps: 'clipPath,transform' });
@@ -380,16 +325,16 @@ export class BugReportController {
 
   open() {
     if (!this.modal) return;
-    /* Same “up” clip as podium / studio shelf reveal. */
+    /* Blur eases in with the panel — same as message / replace-asset confirm (no backdrop wipe). */
     this.ui?.uiSounds?.playShelfShow();
     this._teardownBugReportThankYouQuiet();
     this.ui?.beginShelfOverlaySuppression?.();
     this._sending = false;
     this._bugBackdropDown = false;
     this.setStatus('');
-    this._closeSeverityListbox();
+    this._closeBugReportListboxes();
     const panel = this.modal.querySelector('.load-settings-content');
-    void animateModalOpen(this.modal, panel).then(() => {
+    void animateModalOpen(this.modal, panel, { revealBackdrop: false }).then(() => {
       const messageEl = this.form?.querySelector('#bugReportMessage');
       messageEl?.focus();
     });
@@ -406,7 +351,7 @@ export class BugReportController {
     if (this.modal.style.display === 'none') return;
     /* Same “down” clip as podium / shelf hide — omit on success→thank-you so we don’t stack with notification. */
     if (!opts.skipShelfHideSound) this.ui?.uiSounds?.playShelfHide();
-    this._closeSeverityListbox();
+    this._closeBugReportListboxes();
     const panel = this.modal.querySelector('.load-settings-content');
     const preserveBackdrop = opts.preserveViewportBackdrop === true;
     animateModalClose(
@@ -418,6 +363,7 @@ export class BugReportController {
         if (typeof onAfterCleanup === 'function') queueMicrotask(() => onAfterCleanup());
       },
       preserveBackdrop,
+      { revealBackdrop: false },
     );
   }
 

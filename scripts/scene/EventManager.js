@@ -177,15 +177,21 @@ export class EventManager {
       eventBus.emit('camera:state', state);
     });
     eventBus.on('camera:set-state', (state) => {
-      s.cameraController?._cancelFocusAnimation?.();
+      const cc = s.cameraController;
+      cc?._cancelFocusAnimation?.();
+      cc?._unlockOrbitSolve?.();
       if (state.position) {
         s.camera.position.set(state.position.x, state.position.y, state.position.z);
       }
       if (state.target) {
         s.controls.target.set(state.target.x, state.target.y, state.target.z);
-        s.controls.update();
       }
-      s.cameraController?.emitPoseChanged?.();
+      cc?._updateOrbitControls?.();
+      if (cc && !cc.isIsometricModeActive?.()) {
+        cc._applyTilt?.();
+      }
+      cc?._lockOrbitSolve?.();
+      cc?.emitPoseChanged?.({ persist: false });
     });
     eventBus.on('camera:lock-orbit', () => {
       if (s.controls) {

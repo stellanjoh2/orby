@@ -100,12 +100,14 @@ export function animateModalOpen(modal, panel = null, options = {}) {
  * @param {HTMLElement | null} [panel]
  * @param {() => void} [afterHidden]
  * @param {boolean} [preserveViewportBackdrop] If true, only wipes the panel; modal root stays full-screen (keeps dim scrim during close — e.g. bug report → thank-you).
+ * @param {{ revealBackdrop?: boolean }} [options] When false, fades backdrop blur out with the panel instead of a clip-path wipe.
  */
-export function animateModalClose(modal, panel = null, afterHidden, preserveViewportBackdrop = false) {
+export function animateModalClose(modal, panel = null, afterHidden, preserveViewportBackdrop = false, options = {}) {
   if (!modal) {
     afterHidden?.();
     return;
   }
+  const revealBackdrop = options.revealBackdrop !== false;
   const content = panel ?? modal.querySelector('.load-settings-content');
 
   const finish = () => {
@@ -140,6 +142,18 @@ export function animateModalClose(modal, panel = null, afterHidden, preserveView
   });
   tl.to(content, { y: 32, clipPath: 'inset(100% 0 0 0)', duration: 0.26 }, 0);
   if (!preserveViewportBackdrop) {
-    tl.to(modal, { clipPath: 'inset(0 0 100% 0)', duration: MODAL_BACKDROP_REVEAL_DURATION }, 0.05);
+    if (revealBackdrop) {
+      tl.to(modal, { clipPath: 'inset(0 0 100% 0)', duration: MODAL_BACKDROP_REVEAL_DURATION }, 0.05);
+    } else {
+      tl.to(
+        modal,
+        {
+          '--modal-backdrop-blur': '0px',
+          duration: MODAL_CONTENT_OPEN_DURATION,
+          ease: 'power3.in',
+        },
+        0,
+      );
+    }
   }
 }

@@ -132,8 +132,10 @@
   --shelf-tab-title-font-size: 28px;
   /* Horizontal gap between paired large CTAs (marketing CTA, dropzone, fullscreen prompts) */
   --orby-big-dual-btn-gap: 36px;
-  /* Big headline → CTA row (thank-you, Return Home, marketing lime CTA) */
-  --orby-big-message-headline-actions-gap: 120px;
+  /* Paired magic pills — equal width (Browse/Load sample, Stay/Go Home, …) */
+  --orby-big-dual-btn-min-width: calc(12ch + 3.75rem);
+  /* Fullscreen thank-you / Return home — headline → CTA row (studio overlays only) */
+  --orby-big-message-headline-actions-gap: 5rem;
   /* Flat orby pill — compact base; normal = home; xl = fullscreen big-message modals */
   --ui-orby-pill-font-size: var(--ui-accent-action-font-size);
   --ui-orby-pill-pad-block: 0.52rem;
@@ -1187,8 +1189,8 @@ html.orby-sr-on .orby-sr,
   cursor: default;
 }
 
-.bug-report-thank-you-stack .orby-pill-btn,
-.orby-fullscreen-prompt-stack .orby-pill-btn {
+.bug-report-thank-you-stack .orby-magic-btn--on-dark,
+.orby-fullscreen-prompt-stack .orby-magic-btn--on-dark {
   pointer-events: auto;
 }
 
@@ -1202,6 +1204,13 @@ html.orby-sr-on .orby-sr,
   max-width: 100%;
   margin-inline: auto;
   pointer-events: auto;
+}
+
+.orby-fullscreen-prompt-stack .orby-fullscreen-prompt-actions .orby-magic-btn--on-dark {
+  box-sizing: border-box;
+  width: var(--orby-big-dual-btn-min-width);
+  min-width: var(--orby-big-dual-btn-min-width);
+  max-width: 100%;
 }
 
 .bug-report-thank-you-message {
@@ -1232,6 +1241,7 @@ html.orby-sr-on .orby-sr,
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  --bug-report-dropdown-height: 30px;
 }
 
 /* Pull actions block one step closer to the word meter (one flex-gap less) */
@@ -1268,47 +1278,13 @@ html.orby-sr-on .orby-sr,
   box-sizing: border-box;
 }
 
-.bug-report-field input {
+.bug-report-field input:not([type='hidden']) {
   padding: 0.55rem 0.75rem;
   background: rgba(255, 255, 255, 0.12);
-  border: none;
 }
 
-.bug-report-field select {
-  border: none;
-  background-color: rgba(255, 255, 255, 0.12);
-}
-
-/* Match shelf .select-line chevron: extra right inset so the arrow doesn’t hug the edge */
-.bug-report-field select {
-  height: var(--orby-dropdown-height);
-  min-height: var(--orby-dropdown-height);
-  padding: 0 2rem 0 0.75rem;
-  line-height: var(--orby-dropdown-height);
-  appearance: none;
-  color-scheme: dark;
-  background-color: rgba(255, 255, 255, 0.12);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.65rem center;
-  background-size: 12px 12px;
-}
-
-.bug-report-field select option {
-  background-color: rgb(22, 22, 24);
-  color: var(--text);
-}
-
-.bug-report-field input:focus {
+.bug-report-field input:not([type='hidden']):focus {
   background: rgba(255, 255, 255, 0.16);
-}
-
-.bug-report-field select:focus {
-  background-color: rgba(255, 255, 255, 0.16);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.65rem center;
-  background-size: 12px 12px;
 }
 
 .bug-report-message-block {
@@ -1449,52 +1425,66 @@ html.orby-sr-on .orby-sr,
   animation: bug-report-progress-slide 1.08s ease-in-out infinite;
 }
 
-/* Custom severity combobox: matches .bug-report-field select (Category) */
+/* Custom comboboxes — Category + Severity share pill triggers and list panels */
+.bug-report-combo,
 .bug-report-severity-combo {
   position: relative;
 }
 
+.bug-report-combo-trigger,
 .bug-report-severity-trigger {
   width: 100%;
-  border-radius: 8px;
+  border-radius: 999px;
   border: none;
   color: var(--text);
   font-family: inherit;
   font-size: 0.9rem;
-  line-height: var(--orby-dropdown-height);
+  line-height: var(--bug-report-dropdown-height, 30px);
   outline: none;
   box-sizing: border-box;
-  height: var(--orby-dropdown-height);
-  min-height: var(--orby-dropdown-height);
-  padding: 0 2rem 0 0.75rem;
+  height: var(--bug-report-dropdown-height, 30px);
+  min-height: var(--bug-report-dropdown-height, 30px);
+  padding: 0 2rem 0 0.85rem;
   appearance: none;
   background-color: rgba(255, 255, 255, 0.12);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 0.65rem center;
+  background-position: right 0.75rem center;
   background-size: 12px 12px;
   cursor: pointer;
   text-align: left;
 }
 
+.bug-report-combo-trigger:focus,
 .bug-report-severity-trigger:focus {
   background-color: rgba(255, 255, 255, 0.16);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 0.65rem center;
+  background-position: right 0.75rem center;
   background-size: 12px 12px;
 }
 
+.bug-report-combo-trigger:focus-visible,
 .bug-report-severity-trigger:focus-visible {
   outline: none;
 }
 
+.bug-report-combo-trigger-text,
 .bug-report-severity-trigger-inner {
   display: flex;
   align-items: center;
   gap: 0.55rem;
   min-width: 0;
   pointer-events: none;
+}
+
+.bug-report-combo-trigger-text {
+  flex: 1;
+  min-width: 0;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bug-report-severity-trigger-text {
@@ -1514,6 +1504,7 @@ html.orby-sr-on .orby-sr,
   font-weight: 400;
 }
 
+.bug-report-combo-listbox,
 .bug-report-severity-listbox {
   position: absolute;
   left: 0;
@@ -1523,24 +1514,26 @@ html.orby-sr-on .orby-sr,
   margin: 0;
   padding: 0.35rem 0;
   list-style: none;
-  border-radius: 8px;
+  border-radius: 12px;
   border: none;
-  background: rgba(22, 22, 24, 0.98);
+  background: var(--orby-app-bg);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   max-height: min(16rem, 70vh);
   overflow-y: auto;
   outline: none;
 }
 
+.bug-report-combo-listbox:focus,
 .bug-report-severity-listbox:focus {
   outline: none;
 }
 
+.bug-report-combo-option,
 .bug-report-severity-list-option {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.55rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0.85rem;
   margin: 0;
   font-size: 0.88rem;
   line-height: 1.35;
@@ -1549,22 +1542,30 @@ html.orby-sr-on .orby-sr,
   transition: background 0.12s;
 }
 
+.bug-report-combo-option:hover,
+.bug-report-combo-option:focus,
 .bug-report-severity-list-option:hover,
 .bug-report-severity-list-option:focus {
   background: rgba(255, 255, 255, 0.1);
   outline: none;
 }
 
+.bug-report-combo-option[aria-selected='true'],
 .bug-report-severity-list-option[aria-selected='true'] {
   background: rgba(255, 255, 255, 0.08);
   box-shadow: inset 2px 0 0 0 var(--accent);
+}
+
+.bug-report-severity-trigger .bug-report-severity-dot,
+.bug-report-combo-option .bug-report-severity-dot,
+.bug-report-severity-list-option .bug-report-severity-dot {
+  margin-top: 0;
 }
 
 .bug-report-severity-dot {
   flex-shrink: 0;
   width: 0.55rem;
   height: 0.55rem;
-  margin-top: 0.32em;
   border-radius: 50%;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
@@ -1643,6 +1644,40 @@ html.orby-sr-on .orby-sr,
   width: 100%;
 }
 
+.bug-report-actions > .orby-magic-btn,
+.bug-report-actions .bug-report-submit-wrap {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+}
+
+.bug-report-actions .orby-magic-btn {
+  --orby-magic-btn-pad-block: 0;
+  --orby-magic-btn-pad-inline: 1.35rem;
+  --orby-magic-btn-min-height: 54px;
+  --orby-magic-btn-inner-gap: 0.5rem;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 54px;
+  min-height: 54px;
+  font-size: var(--ui-accent-action-font-size);
+}
+
+.bug-report-actions .orby-magic-btn__inner {
+  height: 100%;
+  min-height: 0;
+  padding-block: 0;
+  padding-inline: var(--orby-magic-btn-pad-inline);
+  width: 100%;
+  justify-content: center;
+}
+
+.bug-report-actions .orby-magic-btn__arrow {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
 /* Wrapper so native tooltip works on disabled Send (hover hits the span, not the dead button) */
 .bug-report-submit-wrap {
   flex: 1;
@@ -1650,82 +1685,38 @@ html.orby-sr-on .orby-sr,
   display: flex;
 }
 
-.bug-report-submit-wrap .bug-report-modal-btn:disabled {
+.bug-report-submit-wrap .orby-magic-btn:disabled {
   pointer-events: none;
 }
 
-.bug-report-submit-wrap:has(.bug-report-modal-btn:disabled) {
+.bug-report-submit-wrap:has(.orby-magic-btn:disabled) {
   cursor: not-allowed;
 }
 
-.bug-report-submit-wrap .bug-report-modal-btn {
-  flex: 1;
-  width: 100%;
-  min-width: 0;
+.bug-report-actions .orby-magic-btn--outline-dark:disabled {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.34);
+  cursor: not-allowed;
 }
 
-.bug-report-modal-btn {
-  flex: 1;
-  min-width: 0;
-  min-height: 2.75rem;
-  margin-top: 0;
-  box-sizing: border-box;
-  border-radius: 999px;
-  width: auto;
-  max-width: none;
+.bug-report-actions .orby-magic-btn--outline-dark:disabled .orby-magic-btn__ring {
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
-.bug-report-content .bug-report-modal-btn.ghost-btn {
-  width: auto;
-  flex: 1;
-  min-width: 0;
-  padding: 0.5rem 1rem;
-  border: none;
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text);
-}
-
-.bug-report-content .bug-report-modal-btn.ghost-btn:hover {
-  background: var(--ui-control-surface);
-  color: var(--text);
-}
-
-.bug-report-content .bug-report-modal-btn.accent-action-btn {
-  transition:
-    opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-    background-color 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-    color 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-    filter 0.2s ease;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .bug-report-content .bug-report-modal-btn.accent-action-btn {
-    transition-duration: 0.01ms;
+@media (hover: hover) and (pointer: fine) {
+  .bug-report-actions .orby-magic-btn--outline-dark:disabled:hover,
+  .bug-report-actions .orby-magic-btn--outline-dark:disabled:focus-visible {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.34);
+    filter: none;
   }
-}
 
-.bug-report-content .bug-report-modal-btn.accent-action-btn:not(:disabled) {
-  opacity: 1;
-  background: var(--brand-primary);
-  color: var(--brand-text);
-  border: none;
-  box-shadow: none;
-}
-
-.bug-report-content .bug-report-modal-btn.accent-action-btn:hover:not(:disabled) {
-  filter: brightness(1.07);
-  opacity: 1;
-  box-shadow: var(--ui-accent-outer-glow);
-}
-
-.bug-report-content .bug-report-modal-btn.accent-action-btn:disabled {
-  opacity: 0.48;
-  cursor: not-allowed;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  box-shadow: none;
-  color: var(--text-dim);
+  .bug-report-actions .orby-magic-btn:disabled:hover .orby-magic-btn__inner,
+  .bug-report-actions .orby-magic-btn:disabled:hover .orby-magic-btn__arrow,
+  .bug-report-actions .orby-magic-btn:disabled:focus-visible .orby-magic-btn__inner,
+  .bug-report-actions .orby-magic-btn:disabled:focus-visible .orby-magic-btn__arrow {
+    transform: none;
+  }
 }
 
 .primary-btn {
@@ -2309,6 +2300,87 @@ html.safari-browser .orby-magic-btn::before {
 .orby-magic-btn--on-lime.orby-magic-btn--outline-lime:active {
   background: var(--brand-text, var(--orby-black));
   color: var(--brand-primary, var(--orby-lime));
+  filter: brightness(0.96);
+}
+
+/* Flat inverted pills on dark scrims — mirror of --on-lime (lime stroke, hover fill + slide) */
+.orby-magic-btn--on-dark::before,
+.orby-magic-btn--on-dark::after {
+  display: none;
+  content: none;
+}
+
+.orby-magic-btn--on-dark .orby-magic-btn__fill {
+  display: none;
+}
+
+.orby-magic-btn--on-dark .orby-magic-btn__inner {
+  min-height: 0;
+}
+
+.orby-magic-btn--on-dark.orby-magic-btn--solid-dark {
+  background: var(--brand-primary, var(--orby-lime));
+  color: var(--brand-text, var(--orby-black));
+  transition:
+    background 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orby-magic-btn--on-dark.orby-magic-btn--outline-dark {
+  background: transparent;
+  color: var(--brand-primary, var(--orby-lime));
+  border: none;
+  overflow: visible;
+  transition:
+    background 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orby-magic-btn--on-dark.orby-magic-btn--outline-dark .orby-magic-btn__ring {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  border-radius: inherit;
+  border: var(--orby-magic-btn-stroke) solid var(--brand-primary, var(--orby-lime));
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .orby-magic-btn--on-dark.orby-magic-btn--solid-dark:hover,
+  .orby-magic-btn--on-dark.orby-magic-btn--solid-dark:focus-visible {
+    background: color-mix(in srgb, var(--brand-primary, var(--orby-lime)) 86%, white);
+    color: var(--brand-text, var(--orby-black));
+    outline: none;
+  }
+
+  .orby-magic-btn--on-dark.orby-magic-btn--outline-dark:hover,
+  .orby-magic-btn--on-dark.orby-magic-btn--outline-dark:focus-visible {
+    background: var(--brand-primary, var(--orby-lime));
+    color: var(--brand-text, var(--orby-black));
+    outline: none;
+  }
+
+  .orby-magic-btn--on-dark:hover .orby-magic-btn__inner,
+  .orby-magic-btn--on-dark:focus-visible .orby-magic-btn__inner {
+    transform: translateX(4px);
+  }
+
+  .orby-magic-btn--on-dark:hover .orby-magic-btn__arrow,
+  .orby-magic-btn--on-dark:focus-visible .orby-magic-btn__arrow {
+    transform: translateX(9px);
+  }
+}
+
+.orby-magic-btn--on-dark.orby-magic-btn--solid-dark:active {
+  background: color-mix(in srgb, var(--brand-primary, var(--orby-lime)) 86%, white);
+  color: var(--brand-text, var(--orby-black));
+  filter: brightness(0.96);
+}
+
+.orby-magic-btn--on-dark.orby-magic-btn--outline-dark:active {
+  background: var(--brand-primary, var(--orby-lime));
+  color: var(--brand-text, var(--orby-black));
   filter: brightness(0.96);
 }
 
@@ -6969,7 +7041,7 @@ button.advanced-info-doc-btn {
 /*
  * Same display: contents leak as SVG extrude: dropping the bevel group's box re-anchors its
  * ::before hairline to .subsection (position: relative), painting a stray rule above the
- * "Generate from Font" headline once the foldout expands. Bevel sits mid-"3D Shape" section
+ * "Type Creator" headline once the foldout expands. Bevel sits mid-"3D Shape" section
  * with no separator before it — suppress the pseudo.
  */
 [data-subsection='font-extrude'] .extrude-bevel-group::before {
@@ -8453,8 +8525,77 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   min-width: 0;
 }
 
+.toast--persistent {
+  pointer-events: auto;
+}
+
+.toast-isometric-cluster {
+  --toast-bottom: max(var(--viewport-chrome-inset-y, 1.5rem), env(safe-area-inset-bottom, 0px));
+  --toast-inline: var(--viewport-chrome-inset-x, 1.5rem);
+  position: fixed;
+  bottom: var(--toast-bottom);
+  left: var(--toast-inline);
+  right: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: min(36rem, calc(100vw - 2 * var(--toast-inline)));
+  z-index: 15;
+  pointer-events: auto;
+  animation: toast-persistent-in 0.28s ease forwards;
+}
+
+.toast-isometric-cluster .toast--isometric-hint {
+  position: static;
+  bottom: auto;
+  left: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: min(24rem, calc(100vw - 2 * var(--toast-inline) - 9.5rem));
+  animation: none;
+}
+
+.toast-isometric-unlock-btn.orby-pill-btn {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  padding: 0.52rem 0.9rem;
+  letter-spacing: -0.01em;
+}
+
+.toast--isometric-hint .toast-status-on {
+  color: var(--brand-primary);
+  font-weight: 700;
+}
+
+.toast--isometric-hint .toast-dismiss.close-btn {
+  width: 1.65rem;
+  height: 1.65rem;
+  margin: -0.15rem -0.35rem -0.15rem 0.1rem;
+}
+
+.toast--isometric-hint .toast-dismiss.close-btn::before,
+.toast--isometric-hint .toast-dismiss.close-btn::after {
+  height: 0.7rem;
+}
+
+body:has(.toast-isometric-cluster) .toast:not(.toast--isometric-hint) {
+  bottom: calc(var(--toast-bottom) + 3.1rem);
+}
+
+@keyframes toast-persistent-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Marketing home — same frame inset as studio UI */
-html.orby-home-scroll .toast {
+html.orby-home-scroll .toast,
+html.orby-home-scroll .toast-isometric-cluster {
   z-index: 100060;
 }
 
@@ -9675,7 +9816,7 @@ body.ui-hidden .shelf {
   background: #ff9632;
 }
 
-/* Object panel — Generate from Font (live editor = canvas + transparent textarea) */
+/* Object panel — Type Creator (live editor = canvas + transparent textarea) */
 .font-extrude-live-editor {
   position: relative;
   margin: 0 0 var(--shelf-section-gap);
@@ -9810,7 +9951,7 @@ body.ui-hidden .shelf {
   margin: 0 0 var(--shelf-section-gap);
 }
 
-/* Generate from Font — family picker with lazy typeface previews */
+/* Type Creator — family picker with lazy typeface previews */
 .font-extrude-family-line .font-extrude-family-picker {
   position: relative;
 }

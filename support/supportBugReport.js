@@ -2,6 +2,8 @@
  * Embedded issue report on the Support page — POST /api/bug-report.
  * API: meta[name="orby-bug-report-api"]; Turnstile: meta orby-turnstile-site-key.
  */
+import { bindBugReportListbox } from '../scripts/ui/bugReportListbox.js';
+
 const MIN_BUG_MESSAGE_WORDS = 5;
 
 function messagePassesDetailBar(trimmed) {
@@ -36,6 +38,11 @@ function initSupportBugReport() {
   const thankYouEl = document.querySelector('#supportBugReportThankYou');
   const formPanel = document.querySelector('#supportBugReportPanel');
 
+  const categoryCombo = form.querySelector('#supportBugReportCategoryCombo');
+  const categoryTrigger = form.querySelector('#supportBugReportCategoryTrigger');
+  const categoryListbox = form.querySelector('#supportBugReportCategoryListbox');
+  const categoryHidden = form.querySelector('#supportBugReportCategory');
+
   const severityCombo = form.querySelector('#supportBugReportSeverityCombo');
   const severityTrigger = form.querySelector('#supportBugReportSeverityTrigger');
   const severityListbox = form.querySelector('#supportBugReportSeverityListbox');
@@ -44,7 +51,8 @@ function initSupportBugReport() {
   let sending = false;
   let turnstileWidgetId = null;
   let turnstileScriptPromise = null;
-  let severityDocCapture = false;
+  let categoryListboxApi = null;
+  let severityListboxApi = null;
 
   function setStatus(text, isError = false, options = {}) {
     const sendingNow = options.sending === true;
@@ -99,121 +107,56 @@ function initSupportBugReport() {
     }
   }
 
-  function closeSeverityListbox() {
-    if (!severityListbox || !severityTrigger) return;
-    severityListbox.hidden = true;
-    severityTrigger.setAttribute('aria-expanded', 'false');
-    if (severityDocCapture) {
-      document.removeEventListener('pointerdown', onSeverityDocPointer, true);
-      severityDocCapture = false;
-    }
+  function closeBugReportListboxes() {
+    categoryListboxApi?.close();
+    severityListboxApi?.close();
   }
 
-  function openSeverityListbox() {
-    if (!severityListbox || !severityTrigger) return;
-    severityListbox.hidden = false;
-    severityTrigger.setAttribute('aria-expanded', 'true');
-    if (!severityDocCapture) {
-      document.addEventListener('pointerdown', onSeverityDocPointer, true);
-      severityDocCapture = true;
-    }
-    queueMicrotask(() => severityListbox?.focus());
+  function syncCategoryFromHidden(value) {
+    const opt = categoryListbox?.querySelector(`[role="option"][data-value="${CSS.escape(value)}"]`);
+    const textEl = categoryTrigger?.querySelector('.bug-report-combo-trigger-text');
+    if (textEl) textEl.textContent = opt?.textContent?.replace(/\s+/g, ' ')?.trim() ?? value;
   }
 
-  function onSeverityDocPointer(e) {
-    if (!severityCombo || !(e.target instanceof Node)) return;
-    if (severityCombo.contains(e.target)) return;
-    closeSeverityListbox();
-  }
-
-  function syncSeverityFromHidden() {
-    const v = severityHidden?.value?.trim() ?? '';
-    if (!v || !severityListbox) return;
-    const opt = severityListbox.querySelector(`[role="option"][data-value="${CSS.escape(v)}"]`);
+  function syncSeverityFromHidden(value) {
+    const opt = severityListbox?.querySelector(`[role="option"][data-value="${CSS.escape(value)}"]`);
     const labelEl = opt?.querySelector('.bug-report-severity-label');
     if (severityTrigger) {
       const dot = severityTrigger.querySelector('.bug-report-severity-dot');
-      if (dot) dot.setAttribute('data-severity', v);
+      if (dot) dot.setAttribute('data-severity', value);
       const textEl = severityTrigger.querySelector('.bug-report-severity-trigger-text');
       if (textEl) {
         if (labelEl) textEl.innerHTML = labelEl.innerHTML;
-        else textEl.textContent = opt?.textContent?.replace(/\s+/g, ' ')?.trim() ?? '';
+        else textEl.textContent = opt?.textContent?.replace(/\s+/g, ' ')?.trim() ?? value;
       }
     }
-    severityListbox.querySelectorAll('[role="option"]').forEach((el) => {
-      el.setAttribute('aria-selected', el.getAttribute('data-value') === v ? 'true' : 'false');
-    });
-    syncSendButton();
   }
 
-  function setSeverity(value) {
-    if (!severityHidden || !value) return;
-    severityHidden.value = value;
-    syncSeverityFromHidden();
+  function bindBugReportCombos() {
+    categoryListboxApi = bindBugReportListbox({
+      comboEl: categoryCombo,
+      triggerEl: categoryTrigger,
+      listboxEl: categoryListbox,
+      hiddenEl: categoryHidden,
+      syncTrigger: syncCategoryFromHidden,
+      onOpen: () => severityListboxApi?.close(),
+    });
+
+    severityListboxApi = bindBugReportListbox({
+      comboEl: severityCombo,
+      triggerEl: severityTrigger,
+      listboxEl: severityListbox,
+      hiddenEl: severityHidden,
+      syncTrigger: syncSeverityFromHidden,
+      onChange: () => syncSendButton(),
+      onOpen: () => categoryListboxApi?.close(),
+    });
+
+    categoryListboxApi.sync();
+    severityListboxApi.sync();
   }
 
-  function bindSeverityCombo() {
-    if (!severityCombo || !severityTrigger || !severityListbox || !severityHidden) return;
-
-    severityTrigger.addEventListener('click', () => {
-      const open = severityTrigger.getAttribute('aria-expanded') === 'true';
-      if (open) closeSeverityListbox();
-      else openSeverityListbox();
-    });
-
-    severityTrigger.addEventListener('keydown', (e) => {
-      const open = severityTrigger.getAttribute('aria-expanded') === 'true';
-      if (e.key === 'Escape' && open) {
-        e.preventDefault();
-        closeSeverityListbox();
-        return;
-      }
-      if ((e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') && !open) {
-        e.preventDefault();
-        openSeverityListbox();
-      }
-    });
-
-    severityListbox.addEventListener('click', (e) => {
-      const li = e.target?.closest?.('[role="option"]');
-      const val = li?.getAttribute?.('data-value');
-      if (!val) return;
-      setSeverity(val);
-      closeSeverityListbox();
-      severityTrigger.focus();
-    });
-
-    severityListbox.addEventListener('keydown', (e) => {
-      const opts = [...severityListbox.querySelectorAll('[role="option"]')];
-      let ix = opts.findIndex((o) => o.getAttribute('data-value') === severityHidden.value);
-      if (ix < 0) ix = 0;
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        closeSeverityListbox();
-        severityTrigger.focus();
-        return;
-      }
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSeverity(opts[Math.min(opts.length - 1, ix + 1)].getAttribute('data-value') ?? '');
-        return;
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSeverity(opts[Math.max(0, ix - 1)].getAttribute('data-value') ?? '');
-        return;
-      }
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        closeSeverityListbox();
-        severityTrigger.focus();
-      }
-    });
-
-    syncSeverityFromHidden();
-  }
-
-  function ensureTurnstileScript() {
+  async function submit() {
     if (typeof window.turnstile !== 'undefined') return Promise.resolve();
     if (turnstileScriptPromise) return turnstileScriptPromise;
     turnstileScriptPromise = new Promise((resolve, reject) => {
@@ -382,7 +325,7 @@ function initSupportBugReport() {
     submit();
   });
 
-  bindSeverityCombo();
+  bindBugReportCombos();
   wordMeter?.setAttribute('aria-valuemax', String(MIN_BUG_MESSAGE_WORDS));
   syncSendButton();
   void prepareTurnstile();

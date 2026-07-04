@@ -2147,7 +2147,10 @@ export class SceneManager {
         this.applyHdriMood(preset);
       }
       this.autoExposureController?.resetLuminance();
-      if (!options.suppressSuccessToast) {
+      if (
+        !options.suppressSuccessToast
+        && this._suppressModeChangeToasts === 0
+      ) {
         const state = this.stateStore.getState();
         const customName = state.hdriCustomName;
         const message =

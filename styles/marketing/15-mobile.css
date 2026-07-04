@@ -1229,7 +1229,9 @@ html.mobile-landing body.orby-not-found-active #orbyFullscreenPrompt .orby-not-f
   animation: none;
 }
 
-html.mobile-landing body.orby-not-found-active #orbyFullscreenPrompt .orby-pill-btn--xl {
+html.mobile-landing body.orby-not-found-active #orbyFullscreenPrompt .orby-magic-btn--on-dark {
+  --orby-magic-btn-min-height: 0;
+  --orby-magic-btn-pad-block: var(--ui-orby-pill-pad-block-normal);
+  --orby-magic-btn-pad-inline: var(--ui-orby-pill-pad-inline-normal);
   font-size: var(--ui-orby-pill-font-size-normal);
-  padding: var(--ui-orby-pill-pad-block-normal) var(--ui-orby-pill-pad-inline-normal);
 }

@@ -33,6 +33,8 @@ const FORMAT_LABELS = {
   fbx: 'FBX',
   stl: 'STL',
   usd: 'USD',
+  usda: 'USDA',
+  usdc: 'USDC',
   usdz: 'USDZ',
   svg: 'SVG',
   orby: 'ORBY',

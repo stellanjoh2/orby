@@ -1,4 +1,4 @@
-import { initInfoSections } from './infoSections.js';
+import { bindInfoPanelNavLinks, initInfoPanelNavGuard, initInfoSections } from './infoSections.js';
 
 /** Fetched HTML fragment — see partials/info-panel-prose.html */
 const PROSE_URL = './partials/info-panel-prose.html';
@@ -15,6 +15,8 @@ export function ensureInfoPanelProseLoaded() {
   const mount = document.getElementById('infoPanelProseMount');
   const panel = mount?.closest('.panel[data-panel="info"]');
   if (!panel) return Promise.resolve(false);
+  bindInfoPanelNavLinks(panel);
+  initInfoPanelNavGuard();
   if (panel.dataset.infoProseLoaded === '1') return Promise.resolve(true);
   if (loadPromise) return loadPromise;
 

@@ -523,7 +523,7 @@
             type="file"
             id="fileInput"
             class="sr-only"
-            accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usdz,.svg,.bvh,.orby"
+            accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usda,.usdc,.usdz,.svg,.bvh,.orby"
             aria-label="Import 3D model file"
           />
           <button
@@ -756,6 +756,34 @@
       </main>
     </div>
 
+    <template id="isometricToastTemplate">
+      <div class="toast-isometric-cluster">
+        <div
+          class="toast toast--persistent toast--isometric-hint"
+          role="status"
+          aria-live="polite"
+          data-toast-icon="info"
+        >
+          <span class="toast-icon toast-icon--info" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="9" cy="9" r="9" fill="currentColor"/>
+              <path d="M9 8.1V12.15" stroke="var(--orby-black)" stroke-width="1.65" stroke-linecap="round"/>
+              <circle cx="9" cy="5.55" r="0.9" fill="var(--orby-black)"/>
+            </svg>
+          </span>
+          <span class="toast-message">
+            Isometric Camera <span class="toast-status-on">ON</span>
+            <span class="toast-isometric-sep" aria-hidden="true"> — </span>
+            <span class="toast-isometric-detail">Camera Pan locked</span>
+          </span>
+          <button type="button" class="toast-dismiss close-btn" aria-label="Dismiss"></button>
+        </div>
+        <button type="button" class="toast-isometric-unlock-btn orby-pill-btn orby-pill-btn--accent">
+          Unlock Camera Pan
+        </button>
+      </div>
+    </template>
+
     <template id="toastTemplate">
       <div class="toast" role="status" aria-live="polite">
         <span class="toast-icon toast-icon--success" aria-hidden="true">
@@ -852,16 +880,59 @@
         </p>
         <form id="bugReportForm">
           <div class="bug-report-field">
-            <label for="bugReportCategory">Category</label>
-            <select id="bugReportCategory" name="category" required aria-required="true">
-              <option value="crash">Crash / Freeze</option>
-              <option value="rendering" selected>Rendering / Display</option>
-              <option value="loaded-mesh-materials">Loaded Mesh / Materials</option>
-              <option value="ui">UI / Controls</option>
-              <option value="export">Export</option>
-              <option value="performance">Performance</option>
-              <option value="other">Other</option>
-            </select>
+            <label id="bugReportCategoryLabel" for="bugReportCategoryTrigger">Category</label>
+            <div class="bug-report-combo" id="bugReportCategoryCombo">
+              <input type="hidden" name="category" id="bugReportCategory" value="rendering" required />
+              <button
+                type="button"
+                id="bugReportCategoryTrigger"
+                class="bug-report-combo-trigger"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-controls="bugReportCategoryListbox"
+                aria-labelledby="bugReportCategoryLabel"
+              >
+                <span class="bug-report-combo-trigger-text" id="bugReportCategoryTriggerText"
+                  >Rendering / Display</span
+                >
+              </button>
+              <ul
+                id="bugReportCategoryListbox"
+                class="bug-report-combo-listbox"
+                role="listbox"
+                tabindex="-1"
+                aria-labelledby="bugReportCategoryLabel"
+                hidden
+              >
+                <li role="option" data-value="crash" class="bug-report-combo-option" aria-selected="false" tabindex="-1">
+                  Crash / Freeze
+                </li>
+                <li role="option" data-value="rendering" class="bug-report-combo-option" aria-selected="true" tabindex="-1">
+                  Rendering / Display
+                </li>
+                <li
+                  role="option"
+                  data-value="loaded-mesh-materials"
+                  class="bug-report-combo-option"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  Loaded Mesh / Materials
+                </li>
+                <li role="option" data-value="ui" class="bug-report-combo-option" aria-selected="false" tabindex="-1">
+                  UI / Controls
+                </li>
+                <li role="option" data-value="export" class="bug-report-combo-option" aria-selected="false" tabindex="-1">
+                  Export
+                </li>
+                <li role="option" data-value="performance" class="bug-report-combo-option" aria-selected="false" tabindex="-1">
+                  Performance
+                </li>
+                <li role="option" data-value="other" class="bug-report-combo-option" aria-selected="false" tabindex="-1">
+                  Other
+                </li>
+              </ul>
+            </div>
           </div>
           <div class="bug-report-field bug-report-field-severity">
             <label id="bugReportSeverityLabel" for="bugReportSeverityTrigger">Severity</label>
@@ -975,9 +1046,45 @@
             <span class="bug-report-status-text"></span>
           </p>
           <div class="load-settings-actions bug-report-actions">
-            <button type="button" id="cancelBugReport" class="ghost-btn bug-report-modal-btn">Cancel</button>
+            <button
+              type="button"
+              id="cancelBugReport"
+              class="orby-magic-btn orby-magic-btn--on-dark orby-magic-btn--outline-dark bug-report-action-btn"
+            >
+              <span class="orby-magic-btn__ring" aria-hidden="true"></span>
+              <span class="orby-magic-btn__inner">
+                <span class="orby-magic-btn__label">Cancel</span>
+                <span class="orby-magic-btn__arrow" aria-hidden="true"
+                  ><svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"
+                    ><path
+                      d="M3.5 8h9M9 4.5L12.5 8 9 11.5"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                      stroke-linecap="round"
+                      stroke-linejoin="round" /></svg
+                ></span>
+              </span>
+            </button>
             <span class="bug-report-submit-wrap" id="bugReportSubmitWrap">
-              <button type="submit" id="submitBugReport" class="accent-action-btn bug-report-modal-btn">Send</button>
+              <button
+                type="submit"
+                id="submitBugReport"
+                class="orby-magic-btn orby-magic-btn--on-dark orby-magic-btn--outline-dark bug-report-action-btn"
+              >
+                <span class="orby-magic-btn__ring" aria-hidden="true"></span>
+                <span class="orby-magic-btn__inner">
+                  <span class="orby-magic-btn__label">Send</span>
+                  <span class="orby-magic-btn__arrow" aria-hidden="true"
+                    ><svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"
+                      ><path
+                        d="M3.5 8h9M9 4.5L12.5 8 9 11.5"
+                        stroke="currentColor"
+                        stroke-width="1.75"
+                        stroke-linecap="round"
+                        stroke-linejoin="round" /></svg
+                  ></span>
+                </span>
+              </button>
             </span>
           </div>
         </form>
@@ -1000,16 +1107,24 @@
           <button
             type="button"
             id="orbyFullscreenPromptNo"
-            class="orby-pill-btn orby-pill-btn--ghost orby-pill-btn--xl"
+            class="orby-magic-btn orby-magic-btn--on-dark orby-magic-btn--outline-dark"
           >
-            Stay →
+            <span class="orby-magic-btn__ring" aria-hidden="true"></span>
+            <span class="orby-magic-btn__inner">
+              <span class="orby-magic-btn__label">Stay</span>
+              <span class="orby-magic-btn__arrow" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </span>
           </button>
           <button
             type="button"
             id="orbyFullscreenPromptYes"
-            class="orby-pill-btn orby-pill-btn--ghost orby-pill-btn--xl"
+            class="orby-magic-btn orby-magic-btn--on-dark orby-magic-btn--outline-dark"
           >
-            Go Home →
+            <span class="orby-magic-btn__ring" aria-hidden="true"></span>
+            <span class="orby-magic-btn__inner">
+              <span class="orby-magic-btn__label">Go Home</span>
+              <span class="orby-magic-btn__arrow" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </span>
           </button>
         </div>
       </div>
@@ -1021,9 +1136,13 @@
         <button
           type="button"
           id="bugReportThankYouOk"
-          class="orby-pill-btn orby-pill-btn--accent orby-pill-btn--xl"
+          class="orby-magic-btn orby-magic-btn--on-dark orby-magic-btn--outline-dark"
         >
-          Keep Orbing →
+          <span class="orby-magic-btn__ring" aria-hidden="true"></span>
+          <span class="orby-magic-btn__inner">
+            <span class="orby-magic-btn__label">Keep Orbing</span>
+            <span class="orby-magic-btn__arrow" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </span>
         </button>
       </div>
     </div>

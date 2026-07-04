@@ -94,10 +94,13 @@ export class CameraController {
     this._handheldQuat = new THREE.Quaternion();
     this.camera.fov = initialFov;
     this.camera.updateProjectionMatrix();
-    this.controls.update();
+    this._updateOrbitControls();
 
     this.currentTilt = 0;
     this._applyTilt();
+    /** When true, update() skips OrbitControls+tilt until orbit/damping moves again. */
+    this._orbitSolveLocked = true;
+    this._orbitInteractionActive = false;
 
     // Auto-orbit state
     this.autoOrbitMode = 'off'; // 'off', 'slow', 'fast'
@@ -196,11 +199,13 @@ export class CameraController {
   setWorldPosition(x, y, z) {
     if (this._isometricModeActive) return;
     this._cancelFocusAnimation();
+    this._unlockOrbitSolve();
     this._suppressPoseEvents = true;
     this.camera.position.set(x, y, z);
-    this.controls.update();
+    this._updateOrbitControls();
     this._applyTilt();
     this._suppressPoseEvents = false;
+    this._lockOrbitSolve();
     this._emitPoseChanged();
   }
 
@@ -222,16 +227,19 @@ export class CameraController {
       direction = offset.normalize();
     }
 
+    this._unlockOrbitSolve();
     this._suppressPoseEvents = true;
     this.camera.position.copy(target).add(direction.multiplyScalar(nextDistance));
-    this.controls.update();
+    this._updateOrbitControls();
     this._applyTilt();
     this._suppressPoseEvents = false;
+    this._lockOrbitSolve();
     this._emitPoseChanged();
   }
 
   resetWorldPose() {
     this._cancelFocusAnimation();
+    this._unlockOrbitSolve();
     this._suppressPoseEvents = true;
     this.controls.target.set(
       DEFAULT_CAMERA_TARGET.x,
@@ -243,20 +251,50 @@ export class CameraController {
       DEFAULT_CAMERA_POSITION.y,
       DEFAULT_CAMERA_POSITION.z,
     );
-    this.controls.update();
+    this._updateOrbitControls();
     this._applyTilt();
     this._suppressPoseEvents = false;
+    this._lockOrbitSolve();
     this._emitPoseChanged();
   }
 
   _bindOrbitPoseSync() {
     if (!this.controls) return;
-    const commitPose = () => {
+    this.controls.addEventListener('start', () => {
+      this._orbitInteractionActive = true;
+      this._unlockOrbitSolve();
+    });
+    this.controls.addEventListener('end', () => {
+      this._orbitInteractionActive = false;
       if (this._suppressPoseEvents || this._exportCameraDriveActive) return;
       if (this.autoOrbitMode !== 'off') return;
       this._emitPoseChanged({ persist: true });
-    };
-    this.controls.addEventListener('end', commitPose);
+    });
+  }
+
+  _unlockOrbitSolve() {
+    this._orbitSolveLocked = false;
+  }
+
+  _lockOrbitSolve() {
+    this._orbitSolveLocked = true;
+  }
+
+  /** Run OrbitControls.update + optional tilt; returns whether controls reported motion. */
+  _runOrbitSolveAndTilt() {
+    const changed = this._updateOrbitControls();
+    if (!this._isometricModeActive) {
+      this._applyTilt();
+    }
+    return changed;
+  }
+
+  _shouldRunOrbitSolve() {
+    if (!this._orbitSolveLocked) return true;
+    if (this._orbitInteractionActive) return true;
+    if (this.isFocusAnimating()) return true;
+    if (this.hasViewportInteraction()) return true;
+    return false;
   }
 
   /**
@@ -338,8 +376,10 @@ export class CameraController {
     this._isometricModeActive = false;
     this._isometricPanUnlocked = false;
     this._isometricRestoreSnapshot = null;
-    this.controls?.update?.();
+    this._unlockOrbitSolve();
+    this._updateOrbitControls();
     this._applyTilt();
+    this._lockOrbitSolve();
     this._emitPoseChanged();
   }
 
@@ -371,8 +411,10 @@ export class CameraController {
     if (this.controls.sphericalDelta) {
       this.controls.sphericalDelta.set(0, 0, 0);
     }
-    this.controls.update();
+    this._unlockOrbitSolve();
+    this._updateOrbitControls();
     this._lockIsometricOrbitPose();
+    this._lockOrbitSolve();
     this._emitPoseChanged();
   }
 
@@ -483,6 +525,20 @@ export class CameraController {
   }
 
   /**
+   * OrbitControls uses `camera.up` as the orbit pole; `_applyTilt()` rolls afterward.
+   * Reset to world Y before each update so spherical decompose matches tilt's neutral lookAt
+   * and static repaints (state/UI tweaks) do not re-solve orientation differently.
+   */
+  _prepareOrbitControlsUpdate() {
+    this.camera.up.set(0, 1, 0);
+  }
+
+  _updateOrbitControls() {
+    this._prepareOrbitControlsUpdate();
+    return this.controls.update();
+  }
+
+  /**
    * Apply tilt rotation to camera (called after OrbitControls updates)
    * Roll around the view axis using a local Z quaternion after a neutral lookAt —
    * avoids fragile pairing of custom camera.up with lookAt when values come from UI/state as strings.
@@ -538,6 +594,7 @@ export class CameraController {
 
   orbit(deltaAzimuth, deltaPolar) {
     if (!this.controls || this._isometricModeActive) return;
+    this._unlockOrbitSolve();
     if (Math.abs(deltaAzimuth) > 1e-4) {
       if (typeof this.controls.rotateLeft === 'function') {
         this.controls.rotateLeft(deltaAzimuth);
@@ -556,9 +613,12 @@ export class CameraController {
         this._applyOrbitFallback(0, deltaPolar);
       }
     }
-    this.controls.update();
+    this._updateOrbitControls();
     if (this.autoOrbitMode === 'off') {
       this._applyTilt();
+    }
+    if (!this.controls.enableDamping) {
+      this._lockOrbitSolve();
     }
   }
 
@@ -566,6 +626,7 @@ export class CameraController {
     if (!this.controls) return;
     if (this._isometricModeActive && !this._isometricPanUnlocked) return;
     if (Math.abs(deltaX) < 1e-5 && Math.abs(deltaY) < 1e-5) return;
+    this._unlockOrbitSolve();
     if (typeof this.controls.pan === 'function') {
       this.controls.pan(deltaX, deltaY);
     } else if (this.camera) {
@@ -582,14 +643,18 @@ export class CameraController {
         this.controls.target.add(this._panMove);
       }
     }
-    this.controls.update();
+    this._updateOrbitControls();
     if (this.autoOrbitMode === 'off') {
       this._applyTilt();
+    }
+    if (!this.controls.enableDamping) {
+      this._lockOrbitSolve();
     }
   }
 
   dolly(amount) {
     if (!this.controls || Math.abs(amount) < 1e-5) return;
+    this._unlockOrbitSolve();
     const scale = 1 + Math.min(Math.abs(amount), 1);
     if (typeof this.controls.dollyIn === 'function') {
       if (amount > 0) {
@@ -607,9 +672,12 @@ export class CameraController {
       this.camera.position.add(this._dollyOffset);
       this.camera.lookAt(target);
     }
-    this.controls.update();
+    this._updateOrbitControls();
     if (this.autoOrbitMode === 'off') {
       this._applyTilt();
+    }
+    if (!this.controls.enableDamping) {
+      this._lockOrbitSolve();
     }
   }
 
@@ -771,8 +839,10 @@ export class CameraController {
     if (this.controls.sphericalDelta) {
       this.controls.sphericalDelta.set(0, 0, 0);
     }
-    this.controls.update();
+    this._unlockOrbitSolve();
+    this._updateOrbitControls();
     this._applyTilt();
+    this._lockOrbitSolve();
     this._suppressPoseEvents = false;
     this._emitPoseChanged({ persist: true });
 
@@ -816,10 +886,11 @@ export class CameraController {
       this.controls.enableDamping = true;
     }
     this._preExportCameraControls = null;
-    this.controls?.update?.();
+    this._updateOrbitControls();
     if (this.autoOrbitMode === 'off') {
       this._applyTilt();
     }
+    this._lockOrbitSolve();
   }
 
   /** Lock orbit/pan/zoom while export preview is armed (when camera drive is not active). */
@@ -856,7 +927,8 @@ export class CameraController {
     }
     this._prePreviewViewportControls = null;
     this._previewViewportLockActive = false;
-    this.controls.update?.();
+    this._updateOrbitControls();
+    this._lockOrbitSolve();
   }
 
   isPreviewViewportLocked() {
@@ -1022,9 +1094,19 @@ export class CameraController {
     // Only update controls if auto-orbit is off (to prevent interference)
     // When auto-orbit is on, updateAutoOrbit sets pose then _applyTilt() there.
     if (this.autoOrbitMode === 'off') {
-      this.controls.update();
-      if (!this._isometricModeActive) {
-        this._applyTilt();
+      if (!this._shouldRunOrbitSolve()) return;
+
+      const changed = this._runOrbitSolveAndTilt();
+
+      if (
+        !this._orbitInteractionActive &&
+        !this.isFocusAnimating() &&
+        !this.hasViewportInteraction()
+      ) {
+        // OrbitControls.update() returns false once damping / inertia has settled.
+        this._orbitSolveLocked = !changed;
+      } else {
+        this._orbitSolveLocked = false;
       }
     }
   }
@@ -1076,10 +1158,12 @@ export class CameraController {
       const distance = (this.modelBounds.radius * 2.2 || 5) * 0.85;
       const direction = defaultModelViewDirection();
       this.camera.position.copy(adjustedCenter.clone().add(direction.multiplyScalar(distance)));
-      this.controls.update();
+      this._unlockOrbitSolve();
+      this._updateOrbitControls();
       if (this.autoOrbitMode === 'off') {
         this._applyTilt();
       }
+      this._lockOrbitSolve();
       this._emitPoseChanged();
     }
   }
@@ -1102,7 +1186,7 @@ export class CameraController {
       this.controls.enableRotate = rotate ?? true;
     }
     this.controls.enabled = true;
-    this.controls.update();
+    this._updateOrbitControls();
   }
 
   /**
@@ -1115,6 +1199,8 @@ export class CameraController {
     if (box.isEmpty()) return;
 
     this._cancelFocusAnimation();
+
+    this._unlockOrbitSolve();
 
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
@@ -1148,6 +1234,7 @@ export class CameraController {
         if (this.autoOrbitMode === 'off') {
           this._applyTilt();
         }
+        this._lockOrbitSolve();
         this._emitPoseChanged();
       },
     });
@@ -1219,14 +1306,16 @@ export class CameraController {
     }
 
     if (position) {
+      this._unlockOrbitSolve();
       this._suppressPoseEvents = true;
       this.camera.position.copy(position);
       this.controls.target.copy(target);
-      this.controls.update();
+      this._updateOrbitControls();
       if (this.autoOrbitMode === 'off') {
         this._applyTilt();
       }
       this._suppressPoseEvents = false;
+      this._lockOrbitSolve();
       this._emitPoseChanged();
     }
   }
@@ -1394,11 +1483,13 @@ export class CameraController {
     
     if (!point) return;
 
+    this._unlockOrbitSolve();
     this.controls.target.copy(point);
-    this.controls.update();
+    this._updateOrbitControls();
     if (this.autoOrbitMode === 'off') {
       this._applyTilt();
     }
+    this._lockOrbitSolve();
     this.altLeftTargetSet = true;
   }
 }

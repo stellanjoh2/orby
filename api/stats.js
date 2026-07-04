@@ -24,6 +24,8 @@ const ALLOWED_FORMATS = new Set([
   'fbx',
   'stl',
   'usd',
+  'usda',
+  'usdc',
   'usdz',
   'svg',
   'orby',

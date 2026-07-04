@@ -252,6 +252,23 @@ export class GlobalControls {
 
     document.addEventListener('keydown', (event) => {
       const target = event.target;
+      const key = event.key.toLowerCase();
+      const isShift = event.shiftKey;
+      const isCtrl = event.ctrlKey || event.metaKey;
+
+      // Undo — before shelf control early-returns (range/select keep focus after edits).
+      if (isCtrl && key === 'z' && !isShift) {
+        if (
+          (target.tagName === 'INPUT' && target.type !== 'range' && target.type !== 'color')
+          || target.tagName === 'TEXTAREA'
+          || target.isContentEditable
+        ) {
+          return;
+        }
+        event.preventDefault();
+        void window.orby?.undo?.();
+        return;
+      }
       
       if (
         (target.tagName === 'INPUT' && target.type !== 'range') ||
@@ -306,10 +323,6 @@ export class GlobalControls {
         this.eventBus.emit('export:movement-preview-stop', { silent: false });
         return;
       }
-
-      const key = event.key.toLowerCase();
-      const isShift = event.shiftKey;
-      const isCtrl = event.ctrlKey || event.metaKey;
 
       // Essential shortcuts
       if (key === 'f') {

@@ -88,7 +88,7 @@ import {
 import { arrayBufferToBase64, fileFromEmbeddedAsset } from '../utils/binaryAsset.js';
 
 /**
- * Object panel — Generate from Font (2D preview + extrude).
+ * Object panel — Type Creator (2D preview + extrude).
  */
 export class FontExtrudeUI {
   /**
@@ -152,12 +152,12 @@ export class FontExtrudeUI {
     block.innerHTML = `
       <div class="subsection" data-subsection="font-extrude">
         <div class="block-title has-toggle">
-          <span>Generate from Font</span>
+          <span>Type Creator</span>
           <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <label class="effect-toggle" data-tooltip="Show or hide font generator controls">
+            <label class="effect-toggle" data-tooltip="Show or hide Type Creator controls">
               <input type="checkbox" id="fontExtrudePanelOpen" />
               <span class="effect-indicator" aria-hidden="true"></span>
-              <span class="sr-only">Show Generate from Font</span>
+              <span class="sr-only">Show Type Creator</span>
             </label>
           </div>
         </div>
@@ -1283,7 +1283,7 @@ export class FontExtrudeUI {
     run(controller, model, scene);
   }
 
-  /** Post-reset side effects for Generate from Font subsection reset icons. */
+  /** Post-reset side effects for Type Creator subsection reset icons. */
   onSubsectionReset(resetType) {
     this.schedulePreview();
     switch (resetType) {

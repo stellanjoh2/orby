@@ -414,7 +414,7 @@ Export a `.orby` file with your full settings **and** embedded model — distinc
 Drop an SVG to extrude filled paths into 3D geometry. Per-color depth layers, surface presets, and GLB export. See [Support → SVG extrude](support/#svg-extrude).
 
 #### Font Extrude
-Type live 3D text via **Object → Generate from Font** — custom fonts, tracking, bevels, and reveal animations. Separate engine from SVG extrude.
+Type live 3D text via **Object → Type Creator** — custom fonts, tracking, bevels, and reveal animations. Separate engine from SVG extrude.
 
 #### Exports
 - **Still image** — PNG/JPEG at configurable resolution

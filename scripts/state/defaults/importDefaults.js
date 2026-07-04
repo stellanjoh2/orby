@@ -73,7 +73,7 @@ export function createImportDefaults() {
       constantSpeedSec: 2,
       /** 0–1 phase spread between adjacent glyphs (wave / sway). */
       constantSpread: 1,
-      /** Live editor text (Generate from Font). */
+      /** Live editor text (Type Creator). */
       sourceText: '',
       /** Wrap text on a circular arc before extruding (first line only). */
       circularWrapEnabled: false,

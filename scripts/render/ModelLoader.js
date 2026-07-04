@@ -4,7 +4,8 @@ import { MeshoptDecoder } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examp
 import { FBXLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/FBXLoader.js';
 import { OBJLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/OBJLoader.js';
 import { STLLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/STLLoader.js';
-import { USDZLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/USDZLoader.js';
+// Pin newer loader than core three@0.167 — USDZLoader there rejects binary USDC; USDLoader parses USDA + USDC + USDZ.
+import { USDLoader } from 'https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/loaders/USDLoader.js';
 import { SvgExtrudeImporter } from '../import/SvgExtrudeImporter.js';
 import { BvhImporter } from '../import/BvhImporter.js';
 import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
@@ -104,7 +105,7 @@ function unsupportedFormatMessage(ext) {
   return (
     `Unsupported file type (${label}). ` +
     `Orby opens 3D geometry in GLB, GLTF (single file or whole folder with textures), OBJ, FBX (drop the FBX plus texture PNGs in one folder — external FBX textures do not load from a single file alone), STL, BVH for motion-capture skeleton + animation, ` +
-    `USDZ / USD when the package uses a text USDA stage (binary USDC is not supported in the browser here), ` +
+    `USD / USDC / USDZ (experimental), ` +
     `and SVG for extruded logos. ` +
     `Raster images such as PNG, JPEG, or WebP are not imported as meshes—convert or export from your DCC to a supported 3D format first.`
   );
@@ -145,7 +146,7 @@ export class ModelLoader {
     this.fbxLoader = new FBXLoader();
     this.objLoader = new OBJLoader();
     this.stlLoader = new STLLoader();
-    this.usdLoader = new USDZLoader();
+    this.usdLoader = new USDLoader();
     this.svgExtrudeImporter = new SvgExtrudeImporter();
     this.bvhImporter = new BvhImporter();
   }
@@ -266,6 +267,8 @@ export class ModelLoader {
         return this.loadStl(file);
       case 'usdz':
       case 'usd':
+      case 'usdc':
+      case 'usda':
         return this.loadUsd(file);
       case 'svg':
         return this.loadSvg(file, options);
@@ -594,22 +597,17 @@ export class ModelLoader {
 
   async loadUsd(file) {
     const buffer = await this.fileReaders.buffer(file);
-    let object;
-    if (typeof this.usdLoader.parse === 'function') {
-      object = await this.usdLoader.parse(buffer);
-    } else {
-      const blobUrl = URL.createObjectURL(new Blob([buffer]));
+    const object = await new Promise((resolve, reject) => {
       try {
-        object = await this.usdLoader.loadAsync(blobUrl);
-      } finally {
-        URL.revokeObjectURL(blobUrl);
+        // USDLoader returns the group immediately but resolves onLoad after embedded textures finish.
+        this.usdLoader.parse(buffer, '', resolve, reject);
+      } catch (err) {
+        reject(err);
       }
-    }
-    // Three.js USDZLoader only supports text USDA / non-crate USD inside USDZ.
-    // Typical Apple / exporter USDZ uses binary USDC as the root — that yields an empty Group with no warning thrown.
+    });
     if (countMeshes(object) === 0) {
       throw new Error(
-        'This USDZ uses binary USD (USDC). The viewer only loads USDZ packages whose main stage is text USDA—a common exporter default is USDC, which shows up empty here. Prefer GLB/glTF, or convert with usdcat and repackage if you control the asset.',
+        'This USD file had no meshes the viewer could read. GLB/glTF is more reliable for web; lights, cameras, and some composition features may be skipped.',
       );
     }
     normalizeImportScale(object);

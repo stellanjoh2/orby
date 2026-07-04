@@ -59,9 +59,10 @@ export function orbyMagicButtonMonoLinkHtml(label, href, options = {}) {
  * @param {HTMLButtonElement | null} button
  * @param {string} label
  */
-export function setOrbyMagicButtonLabel(button, label) {
+export function setOrbyMagicButtonLabel(button, label, { sentenceCase = false } = {}) {
   if (!button) return;
-  const text = formatMarketingButtonLabel(label);
+  const raw = String(label ?? '').trim();
+  const text = sentenceCase ? formatMarketingButtonLabel(raw) : raw;
   const el = button.querySelector('.orby-magic-btn__label');
   if (el) el.textContent = text;
   else button.textContent = text;
@@ -149,4 +150,69 @@ export function orbyMagicButtonOnLimeHtml(label, options = {}) {
           <span class="orby-magic-btn__arrow" aria-hidden="true">${ORBY_MAGIC_BTN_ARROW_SVG}</span>
         </span>
       </button>`;
+}
+
+const ORBY_MAGIC_BTN_RING_HTML = '<span class="orby-magic-btn__ring" aria-hidden="true"></span>\n        ';
+const ORBY_MAGIC_BTN_INNER_OPEN =
+  '<span class="orby-magic-btn__inner">\n          <span class="orby-magic-btn__label">';
+const ORBY_MAGIC_BTN_INNER_CLOSE = `</span>
+          <span class="orby-magic-btn__arrow" aria-hidden="true">${ORBY_MAGIC_BTN_ARROW_SVG}</span>
+        </span>`;
+
+/**
+ * Flat inverted pills on dark scrims — mirror of `.orby-magic-btn--on-lime`, lime stroke + hover slide.
+ * @param {string} label
+ * @param {{ extraClass?: string, attrs?: string, variant?: 'solid' | 'outline' }} [options]
+ */
+export function orbyMagicButtonOnDarkHtml(label, options = {}) {
+  const extraClass = options.extraClass?.trim() || '';
+  const attrs = options.attrs?.trim() || '';
+  const variant = options.variant === 'solid' ? 'solid' : 'outline';
+  const classes = [
+    'orby-magic-btn',
+    'orby-magic-btn--on-dark',
+    variant === 'solid' ? 'orby-magic-btn--solid-dark' : 'orby-magic-btn--outline-dark',
+    extraClass,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const ring = variant === 'outline' ? ORBY_MAGIC_BTN_RING_HTML : '';
+  return `<button type="button" class="${classes}"${attrs ? ` ${attrs}` : ''}>
+        ${ring}${ORBY_MAGIC_BTN_INNER_OPEN}${label}${ORBY_MAGIC_BTN_INNER_CLOSE}
+      </button>`;
+}
+
+/**
+ * @param {HTMLButtonElement | null} button
+ * @param {'outline' | 'solid'} [variant]
+ */
+export function setOrbyMagicButtonOnDarkVariant(button, variant = 'outline') {
+  if (!button) return;
+  button.classList.remove(
+    'orby-magic-btn--on-dark',
+    'orby-magic-btn--outline-dark',
+    'orby-magic-btn--solid-dark',
+    'orby-magic-btn--dialog',
+    'orby-magic-btn--dialog-ghost',
+    'orby-magic-btn--dialog-accent',
+    'orby-magic-btn--on-lime',
+    'orby-magic-btn--solid-lime',
+    'orby-magic-btn--outline-lime',
+    'orby-pill-btn',
+    'orby-pill-btn--ghost',
+    'orby-pill-btn--accent',
+    'orby-pill-btn--xl',
+    'orby-pill-btn--normal',
+    'dropzone-btn',
+  );
+  button.classList.add('orby-magic-btn', 'orby-magic-btn--on-dark');
+  if (variant === 'solid') {
+    button.classList.add('orby-magic-btn--solid-dark');
+    button.querySelector('.orby-magic-btn__ring')?.remove();
+    return;
+  }
+  button.classList.add('orby-magic-btn--outline-dark');
+  if (!button.querySelector('.orby-magic-btn__ring')) {
+    button.insertAdjacentHTML('afterbegin', ORBY_MAGIC_BTN_RING_HTML);
+  }
 }

@@ -10,6 +10,8 @@ const ALLOWED_ASSET_FORMATS = new Set([
   'fbx',
   'stl',
   'usd',
+  'usda',
+  'usdc',
   'usdz',
   'svg',
   'orby',
