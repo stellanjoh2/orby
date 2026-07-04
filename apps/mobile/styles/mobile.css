@@ -129,6 +129,9 @@
   /* Frosted chrome — match desktop shelf / toast (styles.css --ui-frosted-*) */
   --ui-frosted-bg: rgba(8, 8, 8, 0.78);
   --ui-frosted-blur: 15px;
+  /* Neutral control fills — slider rails, toggle tracks (mirror styles.css) */
+  --ui-control-surface: rgba(255, 255, 255, 0.15);
+  --ui-control-surface-hover: rgba(255, 255, 255, 0.22);
   --orby-mobile-dock-frosted-bg: rgba(8, 8, 8, 0.48);
   --orby-mobile-dock-frosted-blur: 22px;
   /* Preset shelf fade — +20pp vs prior mix so sliders behind spheres read softer */
