@@ -16,11 +16,15 @@
  * @property {boolean} [enabled]
  * @property {number} [amount]   Magnitude of channel separation (0..0.02 typical)
  * @property {number} [blur]     Radial smear / streak length (0..1)
- * @property {number} [falloff]  Edge ramp exponent — higher = sharper center (0.5..3 typical)
+ * @property {number} [falloff]  Edge spread (0.5..3) — higher = more CA toward center
  * @property {AberrationQualityId | string} [quality] Blur sample count when smear is active
  * @property {number} [offset]   Legacy: combined with `strength` to derive `amount`
  * @property {number} [strength] Legacy: combined with `offset` to derive `amount`
  */
+
+/** Edge ramp slider range — stored value is UI-facing; shader gets {@link aberrationFalloffToShaderExponent}. */
+export const ABERRATION_FALLOFF_MIN = 0.5;
+export const ABERRATION_FALLOFF_MAX = 3;
 
 /** Blur streak sample range per quality tier (min at blur→0, max at blur→1). */
 export const ABERRATION_QUALITY_DEFAULT = /** @type {const} */ ('medium');
@@ -104,12 +108,28 @@ export function mergeAberrationSettings(settings) {
   if (typeof merged.falloff !== 'number' || Number.isNaN(merged.falloff)) {
     merged.falloff = defaultAberration.falloff;
   } else {
-    merged.falloff = Math.min(3, Math.max(0.5, merged.falloff));
+    merged.falloff = Math.min(
+      ABERRATION_FALLOFF_MAX,
+      Math.max(ABERRATION_FALLOFF_MIN, merged.falloff),
+    );
   }
   merged.quality = normalizeAberrationQualityId(
     typeof merged.quality === 'string' ? merged.quality : defaultAberration.quality,
   );
   return merged;
+}
+
+/**
+ * Map UI Edge slider value to the radial ramp exponent used in the shader.
+ * Higher slider = more dispersion toward center (lower pow exponent).
+ * @param {number} falloff
+ */
+export function aberrationFalloffToShaderExponent(falloff) {
+  const f = Math.min(
+    ABERRATION_FALLOFF_MAX,
+    Math.max(ABERRATION_FALLOFF_MIN, falloff),
+  );
+  return ABERRATION_FALLOFF_MIN + ABERRATION_FALLOFF_MAX - f;
 }
 
 const aberrationVertex = `
@@ -146,10 +166,19 @@ void main() {
   vec2 shift = (dirP * baseMag) / invAspect;
   vec2 shiftDir = dirP / invAspect;
 
-  int samples = blur < 0.002
-    ? 1
-    : int(mix(minBlurSamples, maxBlurSamples, clamp(blur, 0.0, 1.0)));
+  // Sharp split — baseline when blur is off.
+  vec3 sharp;
+  sharp.r = texture2D(tDiffuse, vUv + shift * 1.06).r;
+  sharp.g = texture2D(tDiffuse, vUv).g;
+  sharp.b = texture2D(tDiffuse, vUv - shift * 0.94).b;
+
+  if (blur < 0.002) {
+    gl_FragColor = vec4(sharp, 1.0);
+    return;
+  }
+
   float streak = blur * baseMag * 10.0;
+  int samples = int(mix(minBlurSamples, maxBlurSamples, clamp(blur, 0.0, 1.0)));
 
   float rAcc = 0.0;
   float gAcc = 0.0;
@@ -161,12 +190,20 @@ void main() {
     float u = samples > 1 ? (float(i) / float(samples - 1) - 0.5) * 2.0 : 0.0;
     vec2 smear = shiftDir * streak * u;
     rAcc += texture2D(tDiffuse, vUv + shift * 1.06 + smear).r;
-    gAcc += texture2D(tDiffuse, vUv + smear * 0.12).g;
+    gAcc += texture2D(tDiffuse, vUv).g;
     bAcc += texture2D(tDiffuse, vUv - shift * 0.94 - smear).b;
     wSum += 1.0;
   }
 
-  gl_FragColor = vec4(rAcc, gAcc, bAcc, 1.0) / wSum;
+  vec3 smeared = vec3(rAcc, gAcc, bAcc) / wSum;
+
+  // Smear taps can pull bloom halos from offset UVs — re-anchor luma to the sharp CA
+  // split so streak blur adds fringe without raising exposure or ghosting green.
+  float ySharp = dot(sharp, vec3(0.299, 0.587, 0.114));
+  float ySm = dot(smeared, vec3(0.299, 0.587, 0.114));
+  smeared = vec3(ySharp) + (smeared - vec3(ySm));
+
+  gl_FragColor = vec4(smeared, 1.0);
 }
 `;
 
@@ -212,7 +249,7 @@ export function applyChromaticAberrationToPass(pass, settings) {
   pass.enabled = true;
   pass.uniforms.amount.value = s.amount;
   pass.uniforms.blur.value = s.blur;
-  pass.uniforms.falloff.value = s.falloff;
+  pass.uniforms.falloff.value = aberrationFalloffToShaderExponent(s.falloff);
   pass.uniforms.minBlurSamples.value = tier.minBlurSamples;
   pass.uniforms.maxBlurSamples.value = tier.maxBlurSamples;
 }

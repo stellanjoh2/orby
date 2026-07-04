@@ -301,7 +301,6 @@ export function getCreativeLookPostFxUiBlocks(state) {
     mute('dof');
     mute('volumetric-scattering');
     mute('lens-dirt');
-    mute('aberration');
     mute('fisheye');
     mute('vignette');
     mute('color-tone');
@@ -404,6 +403,13 @@ export function applyCreativeLookPostFxUiBlocks(state, api) {
   api.setControlsDisabled(EXPOSURE_INPUTS, false);
   api.setControlsDisabled(['toggleGrain'], false);
   api.setControlsDisabled(['grainIntensity', 'grainScale'], !state?.grain?.enabled);
+  if (!blocked.has('toggleAberration')) {
+    api.setControlsDisabled(['toggleAberration'], false);
+    api.setControlsDisabled(
+      ['aberrationAmount', 'aberrationBlur', 'aberrationFalloff', 'aberrationQuality'],
+      !state?.aberration?.enabled,
+    );
+  }
 
   if (creativeLookPresetAllowsAmbientOcclusion(state.creativeLook?.preset)) {
     const aoOn = !!state?.ambientOcclusion?.enabled;

@@ -1190,9 +1190,8 @@ export class PostProcessingPipeline {
   }
 
   /**
-   * ASCII Art terminal mode — scene → luminance → hard glyphs → (optional bloom) → (optional grain) → grading → screen.
-   * Skips FXAA and chromatic aberration. Glyphs stay nearest-sampled;
-   * when bloom is on, composer buffers stay NearestFilter so glyphs stay 1:1 crisp.
+   * Flat-post (ASCII / pixel / dither) — scene → grid pass → (optional bloom) → (optional grain) → grading → (optional CA) → screen.
+   * Composer buffers stay NearestFilter until optional post (bloom, chromatic aberration) runs afterward.
    */
   pushCreativeLookAsciiPresentation() {
     if (this._creativeLookAsciiSnapshot) return;
@@ -1269,6 +1268,12 @@ export class PostProcessingPipeline {
       }
 
       if (CREATIVE_LOOK_GRAIN_PASS_KEYS.has(key)) {
+        pass.enabled = snap.enabled;
+        pass.renderToScreen = false;
+        continue;
+      }
+
+      if (key === 'aberrationPass') {
         pass.enabled = snap.enabled;
         pass.renderToScreen = false;
         continue;

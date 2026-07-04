@@ -42,6 +42,7 @@ import {
   getCreativeLookPresetSliderDefs,
 } from '../render/creativeLookPresetSliders.js';
 import {
+  normalizeCreativeLookSketchPatternScale,
   normalizeCreativeLookSketchRasterSize,
   normalizeCreativeLookSketchStrokeWidth,
   resolveCreativeLookSketchParams,
@@ -700,16 +701,19 @@ export class MeshControls {
             normalizeCreativeLookPreset(preset) === 'sketch'
             || normalizeCreativeLookPreset(preset) === 'sketch-colour'
           ) {
-            const fb = Number.isFinite(Number(state.patternScale))
-              ? Number(state.patternScale)
-              : 1;
+            const fb = normalizeCreativeLookSketchPatternScale(
+              Number.isFinite(Number(state.patternScale)) ? Number(state.patternScale) : 1,
+            );
+            const prevSketch = state.presetParams?.sketch ?? {};
+            const fromSketchFamily =
+              normalizeCreativeLookPreset(prev) === 'sketch'
+              || normalizeCreativeLookPreset(prev) === 'sketch-colour';
+            const sketch = fromSketchFamily
+              ? resolveCreativeLookSketchParams({ sketch: prevSketch }, fb)
+              : { strokeWidth: fb, rasterSize: fb };
             this.stateStore.set('creativeLook.presetParams', {
               ...(state.presetParams ?? {}),
-              sketch: {
-                strokeWidth: fb,
-                rasterSize: fb,
-                ...(state.presetParams?.sketch ?? {}),
-              },
+              sketch,
             });
           }
           if (uvCheckerWasOn) {

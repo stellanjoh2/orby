@@ -120,12 +120,24 @@ export function isCreativeLookSketchRasterActive(rasterSize) {
 export function resolveCreativeLookSketchParams(presetParams = {}, patternScaleFallback = 1) {
   const sk = presetParams?.sketch ?? {};
   const fb = normalizeCreativeLookSketchPatternScale(patternScaleFallback);
+  const rawStroke = Number(sk.strokeWidth);
+  const rawRaster = Number(sk.rasterSize);
+  // Legacy / corrupted saves may store { strokeWidth: 0, rasterSize: 0 } — treat as unset, not off.
+  const bothZero =
+    Number.isFinite(rawStroke) && rawStroke === 0
+    && Number.isFinite(rawRaster) && rawRaster === 0;
+  if (bothZero) {
+    return {
+      strokeWidth: normalizeCreativeLookSketchStrokeWidth(fb),
+      rasterSize: normalizeCreativeLookSketchRasterSize(fb),
+    };
+  }
   return {
     strokeWidth: normalizeCreativeLookSketchStrokeWidth(
-      Number.isFinite(Number(sk.strokeWidth)) ? Number(sk.strokeWidth) : fb,
+      Number.isFinite(rawStroke) ? rawStroke : fb,
     ),
     rasterSize: normalizeCreativeLookSketchRasterSize(
-      Number.isFinite(Number(sk.rasterSize)) ? Number(sk.rasterSize) : fb,
+      Number.isFinite(rawRaster) ? rawRaster : fb,
     ),
   };
 }

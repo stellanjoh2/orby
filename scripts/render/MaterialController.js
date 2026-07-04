@@ -103,6 +103,7 @@ import {
   creativeSketchMergeFactor,
   creativeSketchVertexDrift,
   creativeSketchWobbleScale,
+  normalizeCreativeLookSketchPatternScale,
   resolveCreativeLookSketchParams,
 } from './creativeLookSketchArt.js';
 import { normalizeCreativeLookPresetParams } from './creativeLookPresetSliders.js';
@@ -3862,12 +3863,12 @@ export class MaterialController {
       nextPreset !== prevPreset &&
       patch.presetParams?.sketch === undefined
     ) {
-      const fb = this.creativeLookSettings.patternScale;
-      mergedPresetParams.sketch = {
-        strokeWidth: fb,
-        rasterSize: fb,
-        ...mergedPresetParams.sketch,
-      };
+      const fb = normalizeCreativeLookSketchPatternScale(this.creativeLookSettings.patternScale);
+      const prevSketch = mergedPresetParams.sketch ?? {};
+      const fromSketchFamily = prevPreset === 'sketch' || prevPreset === 'sketch-colour';
+      mergedPresetParams.sketch = fromSketchFamily
+        ? resolveCreativeLookSketchParams({ sketch: prevSketch }, fb)
+        : { strokeWidth: fb, rasterSize: fb };
     }
     this.creativeLookSettings.presetParams = normalizeCreativeLookPresetParams(
       nextPreset,

@@ -530,6 +530,7 @@ export class MobileCreativeLookPost {
         filmPass.enabled = true;
         grainTintPass.enabled = true;
       }
+      if (aberrationActive) aberrationPass.enabled = true;
     } else if (this._presentationMode === 'watercolour') {
       this._restoreComposerFilter();
       const pass = this._getPass('watercolour');
