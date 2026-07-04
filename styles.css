@@ -4372,12 +4372,14 @@ html:not(.mobile-landing) .shelf .hdri-icon--upload .hdri-icon__check {
 
 /* Scene / Object accent buttons — card-to-card gutter rhythm */
 html:not(.mobile-landing) .shelf .scene-controls,
-html:not(.mobile-landing) .shelf .export-controls:not(:has(> .export-option-group)),
+html:not(.mobile-landing) .shelf .scene-controls,
+html:not(.mobile-landing) .shelf .export-controls:not(:has(> .export-option-group, > .export-section-title)),
 html:not(.mobile-landing) .shelf .map-slots-action-row {
   gap: var(--shelf-accent-action-gap);
 }
 
-html:not(.mobile-landing) .shelf .export-controls:has(> .export-option-group) {
+html:not(.mobile-landing) .shelf .export-controls:has(> .export-option-group, > .export-section-title),
+html:not(.mobile-landing) .shelf .export-controls:has(> .panel-block-divider) {
   gap: var(--shelf-section-gap);
 }
 
@@ -7665,11 +7667,16 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   word-break: break-word;
 }
 
-.stats-block .mesh-info-actions {
-  margin-top: 1rem;
+/* Object Info — compact scroll placeholder when collapsed; full paint when foldout animates open */
+.stats-block:has(.effect-foldout--collapsed) {
+  contain-intrinsic-size: auto 4.5rem;
 }
 
-.stats-block .mesh-info-actions .hide-object-btn {
+.stats-block:has(.effect-foldout--expanded) {
+  content-visibility: visible;
+}
+
+.scene-controls .hide-object-btn {
   width: 100%;
 }
 
@@ -8196,11 +8203,12 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   gap: var(--shelf-section-gap);
 }
 
-.export-controls:not(:has(> .export-option-group)) {
+.export-controls:not(:has(> .export-option-group, > .export-section-title)) {
   gap: var(--shelf-accent-action-gap);
 }
 
-.export-controls:has(> .export-option-group) {
+.export-controls:has(> .export-option-group, > .export-section-title),
+.export-controls:has(> .panel-block-divider) {
   gap: var(--shelf-section-gap);
 }
 

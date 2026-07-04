@@ -80,6 +80,8 @@ export function createMaterialDefaults() {
       normalView: false,
       /** @type {'geometry' | 'tangent'} */
       normalViewMode: 'geometry',
+      /** Object Info foldout — UI-only disclosure for file/geometry stats. */
+      objectInfoOpen: false,
       /** Imported meshes: recompute vertex normals with a crease angle (see Object → Advanced). */
       stlSmoothShading: false,
       stlSmoothingAngle: 40,

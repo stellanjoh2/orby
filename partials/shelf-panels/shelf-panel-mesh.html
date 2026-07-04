@@ -1360,36 +1360,34 @@
               </div>
 
               <div class="panel-block stats-block">
-                <div class="block-title">Mesh Info</div>
-                <dl id="meshStats">
-                  <div><dt>Asset Name</dt><dd>—</dd></div>
-                  <div><dt>Generator</dt><dd>—</dd></div>
-                  <div><dt>Version</dt><dd>—</dd></div>
-                  <div><dt>Copyright</dt><dd>—</dd></div>
-                  <div><dt>Triangles</dt><dd>—</dd></div>
-                  <div><dt>Vertices</dt><dd>—</dd></div>
-                  <div><dt>Materials</dt><dd>—</dd></div>
-                  <div><dt>Textures</dt><dd>—</dd></div>
-                  <div><dt>File Size</dt><dd>—</dd></div>
-                  <div><dt>Bounds</dt><dd>—</dd></div>
-                </dl>
-                <div class="export-controls mesh-info-actions">
-                  <button
-                    type="button"
-                    id="hideObjectBtn"
-                    class="accent-action-btn topology-warnings-scan hide-object-btn"
-                    data-tooltip="Hide the loaded mesh from the viewport and exports"
-                    aria-pressed="false"
-                    disabled
+                <div class="subsection" data-subsection="object-info">
+                  <div class="block-title has-toggle">
+                    <span data-tooltip="File metadata and geometry statistics">Object Info</span>
+                    <label class="effect-toggle" data-tooltip="Show object file and geometry details">
+                      <input type="checkbox" id="toggleObjectInfo" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show object info</span>
+                    </label>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                    data-effect-foldout="object-info"
+                    aria-hidden="true"
                   >
-                    <i class="fa-solid fa-eye" aria-hidden="true"></i>
-                    Hide Object
-                  </button>
+                    <dl id="meshStats">
+                      <div><dt>Asset Name</dt><dd>—</dd></div>
+                      <div><dt>Generator</dt><dd>—</dd></div>
+                      <div><dt>Version</dt><dd>—</dd></div>
+                      <div><dt>Copyright</dt><dd>—</dd></div>
+                      <div><dt>Triangles</dt><dd>—</dd></div>
+                      <div><dt>Vertices</dt><dd>—</dd></div>
+                      <div><dt>Materials</dt><dd>—</dd></div>
+                      <div><dt>Textures</dt><dd>—</dd></div>
+                      <div><dt>File Size</dt><dd>—</dd></div>
+                      <div><dt>Bounds</dt><dd>—</dd></div>
+                    </dl>
+                  </div>
                 </div>
-                <button id="loadMeshButton" class="accent-action-btn" style="margin-top: 1rem;" data-tooltip="Load a new 3D model file">
-                  <i class="fa-solid fa-wand-magic-sparkles"></i>
-                  Import New Mesh
-                </button>
               </div>
 
               <div class="panel-block" id="animationBlock">
@@ -1553,33 +1551,53 @@
               <div class="panel-block">
                 <div class="block-title">Scene</div>
                 <div class="export-controls">
-                  <button id="resetMeshSettings" class="accent-action-btn" data-tooltip="Reset all object settings to defaults">
-                    <i class="fa-solid fa-rotate-left"></i>
-                    Reset Object
-              </button>
-                  <button class="reset-scene accent-action-btn" data-tooltip="Clear the workspace and restore a blank canvas">
-                    <i class="fa-solid fa-arrow-left"></i>
-                    Reset Scene
-                  </button>
-                  <button class="copy-scene-settings accent-action-btn" data-tooltip="Copy all scene settings to clipboard">
-                    <i class="fa-solid fa-copy"></i>
-                    Copy Scene Settings
-              </button>
-                  <button class="load-scene-settings accent-action-btn" data-tooltip="Paste scene settings from clipboard into a dialog">
-                    <i class="fa-solid fa-upload"></i>
-                    Paste Scene Settings
-                  </button>
-                  <button class="save-orby-scene accent-action-btn" data-tooltip="Save entire scene and model as .orby file">
-                    <i class="fa-solid fa-floppy-disk"></i>
-                    Save .orby Scene
-                  </button>
-                  <button class="load-orby-scene accent-action-btn" data-tooltip="Load entire scene and model from .orby file">
-                    <i class="fa-solid fa-file-import"></i>
-                    Load .orby Scene
-                  </button>
+                  <div class="scene-controls">
+                    <button id="loadMeshButton" class="accent-action-btn" data-tooltip="Load a new 3D model file">
+                      <i class="fa-solid fa-wand-magic-sparkles"></i>
+                      Import Object
+                    </button>
+                    <button
+                      type="button"
+                      id="hideObjectBtn"
+                      class="accent-action-btn hide-object-btn"
+                      data-tooltip="Hide the loaded object from the viewport and exports"
+                      aria-pressed="false"
+                      disabled
+                    >
+                      <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                      Hide Object
+                    </button>
+                    <button id="resetMeshSettings" class="accent-action-btn" data-tooltip="Reset all object settings to defaults">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      Reset Object
+                    </button>
+                  </div>
+                  <div class="panel-block-divider" aria-hidden="true"></div>
+                  <div class="scene-controls">
+                    <button class="reset-scene accent-action-btn" data-tooltip="Clear the workspace and restore a blank canvas">
+                      <i class="fa-solid fa-arrow-left"></i>
+                      Reset Scene
+                    </button>
+                    <button class="copy-scene-settings accent-action-btn" data-tooltip="Copy all scene settings to clipboard">
+                      <i class="fa-solid fa-copy"></i>
+                      Copy Scene Settings
+                    </button>
+                    <button class="load-scene-settings accent-action-btn" data-tooltip="Paste scene settings from clipboard into a dialog">
+                      <i class="fa-solid fa-upload"></i>
+                      Paste Scene Settings
+                    </button>
+                    <button class="save-orby-scene accent-action-btn" data-tooltip="Save entire scene and model as .orby file">
+                      <i class="fa-solid fa-floppy-disk"></i>
+                      Save .orby Scene
+                    </button>
+                    <button class="load-orby-scene accent-action-btn" data-tooltip="Load entire scene and model from .orby file">
+                      <i class="fa-solid fa-file-import"></i>
+                      Load .orby Scene
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.909 · 2026-07-04 17:05:09 UTC</div>
+              <div class="info-version-tag">v0.5.911 · 2026-07-04 17:30:33 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>

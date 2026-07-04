@@ -531,6 +531,7 @@ export class UIManager {
       stlSmoothShading: q('#stlSmoothShading'),
       stlSmoothingAngle: q('#stlSmoothingAngle'),
       uvChecker: q('#uvChecker'),
+      toggleObjectInfo: q('#toggleObjectInfo'),
       uvCheckerStyle: q('#uvCheckerStyle'),
       uvCheckerScale: q('#uvCheckerScale'),
       advancedAlphaControls: q('#advancedAlphaControls'),

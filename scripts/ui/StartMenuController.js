@@ -324,7 +324,7 @@ export class StartMenuController {
       this.fileInput.value = '';
     });
 
-    // "Import New Mesh" button in sidebar
+    // "Import Object" button in sidebar
     if (this.loadMeshButton) {
       this.loadMeshButton.addEventListener('click', () => {
         this.fileInput.click();

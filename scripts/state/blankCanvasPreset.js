@@ -57,6 +57,7 @@ export function createBlankCanvasPreset() {
       uvCheckerStyle: 'orby',
       normalView: false,
       normalViewMode: 'geometry',
+      objectInfoOpen: false,
       stlSmoothShading: false,
       stlSmoothingAngle: 40,
     },

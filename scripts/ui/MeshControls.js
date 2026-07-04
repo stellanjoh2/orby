@@ -250,6 +250,11 @@ export class MeshControls {
     if (this.ui.inputs.stlSmoothingAngle) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.stlSmoothingAngle);
     }
+    this.ui.inputs.toggleObjectInfo?.addEventListener('change', (event) => {
+      const open = !!event.target.checked;
+      this.ui.setEffectFoldoutOpen('object-info', open);
+      this.stateStore.set('advanced.objectInfoOpen', open);
+    });
     this.ui.inputs.uvChecker?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
       const normalViewWasOn = enabled && !!this.stateStore.getState().advanced?.normalView;
@@ -1595,6 +1600,9 @@ export class MeshControls {
         this.helpers.updateValueLabel('stlSmoothingAngle', angle, 'angle');
       }
       this.ui.setControlDisabled('stlSmoothingAngle', !stlControlsVisible || !smoothOn);
+    }
+    if (this.ui.inputs.toggleObjectInfo) {
+      this.ui.inputs.toggleObjectInfo.checked = !!state.advanced?.objectInfoOpen;
     }
     if (this.ui.inputs.uvChecker) {
       this.ui.inputs.uvChecker.checked = !!state.advanced?.uvChecker;

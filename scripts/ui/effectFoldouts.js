@@ -79,6 +79,7 @@ export function applyMeshFoldouts(state, setOpen) {
   setOpen('wireframe-settings', wireframeActive);
   setOpen('uv-checker', !!state.advanced?.uvChecker);
   setOpen('normal-view', !!state.advanced?.normalView);
+  setOpen('object-info', !!state.advanced?.objectInfoOpen);
   setOpen(
     'svg-color-override',
     !!state.svgExtrude?.enabled && !!state.svgExtrude?.colorOverride,
@@ -120,6 +121,7 @@ export function applyToggleSectionMute(state, setMuted) {
     !state.creativeLookSectionOpen && !state.creativeLook?.enabled,
   );
   setMuted('grid', !state.groundWire);
+  setMuted('object-info', !state.advanced?.objectInfoOpen);
   setMuted('font-extrude', !state.fontExtrude?.panelOpen);
   setMuted('shape-library', !state.shapeLibrary?.panelOpen);
 
