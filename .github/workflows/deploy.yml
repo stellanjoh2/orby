@@ -14,11 +14,12 @@ on:
     branches:
       - main
 
-# One Pages deployment at a time; cancel an older run when a newer commit lands
-# (avoids 400: "in progress deployment" from deploy-pages).
+# Queue Pages deploys instead of cancelling mid-flight. Cancelling during
+# deploy-pages status polling leaves an orphaned deployment_in_progress and
+# surfaces "Deployment failed, try again later." Rapid pushes rely on deploy retries.
 concurrency:
   group: pages-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -28,8 +29,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,12 +60,37 @@ jobs:
   deploy:
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deploy1.outputs.page_url || steps.deploy2.outputs.page_url || steps.deploy3.outputs.page_url }}
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     needs: build
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - name: Deploy to GitHub Pages (1/3)
+        id: deploy1
         uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Wait before deploy retry
+        if: steps.deploy1.outcome == 'failure'
+        run: sleep 45
+
+      - name: Deploy to GitHub Pages (2/3)
+        if: steps.deploy1.outcome == 'failure'
+        id: deploy2
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Wait before deploy retry
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        run: sleep 45
+
+      - name: Deploy to GitHub Pages (3/3)
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        id: deploy3
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Verify deploy succeeded
+        if: always() && steps.deploy1.outcome != 'success' && steps.deploy2.outcome != 'success' && steps.deploy3.outcome != 'success'
+        run: |
+          echo "GitHub Pages deploy failed after 3 attempts."
+          exit 1
