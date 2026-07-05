@@ -27,6 +27,8 @@ export class RenderLoopController {
     this._stateStoreUnsub = null;
     this._inTick = false;
     this._queuedWake = false;
+    /** @type {Array<{ target: EventTarget, type: string, listener: (event?: Event) => void }>} */
+    this._wakeBindings = [];
 
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', () => {
@@ -250,6 +252,7 @@ export class RenderLoopController {
     this._active = false;
     this._clearHistogramWake();
     this._cancelFrame();
+    this.detachWakeSources();
   }
 
   /** Schedule at least one frame while the studio loop is armed. */
@@ -270,16 +273,16 @@ export class RenderLoopController {
     const wake = () => this.requestFrame();
 
     const controls = this.scene.cameraController?.getControls?.();
-    controls?.addEventListener('start', wake);
-    controls?.addEventListener('change', wake);
+    this._bindWakeListener(controls, 'start', wake);
+    this._bindWakeListener(controls, 'change', wake);
 
     for (const transformControl of [
       this.scene.transformControlsTranslate,
       this.scene.transformControlsRotate,
       this.scene.transformControlsScale,
     ]) {
-      transformControl?.addEventListener('change', wake);
-      transformControl?.addEventListener('dragging-changed', (event) => {
+      this._bindWakeListener(transformControl, 'change', wake);
+      this._bindWakeListener(transformControl, 'dragging-changed', (event) => {
         if (event.value) wake();
       });
     }
@@ -287,9 +290,19 @@ export class RenderLoopController {
     this._stateStoreUnsub = this.scene.stateStore?.subscribe?.(() => wake());
   }
 
+  _bindWakeListener(target, type, listener) {
+    if (!target?.addEventListener) return;
+    target.addEventListener(type, listener);
+    this._wakeBindings.push({ target, type, listener });
+  }
+
   detachWakeSources() {
     this._stateStoreUnsub?.();
     this._stateStoreUnsub = null;
+    for (const { target, type, listener } of this._wakeBindings) {
+      target.removeEventListener(type, listener);
+    }
+    this._wakeBindings.length = 0;
     this._wakeSourcesAttached = false;
   }
 

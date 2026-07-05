@@ -1,3 +1,5 @@
+import { bootstrapStudio, teardownStudioGpu } from './StudioBootstrap.js';
+
 /**
  * Deferred WebGL studio boot / full GPU teardown for the marketing home page.
  * The studio only exists while a session is active (model loaded); returning home shuts it down.
@@ -9,7 +11,7 @@
 export async function ensureStudioActive(scene) {
   if (scene.isStudioReady) return;
   if (!scene._studioBootPromise) {
-    scene._studioBootPromise = scene._bootstrapStudio().finally(() => {
+    scene._studioBootPromise = bootstrapStudio(scene).finally(() => {
       scene._studioBootPromise = null;
     });
   }
@@ -28,5 +30,5 @@ export async function shutdownStudio(scene) {
     }
   }
   if (!scene.isStudioReady) return;
-  scene._teardownStudioGpu();
+  teardownStudioGpu(scene);
 }

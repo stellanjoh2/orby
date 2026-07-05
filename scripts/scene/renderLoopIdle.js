@@ -78,7 +78,9 @@ export function needsContinuousFrames(scene, ctx) {
 
   if (scene._viewportPresentationFrames > 0) return true;
 
-  return orbitControlsNeedFrame(scene.cameraController?.getControls?.());
+  if (scene.cameraController?.needsContinuousOrbitFrames?.()) return true;
+
+  return false;
 }
 
 /**

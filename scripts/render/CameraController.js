@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { expandBox3FromArmature } from '../import/bvhArmatureBounds.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/controls/OrbitControls.js';
+import { orbitControlsNeedFrame } from '../scene/renderLoopIdle.js';
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 import { setCameraOrbitFromAngles } from '../camera/isometricView.js';
 import {
@@ -164,6 +165,19 @@ export class CameraController {
       this.altRightDragging ||
       this.altLeftDragging
     );
+  }
+
+  /**
+   * Keep the idle render loop alive during orbit drag, damping settle, and focus tweens.
+   */
+  needsContinuousOrbitFrames() {
+    if (!this.controls?.enabled) return false;
+    if (this._exportCameraDriveActive || this._previewViewportLockActive) return false;
+    if (this._orbitInteractionActive) return true;
+    if (!this._orbitSolveLocked) return true;
+    if (this.isFocusAnimating()) return true;
+    if (this.hasViewportInteraction()) return true;
+    return orbitControlsNeedFrame(this.controls);
   }
 
   _wakeRender() {

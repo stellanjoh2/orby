@@ -4,6 +4,53 @@ import * as THREE from 'three';
  * @typedef {{ modelDelta: THREE.Vector3, rootDelta: THREE.Vector3 }} CenterPivotDelta
  */
 
+/** World-space lift from the studio floor grid for generated font meshes. */
+export const FONT_STUDIO_GRID_CLEARANCE = 0.04;
+
+/**
+ * Move generated font geometry so its block is centered on X/Z and sits above the grid.
+ * Unlike {@link centerModelGeometryOnRoot}, the bbox bottom — not center — lands at `gridClearance`.
+ *
+ * @param {THREE.Object3D} modelRoot
+ * @param {THREE.Object3D} model
+ * @param {{ gridClearance?: number }} [options]
+ * @returns {CenterPivotDelta | null}
+ */
+export function centerFontModelGeometryOnRoot(modelRoot, model, options = {}) {
+  if (!modelRoot || !model) return null;
+
+  const gridClearance = Number.isFinite(options.gridClearance)
+    ? options.gridClearance
+    : FONT_STUDIO_GRID_CLEARANCE;
+
+  model.updateMatrixWorld(true);
+  modelRoot.updateMatrixWorld(true);
+
+  const box = new THREE.Box3().setFromObject(model);
+  if (box.isEmpty()) return null;
+
+  const modelBefore = model.position.clone();
+  const centerWorldBefore = box.getCenter(new THREE.Vector3());
+  const minWorldBefore = box.min.clone();
+  const centerInRoot = modelRoot.worldToLocal(centerWorldBefore.clone());
+  const minInRoot = modelRoot.worldToLocal(minWorldBefore.clone());
+
+  const offsetInRoot = new THREE.Vector3(
+    centerInRoot.x,
+    minInRoot.y - gridClearance,
+    centerInRoot.z,
+  );
+
+  model.position.sub(offsetInRoot);
+  model.updateMatrixWorld(true);
+  modelRoot.updateMatrixWorld(true);
+
+  return {
+    modelDelta: model.position.clone().sub(modelBefore),
+    rootDelta: new THREE.Vector3(),
+  };
+}
+
 /**
  * Move the loaded model so its bounding-box center sits on {@link modelRoot}'s origin.
  * Does not move {@link modelRoot} — use on import so the mesh lands at the studio origin.

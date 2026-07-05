@@ -67,7 +67,7 @@ export class ModelLifecycleManager {
 
   clearModel() {
     const s = this.scene;
-    if (!s.modelRoot) return;
+    if (!s?.modelRoot) return;
     const fbxDefaults = s.stateStore.getDefaults().fbxMapSlots;
     s.stateStore.set('fbxMapSlots', { ...fbxDefaults, enabled: false, activeMaterial: '' });
     s._fbxImportBundle = null;
@@ -261,6 +261,9 @@ export class ModelLifecycleManager {
     if (wasFirstLoad && !s._skipGroundGridAutoAlignOnNextModelLoad) {
       if (isFontModel) {
         s._pendingFontGroundAlignAfterTypography = true;
+        if (!s._skipCameraFlightOnNextModelLoad) {
+          s._pendingFontCameraFocusAfterTypography = true;
+        }
       } else {
         s._cancelGroundGridBottomAlignAnimation();
         s._alignGroundAndGridToCurrentModelBottom();
@@ -388,12 +391,16 @@ export class ModelLifecycleManager {
           fadeExposure();
         }
 
-        if (wasFirstLoad && !s._skipCameraFlightOnNextModelLoad) {
-          s.cameraController?.focusOnObjectAnimated(s.currentModel, 1.0);
+        if (wasFirstLoad) {
+          if (!s._skipCameraFlightOnNextModelLoad && !isFontModel) {
+            s.cameraController?.focusOnObjectAnimated(s.currentModel, 1.0);
+          }
+          if (!isFontModel) {
+            s._skipCameraFlightOnNextModelLoad = false;
+          }
         } else if (s.currentModel) {
           s.cameraController?.refreshModelBounds(s.currentModel);
         }
-        s._skipCameraFlightOnNextModelLoad = false;
         this._scaleInMeshOnSpawn(object, { animateSpawn: wasFirstLoad });
       });
     });
@@ -409,6 +416,16 @@ export class ModelLifecycleManager {
     });
     s._pendingFontGroundAlignAfterTypography = false;
     s.fontTextRevealController?.reconcileTypographyToMaster?.(object);
+
+    if (s._pendingFontCameraFocusAfterTypography) {
+      s._pendingFontCameraFocusAfterTypography = false;
+      if (!s._skipCameraFlightOnNextModelLoad) {
+        s.cameraController?.focusOnObjectAnimated(s.currentModel, 1.0);
+      }
+      s._skipCameraFlightOnNextModelLoad = false;
+    } else if (s.currentModel === object) {
+      s.cameraController?.refreshModelBounds(s.currentModel);
+    }
   }
 
   /** Surface must compile on visible lit materials — same rebuild path as a shading toggle. */
