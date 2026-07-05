@@ -91,6 +91,7 @@ const RESET_DIRTY_PATHS = {
   'anamorphic-bloom': ['lensFlare.anamorphicBloom'],
   'lens-dirt': ['lensDirt'],
   grain: ['grain'],
+  'ambient-dust': ['ambientDust'],
   aberration: ['aberration'],
   'color-checker': ['colorChecker'],
   'ambient-occlusion': ['ambientOcclusion'],
@@ -216,6 +217,7 @@ const RENDER_TAB_RESET_PATHS = [
   ...RESET_DIRTY_PATHS.dof,
   ...RESET_DIRTY_PATHS.bloom,
   ...RESET_DIRTY_PATHS.grain,
+  ...RESET_DIRTY_PATHS['ambient-dust'],
   ...RESET_DIRTY_PATHS.aberration,
   ...RESET_DIRTY_PATHS['ambient-occlusion'],
   ...RESET_DIRTY_PATHS.fresnel,
@@ -280,6 +282,7 @@ const BLOCK_RESET_TOASTS = {
   'anamorphic-bloom': 'Anamorphic bloom reset',
   'lens-dirt': 'Lens dirt reset',
   grain: 'Grain reset',
+  'ambient-dust': 'Ambient dust reset',
   aberration: 'Chromatic aberration reset',
   'color-checker': 'ColorChecker reset',
   'ambient-occlusion': 'Ambient occlusion reset',
@@ -768,6 +771,11 @@ export class ResetControls {
       );
       this.eventBus.emit('render:grain', defaults.grain);
       this.ui.setEffectControlsDisabled(['grainIntensity', 'grainScale'], !defaults.grain.enabled);
+      this.eventBus.emit('render:ambient-dust', defaults.ambientDust);
+      this.ui.setEffectControlsDisabled(
+        ['ambientDustAmount', 'ambientDustScale', 'ambientDustColor'],
+        !defaults.ambientDust.enabled,
+      );
       this.eventBus.emit('render:aberration', defaults.aberration);
       this.ui.setEffectControlsDisabled(
         ['aberrationAmount', 'aberrationBlur', 'aberrationFalloff', 'aberrationQuality'],
@@ -1210,6 +1218,16 @@ export class ResetControls {
             });
             this.eventBus.emit('render:grain', defaults.grain);
             this.ui.setEffectControlsDisabled(['grainIntensity', 'grainScale'], !defaults.grain.enabled);
+            this.ui.syncUIFromState();
+            break;
+
+          case 'ambient-dust':
+            this.stateStore.resetSlice(RESET_DIRTY_PATHS['ambient-dust']);
+            this.eventBus.emit('render:ambient-dust', defaults.ambientDust);
+            this.ui.setEffectControlsDisabled(
+              ['ambientDustAmount', 'ambientDustScale', 'ambientDustColor'],
+              !defaults.ambientDust.enabled,
+            );
             this.ui.syncUIFromState();
             break;
             

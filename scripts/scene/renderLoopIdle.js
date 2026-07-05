@@ -61,6 +61,7 @@ export function needsContinuousFrames(scene, ctx) {
 
   if (ctx.creativeLookEnabled) return true;
   if (ctx.grainActive && !ctx.panelsShelfScrolling) return true;
+  if (ctx.ambientDustActive && !ctx.panelsShelfScrolling) return true;
 
   if (toggleScaleAnimActive(scene._ccToggleCtx)) return true;
   if (toggleScaleAnimActive(scene._baseToggleCtx)) return true;
@@ -95,6 +96,8 @@ export function buildRenderLoopFrameContext(scene) {
       !scene.unlitMode,
     grainActive:
       !!state.grain?.enabled && !!scene.postPipeline?.grainTintPass?.enabled,
+    ambientDustActive:
+      !!state.ambientDust?.enabled && (scene.ambientDustController?.mesh?.count ?? 0) > 0,
     creativeLookEnabled: !!scene.materialController?.creativeLookSettings?.enabled,
     colorCheckerActive:
       !!scene.colorCheckerRoot || toggleScaleAnimActive(scene._ccToggleCtx),

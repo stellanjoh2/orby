@@ -338,6 +338,12 @@ export function createBlankCanvasPreset() {
       scale: 1,
       color: '#ffffff',
     },
+    ambientDust: {
+      enabled: false,
+      amount: 70,
+      scale: 0.04,
+      color: '#b9fff4',
+    },
     aberration: {
       enabled: false,
       amount: 0.0006,

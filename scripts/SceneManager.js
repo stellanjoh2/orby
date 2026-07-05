@@ -103,6 +103,7 @@ import { ensureAscii4FontAtlasLoaded } from './render/creativeLookAscii4Art.js';
 import { LensFlareController } from './render/LensFlareController.js';
 import { keyLightParamsFromLensFlare } from './render/lensFlareKeyLightSync.js';
 import { GodRaysController } from './render/GodRaysController.js';
+import { AmbientDustController } from './render/AmbientDustController.js';
 import { AutoExposureController } from './render/AutoExposureController.js';
 import { TransformController } from './render/TransformController.js';
 import { LensDirtController } from './render/LensDirtController.js';
@@ -843,6 +844,15 @@ export class SceneManager {
     this.godRaysController.init(initialState);
     this.godRaysController.setHdriEnabled(this.hdriEnabled);
 
+    this.ambientDustController = new AmbientDustController({
+      scene: this.scene,
+      stateStore: this.stateStore,
+      getCamera: () => this.camera,
+      getOrbitTarget: () => this.cameraController?.controls?.target,
+      getModelBounds: () => this.cameraController?.getModelBounds?.(),
+    });
+    this.ambientDustController.init(initialState);
+
     this.dofAutofocus = new DofAutofocusController({
       getCamera: () => this.camera,
       getCurrentModel: () => this.currentModel,
@@ -973,6 +983,8 @@ export class SceneManager {
     this.lensFlareController = null;
     this.godRaysController?.dispose?.();
     this.godRaysController = null;
+    this.ambientDustController?.dispose?.();
+    this.ambientDustController = null;
     this.lensDirtController?.dispose?.();
     this.lensDirtController = null;
     this.autoExposureController?.dispose?.();
@@ -3641,6 +3653,15 @@ export class SceneManager {
     this._syncShadowModesHdriReceiver();
   }
 
+  updateAmbientDust(settings) {
+    const payload = settings ?? this.stateStore.getState().ambientDust;
+    const wasEnabled = !!this.ambientDustController?.settings?.enabled;
+    this.ambientDustController?.updateSettings(payload);
+    if (payload?.enabled && !wasEnabled) {
+      this.ambientDustController?.reseedVolumeFromScene?.();
+    }
+  }
+
   _syncShadowModesHdriReceiver() {
     const bg = this.backgroundController;
     if (!bg) return;
@@ -4165,6 +4186,7 @@ export class SceneManager {
     this.currentModel.updateMatrixWorld(true);
     this.modelRoot.updateMatrixWorld(true);
     this.cameraController?.refreshModelBounds(this.currentModel);
+    this.ambientDustController?.reseedVolumeFromScene?.();
     this.updateWireframeOverlayTransforms();
     this.updateUvCheckerOverlayTransforms();
     this.updateNormalViewOverlayTransforms();

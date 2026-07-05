@@ -182,6 +182,13 @@ export class RenderLoopController {
         },
       },
       {
+        id: 'ambient-dust',
+        when: (ctx) => ctx.ambientDustActive,
+        run: (_delta, s) => {
+          s.ambientDustController?.update(s.clock.elapsedTime, s.camera);
+        },
+      },
+      {
         id: 'wireframe-overlay',
         when: (ctx) => ctx.wireframeOverlayActive,
         run: (_delta, s) => {
