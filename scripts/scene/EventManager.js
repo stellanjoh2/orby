@@ -1,8 +1,7 @@
-import { resolveRenderQualityTier } from '../constants.js';
-import { isOrbySceneFile } from '../import/dispatchImportFile.js';
-import { handoffFileToMobileAppIfLanding } from '../orbyMobileHandoff.js';
 import { registerSceneManifestHandlers } from '../state/controlManifestCore.js';
 import { SCENE_CONTROL_MANIFEST } from '../state/sceneControlManifest.js';
+import { isOrbySceneFile } from '../import/dispatchImportFile.js';
+import { handoffFileToMobileAppIfLanding } from '../orbyMobileHandoff.js';
 
 /**
  * EventManager - Handles all eventBus event listeners for SceneManager
@@ -24,24 +23,6 @@ export class EventManager {
       s.ui.showToast(result.message, 3200, { notification: false });
     }
     return result;
-  }
-
-  /**
-   * Show/hide a transform gizmo and attach/detach from model root.
-   * @param {*} s - SceneManager instance (`register` shorthand)
-   * @param {*} control - TransformControls instance or null
-   * @param {boolean} enabled
-   */
-  setTransformWidgetEnabled(s, control, enabled) {
-    if (!control) return;
-    const objectHidden = !!s.stateStore?.getState()?.objectHidden;
-    const show = enabled && !objectHidden;
-    control.visible = show;
-    if (show && s.currentModel && s.modelRoot) {
-      control.attach(s.modelRoot);
-    } else if (!enabled) {
-      control.detach();
-    }
   }
 
   /**
@@ -79,33 +60,6 @@ export class EventManager {
     });
     */
 
-    eventBus.on('mesh:fbx-map-slot', (payload) => {
-      void s.applyFbxMapSlot(payload);
-    });
-    eventBus.on('mesh:fbx-map-clear', (payload) => {
-      s.clearFbxMapSlot(payload);
-    });
-    eventBus.on('mesh:fbx-material-tuning', (payload) => {
-      const key = payload?.materialKey ?? '';
-      const patch = payload?.patch ?? {};
-      s.setFbxMaterialTuning(key, patch);
-    });
-    eventBus.on('mesh:fbx-apply-tuning-all', (payload) => {
-      const key = payload?.materialKey ?? '';
-      s.applyFbxTuningToAllMaterials(key);
-    });
-    eventBus.on('mesh:fbx-rescan-folder', () => {
-      void s.rescanFbxMapSlotTextures();
-    });
-    eventBus.on('mesh:fbx-restore-tuning', () => {
-      s.materialController?.applyFbxMapSlotsTuningFromState?.();
-      s.eventBus.emit('scene:fbx-tuning-changed');
-    });
-    eventBus.on('mesh:fbx-active-material', (payload) => {
-      const key = payload?.materialKey ?? payload;
-      s.setFbxActiveMaterial(typeof key === 'string' ? key : '');
-    });
-
     eventBus.on('mesh:creative-look', () => {
       const cl = s.stateStore.getState().creativeLook ?? {
         enabled: false,
@@ -119,39 +73,8 @@ export class EventManager {
       };
       void s.applyCreativeLookFromState(cl, { skipStateStore: true });
     });
-    eventBus.on('mesh:creative-look-live', () => {
-      s.materialController?.syncCreativeLookLiveFromStore?.();
-    });
-    eventBus.on('mesh:reset-transform', () => {
-      s.transformController?.setRotationY(0);
-    });
-
-    // Transform widget visibility
-    eventBus.on('mesh:move-widget-enabled', (enabled) => {
-      this.setTransformWidgetEnabled(s, s.transformControlsTranslate, enabled);
-    });
-    eventBus.on('mesh:rotate-widget-enabled', (enabled) => {
-      this.setTransformWidgetEnabled(s, s.transformControlsRotate, enabled);
-    });
-    eventBus.on('mesh:scale-widget-enabled', (enabled) => {
-      this.setTransformWidgetEnabled(s, s.transformControlsScale, enabled);
-    });
 
     // Camera events
-    eventBus.on('camera:fov', () => {
-      s.syncPerspectiveCameraFovAndLens();
-    });
-    eventBus.on('camera:fisheye', () => {
-      s.syncPerspectiveCameraFovAndLens();
-    });
-    eventBus.on('camera:focus', () => {
-      if (s.currentModel) {
-        s.cameraController?.focusOnObjectAnimated(s.currentModel, 1.0);
-      }
-    });
-    eventBus.on('camera:reset', () => {
-      s.cameraController?.resetWorldPose?.();
-    });
     eventBus.on('camera:pose-changed', (pose) => {
       if (!pose?.position) return;
       s.ui?.renderControls?.syncCameraWorldPose?.(pose);
@@ -206,57 +129,6 @@ export class EventManager {
       }
     });
 
-    // Render/Post-processing events (complex / one-off — manifest handles slice settings)
-    eventBus.on('dof:reset-smooth-focus', (focus) => {
-      s.dofAutofocus?.resetSmoothFocus?.(focus);
-    });
-    eventBus.on('render:anti-aliasing', (value) => {
-      if (s.fxaaPass) {
-        const state = s.stateStore.getState();
-        const tier = resolveRenderQualityTier(state.renderQuality);
-        s.fxaaPass.enabled = !tier.forceFxaaOff && value === 'fxaa';
-      }
-    });
-    eventBus.on('render:apply-performance', () => {
-      s.applyRenderQualitySettings();
-    });
-    eventBus.on('camera:composition-grid', (payload) => {
-      let enabled;
-      let animate = false;
-      if (
-        payload &&
-        typeof payload === 'object' &&
-        !Array.isArray(payload) &&
-        Object.prototype.hasOwnProperty.call(payload, 'enabled')
-      ) {
-        enabled = !!payload.enabled;
-        animate = !!payload.animate;
-      } else {
-        enabled = !!payload;
-      }
-      s.setCompositionGridOverlayVisible(enabled, { animate });
-    });
-    eventBus.on('camera:composition-portrait-crop-guide', (enabled) => {
-      const gridOn = !!s.stateStore?.getState?.()?.camera?.compositionGridEnabled;
-      s.setCompositionPortraitCropGuideVisible(!!enabled && gridOn);
-    });
-    eventBus.on('camera:cinematic-letterbox-219', (payload) => {
-      let enabled;
-      let animate = false;
-      if (
-        payload &&
-        typeof payload === 'object' &&
-        !Array.isArray(payload) &&
-        Object.prototype.hasOwnProperty.call(payload, 'enabled')
-      ) {
-        enabled = !!payload.enabled;
-        animate = !!payload.animate;
-      } else {
-        enabled = !!payload;
-      }
-      s.setCinematicLetterbox219Visible(enabled, { animate });
-    });
-
     // Lights events
     eventBus.on('lights:update', ({ lightId, property, value }) => {
       if (
@@ -288,19 +160,6 @@ export class EventManager {
     });
     eventBus.on('lights:gobo-texture', (textureId) => {
       void s.setGoboTexture(textureId);
-    });
-
-    // Scene/Background events
-    eventBus.on('scene:background-image', (config) => {
-      s.backgroundImageController?.setConfig(config);
-      if (!config?.asset?.dataBase64) {
-        s.backgroundImageController?.setImage(null);
-      }
-    });
-    eventBus.on('scene:exposure', (value) => {
-      s.autoExposureController?.setManualExposure(value);
-      s.ui?.updateExposureDisplay?.(value);
-      s.lensDirtController?.updateExposureFactor();
     });
 
     // File loading events (.orby scenes are restored via SceneSettingsManager)
@@ -349,21 +208,6 @@ export class EventManager {
       eventBus.emit('scene:current-file', { file: s.currentFile || null });
     });
 
-    // Animation events
-    eventBus.on('animation:toggle', () => s.animationController.togglePlayback());
-    eventBus.on('animation:clip-mode', (mode) => {
-      s.animationController.setClipPlaybackMode(mode);
-      s.stateStore.set('animation.clipPlaybackMode', mode === 'cycle' ? 'cycle' : 'loop');
-    });
-    eventBus.on('animation:display-fps', (fps) => {
-      const next = s.ui.syncAnimationDisplayFps(fps);
-      s.stateStore.set('animation.displayFps', next);
-    });
-    eventBus.on('animation:time-reference', (enabled) => {
-      s.ui.syncAnimationTimeReference(!!enabled);
-      s.stateStore.set('animation.timeReferenceEnabled', !!enabled);
-    });
-
     // Export events
     eventBus.on('scene:batch-apply-start', () => {
       s._suppressModeChangeToasts += 1;
@@ -407,12 +251,6 @@ export class EventManager {
         void s.applyStateSnapshot(s.stateStore.getState());
       }
       s._refreshImportSmoothingUi();
-    });
-    eventBus.on('scene:color-checker', () => {
-      s.applyColorCheckerFromState(s.stateStore.getState());
-    });
-    eventBus.on('scene:color-checker-reference-shading', () => {
-      s.applyColorCheckerReferenceShading();
     });
   }
 

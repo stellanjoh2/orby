@@ -19,7 +19,7 @@
     "preview": "python3 -m http.server 8000 --bind 0.0.0.0 -d dist",
     "setup-hooks": "node scripts/setup-git-hooks.mjs",
     "prepare": "node scripts/setup-git-hooks.mjs || true",
-    "test": "node --test scripts/stitchIndexHtml.test.mjs scripts/render/capture/*.test.mjs scripts/render/drawingBufferSize.test.mjs scripts/render/importPhysicalGlassPresentation.test.mjs scripts/render/creativeLookPhysicalTransmission.test.mjs scripts/import/fontCircularGeometryNormalize.test.mjs scripts/scene/fontTextTrackingAnimation.test.mjs scripts/scene/fontTextConstantTypes.test.mjs",
+    "test": "node --test scripts/stitchIndexHtml.test.mjs scripts/render/capture/*.test.mjs scripts/render/drawingBufferSize.test.mjs scripts/render/importPhysicalGlassPresentation.test.mjs scripts/render/creativeLookPhysicalTransmission.test.mjs scripts/render/AnimationController.exportDrive.test.mjs scripts/render/mapInspectChannelMaterial.test.mjs scripts/import/fontCircularGeometryNormalize.test.mjs scripts/scene/fontTextTrackingAnimation.test.mjs scripts/scene/fontTextConstantTypes.test.mjs",
     "test:e2e:dimension": "playwright test e2e/export-dimension-spot-checks.spec.mjs",
     "test:all": "npm test && npm run test:e2e:dimension"
   },

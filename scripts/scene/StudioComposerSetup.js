@@ -96,9 +96,9 @@ export function setupStudioComposer(scene) {
             time: scene.materialController?.getCreativeLookAnimationTime?.() ?? 0,
           });
         }
-        prepareArtisticCreativeLookForCapture({}, scene._creativeLookCaptureDeps());
+        prepareArtisticCreativeLookForCapture({}, scene.creativeLookSceneSync?.captureDeps());
         if (isCreativeLookOpticsPostActive(scene.stateStore.getState())) {
-          scene._prepareCreativeLookOpticsFrameUniforms();
+          scene.creativeLookSceneSync?.prepareOpticsFrameUniforms();
         }
         if (isCreativeLookAscii4PostActive(scene.stateStore.getState())) {
           scene.postPipeline?.updateCreativeLookAscii?.({
@@ -142,7 +142,7 @@ export function setupStudioComposer(scene) {
         );
       },
       getRenderState: () => scene.stateStore.peekState(),
-      creativeLookCaptureDeps: scene._creativeLookCaptureDeps(),
+      creativeLookCaptureDeps: scene.creativeLookSceneSync?.captureDeps(),
     });
     scene.imageExporter.getHdriRotationDegrees = () =>
       scene.hdriRotation ?? scene.stateStore.getState().hdriRotation ?? 0;
@@ -185,9 +185,9 @@ export function setupStudioComposer(scene) {
             time: scene.materialController?.getCreativeLookAnimationTime?.() ?? 0,
           });
         }
-        prepareArtisticCreativeLookForCapture({}, scene._creativeLookCaptureDeps());
+        prepareArtisticCreativeLookForCapture({}, scene.creativeLookSceneSync?.captureDeps());
         if (isCreativeLookOpticsPostActive(scene.stateStore.getState())) {
-          scene._prepareCreativeLookOpticsFrameUniforms();
+          scene.creativeLookSceneSync?.prepareOpticsFrameUniforms();
         }
         if (isCreativeLookAscii4PostActive(scene.stateStore.getState())) {
           scene.postPipeline?.updateCreativeLookAscii?.({
@@ -290,7 +290,7 @@ export function setupStudioComposer(scene) {
         return parts.join(' · ');
       },
       handleResize: () => scene.handleResize(),
-      creativeLookCaptureDeps: scene._creativeLookCaptureDeps(),
+      creativeLookCaptureDeps: scene.creativeLookSceneSync?.captureDeps(),
     });
 
     scene.exportMovementPreview = new ExportMovementPreview({

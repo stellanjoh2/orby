@@ -19,7 +19,7 @@
                 </p>
                 <div class="export-controls">
                   <div class="export-option-group">
-                    <label class="export-label">Format</label>
+                    <span class="export-label">Format</span>
                     <div class="export-button-group export-button-group--triple">
                       <button type="button" data-export-image-format="png" class="export-option-btn active" data-tooltip="Lossless PNG with optional transparency">.PNG</button>
                       <button type="button" data-export-image-format="jpeg" class="export-option-btn" data-tooltip="Smaller JPEG — no transparency">.JPEG</button>
@@ -27,7 +27,7 @@
                     </div>
                   </div>
                   <div id="exportImageTransparentSettings" class="export-option-group">
-                    <label class="export-label">Transparent</label>
+                    <span class="export-label">Transparent</span>
                     <div class="export-button-group">
                       <button type="button" data-export-transparent="false" class="export-option-btn" data-tooltip="Export with solid background">NO</button>
                       <button type="button" data-export-transparent="true" class="export-option-btn active" data-tooltip="Export with transparent background">YES</button>
@@ -35,7 +35,7 @@
                   </div>
                   <div id="exportImageTransparentFraming" class="export-image-transparent-framing is-muted">
                     <div class="export-option-group">
-                      <label class="export-label">Framing</label>
+                      <span class="export-label">Framing</span>
                       <div class="export-button-group">
                         <button type="button" data-export-transparent-framing="crop" class="export-option-btn active" data-tooltip="Trim empty pixels around the mesh — best for stickers and compositing">CROP TO ASSET</button>
                         <button type="button" data-export-transparent-framing="full" class="export-option-btn" data-tooltip="Keep the viewport canvas with transparent margins — best for overlays and motion graphics">FULL FRAME</button>
@@ -43,7 +43,7 @@
                     </div>
                   </div>
                   <div class="export-option-group">
-                    <label class="export-label">Size</label>
+                    <span class="export-label">Size</span>
                     <div class="export-button-group">
                       <button data-export-size="1" class="export-option-btn" data-tooltip="Export at 1× resolution">1X</button>
                       <button data-export-size="2" class="export-option-btn active" data-tooltip="Export at 2× resolution (higher quality)">2X</button>
@@ -146,19 +146,19 @@
                     <div class="export-button-group">
                       <button type="button" data-video-movement="turntable" class="export-option-btn active" data-tooltip="Rotate the mesh in place over the export length">TURNTABLE</button>
                     </div>
-                    <label class="export-label">Laps</label>
+                    <span class="export-label">Laps</span>
                     <div class="export-button-group export-button-group--triple">
                       <button type="button" data-video-object-spins="0" class="export-option-btn" data-tooltip="No full 360° mesh rotation — use arc below for partial turns">0</button>
                       <button type="button" data-video-object-spins="1" class="export-option-btn active" data-tooltip="One full mesh rotation over the export length">1</button>
                       <button type="button" data-video-object-spins="2" class="export-option-btn" data-tooltip="Two full mesh rotations over the same duration">2</button>
                     </div>
-                    <label class="export-label">Arc</label>
+                    <span class="export-label">Arc</span>
                     <div id="exportObjectArcGroup" class="export-button-group export-button-group--triple">
                       <button type="button" data-video-object-arc="22.5" class="export-option-btn" data-tooltip="Partial 22.5° mesh rotation when laps is 0">22.5°</button>
                       <button type="button" data-video-object-arc="45" class="export-option-btn" data-tooltip="Partial 45° mesh rotation when laps is 0">45°</button>
                       <button type="button" data-video-object-arc="90" class="export-option-btn" data-tooltip="Partial 90° mesh rotation when laps is 0">90°</button>
                     </div>
-                    <label class="export-label">Direction</label>
+                    <span class="export-label">Direction</span>
                     <div class="export-button-group">
                       <button type="button" data-video-object-direction="reverse" class="export-option-btn" data-tooltip="Opposite mesh rotation direction">REVERSE</button>
                       <button type="button" data-video-object-direction="forward" class="export-option-btn active" data-tooltip="Default mesh rotation direction">FORWARD</button>
@@ -170,19 +170,19 @@
                     <div class="export-button-group">
                       <button type="button" data-video-movement="orbit" class="export-option-btn" data-tooltip="Orbit around your current target over the export length">ORBIT</button>
                     </div>
-                    <label class="export-label">Orbit laps</label>
+                    <span class="export-label">Orbit laps</span>
                     <div class="export-button-group export-button-group--triple">
                       <button type="button" data-video-camera-spins="0" class="export-option-btn" data-tooltip="No full 360° camera orbit — use arc below for partial moves">0</button>
                       <button type="button" data-video-camera-spins="1" class="export-option-btn active" data-tooltip="One full camera orbit over the export length">1</button>
                       <button type="button" data-video-camera-spins="2" class="export-option-btn" data-tooltip="Two full camera orbits over the same duration">2</button>
                     </div>
-                    <label class="export-label">Orbit arc</label>
+                    <span class="export-label">Orbit arc</span>
                     <div id="exportCameraArcGroup" class="export-button-group export-button-group--triple">
                       <button type="button" data-video-camera-arc="22.5" class="export-option-btn" data-tooltip="Partial 22.5° camera orbit when orbit laps is 0">22.5°</button>
                       <button type="button" data-video-camera-arc="45" class="export-option-btn" data-tooltip="Partial 45° camera orbit when orbit laps is 0">45°</button>
                       <button type="button" data-video-camera-arc="90" class="export-option-btn" data-tooltip="Partial 90° camera orbit when orbit laps is 0">90°</button>
                     </div>
-                    <label class="export-label">Orbit direction</label>
+                    <span class="export-label">Orbit direction</span>
                     <div class="export-button-group">
                       <button type="button" data-video-camera-direction="reverse" class="export-option-btn" data-tooltip="Opposite camera orbit direction">REVERSE</button>
                       <button type="button" data-video-camera-direction="forward" class="export-option-btn active" data-tooltip="Default camera orbit direction">FORWARD</button>
@@ -316,7 +316,7 @@
                   <div class="panel-block-divider" aria-hidden="true"></div>
                   <div class="block-title export-section-title">Output</div>
                   <div class="export-option-group">
-                    <label class="export-label">Format</label>
+                    <span class="export-label">Format</span>
                     <div class="export-button-group">
                       <button data-video-format="mp4" class="export-option-btn active" data-tooltip="Encoded .MP4 export">.MP4</button>
                       <button data-video-format="png" class="export-option-btn" data-tooltip="Numbered PNG sequence">.PNG</button>
@@ -324,7 +324,7 @@
                   </div>
                   <div id="exportPngTransparentSettings" class="export-png-transparent is-muted">
                     <div class="export-option-group">
-                      <label class="export-label">Transparent</label>
+                      <span class="export-label">Transparent</span>
                       <div class="export-button-group">
                         <button type="button" data-video-mov-transparent="false" class="export-option-btn active" disabled data-tooltip="Solid background">NO</button>
                         <button type="button" data-video-mov-transparent="true" class="export-option-btn is-disabled" disabled data-tooltip="Transparent PNG sequence for compositing">YES</button>
@@ -333,7 +333,7 @@
                   </div>
                   <div id="exportVideoTransparentFraming" class="export-video-transparent-framing is-muted">
                     <div class="export-option-group">
-                      <label class="export-label">Framing</label>
+                      <span class="export-label">Framing</span>
                       <div class="export-button-group">
                         <button type="button" data-export-transparent-framing="crop" class="export-option-btn active" data-tooltip="Trim empty pixels around the mesh — best for stickers and compositing">CROP TO ASSET</button>
                         <button type="button" data-export-transparent-framing="full" class="export-option-btn" data-tooltip="Keep the export canvas with transparent margins — best for overlays and motion graphics">FULL FRAME</button>
@@ -342,7 +342,7 @@
                   </div>
                   <div id="exportPngFolderSettings" class="export-png-folder is-muted">
                     <div class="export-option-group">
-                      <label class="export-label">Output folder</label>
+                      <span class="export-label">Output folder</span>
                       <div class="export-path-row">
                         <button type="button" id="exportPngFolderChoose" class="export-option-btn export-path-choose" data-tooltip="Choose a folder — frames write directly to disk (Chrome / Edge; Safari and Firefox use ZIP)">Choose…</button>
                         <span id="exportPngFolderLabel" class="export-path-label">No folder — downloads as ZIP</span>
@@ -351,7 +351,7 @@
                   </div>
                   <div id="exportMp4Settings" class="export-video-foldout export-video-foldout--borderless">
                     <div class="export-option-group">
-                      <label class="export-label">Quality</label>
+                      <span class="export-label">Quality</span>
                       <div class="export-button-group export-button-group--triple">
                         <button data-video-mp4-quality="low" class="export-option-btn" data-tooltip="Smaller file, lower quality">LOW</button>
                         <button data-video-mp4-quality="medium" class="export-option-btn active" data-tooltip="Balanced quality and size">MEDIUM</button>
@@ -360,7 +360,7 @@
                     </div>
                   </div>
                   <div id="exportVideoLengthGroup" class="export-option-group">
-                    <label class="export-label">Length</label>
+                    <span class="export-label">Length</span>
                     <div class="export-button-group export-button-group--triple">
                       <button data-video-duration="5" class="export-option-btn active" data-tooltip="5 second export duration">5s</button>
                       <button data-video-duration="10" class="export-option-btn" data-tooltip="10 second export duration">10s</button>
@@ -369,7 +369,7 @@
                     <span id="exportVideoLengthClipHint" class="export-length-clip-hint" hidden></span>
                   </div>
                   <div class="export-option-group">
-                    <label class="export-label">FPS</label>
+                    <span class="export-label">FPS</span>
                     <div class="export-button-group export-button-group--triple">
                       <button data-video-fps="24" class="export-option-btn" data-tooltip="Cinematic motion">24</button>
                       <button data-video-fps="30" class="export-option-btn active" data-tooltip="Smoother standard video">30</button>
@@ -377,7 +377,7 @@
                     </div>
                   </div>
                   <div class="export-option-group">
-                    <label class="export-label">Resolution</label>
+                    <span class="export-label">Resolution</span>
                     <div class="export-button-group export-button-group--triple">
                       <button data-video-resolution="1080p" class="export-option-btn active" data-tooltip="1920 × 1080">1080p</button>
                       <button data-video-resolution="1440p" class="export-option-btn" data-tooltip="2560 × 1440">1440p</button>
@@ -432,12 +432,12 @@
                 >
                 <div class="export-controls">
                   <div class="export-option-group">
-                    <label class="export-label">Logotype</label>
+                    <span class="export-label">Logotype</span>
                     <div class="export-button-group">
                       <button type="button" data-watermark-logo="orby" class="export-option-btn active" data-tooltip="Use the Orby mark">Orby</button>
                       <button type="button" id="watermarkCustomBtn" data-watermark-logo="custom" class="export-option-btn watermark-custom-btn" data-tooltip="Upload your own SVG logotype">Custom</button>
                     </div>
-                    <input type="file" id="watermarkCustomFile" class="sr-only" accept=".svg,image/svg+xml" />
+                    <input type="file" id="watermarkCustomFile" name="watermarkCustomFile" class="sr-only" accept=".svg,image/svg+xml" aria-label="Custom watermark SVG file" />
                   </div>
                   <label class="slider-line">
                     <span data-tooltip="Scale the logotype up or down">Logotype Scale</span>
@@ -449,7 +449,7 @@
                     <input type="color" id="watermarkLogoColor" class="color-chip" value="#c4ff00" />
                   </label>
                   <div class="export-option-group">
-                    <label class="export-label">Placement</label>
+                    <span class="export-label">Placement</span>
                     <div class="export-button-group">
                       <button type="button" data-watermark-placement="left" class="export-option-btn active" data-tooltip="Logotype bottom-left, credit bottom-right">LEFT</button>
                       <button type="button" data-watermark-placement="right" class="export-option-btn" data-tooltip="Logotype bottom-right, credit bottom-left">RIGHT</button>

@@ -1,10 +1,20 @@
 import * as THREE from 'three';
 
-const VERTEX = `
+const VERTEX = /* glsl */ `
+#include <common>
+#include <uv_pars_vertex>
+#include <morphtarget_pars_vertex>
+#include <skinning_pars_vertex>
+
 varying vec2 vMapUv;
+
 void main() {
+  #include <uv_vertex>
+  #include <begin_vertex>
+  #include <morphtarget_vertex>
+  #include <skinning_vertex>
   vMapUv = uv;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
 }
 `;
 
@@ -23,11 +33,11 @@ void main() {
  * Unlit grayscale preview of one channel from a packed ORM map (R=AO, G=roughness, B=metallic).
  * @param {import('three').Texture} texture
  * @param {'r' | 'g' | 'b'} channel
- * @param {{ side?: number, transparent?: boolean, opacity?: number }} [opts]
+ * @param {{ side?: number, transparent?: boolean, opacity?: number, skinning?: boolean, morphTargets?: boolean }} [opts]
  */
 export function createMapChannelPreviewMaterial(texture, channel, opts = {}) {
   const channelIndex = channel === 'r' ? 0 : channel === 'g' ? 1 : 2;
-  return new THREE.ShaderMaterial({
+  const material = new THREE.ShaderMaterial({
     uniforms: {
       map: { value: texture },
       channel: { value: channelIndex },
@@ -39,4 +49,11 @@ export function createMapChannelPreviewMaterial(texture, channel, opts = {}) {
     opacity: Number.isFinite(opts.opacity) ? opts.opacity : 1,
     depthWrite: !opts.transparent,
   });
+  if (opts.skinning) {
+    material.skinning = true;
+  }
+  if (opts.morphTargets) {
+    material.morphTargets = true;
+  }
+  return material;
 }

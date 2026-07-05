@@ -880,7 +880,7 @@
         </p>
         <form id="bugReportForm">
           <div class="bug-report-field">
-            <label id="bugReportCategoryLabel" for="bugReportCategoryTrigger">Category</label>
+            <span id="bugReportCategoryLabel" class="bug-report-field-label">Category</span>
             <div class="bug-report-combo" id="bugReportCategoryCombo">
               <input type="hidden" name="category" id="bugReportCategory" value="rendering" required />
               <button
@@ -935,7 +935,7 @@
             </div>
           </div>
           <div class="bug-report-field bug-report-field-severity">
-            <label id="bugReportSeverityLabel" for="bugReportSeverityTrigger">Severity</label>
+            <span id="bugReportSeverityLabel" class="bug-report-field-label">Severity</span>
             <div class="bug-report-severity-combo" id="bugReportSeverityCombo">
               <input type="hidden" name="severity" id="bugReportSeverity" value="moderate" />
               <button
@@ -945,6 +945,7 @@
                 aria-haspopup="listbox"
                 aria-expanded="false"
                 aria-controls="bugReportSeverityListbox"
+                aria-labelledby="bugReportSeverityLabel"
               >
                 <span class="bug-report-severity-trigger-inner">
                   <span class="bug-report-severity-dot" data-severity="moderate" aria-hidden="true"></span>

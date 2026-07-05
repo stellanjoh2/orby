@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ORBY_BLACK } from '../../constants.js';
+import { CINEMATIC_LETTERBOX_BLACK } from '../../constants.js';
 
 const ASPECT_219 = 21 / 9;
 
@@ -39,7 +39,7 @@ export function computeCinematicLetterbox219Mattes(w, h) {
 }
 
 /**
- * Paint Orby black mattes for export stills (same geometry as viewport overlay).
+ * Paint pure-black mattes for export stills (same geometry as viewport overlay).
  *
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} w
@@ -48,14 +48,14 @@ export function computeCinematicLetterbox219Mattes(w, h) {
 export function fillCinematicLetterbox219Mattes(ctx, w, h) {
   const bars = computeCinematicLetterbox219Mattes(w, h);
   if (!bars.length) return;
-  ctx.fillStyle = ORBY_BLACK;
+  ctx.fillStyle = CINEMATIC_LETTERBOX_BLACK;
   for (const bar of bars) {
     ctx.fillRect(bar.x, bar.y, bar.width, bar.height);
   }
 }
 
 /**
- * Draw Orby-black 21∶9 mattes straight into the renderer's default framebuffer.
+ * Draw pure-black 21∶9 mattes straight into the renderer's default framebuffer.
  *
  * MP4 export records `renderer.domElement` via `captureStream`, which samples the GL
  * drawing buffer — a CSS overlay or 2D-canvas matte (the still-image path) is never seen.
@@ -81,7 +81,7 @@ export function fillCinematicLetterbox219MattesGl(renderer) {
 
   renderer.setRenderTarget(null);
   renderer.setScissorTest(true);
-  renderer.setClearColor(ORBY_BLACK, 1);
+  renderer.setClearColor(CINEMATIC_LETTERBOX_BLACK, 1);
   for (const bar of bars) {
     const glY = h - bar.y - bar.height;
     renderer.setScissor(bar.x, glY, bar.width, bar.height);

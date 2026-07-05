@@ -20,6 +20,7 @@ export class AnimationControls {
 
   bind() {
     this.ui.dom.animationBlock.hidden = true;
+    this.syncAnimationShowBones(false, false);
     this.syncAnimationDisplayFps(
       this.ui.stateStore?.getState?.().animation?.displayFps ?? ANIMATION_DISPLAY_FPS,
     );
@@ -137,10 +138,6 @@ export class AnimationControls {
       this.setAnimationClipModeEnabled(false);
       this.syncAnimationReverse(false, false);
       this.syncAnimationShowBones(false, false);
-      this.syncAnimationShowJointNames({ visible: false, enabled: false, checked: false });
-      this.syncAnimationHideMesh({ visible: false, enabled: false, checked: false });
-      this.syncAnimationBoneStroke({ visible: false, enabled: false });
-      this.syncAnimationJointScale({ visible: false, enabled: false });
       this.syncAnimationTimeReference(false, false);
       return;
     }
@@ -161,6 +158,11 @@ export class AnimationControls {
     const animation = this.ui.stateStore?.getState?.().animation ?? {};
     this.syncAnimationTimeReference(animation.timeReferenceEnabled ?? false, true);
     this._syncAnimationScrubFill();
+    const showBonesInput = this.ui.inputs.animationShowBones;
+    this.syncAnimationShowBones(
+      !!showBonesInput?.checked,
+      showBonesInput ? !showBonesInput.disabled : false,
+    );
   }
 
   syncAnimationTimeReference(checked, available) {
@@ -255,6 +257,33 @@ export class AnimationControls {
     if (available !== undefined) {
       input.disabled = !available;
     }
+    const hasSkinned = available !== false;
+    const bonesOn = !!checked && hasSkinned;
+    this._syncAnimationBoneSubSettings(bonesOn);
+  }
+
+  _syncAnimationBoneSubSettings(bonesOn) {
+    const animation = this.ui.stateStore?.getState?.().animation ?? {};
+    this.syncAnimationShowJointNames({
+      visible: bonesOn,
+      enabled: bonesOn,
+      checked: bonesOn ? !!animation.showJointNames : false,
+    });
+    this.syncAnimationHideMesh({
+      visible: bonesOn,
+      enabled: bonesOn,
+      checked: bonesOn ? !!animation.hideMesh : false,
+    });
+    this.syncAnimationBoneStroke({
+      visible: bonesOn,
+      enabled: bonesOn,
+      value: animation.boneStrokeWidth ?? 2,
+    });
+    this.syncAnimationJointScale({
+      visible: bonesOn,
+      enabled: bonesOn,
+      value: animation.jointScale ?? 0.5,
+    });
   }
 
   syncAnimationShowJointNames({ visible, enabled, checked } = {}) {

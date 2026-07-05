@@ -212,19 +212,47 @@ export class AnimationController {
     this._exportDriveSnapshot = null;
     this._exportClipIndex = 0;
 
-    if (this._exportAction) {
+    if (this._exportAction && this._exportAction !== this.currentAction) {
       this._exportAction.stop();
-      this._exportAction = null;
     }
+    this._exportAction = null;
 
     if (!this.mixer || !this.currentAction || !snap) return;
 
-    this.currentAction.time = snap.time;
+    const clip = this.animations[this.currentClipIndex];
+    this.currentAction.play();
+    this.currentAction.time = THREE.MathUtils.clamp(
+      snap.time,
+      0,
+      clip?.duration ?? snap.time,
+    );
     this.currentAction.paused = snap.paused;
+    this._applyTimeScale();
+    this._applyClipLoopSettings();
+    this.mixer.update(0);
+    if (clip) {
+      this.onTimeUpdate(this.currentAction.time, clip.duration);
+      this.onPlayStateChanged(!this.currentAction.paused);
+    }
+  }
+
+  /**
+   * Safety net after export capture / preview teardown when export drives were cleared
+   * but the live clip stayed deactivated or stuck at an export pose.
+   */
+  ensureLivePlaybackResumed() {
+    this.endExportDrive();
+    if (!this.mixer || !this.currentAction || this.isExportSessionActive()) return;
+    this._applyTimeScale();
+    this._applyClipLoopSettings();
+    if (!this.currentAction.paused) {
+      this.currentAction.play();
+    }
     this.mixer.update(0);
     const clip = this.animations[this.currentClipIndex];
     if (clip) {
       this.onTimeUpdate(this.currentAction.time, clip.duration);
+      this.onPlayStateChanged(!this.currentAction.paused);
     }
   }
 

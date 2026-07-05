@@ -26,7 +26,8 @@ Defined in `styles.css`:
 
 - New surfaces, defaults, fallbacks, and color-picker defaults → `#080808` / tokens above
 - `color-mix(..., var(--orby-black))` instead of mixing with `#000`
-- Scene `background`, `theme-color`, letterbox mattes, histogram/tone-curve fills → `ORBY_BLACK` or CSS token
+- Scene `background`, `theme-color`, histogram/tone-curve fills → `ORBY_BLACK` or CSS token
+- **21∶9 cinematic letterbox** mattes → pure `#000` / `--cinematic-letterbox-black` / `CINEMATIC_LETTERBOX_BLACK` (not brand black)
 
 ## Don't (unless user explicitly asks for pure black)
 

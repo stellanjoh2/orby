@@ -513,9 +513,6 @@ export class ExportMovementPreview {
   stop({ silent = false } = {}) {
     if (!this._active) return;
     this._playing = false;
-    this._engageSessionDrives();
-    this._engageViewportDrives();
-    this._applyFrame(0, 0);
     this._releaseViewportDrives({ keepPose: false });
     this._releaseSessionDrives();
     this.setRotationY(this._startRotationY);

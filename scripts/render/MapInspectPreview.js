@@ -51,9 +51,10 @@ export class MapInspectPreview {
       if (!original) return;
 
       this._savedMaterials.set(child, child.material);
+      const deform = this._resolveMeshDeformFlags(child);
 
       const buildOne = (mat, idx) => {
-        const previewMat = this._buildPreviewMaterial(mat, id, prop);
+        const previewMat = this._buildPreviewMaterial(mat, id, prop, deform);
         if (!previewMat) {
           const current = child.material;
           return Array.isArray(current) ? current[idx] : current;
@@ -95,12 +96,28 @@ export class MapInspectPreview {
   }
 
   /**
+   * @param {import('three').Mesh} mesh
+   * @returns {{ skinning: boolean, morphTargets: boolean }}
+   */
+  _resolveMeshDeformFlags(mesh) {
+    const geom = mesh.geometry;
+    return {
+      skinning:
+        mesh.isSkinnedMesh ||
+        !!geom?.attributes?.skinIndex ||
+        !!geom?.attributes?.skinWeight,
+      morphTargets: !!mesh.morphTargetInfluences?.length,
+    };
+  }
+
+  /**
    * @param {import('three').Material | null | undefined} originalMat
    * @param {string} slotId
    * @param {string} prop
+   * @param {{ skinning?: boolean, morphTargets?: boolean }} deform
    * @returns {import('three').Material | null}
    */
-  _buildPreviewMaterial(originalMat, slotId, prop) {
+  _buildPreviewMaterial(originalMat, slotId, prop, deform = {}) {
     if (!originalMat) return null;
 
     const tex = originalMat[prop];
@@ -111,8 +128,18 @@ export class MapInspectPreview {
     const opacity = Number.isFinite(originalMat.opacity) ? originalMat.opacity : 1;
     const channel = getOrmChannelForMaterialSlot(originalMat, slotId);
 
+    const deformOpts = {
+      skinning: !!deform.skinning,
+      morphTargets: !!deform.morphTargets,
+    };
+
     if (channel) {
-      return createMapChannelPreviewMaterial(tex, channel, { side, transparent, opacity });
+      return createMapChannelPreviewMaterial(tex, channel, {
+        side,
+        transparent,
+        opacity,
+        ...deformOpts,
+      });
     }
 
     if (prop === 'map') {
@@ -123,6 +150,7 @@ export class MapInspectPreview {
         side,
         transparent,
         opacity,
+        ...deformOpts,
       });
     }
 
@@ -132,6 +160,7 @@ export class MapInspectPreview {
       side,
       transparent,
       opacity,
+      ...deformOpts,
     });
   }
 }

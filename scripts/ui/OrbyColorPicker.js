@@ -76,6 +76,8 @@ export class OrbyColorPicker {
             <div class="orby-color-picker__fields orby-color-picker__fields--hex is-visible">
               <input
                 type="text"
+                id="orbyColorPickerHex"
+                name="orbyColorPickerHex"
                 class="orby-color-picker__hex"
                 spellcheck="false"
                 autocomplete="off"
@@ -83,14 +85,14 @@ export class OrbyColorPicker {
               />
             </div>
             <div class="orby-color-picker__fields orby-color-picker__fields--rgb">
-              <input type="text" class="orby-color-picker__channel" data-channel="r" inputmode="numeric" aria-label="Red" />
-              <input type="text" class="orby-color-picker__channel" data-channel="g" inputmode="numeric" aria-label="Green" />
-              <input type="text" class="orby-color-picker__channel" data-channel="b" inputmode="numeric" aria-label="Blue" />
+              <input type="text" id="orbyColorPickerR" name="orbyColorPickerR" class="orby-color-picker__channel" data-channel="r" inputmode="numeric" aria-label="Red" />
+              <input type="text" id="orbyColorPickerG" name="orbyColorPickerG" class="orby-color-picker__channel" data-channel="g" inputmode="numeric" aria-label="Green" />
+              <input type="text" id="orbyColorPickerB" name="orbyColorPickerB" class="orby-color-picker__channel" data-channel="b" inputmode="numeric" aria-label="Blue" />
             </div>
             <div class="orby-color-picker__fields orby-color-picker__fields--hsl">
-              <input type="text" class="orby-color-picker__channel" data-channel="h" inputmode="numeric" aria-label="Hue" />
-              <input type="text" class="orby-color-picker__channel" data-channel="s" inputmode="numeric" aria-label="Saturation" />
-              <input type="text" class="orby-color-picker__channel" data-channel="l" inputmode="numeric" aria-label="Lightness" />
+              <input type="text" id="orbyColorPickerH" name="orbyColorPickerH" class="orby-color-picker__channel" data-channel="h" inputmode="numeric" aria-label="Hue" />
+              <input type="text" id="orbyColorPickerS" name="orbyColorPickerS" class="orby-color-picker__channel" data-channel="s" inputmode="numeric" aria-label="Saturation" />
+              <input type="text" id="orbyColorPickerL" name="orbyColorPickerL" class="orby-color-picker__channel" data-channel="l" inputmode="numeric" aria-label="Lightness" />
             </div>
           </div>
           <div class="orby-color-picker__scale-combo">

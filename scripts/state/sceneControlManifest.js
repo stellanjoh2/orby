@@ -3,6 +3,19 @@
  * Complex handlers (multi-step, async, conditional) stay in EventManager.js.
  */
 
+/** @param {*} payload */
+export function parseOverlayTogglePayload(payload) {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    !Array.isArray(payload) &&
+    Object.prototype.hasOwnProperty.call(payload, 'enabled')
+  ) {
+    return { enabled: !!payload.enabled, animate: !!payload.animate };
+  }
+  return { enabled: !!payload, animate: false };
+}
+
 /** @type {object[]} */
 export const SCENE_CONTROL_MANIFEST = [
   // ── Mesh / transform ──────────────────────────────────────────────────────
@@ -111,6 +124,51 @@ export const SCENE_CONTROL_MANIFEST = [
   },
   { event: 'mesh:clay-normal-map', apply: 'setClayNormalMap' },
 
+  {
+    event: 'mesh:fbx-map-slot',
+    apply: 'applyFbxMapSlot',
+  },
+  { event: 'mesh:fbx-map-clear', apply: 'clearFbxMapSlot' },
+  {
+    event: 'mesh:fbx-material-tuning',
+    apply: 'setFbxMaterialTuning',
+    mapArg: (payload) => [payload?.materialKey ?? '', payload?.patch ?? {}],
+    spreadArgs: true,
+  },
+  {
+    event: 'mesh:fbx-apply-tuning-all',
+    apply: 'applyFbxTuningToAllMaterials',
+    mapArg: (payload) => payload?.materialKey ?? '',
+  },
+  { event: 'mesh:fbx-rescan-folder', apply: 'rescanFbxMapSlotTextures', noArg: true },
+  {
+    event: 'mesh:fbx-restore-tuning',
+    apply: { controller: 'materialController', method: 'applyFbxMapSlotsTuningFromState' },
+    noArg: true,
+    afterApply: (scene) => scene.eventBus.emit('scene:fbx-tuning-changed'),
+  },
+  {
+    event: 'mesh:fbx-active-material',
+    apply: 'setFbxActiveMaterial',
+    mapArg: (payload) => {
+      const key = payload?.materialKey ?? payload;
+      return typeof key === 'string' ? key : '';
+    },
+  },
+  {
+    event: 'mesh:creative-look-live',
+    apply: { controller: 'materialController', method: 'syncCreativeLookLiveFromStore' },
+    noArg: true,
+  },
+  {
+    event: 'mesh:reset-transform',
+    apply: { controller: 'transformController', method: 'setRotationY' },
+    defaultArg: 0,
+  },
+  { event: 'mesh:move-widget-enabled', apply: 'setMoveWidgetEnabled', coerce: 'bool' },
+  { event: 'mesh:rotate-widget-enabled', apply: 'setRotateWidgetEnabled', coerce: 'bool' },
+  { event: 'mesh:scale-widget-enabled', apply: 'setScaleWidgetEnabled', coerce: 'bool' },
+
   // ── Camera ────────────────────────────────────────────────────────────────
   { event: 'camera:preset', apply: 'applyCameraPreset' },
   { event: 'camera:auto-orbit', apply: 'setCameraAutoOrbit' },
@@ -132,6 +190,41 @@ export const SCENE_CONTROL_MANIFEST = [
     apply: { controller: 'cameraController', method: 'setDistance' },
   },
   { event: 'camera:composition-guides-inverted', apply: { controller: 'viewportFramingOverlays', method: 'setCompositionGuidesInverted' }, coerce: 'bool' },
+  {
+    event: 'camera:composition-grid',
+    apply: 'setCompositionGridOverlayVisible',
+    mapArg: (payload) => {
+      const parsed = parseOverlayTogglePayload(payload);
+      return [parsed.enabled, { animate: parsed.animate }];
+    },
+    spreadArgs: true,
+  },
+  {
+    event: 'camera:composition-portrait-crop-guide',
+    apply: 'setCompositionPortraitCropGuideVisible',
+    mapArg: (enabled, scene) => {
+      const gridOn = !!scene.stateStore?.getState?.()?.camera?.compositionGridEnabled;
+      return !!enabled && gridOn;
+    },
+    coerce: 'bool',
+  },
+  {
+    event: 'camera:cinematic-letterbox-219',
+    apply: 'setCinematicLetterbox219Visible',
+    mapArg: (payload) => {
+      const parsed = parseOverlayTogglePayload(payload);
+      return [parsed.enabled, { animate: parsed.animate }];
+    },
+    spreadArgs: true,
+  },
+  { event: 'camera:fov', apply: 'syncPerspectiveCameraFovAndLens', noArg: true },
+  { event: 'camera:fisheye', apply: 'syncPerspectiveCameraFovAndLens', noArg: true },
+  { event: 'camera:focus', apply: 'focusCameraOnCurrentModel', noArg: true },
+  {
+    event: 'camera:reset',
+    apply: { controller: 'cameraController', method: 'resetWorldPose' },
+    noArg: true,
+  },
   { event: 'render:look-filter', apply: 'applyLookFilter' },
 
   // ── Studio / HDRI ─────────────────────────────────────────────────────────
@@ -205,6 +298,12 @@ export const SCENE_CONTROL_MANIFEST = [
     event: 'render:histogram-enabled',
     apply: 'setHistogramEnabled',
   },
+  {
+    event: 'dof:reset-smooth-focus',
+    apply: { controller: 'dofAutofocusController', method: 'resetSmoothFocus' },
+  },
+  { event: 'render:apply-performance', apply: 'applyRenderQualitySettings', noArg: true },
+  { event: 'render:anti-aliasing', apply: 'setAntiAliasing' },
 
   // ── Camera / post-FX (slice settings — complex apply stays on SceneManager) ─
   {
@@ -296,6 +395,33 @@ export const SCENE_CONTROL_MANIFEST = [
     event: 'scene:background-gradient',
     apply: { controller: 'backgroundGradientController', method: 'setConfig' },
   },
+  {
+    event: 'scene:background-image',
+    apply: { controller: 'backgroundImageController', method: 'setConfig' },
+    afterApply: (scene, config) => {
+      if (!config?.asset?.dataBase64) {
+        scene.backgroundImageController?.setImage(null);
+      }
+    },
+  },
+  {
+    event: 'scene:exposure',
+    apply: { controller: 'autoExposureController', method: 'setManualExposure' },
+    afterApply: (scene, value) => {
+      scene.ui?.updateExposureDisplay?.(value);
+      scene.lensDirtController?.updateExposureFactor();
+    },
+  },
+  {
+    event: 'scene:color-checker',
+    apply: 'applyColorCheckerFromState',
+    mapArg: (_, scene) => scene.stateStore.getState(),
+  },
+  {
+    event: 'scene:color-checker-reference-shading',
+    apply: 'applyColorCheckerReferenceShading',
+    noArg: true,
+  },
   { event: 'studio:background-image-upload', apply: 'loadCustomBackgroundImage' },
   {
     event: 'camera:auto-exposure',
@@ -304,6 +430,20 @@ export const SCENE_CONTROL_MANIFEST = [
   { event: 'camera:clip-planes', apply: 'syncCameraClipPlanes', defaultArg: {} },
 
   // ── Animation ─────────────────────────────────────────────────────────────
+  {
+    event: 'animation:toggle',
+    apply: { controller: 'animationController', method: 'togglePlayback' },
+    noArg: true,
+  },
+  {
+    event: 'animation:clip-mode',
+    apply: { controller: 'animationController', method: 'setClipPlaybackMode' },
+    afterApply: (scene, mode) => {
+      scene.stateStore.set('animation.clipPlaybackMode', mode === 'cycle' ? 'cycle' : 'loop');
+    },
+  },
+  { event: 'animation:display-fps', apply: 'applyAnimationDisplayFps' },
+  { event: 'animation:time-reference', apply: 'applyAnimationTimeReference', coerce: 'bool' },
   {
     event: 'animation:scrub',
     apply: { controller: 'animationController', method: 'scrub' },

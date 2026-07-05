@@ -17,14 +17,6 @@ import {
   WIREFRAME_OPACITY_OVERLAY,
   resolveBloomQualityTier,
   isAnamorphicBloomPipelineActive,
-  isCreativeLookViewportPostActive,
-  isCreativeLookWatercolourPostActive,
-  isCreativeLookGouachePostActive,
-  isCreativeLookOpticsPostActive,
-  isCreativeLookSketchPostActive,
-  isCreativeLookSketchColourPostActive,
-  isCreativeLookAscii4PostActive,
-  isCreativeLookVectrexPostActive,
   resolveRenderQualityTier,
   isKeyLightOnlyShadowCastingRenderQuality,
   castShadowLightIdsForGlobalToggle,
@@ -43,7 +35,6 @@ import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
 import { GroundController } from './render/GroundController.js';
 import { EnvironmentController } from './render/EnvironmentController.js';
-import { syncTransmissionBackdrop, needsTransmissionBackdrop, isSolidStudioBackdropActive, resolveSolidStudioBackdropColor } from './render/backgroundFallback.js';
 import { HdriMoodController } from './render/HdriMoodController.js';
 import { CameraController } from './render/CameraController.js';
 import { ModelLoader } from './render/ModelLoader.js';
@@ -61,45 +52,11 @@ import { JointNameLabelsController } from './render/JointNameLabelsController.js
 import { MaterialController } from './render/MaterialController.js';
 import { isMaterialObjectSurfaceEnabled } from './render/SvgExtrudeSurfaceShader.js';
 import { effectiveRoughnessWithHdriBlur } from './render/hdriBlur.js';
-import { applyStaticAnimationFrameZero } from './render/bakeStaticSkinnedGeometry.js';
-import { confirmVoxelHdHighPolyAlert } from './render/voxelHdHighPolyAlert.js';
-import { willApplyVoxelHdGeometry } from './mesh/voxelizationMeshAdvice.js';
 import {
   computeCreativeLookToonLightScalars,
-  creativeLookFlatPostVariant,
-  creativeLookMasterHueRadians,
-  creativeLookPresetNeedsHdriBackdrop,
-  formatCreativeLookPresetLabel,
-  isFlatPostCreativeLookPreset,
   isScreenPixelCreativeLookPreset,
-  isVectrexCreativeLookPreset,
-  isWatercolourCreativeLookPreset,
-  isGouacheCreativeLookPreset,
-  isOpticsCreativeLookPreset,
-  isSketchColourCreativeLookPreset,
-  isSketchFamilyCreativeLookPreset,
-  isSketchCreativeLookPreset,
-  isDitherPixelCreativeLookPreset,
-  normalizeCreativeLookIntensity,
-  normalizeCreativeLookLiftCrush,
-  normalizeCreativeLookMasterHue,
-  normalizeCreativeLookPatternScale,
   normalizeCreativeLookPreset,
-  resolveCreativeLookPresetChoice,
 } from './render/CreativeLookMaterials.js';
-import {
-  creativeLookWatercolourRadius,
-} from './render/creativeLookWatercolourArt.js';
-import {
-  resolveCreativeLookSketchParams,
-  SKETCH_PAPER_HEX,
-} from './render/creativeLookSketchArt.js';
-import { resolveCreativeLookInkParams } from './render/creativeLookInkArt.js';
-import { isArtisticCreativeLookPreset } from './render/creativeLookPresetSliders.js';
-import { ensureAsciiFontAtlasLoaded } from './render/creativeLookAsciiArt.js';
-import { ensureAscii2FontAtlasLoaded } from './render/creativeLookAscii2Art.js';
-import { ensureAscii3FontAtlasLoaded } from './render/creativeLookAscii3Art.js';
-import { ensureAscii4FontAtlasLoaded } from './render/creativeLookAscii4Art.js';
 import { LensFlareController } from './render/LensFlareController.js';
 import { keyLightParamsFromLensFlare } from './render/lensFlareKeyLightSync.js';
 import { GodRaysController } from './render/GodRaysController.js';
@@ -157,7 +114,6 @@ import { normalizeTransparentFraming } from './render/imageExportFraming.js';
 import { resolvePngExportCaptureSize } from './render/capture/CaptureSizePolicy.js';
 import { fullViewportLogicalSize } from './render/fullViewportLogicalSize.js';
 import { deferSpinnerPaint } from './utils/viewportLoadSpinner.js';
-import { prepareArtisticCreativeLookForCapture } from './render/capture/captureArtisticLookPrep.js';
 import {
   supportsExtrudeBevel,
   runSvgExtrudeImporterMutation,
@@ -341,6 +297,52 @@ export class SceneManager {
   /** @see ViewportFramingOverlays#setCinematicLetterbox219Visible */
   setCinematicLetterbox219Visible(enabled, options) {
     this.viewportFramingOverlays.setCinematicLetterbox219Visible(enabled, options);
+  }
+
+  focusCameraOnCurrentModel() {
+    if (this.currentModel) {
+      this.cameraController?.focusOnObjectAnimated(this.currentModel, 1.0);
+    }
+  }
+
+  setAntiAliasing(value) {
+    if (!this.fxaaPass) return;
+    const tier = resolveRenderQualityTier(this.stateStore.getState().renderQuality);
+    this.fxaaPass.enabled = !tier.forceFxaaOff && value === 'fxaa';
+  }
+
+  applyAnimationDisplayFps(fps) {
+    const next = this.ui.syncAnimationDisplayFps(fps);
+    this.stateStore.set('animation.displayFps', next);
+  }
+
+  applyAnimationTimeReference(enabled) {
+    this.ui.syncAnimationTimeReference(!!enabled);
+    this.stateStore.set('animation.timeReferenceEnabled', !!enabled);
+  }
+
+  _setTransformWidgetEnabled(control, enabled) {
+    if (!control) return;
+    const objectHidden = !!this.stateStore?.getState()?.objectHidden;
+    const show = enabled && !objectHidden;
+    control.visible = show;
+    if (show && this.currentModel && this.modelRoot) {
+      control.attach(this.modelRoot);
+    } else if (!enabled) {
+      control.detach();
+    }
+  }
+
+  setMoveWidgetEnabled(enabled) {
+    this._setTransformWidgetEnabled(this.transformControlsTranslate, enabled);
+  }
+
+  setRotateWidgetEnabled(enabled) {
+    this._setTransformWidgetEnabled(this.transformControlsRotate, enabled);
+  }
+
+  setScaleWidgetEnabled(enabled) {
+    this._setTransformWidgetEnabled(this.transformControlsScale, enabled);
   }
 
   setTooltipController(tooltips) {
@@ -955,12 +957,7 @@ export class SceneManager {
    * Shared deps for Gouache / Watercolour / Sketch capture hooks + live viewport prep.
    */
   _creativeLookCaptureDeps() {
-    return {
-      postPipeline: this.postPipeline,
-      getState: () => this.stateStore.getState(),
-      getCreativeLookAnimationTime: () =>
-        this.materialController?.getCreativeLookAnimationTime?.() ?? 0,
-    };
+    return this.creativeLookSceneSync?.captureDeps();
   }
 
   /**
@@ -1218,22 +1215,8 @@ export class SceneManager {
     this.ui?.updateHdriBackgroundFallbackVisibility?.();
   }
 
-  /**
-   * MeshPhysicalMaterial transmission refracts `scene.background`, not the clear color.
-   * Glass / Chrome auto-enable Render Backdrop when HDRI lighting is on.
-   */
   syncCreativeLookTransmissionBackdrop() {
-    if (!this.stateStore) return false;
-    const state = this.stateStore.getState();
-    if (!needsTransmissionBackdrop(state)) return false;
-    if (!state.hdriBackground) {
-      this.stateStore.set('hdriBackground', true);
-    }
-    // Always push to the GPU — state may already be true while scene.background was released
-    // (e.g. Shader Lab entry, font regen, or creative-look pass toggling the environment).
-    this.setHdriBackground(true);
-    this.ui?.syncHdriBackgroundCheckboxes?.(true);
-    return true;
+    return this.creativeLookSceneSync?.syncTransmissionBackdrop() ?? false;
   }
 
   setHdriReceiveShadowsAo(enabled) {
@@ -1648,10 +1631,14 @@ export class SceneManager {
 
   setMapInspectPreview(slot) {
     this.materialController?.mapInspectPreview?.preview(slot);
+    this.animationController?.resyncPose?.();
+    this.requestRender?.();
   }
 
   clearMapInspectPreview() {
     this.materialController?.mapInspectPreview?.clear();
+    this.animationController?.resyncPose?.();
+    this.requestRender?.();
   }
 
   setGroundSolid(enabled) {
@@ -2484,7 +2471,7 @@ export class SceneManager {
     this.backgroundController?.setColor(hex);
     this.environmentController?.setFallbackColor(hex);
     this.hdriMood?.setFallbackBackgroundColor(hex);
-    this._creativeLookStudioBgHex = hex;
+    this.creativeLookSceneSync?.noteStudioBackgroundColor(hex);
   }
 
   applyFresnelToModel(root) {
@@ -3775,29 +3762,9 @@ export class SceneManager {
     if (updateUi) {
       this.ui.syncAnimationShowBones(next, hasSkinned);
       const animation = this.stateStore.getState().animation ?? {};
-      this.ui.syncAnimationShowJointNames({
-        visible: next,
-        enabled: next,
-        checked: next ? !!animation.showJointNames : false,
-      });
       if (!next && animation.showJointNames) {
         this.setAnimationShowJointNames(false, { updateUi: false });
       }
-      this.ui.syncAnimationBoneStroke({
-        visible: next,
-        enabled: next,
-        value: animation.boneStrokeWidth ?? 2,
-      });
-      this.ui.syncAnimationHideMesh({
-        visible: next,
-        enabled: next,
-        checked: !!animation.hideMesh,
-      });
-      this.ui.syncAnimationJointScale({
-        visible: next,
-        enabled: next,
-        value: animation.jointScale ?? 0.5,
-      });
     }
 
     this.requestRender();
@@ -3984,401 +3951,16 @@ export class SceneManager {
     this.backgroundController?.updateSpherePosition();
   }
 
-  /** Enable / tune flat-post passes (ASCII, C64, Game Boy). */
   _syncCreativeLookAsciiPass() {
-    const storeCl = this.stateStore?.getState()?.creativeLook ?? {};
-    const mcCl = this.materialController?.getCreativeLookSettings?.() ?? {};
-    const presetId = normalizeCreativeLookPreset(storeCl.preset ?? mcCl.preset);
-    const creativeLookOn =
-      (storeCl.enabled ?? mcCl.enabled) === true;
-    const prevCreativeLookBackdrop =
-      this.backgroundController?.creativeLookBackdropActive === true;
-    this.backgroundController?.setCreativeLookBackdropActive?.(creativeLookOn);
-    if (prevCreativeLookBackdrop !== creativeLookOn) {
-      this.environmentController?.setBackgroundEnabled?.(this.hdriBackgroundEnabled);
-    }
-    const enabled = creativeLookOn && isFlatPostCreativeLookPreset(presetId);
-    const flatVariant = enabled ? creativeLookFlatPostVariant(presetId) : null;
-    const isAscii = flatVariant === 'ascii';
-
-    const masterHue = normalizeCreativeLookMasterHue(storeCl.masterHue ?? mcCl.masterHue);
-    const masterHueRad = creativeLookMasterHueRadians(masterHue);
-    const asciiSettings = {
-      enabled: enabled && isAscii,
-      variant: presetId,
-      masterHue: masterHueRad,
-    };
-    const egaSettings = {
-      enabled: enabled && flatVariant === 'ega-pixel',
-      masterHue: masterHueRad,
-    };
-    const c64Settings = {
-      enabled: enabled && flatVariant === 'c64-pixel',
-      masterHue: masterHueRad,
-    };
-    const gameBoySettings = {
-      enabled: enabled && flatVariant === 'gameboy-pixel',
-      masterHue: masterHueRad,
-    };
-    const nesSettings = {
-      enabled: enabled && flatVariant === 'nes-pixel',
-      masterHue: masterHueRad,
-    };
-    const megaDriveSettings = {
-      enabled: enabled && flatVariant === 'megadrive-pixel',
-      masterHue: masterHueRad,
-    };
-    const gbaSettings = {
-      enabled: enabled && flatVariant === 'gba-pixel',
-      masterHue: masterHueRad,
-    };
-    const intellivisionSettings = {
-      enabled: enabled && flatVariant === 'intellivision-pixel',
-      masterHue: masterHueRad,
-    };
-
-    const apple2Settings = {
-      enabled: enabled && flatVariant === 'apple2-pixel',
-      masterHue: masterHueRad,
-    };
-
-    const patternScale = normalizeCreativeLookPatternScale(
-      presetId,
-      Number(storeCl.patternScale ?? mcCl.patternScale),
-    );
-    const intensity = normalizeCreativeLookIntensity(storeCl.intensity ?? mcCl.intensity);
-    const liftCrush = normalizeCreativeLookLiftCrush(storeCl.liftCrush ?? mcCl.liftCrush);
-    const ditherSettings = {
-      enabled: enabled && isDitherPixelCreativeLookPreset(presetId),
-      variant: presetId,
-      masterHue: masterHueRad,
-      patternScale,
-      intensity,
-      liftCrush,
-    };
-
-    this.postPipeline?.setCreativeLookFlatPostMode?.({ enabled, variant: flatVariant });
-    this.postPipeline?.updateCreativeLookAscii(asciiSettings);
-    this.postPipeline?.updateCreativeLookEga?.(egaSettings);
-    this.postPipeline?.updateCreativeLookC64?.(c64Settings);
-    this.postPipeline?.updateCreativeLookGameBoy?.(gameBoySettings);
-    this.postPipeline?.updateCreativeLookNes?.(nesSettings);
-    this.postPipeline?.updateCreativeLookMegaDrive?.(megaDriveSettings);
-    this.postPipeline?.updateCreativeLookIntellivision?.(intellivisionSettings);
-    this.postPipeline?.updateCreativeLookGba?.(gbaSettings);
-    this.postPipeline?.updateCreativeLookApple2?.(apple2Settings);
-    this.postPipeline?.updateCreativeLookDither?.(ditherSettings);
-
-    const watercolourOn = creativeLookOn && isWatercolourCreativeLookPreset(presetId);
-    const gouacheOn = creativeLookOn && isGouacheCreativeLookPreset(presetId);
-    const opticsOn = creativeLookOn && isOpticsCreativeLookPreset(presetId);
-    const sketchOn = creativeLookOn && isSketchCreativeLookPreset(presetId);
-    const sketchColourOn = creativeLookOn && isSketchColourCreativeLookPreset(presetId);
-    const sketchFamilyOn = sketchOn || sketchColourOn;
-    const vectrexOn = creativeLookOn && isVectrexCreativeLookPreset(presetId);
-    const presetParams = storeCl.presetParams ?? mcCl.presetParams;
-    const watercolourInk = resolveCreativeLookInkParams(presetParams, 'watercolour');
-    const watercolourSettings = {
-      enabled: watercolourOn,
-      patternScale,
-      radius: creativeLookWatercolourRadius(patternScale),
-      intensity: normalizeCreativeLookIntensity(storeCl.intensity ?? mcCl.intensity),
-      strokeColor: watercolourInk.strokeColor,
-      preset: 'watercolour',
-    };
-    this.postPipeline?.updateCreativeLookWatercolour?.(watercolourSettings);
-    if (!watercolourOn) {
-      this.postPipeline?.releaseCreativeLookWatercolour?.();
-    }
-
-    const gouacheInk = resolveCreativeLookInkParams(presetParams, 'gouache');
-    const gouacheSettings = {
-      enabled: gouacheOn,
-      patternScale,
-      intensity: normalizeCreativeLookIntensity(storeCl.intensity ?? mcCl.intensity),
-      strokeColor: gouacheInk.strokeColor,
-      preset: 'gouache',
-    };
-    this.postPipeline?.updateCreativeLookGouache?.(gouacheSettings);
-    if (!gouacheOn) {
-      this.postPipeline?.releaseCreativeLookGouache?.();
-    }
-
-    const opticsSettings = {
-      enabled: opticsOn,
-      variant: presetId,
-      patternScale,
-      intensity: normalizeCreativeLookIntensity(storeCl.intensity ?? mcCl.intensity),
-      masterHue: masterHueRad,
-      liftCrush,
-      backdropFlat: isSolidStudioBackdropActive(this.stateStore.getState()),
-      backdropColor: resolveSolidStudioBackdropColor(this.stateStore.getState()),
-    };
-    this.postPipeline?.updateCreativeLookOptics?.(opticsSettings);
-    if (!opticsOn) {
-      this.postPipeline?.releaseCreativeLookOptics?.();
-    }
-
-    const sketchParams = resolveCreativeLookSketchParams(
-      presetParams,
-      patternScale,
-    );
-    const sketchInk = resolveCreativeLookInkParams(presetParams, 'sketch');
-    const sketchColourInk = resolveCreativeLookInkParams(presetParams, 'sketch-colour');
-    const sketchSettings = {
-      enabled: sketchOn && sketchParams.rasterSize > 0,
-      strokeWidth: sketchParams.strokeWidth,
-      rasterSize: sketchParams.rasterSize,
-      intensity: normalizeCreativeLookIntensity(storeCl.intensity ?? mcCl.intensity),
-      strokeColor: sketchInk.strokeColor,
-      preset: 'sketch',
-    };
-    const sketchColourSettings = {
-      enabled: sketchColourOn && sketchParams.rasterSize > 0,
-      strokeWidth: sketchParams.strokeWidth,
-      rasterSize: sketchParams.rasterSize,
-      intensity: normalizeCreativeLookIntensity(storeCl.intensity ?? mcCl.intensity),
-      strokeColor: sketchColourInk.strokeColor,
-      preset: 'sketch-colour',
-    };
-    this.postPipeline?.updateCreativeLookSketch?.(sketchSettings);
-    this.postPipeline?.updateCreativeLookSketchColour?.(sketchColourSettings);
-    if (!sketchFamilyOn) {
-      this.postPipeline?.releaseCreativeLookSketch?.();
-    }
-
-    const vectrexSettings = {
-      enabled: vectrexOn,
-      intensity: normalizeCreativeLookIntensity(storeCl.intensity ?? mcCl.intensity),
-    };
-    this.postPipeline?.updateCreativeLookVectrex?.(vectrexSettings);
-    if (!vectrexOn) {
-      this.postPipeline?.releaseCreativeLookVectrex?.();
-    }
-
-    this._syncCreativeLookStudioBackground(creativeLookOn, presetId);
-
-    if (enabled || watercolourOn || gouacheOn || opticsOn || sketchFamilyOn || vectrexOn) {
-      const sz = new THREE.Vector2();
-      this.renderer.getSize(sz);
-      if (sz.x > 0 && sz.y > 0) {
-        if (enabled) {
-          this.postPipeline?.creativeLookAscii?.setSize(sz.x, sz.y);
-          this.postPipeline?.creativeLookEga?.setSize(sz.x, sz.y);
-          this.postPipeline?.creativeLookC64?.setSize(sz.x, sz.y);
-          this.postPipeline?.creativeLookGameBoy?.setSize(sz.x, sz.y);
-          this.postPipeline?.creativeLookNes?.setSize(sz.x, sz.y);
-          this.postPipeline?.creativeLookMegaDrive?.setSize(sz.x, sz.y);
-          this.postPipeline?.creativeLookIntellivision?.setSize(sz.x, sz.y);
-          this.postPipeline?.creativeLookGba?.setSize(sz.x, sz.y);
-          this.postPipeline?.creativeLookApple2?.setSize(sz.x, sz.y);
-          this.postPipeline?.creativeLookDither?.setSize(sz.x, sz.y);
-        }
-        if (watercolourOn) {
-          this.postPipeline?.creativeLookWatercolour?.setSize(sz.x, sz.y);
-        }
-        if (gouacheOn) {
-          this.postPipeline?.creativeLookGouache?.setSize(sz.x, sz.y);
-        }
-        if (opticsOn) {
-          this.postPipeline?.creativeLookOptics?.setSize(sz.x, sz.y);
-        }
-        if (sketchOn) {
-          this.postPipeline?.creativeLookSketch?.setSize(sz.x, sz.y);
-        }
-        if (sketchColourOn) {
-          this.postPipeline?.creativeLookSketchColour?.setSize(sz.x, sz.y);
-        }
-        if (vectrexOn) {
-          this.postPipeline?.creativeLookVectrex?.setSize(sz.x, sz.y);
-        }
-      }
-      if (isAscii) {
-        const loadAtlas =
-          presetId === 'ascii-art-2'
-            ? ensureAscii3FontAtlasLoaded
-            : presetId === 'ascii-art-3'
-              ? ensureAscii2FontAtlasLoaded
-              : presetId === 'ascii-art-4'
-                ? ensureAscii4FontAtlasLoaded
-                : ensureAsciiFontAtlasLoaded;
-        void loadAtlas().then(() => {
-          this.postPipeline?.creativeLookAscii?.refreshAtlas?.();
-          this.postPipeline?.updateCreativeLookAscii(asciiSettings);
-        });
-      }
-    }
+    this.creativeLookSceneSync?.syncAsciiPass();
   }
 
-  /** Per-frame optics post uniforms — animated grain + live intensity/scale. */
   _prepareCreativeLookOpticsFrameUniforms() {
-    if (!isCreativeLookOpticsPostActive(this.stateStore.getState())) return;
-    const state = this.stateStore.getState();
-    const cl = state.creativeLook ?? {};
-    const presetId = normalizeCreativeLookPreset(cl.preset);
-    const patternScale = normalizeCreativeLookPatternScale(
-      presetId,
-      Number(cl.patternScale),
-    );
-    this.postPipeline?.updateCreativeLookOptics?.({
-      time: this.materialController?.getCreativeLookAnimationTime?.() ?? 0,
-      patternScale,
-      intensity: normalizeCreativeLookIntensity(cl.intensity),
-      variant: presetId,
-      masterHue: creativeLookMasterHueRadians(normalizeCreativeLookMasterHue(cl.masterHue)),
-      liftCrush: normalizeCreativeLookLiftCrush(cl.liftCrush),
-      backdropFlat: isSolidStudioBackdropActive(state),
-      backdropColor: resolveSolidStudioBackdropColor(state),
-    });
+    this.creativeLookSceneSync?.prepareOpticsFrameUniforms();
   }
 
-  /**
-   * Shader Lab backdrop — artistic presets use warm paper white; other presets keep studio color.
-   * @param {boolean} creativeLookOn
-   * @param {import('./render/CreativeLookMaterials.js').CreativeLookPreset | string} [presetId]
-   */
-  _syncCreativeLookStudioBackground(creativeLookOn, presetId = '') {
-    const state = this.stateStore.getState();
-    const studioBg = state.background ?? APP_BACKGROUND;
-    const studioGradient = state.backgroundGradient;
-
-    const restoreStudioBackdrop = () => {
-      this.syncStudioBackgroundColor(studioBg);
-      if (studioGradient) {
-        this.backgroundGradientController?.setConfig(studioGradient);
-      }
-      this._creativeLookArtisticPaperBg = false;
-    };
-
-    if (!creativeLookOn) {
-      if (this._creativeLookArtisticPaperBg) {
-        restoreStudioBackdrop();
-      }
-      this._creativeLookStudioBgSynced = false;
-      this._creativeLookStudioBgHex = null;
-      return;
-    }
-
-    const artisticOn = isArtisticCreativeLookPreset(
-      normalizeCreativeLookPreset(presetId),
-    );
-
-    if (artisticOn) {
-      if (!this._creativeLookArtisticPaperBg) {
-        this.backgroundController?.setColor(SKETCH_PAPER_HEX);
-        this.backgroundGradientController?.setConfig({
-          ...(studioGradient ?? {}),
-          enabled: false,
-        });
-        this.environmentController?.setFallbackColor(SKETCH_PAPER_HEX);
-        this._creativeLookArtisticPaperBg = true;
-      }
-      this._creativeLookStudioBgSynced = true;
-      return;
-    }
-
-    if (this._creativeLookArtisticPaperBg) {
-      restoreStudioBackdrop();
-      this._creativeLookStudioBgSynced = true;
-      return;
-    }
-
-    const studioBgChanged = this._creativeLookStudioBgHex !== studioBg;
-    if (this._creativeLookStudioBgSynced && !studioBgChanged) return;
-    this.syncStudioBackgroundColor(studioBg);
-    if (studioGradient) {
-      this.backgroundGradientController?.setConfig(studioGradient);
-    }
-    this._creativeLookStudioBgSynced = true;
-  }
-
-  /**
-   * Apply Shader Lab state with viewport spinner + toast when materials rebuild.
-   * @param {object} creativeLookState
-   * @param {{ skipStateStore?: boolean }} [options]
-   */
   applyCreativeLookFromState(creativeLookState, options = {}) {
-    this._creativeLookApplyChain = (this._creativeLookApplyChain ?? Promise.resolve())
-      .catch(() => {})
-      .then(() => this._applyCreativeLookFromStateOnce(creativeLookState, options));
-    return this._creativeLookApplyChain;
-  }
-
-  /**
-   * @param {object} creativeLookState
-   * @param {{ skipStateStore?: boolean }} [options]
-   */
-  async _applyCreativeLookFromStateOnce(creativeLookState, options = {}) {
-    const mc = this.materialController;
-    if (!mc) return;
-
-    if (
-      !options.skipVoxelPolyWarning &&
-      willApplyVoxelHdGeometry(mc, creativeLookState)
-    ) {
-      const proceed = await confirmVoxelHdHighPolyAlert(this.ui, this.currentModel);
-      if (!proceed) {
-        this._revertPendingCreativeLookSelection();
-        return;
-      }
-    }
-
-    const heavy = mc.willRebuildCreativeLookMaterials(creativeLookState);
-    if (heavy) {
-      this.ui?.setLoadSpinnerStatusPrefix?.('Loading shader');
-      this.ui?.beginLoadSpinner?.();
-      this.ui?.beginLoadSpinnerElapsed?.();
-      await new Promise((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(resolve));
-      });
-    }
-
-    try {
-      mc.setCreativeLookSettings(creativeLookState, options);
-      mc.deferCreativeLookSurfaceResync?.();
-      this._syncCreativeLookAsciiPass();
-      const preset = normalizeCreativeLookPreset(creativeLookState?.preset);
-      // Glass / Chrome need scene.background for transmission — only when materials rebuild,
-      // not on live tweaks (bloom, sketch sliders, etc.) that reuse mesh:creative-look.
-      if (
-        heavy &&
-        creativeLookState?.enabled === true &&
-        creativeLookPresetNeedsHdriBackdrop(preset)
-      ) {
-        this.syncCreativeLookTransmissionBackdrop();
-      }
-      if (heavy && creativeLookState?.enabled) {
-        const label = formatCreativeLookPresetLabel(creativeLookState.preset);
-        this.ui?.showToast?.(`${label} loaded`, 2800, {
-          notification: false,
-          icon: 'success',
-        });
-      }
-    } finally {
-      if (heavy) {
-        this.ui?.endLoadSpinner?.();
-      }
-      // Heavy applies yield two rAFs before materials swap; the state-store wake from the
-      // preset click can paint and stop the idle loop while shaders are still stale.
-      this.requestRender();
-    }
-  }
-
-  /** Undo a Voxel HD selection when the high-poly confirm dialog is cancelled. */
-  _revertPendingCreativeLookSelection() {
-    const mc = this.materialController;
-    if (!mc) return;
-
-    const applied = mc.creativeLookSettings;
-    const preset = resolveCreativeLookPresetChoice(applied.preset);
-    this.stateStore?.batch?.(() => {
-      this.stateStore.set('creativeLook.preset', preset);
-      this.stateStore.set('creativeLook.enabled', !!applied.enabled);
-    });
-    if (this.ui?.inputs?.creativeLookEnabled) {
-      this.ui.inputs.creativeLookEnabled.checked = !!applied.enabled;
-    }
-    this.ui?.setCreativeLookActive?.(applied.enabled ? preset : null);
+    return this.creativeLookSceneSync?.applyFromState(creativeLookState, options);
   }
 
   /**
@@ -4781,12 +4363,20 @@ export class SceneManager {
     this._applyViewportSizeFromLayout();
   }
 
+  _resumeLiveAnimationAfterExportCapture() {
+    if (this.exportMovementPreview?.isActive?.()) return;
+    this.animationController?.ensureLivePlaybackResumed?.();
+    this.renderLoop?.requestFrame?.();
+    this.requestRender?.();
+  }
+
   _releaseStuckExportCaptureState() {
     this._capturePreviewInFlight = false;
     this._suppressResizeForExport = false;
     this.ui?.forceClearLoadSpinner?.();
     this.stateStore?.flushDeferredNotify?.();
     this.composer?.clearExportCaptureViewportPin?.();
+    this.animationController?.ensureLivePlaybackResumed?.();
     if (this.videoExporter?._captureFeatureSession) {
       this.videoExporter._captureFeatureSession.restore?.();
       this.videoExporter._captureFeatureSession = null;
@@ -4855,6 +4445,8 @@ export class SceneManager {
       }
       if (preservePreviewSession || (wasPreviewActive && resolvedPreviewT > 0)) {
         this.scrubExportVideoPreview(resolvedPreviewT);
+      } else {
+        this._resumeLiveAnimationAfterExportCapture();
       }
     }
   }

@@ -56,7 +56,7 @@ export class FontFamilyPicker {
     this._reposition = this._positionPanel.bind(this);
 
     root.innerHTML = `
-      <input type="hidden" class="font-extrude-family-value" value="" />
+      <input type="hidden" id="fontExtrudeFamilyValue" name="fontExtrudeFamily" class="font-extrude-family-value" value="" />
       <button
         type="button"
         class="font-extrude-family-trigger"
@@ -87,10 +87,13 @@ export class FontFamilyPicker {
         <div class="font-extrude-family-panel-search-wrap">
           <input
             type="search"
+            id="fontExtrudeFamilySearch"
+            name="fontExtrudeFamilySearch"
             class="font-extrude-family-search"
             placeholder="Search fonts…"
             autocomplete="off"
             spellcheck="false"
+            aria-label="Search fonts"
           />
         </div>
         <div class="font-extrude-family-list-scroll">

@@ -42,6 +42,7 @@ import { ViewportFramingOverlays } from './ViewportFramingOverlays.js';
 import { createColorCheckerMeshGroup } from './ColorCheckerMesh.js';
 import { createToggleScaleContext } from './toggleScaleAnimation.js';
 import { setupStudioComposer } from './StudioComposerSetup.js';
+import { CreativeLookSceneSync } from './CreativeLookSceneSync.js';
 
 /** Lightweight shell — no WebGL until the first model load. */
 export function initStudioShell(scene, initialState) {
@@ -266,6 +267,7 @@ export function teardownStudioGpu(scene) {
     scene.jointNameLabelsController?.dispose?.();
     scene.jointNameLabelsController = null;
     scene.materialController = null;
+    scene.creativeLookSceneSync = null;
     scene.lightsController = null;
     scene.lights = null;
     scene.groundController = null;
@@ -400,12 +402,6 @@ export async function bootstrapStudio(scene) {
     scene.scene.add(scene.colorCheckerRoot);
     /** When Reference colors is on, shading we restore when turning it off (Display mode before Unlit). */
     scene._colorCheckerRestoreShading = null;
-    /** Re-apply studio backdrop from state when Shader Lab turns on (no longer forces black). */
-    scene._creativeLookStudioBgSynced = false;
-    /** Last studio flat color pushed while Shader Lab is on — detect user edits. */
-    scene._creativeLookStudioBgHex = null;
-    /** Artistic presets (watercolour / sketch) temporarily use paper-white backdrop. */
-    scene._creativeLookArtisticPaperBg = false;
     /** Horizontal orbit reference (XZ), reused each frame like LightsController. */
     scene._colorCheckerHorizRef = new THREE.Vector3();
     scene._colorCheckerTowardCam = new THREE.Vector3();
@@ -434,6 +430,8 @@ export async function bootstrapStudio(scene) {
     scene.backgroundGradientController.setConfig(initialState.backgroundGradient ?? {});
     scene.backgroundImageController.setConfig(initialState.backgroundImage ?? {});
     scene.backgroundController.setSolidEnabled(getBackgroundMode(initialState) === 'solid');
+
+    scene.creativeLookSceneSync = new CreativeLookSceneSync(scene);
 
     scene.transformController = new TransformController({
       modelRoot: scene.modelRoot,
@@ -540,16 +538,16 @@ export async function bootstrapStudio(scene) {
       getCreativeLookToonLightScalars: () =>
         scene._getCreativeLookToonLightScalars(),
       onNeedsTransmissionBackdrop: () => {
-        scene.syncCreativeLookTransmissionBackdrop();
+        scene.creativeLookSceneSync?.syncTransmissionBackdrop();
       },
       afterCreativeLookMaterialRebuild: () => {
         const preset = normalizeCreativeLookPreset(
           scene.materialController?.creativeLookSettings?.preset,
         );
         if (creativeLookPresetNeedsHdriBackdrop(preset)) {
-          scene.syncCreativeLookTransmissionBackdrop();
+          scene.creativeLookSceneSync?.syncTransmissionBackdrop();
         }
-        scene._syncCreativeLookAsciiPass();
+        scene.creativeLookSceneSync?.syncAsciiPass();
         if (scene.scene?.environment) {
           scene.updateMaterialsEnvironment(
             scene.scene.environment,
@@ -576,7 +574,7 @@ export async function bootstrapStudio(scene) {
       onObjectSurfacePresentationRefresh: () => {
         scene._presentObjectSurfaceChange();
       },
-      onCreativeLookAsciiSync: () => scene._syncCreativeLookAsciiPass(),
+      onCreativeLookAsciiSync: () => scene.creativeLookSceneSync?.syncAsciiPass(),
       prepareStaticVoxelPose: () => {
         if (!scene.currentModel) return;
         applyStaticAnimationFrameZero(scene.currentModel, scene.animationController);

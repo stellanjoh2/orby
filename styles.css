@@ -310,6 +310,8 @@ body[data-theme='aqua'] {
   /* Default near-black — surfaces, buttons on lime, scene background */
   --orby-black: #080808;
   --orby-app-bg: #202020;
+  /* 21∶9 cinematic letterbox — always pure black, not studio backdrop */
+  --cinematic-letterbox-black: #000;
   /* FAQ panels, tooltips — softer than app black so hints don’t read as errors */
   --orby-surface-muted: #202020;
   /* Neutral control fills — buttons, slider rails, toggle tracks, selects */
@@ -1263,7 +1265,8 @@ html.orby-sr-on .orby-sr,
   gap: 0.55rem;
 }
 
-.bug-report-field label {
+.bug-report-field label,
+.bug-report-field-label {
   font-size: 0.8rem;
   color: var(--text-dim);
 }
@@ -2624,7 +2627,7 @@ html.orby-dropzone-shell-pending .workspace {
 
 .viewport-letterbox__bar {
   position: absolute;
-  background: var(--orby-app-bg);
+  background: var(--cinematic-letterbox-black);
   transition-property: transform;
   transition-timing-function: ease-out;
   transition-duration: var(--viewport-lb-in-duration);
@@ -6125,8 +6128,13 @@ button.advanced-info-doc-btn {
   margin-bottom: var(--shelf-section-gap);
 }
 
+/* Author `display: grid` must not override the `hidden` attribute (see composition-grid-overlay). */
+.slider-line[hidden] {
+  display: none !important;
+}
+
 /* Stacked slider — header row + edge-to-edge track */
-.slider-line:has(> input[type='range']) {
+.slider-line:has(> input[type='range']):not([hidden]) {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto auto;
@@ -6139,7 +6147,7 @@ button.advanced-info-doc-btn {
 }
 
 /* Toggle / label-only rows — label | control (no wasted slider column) */
-.slider-line:not(:has(> input[type='range'])) {
+.slider-line:not(:has(> input[type='range'])):not([hidden]) {
   display: grid;
   grid-template-columns: var(--shelf-row-grid-toggle);
   column-gap: var(--shelf-row-col-gap);

@@ -4,8 +4,11 @@ import { COLOR_CHECKER_MESH_WIDTH } from './scene/ColorCheckerMesh.js';
 import { resolveCreativeLookSketchParams } from './render/creativeLookSketchArt.js';
 import { isOpticsCreativeLookPreset } from './render/creativeLookOpticsArt.js';
 
-/** Default near-black — app surfaces, lime CTAs, letterbox mattes, UI chrome. */
+/** Default near-black — app surfaces, lime CTAs, UI chrome. */
 export const ORBY_BLACK = '#080808';
+
+/** 21∶9 cinematic letterbox mattes — pure black, decoupled from studio backdrop. */
+export const CINEMATIC_LETTERBOX_BLACK = '#000000';
 
 /** Scene / viewport clear color — default blank canvas (Shader Lab, exports, backdrop). */
 export const APP_BACKGROUND = '#202020';

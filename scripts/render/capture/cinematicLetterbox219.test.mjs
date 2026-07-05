@@ -59,6 +59,7 @@ describe('cinematic letterbox 21:9 mattes', () => {
       },
     };
     fillCinematicLetterbox219Mattes(ctx, 1920, 1080);
+    assert.equal(ctx.fillStyle, '#000000');
     assert.equal(rects.length, 2);
     assert.ok(rects.every((r) => r.w > 0 && r.h > 0));
   });
