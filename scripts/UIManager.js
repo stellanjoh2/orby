@@ -683,10 +683,6 @@ export class UIManager {
       grainIntensity: q('#grainIntensity'),
       grainScale: q('#grainScale'),
       toggleGrain: q('#toggleGrain'),
-      toggleAmbientDust: q('#toggleAmbientDust'),
-      ambientDustAmount: q('#ambientDustAmount'),
-      ambientDustScale: q('#ambientDustScale'),
-      ambientDustColor: q('#ambientDustColor'),
       aberrationAmount: q('#aberrationAmount'),
       aberrationBlur: q('#aberrationBlur'),
       aberrationFalloff: q('#aberrationFalloff'),
@@ -1883,15 +1879,6 @@ export class UIManager {
         this.stateStore.set('grain', payload.grain);
         this.eventBus.emit('render:grain', payload.grain);
         this.setEffectControlsDisabled(['grainIntensity', 'grainScale'], !payload.grain.enabled);
-      }
-
-      if (payload.ambientDust) {
-        this.stateStore.set('ambientDust', payload.ambientDust);
-        this.eventBus.emit('render:ambient-dust', payload.ambientDust);
-        this.setEffectControlsDisabled(
-          ['ambientDustAmount', 'ambientDustScale', 'ambientDustColor'],
-          !payload.ambientDust.enabled,
-        );
       }
 
       // Apply Aberration settings

@@ -74,8 +74,6 @@ export const SLIDER_DEFAULT_PATHS = {
   lensDirtStrength: 'lensDirt.strength',
   grainIntensity: 'grain.intensity',
   grainScale: 'grain.scale',
-  ambientDustAmount: 'ambientDust.amount',
-  ambientDustScale: 'ambientDust.scale',
   aberrationAmount: 'aberration.amount',
   aberrationBlur: 'aberration.blur',
   aberrationFalloff: 'aberration.falloff',

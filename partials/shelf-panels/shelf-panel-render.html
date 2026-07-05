@@ -1627,62 +1627,6 @@
               </div>
 
               <div class="panel-block">
-                <div class="subsection" data-subsection="ambient-dust">
-                  <div class="block-title has-toggle">
-                    <span data-tooltip="Floating additive dust in world space around your scene — ported from Candy Lands (Dreams).">Ambient Dust</span>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="ambient-dust" aria-label="Reset Ambient Dust" data-tooltip="Reset Ambient Dust settings">
-                        <i class="fa-solid fa-rotate-left"></i>
-                        <span class="sr-only">Reset</span>
-                      </button>
-                      <label class="effect-toggle" data-tooltip="Enable/disable ambient dust particles">
-                        <input type="checkbox" id="toggleAmbientDust" />
-                        <span class="effect-indicator" aria-hidden="true"></span>
-                        <span class="sr-only">Enable Ambient Dust</span>
-                      </label>
-                    </div>
-                  </div>
-                  <div
-                    class="effect-foldout effect-foldout--collapsed"
-                    data-effect-foldout="ambient-dust"
-                    aria-hidden="true"
-                  >
-                  <label class="slider-line">
-                    <span data-tooltip="Number of floating dust specks in the scene volume.">Amount</span>
-                    <input
-                      id="ambientDustAmount"
-                      type="range"
-                      min="0"
-                      max="160"
-                      value="70"
-                      step="1"
-                    />
-                    <span class="value" data-output="ambientDustAmount">70</span>
-                  </label>
-                  <label class="slider-line">
-                    <span data-tooltip="World-space particle size — distance-scaled so specks stay a similar thickness on screen.">Particle scale</span>
-                    <input
-                      id="ambientDustScale"
-                      type="range"
-                      min="0.04"
-                      max="12"
-                      value="0.04"
-                      step="0.02"
-                    />
-                    <span class="value" data-output="ambientDustScale">0.04</span>
-                  </label>
-                  <label class="color-line">
-                    <span>Colour</span>
-                    <input
-                      type="color"
-                      id="ambientDustColor"
-                      class="color-chip"
-                      value="#b9fff4"
-                    />
-                  </label>
-                  </div>
-                </div>
-                <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="color-checker">
                   <div class="block-title has-toggle">
                     <span>ColorChecker</span>

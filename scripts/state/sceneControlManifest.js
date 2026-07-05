@@ -218,7 +218,6 @@ export const SCENE_CONTROL_MANIFEST = [
     afterApply: (scene) => scene.applyRenderQualityVisualOverrides(),
   },
   { event: 'render:grain', apply: { controller: 'postPipeline', method: 'updateGrain' } },
-  { event: 'render:ambient-dust', apply: 'updateAmbientDust' },
   { event: 'render:aberration', apply: { controller: 'postPipeline', method: 'updateAberration' } },
   { event: 'render:ambient-occlusion', apply: 'updateAmbientOcclusion' },
   {

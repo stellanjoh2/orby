@@ -392,7 +392,6 @@ export class ModelLifecycleManager {
           s.cameraController?.focusOnObjectAnimated(s.currentModel, 1.0);
         } else if (s.currentModel) {
           s.cameraController?.refreshModelBounds(s.currentModel);
-          s.ambientDustController?.reseedVolumeFromScene?.();
         }
         s._skipCameraFlightOnNextModelLoad = false;
         this._scaleInMeshOnSpawn(object, { animateSpawn: wasFirstLoad });

@@ -334,7 +334,6 @@ function createStateApplySteps() {
       apply: (s, state) => {
         s.lensDirtController?.updateSettings(state.lensDirt);
         s.postPipeline?.updateGrain(state.grain);
-        s.updateAmbientDust(state.ambientDust);
         s.postPipeline?.updateAberration(state.aberration);
       },
     },

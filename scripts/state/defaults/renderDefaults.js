@@ -25,13 +25,6 @@ export function createRenderDefaults() {
       tintColor: '#ffffff',
     },
     grain: { enabled: false, intensity: 0.03, scale: 1, color: '#ffffff' },
-    /** World-space additive dust (Dreams-style instanced billboards around the orbit target). */
-    ambientDust: {
-      enabled: false,
-      amount: 70,
-      scale: 0.04,
-      color: '#b9fff4',
-    },
     aberration: { ...defaultAberration },
     /** Screen-space AO (N8AO); off by default — GPU-heavy when enabled. */
     ambientOcclusion: {

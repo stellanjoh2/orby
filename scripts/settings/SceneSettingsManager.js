@@ -1361,16 +1361,6 @@ export class SceneSettingsManager {
           this.uiHelper.setEffectControlsDisabled(['grainIntensity', 'grainScale'], !payload.grain.enabled);
         }
       }
-      if (payload.ambientDust) {
-        this.stateStore.set('ambientDust', payload.ambientDust);
-        this.eventBus.emit('render:ambient-dust', payload.ambientDust);
-        if (this.uiHelper?.setEffectControlsDisabled) {
-          this.uiHelper.setEffectControlsDisabled(
-            ['ambientDustAmount', 'ambientDustScale', 'ambientDustColor'],
-            !payload.ambientDust.enabled,
-          );
-        }
-      }
       if (payload.aberration) {
         const ab = mergeAberrationSettings(payload.aberration);
         this.stateStore.set('aberration', ab);

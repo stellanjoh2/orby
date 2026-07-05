@@ -310,57 +310,6 @@ export class RenderControls {
       emitGrain();
     });
 
-    const emitAmbientDust = () =>
-      this.eventBus.emit('render:ambient-dust', this.stateStore.getState().ambientDust);
-    if (this.ui.inputs.toggleAmbientDust) {
-      this.ui.inputs.toggleAmbientDust.addEventListener('change', (event) => {
-        const enabled = event.target.checked;
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set('ambientDust.enabled', enabled);
-        });
-        this.ui.setEffectControlsDisabled(
-          ['ambientDustAmount', 'ambientDustScale', 'ambientDustColor'],
-          !enabled,
-        );
-        emitAmbientDust();
-      });
-    }
-    if (this.ui.inputs.ambientDustAmount) {
-      this.ui.inputs.ambientDustAmount.addEventListener('input', (event) => {
-        const value = Math.round(
-          parseFloat(this.helpers.canonicalizeRangeInputValue(event.target)),
-        );
-        event.target.value = String(value);
-        this.helpers.updateValueLabel('ambientDustAmount', value, 'integer');
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set('ambientDust.amount', value);
-        });
-        emitAmbientDust();
-      });
-    }
-    if (this.ui.inputs.ambientDustScale) {
-      this.ui.inputs.ambientDustScale.addEventListener('input', (event) => {
-        const uiValue = parseFloat(
-          this.helpers.canonicalizeRangeInputValue(event.target).toFixed(2),
-        );
-        event.target.value = String(uiValue);
-        this.helpers.updateValueLabel('ambientDustScale', uiValue, 'decimal');
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set('ambientDust.scale', uiValue);
-        });
-        emitAmbientDust();
-      });
-    }
-    if (this.ui.inputs.ambientDustColor) {
-      this.ui.inputs.ambientDustColor.addEventListener('input', (event) => {
-        const color = event.target.value;
-        commitLookFilterTouchWith(() => {
-          this.stateStore.set('ambientDust.color', color);
-        });
-        emitAmbientDust();
-      });
-    }
-
     // Aberration
     const emitAberration = () => this.eventBus.emit('render:aberration', this.stateStore.getState().aberration);
     this.ui.inputs.toggleAberration.addEventListener('change', (event) => {
@@ -1026,28 +975,6 @@ export class RenderControls {
     this.helpers.updateValueLabel('grainScale', grainScale, 'multiplier');
     this.ui.inputs.toggleGrain.checked = !!state.grain.enabled;
     this.ui.setEffectControlsDisabled(['grainIntensity', 'grainScale'], !state.grain.enabled);
-
-    const dust = state.ambientDust ?? this.stateStore.getDefaults().ambientDust ?? {};
-    if (this.ui.inputs.toggleAmbientDust) {
-      this.ui.inputs.toggleAmbientDust.checked = !!dust.enabled;
-    }
-    if (this.ui.inputs.ambientDustAmount) {
-      const amount = Math.round(dust.amount ?? 70);
-      this.helpers.syncRangeFromState(this.ui.inputs.ambientDustAmount, amount);
-      this.helpers.updateValueLabel('ambientDustAmount', amount, 'integer');
-    }
-    if (this.ui.inputs.ambientDustScale) {
-      const scale = dust.scale ?? 0.04;
-      this.helpers.syncRangeFromState(this.ui.inputs.ambientDustScale, scale);
-      this.helpers.updateValueLabel('ambientDustScale', scale, 'decimal');
-    }
-    if (this.ui.inputs.ambientDustColor && dust.color) {
-      this.ui.inputs.ambientDustColor.value = dust.color;
-    }
-    this.ui.setEffectControlsDisabled(
-      ['ambientDustAmount', 'ambientDustScale', 'ambientDustColor'],
-      !dust.enabled,
-    );
     
     // Aberration
     this.ui.inputs.aberrationAmount.value = state.aberration.amount;

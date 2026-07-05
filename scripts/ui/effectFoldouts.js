@@ -33,7 +33,6 @@ export function applyEffectFoldouts(state, setOpen) {
   setOpen('volumetric-scattering', godRaysOn && !isoOn);
   setOpen('lens-dirt', !!state.lensDirt?.enabled);
   setOpen('grain', !!state.grain?.enabled);
-  setOpen('ambient-dust', !!state.ambientDust?.enabled);
   setOpen('ambient-occlusion', !!state.ambientOcclusion?.enabled);
   setOpen('aberration', !!state.aberration?.enabled);
   setOpen('color-checker', !!state.colorChecker?.enabled);
@@ -155,7 +154,6 @@ export function applyToggleSectionMute(state, setMuted) {
   setMuted('lens-flare', !lensFlareOn || isoOn);
   setMuted('lens-dirt', !state.lensDirt?.enabled);
   setMuted('grain', !state.grain?.enabled);
-  setMuted('ambient-dust', !state.ambientDust?.enabled);
   setMuted('vignette', !isVignetteUiEnabled(state.camera ?? {}));
   setMuted('aberration', !state.aberration?.enabled);
   setMuted('color-checker', !state.colorChecker?.enabled);
