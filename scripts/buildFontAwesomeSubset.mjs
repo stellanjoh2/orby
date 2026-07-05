@@ -108,6 +108,7 @@ function collectUsedIconNames() {
       /\bfa-regular\s+fa-([a-z0-9-]+)\b/g,
       /\bfa-brands\s+fa-([a-z0-9-]+)\b/g,
       /classList\.(?:toggle|add|remove)\(\s*['"]fa-([a-z0-9-]+)['"]/g,
+      /['"]fa-([a-z0-9-]+)['"]/g,
       /\.fa-([a-z0-9-]+)\b/g,
     ];
     for (const re of patterns) {
