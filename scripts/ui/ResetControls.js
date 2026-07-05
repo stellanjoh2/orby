@@ -58,7 +58,7 @@ const RESET_DIRTY_PATHS = {
   'lens-flare': ['lensFlare'],
   'volumetric-scattering': ['godRays'],
   lights: [
-    'lights', 'lightsMaster', 'lightsRotation', 'lightsHeight',
+    'lights', 'lightsMaster', 'lightsRotation', 'lightsHeight', 'lightsRigScale',
     'lightsShadowQuality', 'lightsShadowSoftness', 'lightsShadowColor', 'lightsShadowOpacity',
     'lightsShadowContactOffset', 'lightsShadowNormalBias', 'lightsShadowTwoSided',
   ],
@@ -83,6 +83,11 @@ const RESET_DIRTY_PATHS = {
     'backdropEnabled', 'backdropScale', 'backdropWidth', 'backdropColor',
     'backdropRotation', 'backdropY', 'backdropMetalness', 'backdropRoughness',
     'backdropSurfacePreset', 'backdropSurfaceScale', 'backdropSurfaceStrength',
+  ],
+  'infinity-cove': [
+    'infinityCoveEnabled', 'infinityCoveScale', 'infinityCoveWidth', 'infinityCoveColor',
+    'infinityCoveRotation', 'infinityCoveY', 'infinityCoveMetalness', 'infinityCoveRoughness',
+    'infinityCoveSurfacePreset', 'infinityCoveSurfaceScale', 'infinityCoveSurfaceStrength',
   ],
   background: ['background', 'backgroundSolidEnabled', 'backgroundGradient', 'backgroundImage'],
   grid: ['groundWireColor', 'groundWireOpacity', 'gridLineWidth', 'gridY', 'gridScale'],
@@ -156,6 +161,7 @@ const LIGHTS_SECTION_RESET_PATHS = [
   'lightsMaster',
   'lightsRotation',
   'lightsHeight',
+  'lightsRigScale',
   'lightsShadowQuality',
   'lightsShadowSoftness',
   'lightsShadowColor',
@@ -190,6 +196,7 @@ const STUDIO_TAB_RESET_PATHS = [
   'groundY',
   'groundSolidColor',
   ...RESET_DIRTY_PATHS.backdrop,
+  ...RESET_DIRTY_PATHS['infinity-cove'],
   'groundWireColor',
   ...RESET_DIRTY_PATHS.background,
   'lights',
@@ -197,6 +204,7 @@ const STUDIO_TAB_RESET_PATHS = [
   'lightsMaster',
   'lightsRotation',
   'lightsHeight',
+  'lightsRigScale',
   'lightsAutoRotate',
   'showLightIndicators',
   'showLightFalloffIndicators',
@@ -273,6 +281,7 @@ const BLOCK_RESET_TOASTS = {
   base: 'Base reset',
   'base-glass': 'Base glass reset',
   backdrop: 'Backdrop reset',
+  'infinity-cove': 'Infinity cove reset',
   background: 'Background color and gradient reset',
   grid: 'Grid reset',
   dof: 'Depth of field reset',
@@ -706,6 +715,25 @@ export class ResetControls {
         scale: defaults.backdropSurfaceScale ?? 1,
         strength: defaults.backdropSurfaceStrength ?? 1,
       });
+      this.eventBus.emit('studio:infinity-cove-enabled', defaults.infinityCoveEnabled ?? false);
+      this.eventBus.emit('studio:infinity-cove-scale', defaults.infinityCoveScale ?? 2);
+      this.eventBus.emit('studio:infinity-cove-width', defaults.infinityCoveWidth ?? 2);
+      this.eventBus.emit('studio:infinity-cove-color', defaults.infinityCoveColor ?? '#808080');
+      this.eventBus.emit('studio:infinity-cove-rotation', defaults.infinityCoveRotation ?? 0);
+      this.eventBus.emit('studio:infinity-cove-y', defaults.infinityCoveY ?? 0);
+      this.eventBus.emit(
+        'studio:infinity-cove-metalness',
+        defaults.infinityCoveMetalness ?? DEFAULT_BACKDROP_METALNESS,
+      );
+      this.eventBus.emit(
+        'studio:infinity-cove-roughness',
+        defaults.infinityCoveRoughness ?? DEFAULT_BACKDROP_ROUGHNESS,
+      );
+      this.eventBus.emit('studio:infinity-cove-surface', {
+        preset: defaults.infinityCoveSurfacePreset ?? 'none',
+        scale: defaults.infinityCoveSurfaceScale ?? 1,
+        strength: defaults.infinityCoveSurfaceStrength ?? 1,
+      });
       this.eventBus.emit('studio:ground-wire-color', defaults.groundWireColor);
       this.eventBus.emit('scene:background', defaults.background);
       this.eventBus.emit('scene:background-solid-enabled', defaults.backgroundSolidEnabled);
@@ -722,6 +750,7 @@ export class ResetControls {
       this.eventBus.emit('lights:enabled', defaults.lightsEnabled);
       this.eventBus.emit('lights:rotate', defaults.lightsRotation);
       this.eventBus.emit('lights:height', defaults.lightsHeight ?? 5);
+      this.eventBus.emit('lights:rig-scale', defaults.lightsRigScale ?? 1);
       this.eventBus.emit('lights:auto-rotate', defaults.lightsAutoRotate);
       this.ui.setLightsRotationDisabled(defaults.lightsAutoRotate);
       this.eventBus.emit('lights:shadow-settings', {
@@ -1032,6 +1061,7 @@ export class ResetControls {
             this.eventBus.emit('lights:master', defaults.lightsMaster);
             this.eventBus.emit('lights:rotate', defaults.lightsRotation);
             this.eventBus.emit('lights:height', defaults.lightsHeight ?? 5);
+            this.eventBus.emit('lights:rig-scale', defaults.lightsRigScale ?? 1);
             this.eventBus.emit('lights:shadow-settings', {
               quality: defaults.lightsShadowQuality ?? 'medium',
               softness: defaults.lightsShadowSoftness ?? DEFAULT_LIGHTS_SHADOW_SOFTNESS,
@@ -1131,6 +1161,30 @@ export class ResetControls {
               preset: defaults.backdropSurfacePreset ?? 'none',
               scale: defaults.backdropSurfaceScale ?? 1,
               strength: defaults.backdropSurfaceStrength ?? 1,
+            });
+            this.ui.syncControls(this.stateStore.getState());
+            break;
+
+          case 'infinity-cove':
+            this.stateStore.resetSlice(RESET_DIRTY_PATHS['infinity-cove']);
+            this.eventBus.emit('studio:infinity-cove-enabled', defaults.infinityCoveEnabled ?? false);
+            this.eventBus.emit('studio:infinity-cove-scale', defaults.infinityCoveScale ?? 2);
+            this.eventBus.emit('studio:infinity-cove-width', defaults.infinityCoveWidth ?? 2);
+            this.eventBus.emit('studio:infinity-cove-color', defaults.infinityCoveColor ?? '#808080');
+            this.eventBus.emit('studio:infinity-cove-rotation', defaults.infinityCoveRotation ?? 0);
+            this.eventBus.emit('studio:infinity-cove-y', defaults.infinityCoveY ?? 0);
+            this.eventBus.emit(
+              'studio:infinity-cove-metalness',
+              defaults.infinityCoveMetalness ?? DEFAULT_BACKDROP_METALNESS,
+            );
+            this.eventBus.emit(
+              'studio:infinity-cove-roughness',
+              defaults.infinityCoveRoughness ?? DEFAULT_BACKDROP_ROUGHNESS,
+            );
+            this.eventBus.emit('studio:infinity-cove-surface', {
+              preset: defaults.infinityCoveSurfacePreset ?? 'none',
+              scale: defaults.infinityCoveSurfaceScale ?? 1,
+              strength: defaults.infinityCoveSurfaceStrength ?? 1,
             });
             this.ui.syncControls(this.stateStore.getState());
             break;

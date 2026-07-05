@@ -19,6 +19,8 @@ import {
   syncBaseSurfaceControls,
   bindBackdropSurfaceControls,
   syncBackdropSurfaceControls,
+  bindInfinityCoveSurfaceControls,
+  syncInfinityCoveSurfaceControls,
 } from './svgExtrudeControlsShared.js';
 import { DEFAULT_LIGHTS_SHADOW_SOFTNESS } from '../config/shadowQuality.js';
 import {
@@ -32,6 +34,132 @@ export class StudioControls {
     this.stateStore = stateStore;
     this.ui = uiManager;
     this.helpers = helpers;
+    /** @type {ReturnType<StudioControls['_snapshotLightsRig']> | null} */
+    this._lightsRigRestoreSnapshot = null;
+  }
+
+  _snapshotLightsRig() {
+    const state = this.stateStore.getState();
+    const lights = state.lights ?? {};
+    return {
+      showLightIndicators: !!state.showLightIndicators,
+      showLightFalloffIndicators: !!state.showLightFalloffIndicators,
+      lightsCastShadows: !!state.lightsCastShadows,
+      lights: {
+        key: {
+          enabled: lights.key?.enabled === true,
+          castShadows: lights.key?.castShadows === true,
+        },
+        fill: {
+          enabled: lights.fill?.enabled === true,
+          castShadows: lights.fill?.castShadows === true,
+        },
+        rim: {
+          enabled: lights.rim?.enabled === true,
+          castShadows: lights.rim?.castShadows === true,
+        },
+        ambient: {
+          enabled: lights.ambient?.enabled === true,
+        },
+      },
+    };
+  }
+
+  _restoreLightsRig(snapshot) {
+    this.stateStore.set('showLightIndicators', snapshot.showLightIndicators);
+    this.eventBus.emit('lights:show-indicators', snapshot.showLightIndicators);
+    if (this.ui.inputs.showLightIndicators) {
+      this.ui.inputs.showLightIndicators.checked = snapshot.showLightIndicators;
+    }
+
+    this.stateStore.set(
+      'showLightFalloffIndicators',
+      snapshot.showLightFalloffIndicators,
+    );
+    this.eventBus.emit(
+      'lights:show-falloff-indicators',
+      snapshot.showLightFalloffIndicators,
+    );
+    if (this.ui.inputs.showLightFalloffIndicators) {
+      this.ui.inputs.showLightFalloffIndicators.checked =
+        snapshot.showLightFalloffIndicators;
+    }
+
+    this.stateStore.set('lightsCastShadows', snapshot.lightsCastShadows);
+    this.eventBus.emit('lights:cast-shadows', snapshot.lightsCastShadows);
+    if (this.ui.inputs.lightsCastShadows) {
+      this.ui.inputs.lightsCastShadows.checked = snapshot.lightsCastShadows;
+    }
+
+    for (const lightId of ['key', 'fill', 'rim', 'ambient']) {
+      const lightSnap = snapshot.lights[lightId];
+      this.stateStore.set(`lights.${lightId}.enabled`, lightSnap.enabled);
+      this.eventBus.emit('lights:update', {
+        lightId,
+        property: 'enabled',
+        value: lightSnap.enabled,
+      });
+      const enabledInput = this.ui.inputs[`${lightId}LightEnabled`];
+      if (enabledInput) enabledInput.checked = lightSnap.enabled;
+
+      if (lightId !== 'ambient' && lightSnap.castShadows !== undefined) {
+        this.stateStore.set(`lights.${lightId}.castShadows`, lightSnap.castShadows);
+        this.eventBus.emit('lights:update', {
+          lightId,
+          property: 'castShadows',
+          value: lightSnap.castShadows,
+        });
+        const castShadowsInput = this.ui.inputs[`${lightId}LightCastShadows`];
+        if (castShadowsInput) castShadowsInput.checked = lightSnap.castShadows;
+      }
+    }
+
+    this._syncLightShadowControlDisabledState(
+      snapshot.lightsCastShadows,
+      true,
+    );
+  }
+
+  _applyLightsMasterOff() {
+    ['key', 'fill', 'rim', 'ambient'].forEach((lightId) => {
+      this.stateStore.set(`lights.${lightId}.enabled`, false);
+      this.eventBus.emit('lights:update', { lightId, property: 'enabled', value: false });
+      const enabledInput = this.ui.inputs[`${lightId}LightEnabled`];
+      if (enabledInput) enabledInput.checked = false;
+    });
+    ['key', 'fill', 'rim'].forEach((lightId) => {
+      this.stateStore.set(`lights.${lightId}.castShadows`, false);
+      this.eventBus.emit('lights:update', { lightId, property: 'castShadows', value: false });
+      const castShadowsInput = this.ui.inputs[`${lightId}LightCastShadows`];
+      if (castShadowsInput) castShadowsInput.checked = false;
+    });
+    this.stateStore.set('showLightIndicators', false);
+    this.eventBus.emit('lights:show-indicators', false);
+    if (this.ui.inputs.showLightIndicators) this.ui.inputs.showLightIndicators.checked = false;
+    this.stateStore.set('showLightFalloffIndicators', false);
+    this.eventBus.emit('lights:show-falloff-indicators', false);
+    if (this.ui.inputs.showLightFalloffIndicators) {
+      this.ui.inputs.showLightFalloffIndicators.checked = false;
+    }
+    this.stateStore.set('lightsCastShadows', false);
+    this.eventBus.emit('lights:cast-shadows', false);
+    if (this.ui.inputs.lightsCastShadows) this.ui.inputs.lightsCastShadows.checked = false;
+    this._syncLightShadowControlDisabledState(false, false);
+  }
+
+  _applyLightsMasterOnWithoutSnapshot() {
+    ['key', 'fill', 'rim', 'ambient'].forEach((lightId) => {
+      this.stateStore.set(`lights.${lightId}.enabled`, true);
+      this.eventBus.emit('lights:update', { lightId, property: 'enabled', value: true });
+      const enabledInput = this.ui.inputs[`${lightId}LightEnabled`];
+      if (enabledInput) enabledInput.checked = true;
+    });
+    this.stateStore.set('lightsCastShadows', true);
+    this.eventBus.emit('lights:cast-shadows', true);
+    if (this.ui.inputs.lightsCastShadows) {
+      this.ui.inputs.lightsCastShadows.checked = true;
+    }
+    this._syncLightShadowControlDisabledState(true, true);
   }
 
   _baseSurfaceCtx() {
@@ -78,6 +206,22 @@ export class StudioControls {
         surfaceScaleOutputKey: 'backdropSurfaceScale',
         surfaceStrength: this.ui.inputs.backdropSurfaceStrength,
         surfaceStrengthOutputKey: 'backdropSurfaceStrength',
+      },
+      stateStore: this.stateStore,
+      eventBus: this.eventBus,
+      ui: this.ui,
+      helpers: this.helpers,
+    };
+  }
+
+  _infinityCoveSurfaceCtx() {
+    return {
+      inputs: {
+        surfacePreset: this.ui.inputs.infinityCoveSurfacePreset,
+        surfaceScale: this.ui.inputs.infinityCoveSurfaceScale,
+        surfaceScaleOutputKey: 'infinityCoveSurfaceScale',
+        surfaceStrength: this.ui.inputs.infinityCoveSurfaceStrength,
+        surfaceStrengthOutputKey: 'infinityCoveSurfaceStrength',
       },
       stateStore: this.stateStore,
       eventBus: this.eventBus,
@@ -286,6 +430,19 @@ export class StudioControls {
       this.ui.uiSounds?.playSelect();
       this.eventBus.emit('studio:backdrop-snap');
     });
+    this.ui.inputs.infinityCoveEnabled?.addEventListener('change', (event) => {
+      const enabled = !!event.target.checked;
+      if (enabled) this.ui.uiSounds?.playShelfShow();
+      else this.ui.uiSounds?.playShelfHide();
+      this.stateStore.set('infinityCoveEnabled', enabled);
+      this.eventBus.emit('studio:infinity-cove-enabled', enabled);
+      this.ui.applyBlockStates?.(this.stateStore.getState());
+    });
+    bindInfinityCoveSurfaceControls(this._infinityCoveSurfaceCtx());
+    this.ui.inputs.infinityCoveSnap?.addEventListener('click', () => {
+      this.ui.uiSounds?.playSelect();
+      this.eventBus.emit('studio:infinity-cove-snap');
+    });
     this.ui.inputs.baseSnap?.addEventListener('click', () => {
       this.ui.uiSounds?.playSelect();
       this.eventBus.emit('studio:base-snap');
@@ -342,43 +499,14 @@ export class StudioControls {
       this.stateStore.set('lightsEnabled', enabled);
 
       if (!enabled) {
-        ['key', 'fill', 'rim', 'ambient'].forEach((lightId) => {
-          this.stateStore.set(`lights.${lightId}.enabled`, false);
-          this.eventBus.emit('lights:update', { lightId, property: 'enabled', value: false });
-          const enabledInput = this.ui.inputs[`${lightId}LightEnabled`];
-          if (enabledInput) enabledInput.checked = false;
-        });
-        ['key', 'fill', 'rim'].forEach((lightId) => {
-          this.stateStore.set(`lights.${lightId}.castShadows`, false);
-          this.eventBus.emit('lights:update', { lightId, property: 'castShadows', value: false });
-          const castShadowsInput = this.ui.inputs[`${lightId}LightCastShadows`];
-          if (castShadowsInput) castShadowsInput.checked = false;
-        });
-        this.stateStore.set('showLightIndicators', false);
-        this.eventBus.emit('lights:show-indicators', false);
-        if (this.ui.inputs.showLightIndicators) this.ui.inputs.showLightIndicators.checked = false;
-        this.stateStore.set('showLightFalloffIndicators', false);
-        this.eventBus.emit('lights:show-falloff-indicators', false);
-        if (this.ui.inputs.showLightFalloffIndicators) {
-          this.ui.inputs.showLightFalloffIndicators.checked = false;
-        }
-        this.stateStore.set('lightsCastShadows', false);
-        this.eventBus.emit('lights:cast-shadows', false);
-        if (this.ui.inputs.lightsCastShadows) this.ui.inputs.lightsCastShadows.checked = false;
-        this._syncLightShadowControlDisabledState(false, false);
+        this._lightsRigRestoreSnapshot = this._snapshotLightsRig();
+        this._applyLightsMasterOff();
+      } else if (this._lightsRigRestoreSnapshot) {
+        const snapshot = this._lightsRigRestoreSnapshot;
+        this._lightsRigRestoreSnapshot = null;
+        this._restoreLightsRig(snapshot);
       } else {
-        ['key', 'fill', 'rim', 'ambient'].forEach((lightId) => {
-          this.stateStore.set(`lights.${lightId}.enabled`, true);
-          this.eventBus.emit('lights:update', { lightId, property: 'enabled', value: true });
-          const enabledInput = this.ui.inputs[`${lightId}LightEnabled`];
-          if (enabledInput) enabledInput.checked = true;
-        });
-        this.stateStore.set('lightsCastShadows', true);
-        this.eventBus.emit('lights:cast-shadows', true);
-        if (this.ui.inputs.lightsCastShadows) {
-          this.ui.inputs.lightsCastShadows.checked = true;
-        }
-        this._syncLightShadowControlDisabledState(true, true);
+        this._applyLightsMasterOnWithoutSnapshot();
       }
 
       this.eventBus.emit('lights:enabled', enabled);
@@ -446,6 +574,13 @@ export class StudioControls {
       this.eventBus.emit('lights:height', value);
     });
     if (this.ui.inputs.lightsHeight) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.lightsHeight);
+    this.ui.inputs.lightsRigScale?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 1;
+      this.helpers.updateValueLabel('lightsRigScale', value, 'multiplier');
+      this.stateStore.set('lightsRigScale', value);
+      this.eventBus.emit('lights:rig-scale', value);
+    });
+    if (this.ui.inputs.lightsRigScale) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.lightsRigScale);
     this.ui.inputs.lightsAutoRotate?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('lightsAutoRotate', enabled);
@@ -488,21 +623,27 @@ export class StudioControls {
       handleIndividualLightToggle('ambient', event.target.checked);
     });
 
-    // Cast shadows toggles
+    // Cast shadows toggles — state + global master coordinated in EventManager.
     this.ui.inputs.keyLightCastShadows?.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
-      this.stateStore.set('lights.key.castShadows', enabled);
-      this.eventBus.emit('lights:update', { lightId: 'key', property: 'castShadows', value: enabled });
+      this.eventBus.emit('lights:update', {
+        lightId: 'key',
+        property: 'castShadows',
+        value: event.target.checked,
+      });
     });
     this.ui.inputs.fillLightCastShadows?.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
-      this.stateStore.set('lights.fill.castShadows', enabled);
-      this.eventBus.emit('lights:update', { lightId: 'fill', property: 'castShadows', value: enabled });
+      this.eventBus.emit('lights:update', {
+        lightId: 'fill',
+        property: 'castShadows',
+        value: event.target.checked,
+      });
     });
     this.ui.inputs.rimLightCastShadows?.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
-      this.stateStore.set('lights.rim.castShadows', enabled);
-      this.eventBus.emit('lights:update', { lightId: 'rim', property: 'castShadows', value: enabled });
+      this.eventBus.emit('lights:update', {
+        lightId: 'rim',
+        property: 'castShadows',
+        value: event.target.checked,
+      });
     });
   }
 
@@ -794,10 +935,53 @@ export class StudioControls {
     }
     if (this.ui.inputs.backdropY) {
       const v = state.backdropY ?? 0;
-      this.ui.inputs.backdropY.value = v;
-      this.helpers.updateValueLabel('backdropY', v, 'distance');
+      if (this.helpers.syncRangeFromState(this.ui.inputs.backdropY, v)) {
+        this.helpers.updateValueLabel('backdropY', v, 'distance');
+      }
     }
-    
+    if (this.ui.inputs.infinityCoveEnabled) {
+      this.ui.inputs.infinityCoveEnabled.checked = !!state.infinityCoveEnabled;
+    }
+    if (this.ui.inputs.infinityCoveColor) {
+      this.ui.inputs.infinityCoveColor.value = state.infinityCoveColor ?? '#808080';
+    }
+    if (this.ui.inputs.infinityCoveMetalness) {
+      const v = state.infinityCoveMetalness ?? DEFAULT_BACKDROP_METALNESS;
+      this.ui.inputs.infinityCoveMetalness.value = v;
+      this.helpers.updateValueLabel('infinityCoveMetalness', v, 'decimal');
+    }
+    if (this.ui.inputs.infinityCoveRoughness) {
+      const v = state.infinityCoveRoughness ?? DEFAULT_BACKDROP_ROUGHNESS;
+      this.ui.inputs.infinityCoveRoughness.value = v;
+      this.helpers.updateValueLabel('infinityCoveRoughness', v, 'decimal');
+    }
+    syncInfinityCoveSurfaceControls(
+      this._infinityCoveSurfaceCtx(),
+      state,
+      !!state.infinityCoveEnabled,
+    );
+    if (this.ui.inputs.infinityCoveScale) {
+      const v = state.infinityCoveScale ?? 2;
+      this.ui.inputs.infinityCoveScale.value = v;
+      this.helpers.updateValueLabel('infinityCoveScale', v, 'decimal');
+    }
+    if (this.ui.inputs.infinityCoveWidth) {
+      const v = state.infinityCoveWidth ?? 2;
+      this.ui.inputs.infinityCoveWidth.value = v;
+      this.helpers.updateValueLabel('infinityCoveWidth', v, 'decimal');
+    }
+    if (this.ui.inputs.infinityCoveRotation) {
+      const v = state.infinityCoveRotation ?? 0;
+      this.ui.inputs.infinityCoveRotation.value = v;
+      this.helpers.updateValueLabel('infinityCoveRotation', v, 'angle');
+    }
+    if (this.ui.inputs.infinityCoveY) {
+      const v = state.infinityCoveY ?? 0;
+      if (this.helpers.syncRangeFromState(this.ui.inputs.infinityCoveY, v)) {
+        this.helpers.updateValueLabel('infinityCoveY', v, 'distance');
+      }
+    }
+
     // Lights
     if (this.ui.inputs.lightsRotation) {
       this.ui.inputs.lightsRotation.value = state.lightsRotation ?? 0;
@@ -807,6 +991,11 @@ export class StudioControls {
       const heightValue = state.lightsHeight ?? 5;
       this.ui.inputs.lightsHeight.value = heightValue;
       this.helpers.updateValueLabel('lightsHeight', heightValue, 'decimal');
+    }
+    if (this.ui.inputs.lightsRigScale) {
+      const rigScaleValue = state.lightsRigScale ?? 1;
+      this.ui.inputs.lightsRigScale.value = rigScaleValue;
+      this.helpers.updateValueLabel('lightsRigScale', rigScaleValue, 'multiplier');
     }
     if (this.ui.inputs.lightsMaster) {
       const masterValue = state.lightsMaster ?? 1;
@@ -955,7 +1144,7 @@ export class StudioControls {
     );
     this.ui.setControlDisabled(
       ['fillLightCastShadows', 'rimLightCastShadows'],
-      mute || keyOnly,
+      !lightsEnabled || keyOnly,
     );
   }
 }

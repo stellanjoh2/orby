@@ -131,21 +131,28 @@ export class RenderLoopController {
         id: 'base-appear',
         when: (ctx) => ctx.baseAppearActive,
         run: (_delta, s) => {
-          s._updateBaseAppearAnimation();
+          s.studioGroundFacade?.updateBaseAppearAnimation();
         },
       },
       {
         id: 'base-glass-appear',
         when: (ctx) => ctx.baseGlassAppearActive,
         run: (_delta, s) => {
-          s._updateBaseGlassAppearAnimation();
+          s.studioGroundFacade?.updateBaseGlassAppearAnimation();
         },
       },
       {
         id: 'backdrop-appear',
         when: (ctx) => ctx.backdropAppearActive,
         run: (_delta, s) => {
-          s._updateBackdropAppearAnimation();
+          s.studioGroundFacade?.updateBackdropAppearAnimation();
+        },
+      },
+      {
+        id: 'infinity-cove-appear',
+        when: (ctx) => ctx.infinityCoveAppearActive,
+        run: (_delta, s) => {
+          s.studioGroundFacade?.updateInfinityCoveAppearAnimation();
         },
       },
       {
@@ -174,6 +181,13 @@ export class RenderLoopController {
         when: (_ctx, s) => !!s.jointNameLabelsController?.shouldUpdate?.(),
         run: (_delta, s) => {
           s.jointNameLabelsController.update();
+        },
+      },
+      {
+        id: 'light-indicator-hud',
+        when: (_ctx, s) => !!s.lightIndicatorHud?.shouldUpdate?.(),
+        run: (_delta, s) => {
+          s.lightIndicatorHud.update();
         },
       },
       {

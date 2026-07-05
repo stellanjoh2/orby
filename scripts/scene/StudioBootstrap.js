@@ -16,6 +16,9 @@ import { ModelLoader } from '../render/ModelLoader.js';
 import { MeshDiagnosticsController } from '../render/MeshDiagnosticsController.js';
 import { TopologyWarningsOverlay } from '../render/TopologyWarningsOverlay.js';
 import { JointNameLabelsController } from '../render/JointNameLabelsController.js';
+import { LightIndicatorHudController } from '../render/LightIndicatorHudController.js';
+import { LightViewportHudActions } from './LightViewportHudActions.js';
+import { LightViewportSelectionController } from './LightViewportSelectionController.js';
 import { MaterialController } from '../render/MaterialController.js';
 import { applyStaticAnimationFrameZero } from '../render/bakeStaticSkinnedGeometry.js';
 import {
@@ -43,6 +46,7 @@ import { createColorCheckerMeshGroup } from './ColorCheckerMesh.js';
 import { createToggleScaleContext } from './toggleScaleAnimation.js';
 import { setupStudioComposer } from './StudioComposerSetup.js';
 import { CreativeLookSceneSync } from './CreativeLookSceneSync.js';
+import { StudioGroundFacade } from './StudioGroundFacade.js';
 
 /** Lightweight shell — no WebGL until the first model load. */
 export function initStudioShell(scene, initialState) {
@@ -151,6 +155,7 @@ export function initStudioShell(scene, initialState) {
     scene._baseToggleCtx = createToggleScaleContext();
     scene._baseGlassToggleCtx = createToggleScaleContext();
     scene._backdropToggleCtx = createToggleScaleContext();
+    scene._infinityCoveToggleCtx = createToggleScaleContext();
     const bootGround = scene.stateStore.getState();
     scene._ccToggleCtx.prevEnabled = !!bootGround.colorChecker?.enabled;
     scene._baseToggleCtx.prevEnabled = !!bootGround.groundSolid;
@@ -158,6 +163,7 @@ export function initStudioShell(scene, initialState) {
       bootGround.baseGlassSurface ?? bootGround.podiumReflectMesh ?? false
     );
     scene._backdropToggleCtx.prevEnabled = !!bootGround.backdropEnabled;
+    scene._infinityCoveToggleCtx.prevEnabled = !!bootGround.infinityCoveEnabled;
 
     scene.viewportFramingOverlays = new ViewportFramingOverlays();
     const cam0 = scene.stateStore.getState().camera ?? {};
@@ -266,8 +272,14 @@ export function teardownStudioGpu(scene) {
     scene.diagnosticsController = null;
     scene.jointNameLabelsController?.dispose?.();
     scene.jointNameLabelsController = null;
+    scene.lightIndicatorHud?.dispose?.();
+    scene.lightIndicatorHud = null;
+    scene.lightViewportSelection?.dispose?.();
+    scene.lightViewportSelection = null;
+    scene.lightViewportHudActions = null;
     scene.materialController = null;
     scene.creativeLookSceneSync = null;
+    scene.studioGroundFacade = null;
     scene.lightsController = null;
     scene.lights = null;
     scene.groundController = null;
@@ -387,6 +399,8 @@ export async function bootstrapStudio(scene) {
         scene.eventBus.emit('camera:pose-changed', pose);
       },
       onNeedRender: () => scene.requestRender(),
+      getIsGizmoDragging: () =>
+        !!scene._gizmoDragActive || !!scene._lightMoveDragActive,
     });
     scene.controls = scene.cameraController.getControls();
     scene.camera.position.set(0, 1.5, 6);
@@ -405,7 +419,6 @@ export async function bootstrapStudio(scene) {
     /** Horizontal orbit reference (XZ), reused each frame like LightsController. */
     scene._colorCheckerHorizRef = new THREE.Vector3();
     scene._colorCheckerTowardCam = new THREE.Vector3();
-    scene._groundGridBottomAlignRaf = 0;
     scene.scene.environmentIntensity = scene.hdriStrength;
 
     // Initialize background controller (manages solid background color independently from HDRI)
@@ -476,6 +489,7 @@ export async function bootstrapStudio(scene) {
       }
       if (event.value) {
         scene._gizmoDragActive = true;
+        scene.cameraController?.onMeshGizmoDragStart?.();
       } else if (scene._gizmoDragActive) {
         scene._gizmoDragActive = false;
         scene._commitTransformFromGizmo();
@@ -639,7 +653,29 @@ export async function bootstrapStudio(scene) {
     scene.goboProjection.setShadowQuality(scene.lightsShadowQuality);
     void scene.goboProjection.setTextureId(scene.goboTextureId);
     scene.setupLights();
+    scene.lightViewportSelection?.dispose?.();
+    scene.lightViewportSelection = new LightViewportSelectionController(scene, {
+      canvas: scene.canvas,
+      onSelectionChange: () => scene.lightIndicatorHud?.update?.(),
+    });
+    scene.lightViewportHudActions = new LightViewportHudActions(scene);
+    scene.lightIndicatorHud?.dispose?.();
+    scene.lightIndicatorHud = new LightIndicatorHudController({
+      viewport: scene.viewport,
+      getCamera: () => scene.camera,
+      getLayouts: () => scene.lightsController?.getShadowBadgeLayouts?.() ?? null,
+      getActive: () => !!scene.stateStore.getState().showLightIndicators,
+      getIntensity: (lightId) => scene.stateStore.getState().lights?.[lightId]?.intensity ?? 1,
+      onToggleShadow: (lightId) => scene.lightViewportHudActions.toggleCastShadows(lightId),
+      onToggleLight: (lightId) => scene.lightViewportHudActions.toggleLightEnabled(lightId),
+      onOpenColor: (lightId, clientX, clientY, clickTarget) =>
+        scene.lightViewportHudActions.openColorPicker(lightId, clientX, clientY, clickTarget),
+      onSetIntensity: (lightId, value) =>
+        scene.lightViewportHudActions.setLightIntensity(lightId, value),
+    });
+    scene.lightsController?.setSceneStateProvider(() => scene.stateStore.getState());
     scene.setupGround();
+    scene.studioGroundFacade = new StudioGroundFacade(scene);
     scene._syncHdriShadowReceiverFromState();
     const bootGround = scene.stateStore.getState();
     scene._ccToggleCtx.prevEnabled = !!bootGround.colorChecker?.enabled;
@@ -648,6 +684,7 @@ export async function bootstrapStudio(scene) {
       bootGround.baseGlassSurface ?? bootGround.podiumReflectMesh ?? false
     );
     scene._backdropToggleCtx.prevEnabled = !!bootGround.backdropEnabled;
+    scene._infinityCoveToggleCtx.prevEnabled = !!bootGround.infinityCoveEnabled;
     scene.setupMoodController();
     scene.setupEnvironment(initialState);
     setupStudioComposer(scene);

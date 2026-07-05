@@ -60,6 +60,7 @@ import {
   ensureBaseSurfaceControlsMounted,
   ensureBaseGlassSurfaceControlsMounted,
   ensureBackdropSurfaceControlsMounted,
+  ensureInfinityCoveSurfaceControlsMounted,
   ensureObjectSurfaceControlsMounted,
 } from './ui/svgExtrudeControlsShared.js';
 import { ResetControls } from './ui/ResetControls.js';
@@ -373,6 +374,7 @@ export class UIManager {
     ensureBaseSurfaceControlsMounted();
     ensureBaseGlassSurfaceControlsMounted();
     ensureBackdropSurfaceControlsMounted();
+    ensureInfinityCoveSurfaceControlsMounted();
     ensureObjectSurfaceControlsMounted();
     this.dom.canvas = q('#webgl');
     this.dom.viewport = q('.viewport');
@@ -620,6 +622,18 @@ export class UIManager {
       backdropRotation: q('#backdropRotation'),
       backdropY: q('#backdropY'),
       backdropSnap: q('#backdropSnap'),
+      infinityCoveEnabled: q('#infinityCoveEnabled'),
+      infinityCoveColor: q('#infinityCoveColor'),
+      infinityCoveMetalness: q('#infinityCoveMetalness'),
+      infinityCoveRoughness: q('#infinityCoveRoughness'),
+      infinityCoveSurfacePreset: q('#infinityCoveSurfacePreset'),
+      infinityCoveSurfaceScale: q('#infinityCoveSurfaceScale'),
+      infinityCoveSurfaceStrength: q('#infinityCoveSurfaceStrength'),
+      infinityCoveScale: q('#infinityCoveScale'),
+      infinityCoveWidth: q('#infinityCoveWidth'),
+      infinityCoveRotation: q('#infinityCoveRotation'),
+      infinityCoveY: q('#infinityCoveY'),
+      infinityCoveSnap: q('#infinityCoveSnap'),
       hdriButtons: document.querySelectorAll('[data-hdri]'),
       hdriUploadBtn: q('#hdriUploadBtn'),
       hdriFileInput: q('#hdriFileInput'),
@@ -628,6 +642,7 @@ export class UIManager {
       lightsMaster: q('#lightsMaster'),
       lightsRotation: q('#lightsRotation'),
       lightsHeight: q('#lightsHeight'),
+      lightsRigScale: q('#lightsRigScale'),
       lightsAutoRotate: q('#lightsAutoRotate'),
       showLightIndicators: q('#showLightIndicators'),
       showLightFalloffIndicators: q('#showLightFalloffIndicators'),
@@ -654,6 +669,7 @@ export class UIManager {
       rimLightEnabled: q('#rimLightEnabled'),
       ambientLightEnabled: q('#ambientLightEnabled'),
       keyLightCastShadows: q('#keyLightCastShadows'),
+      keyLightColor: q('#keyLightColor'),
       keyLightGoboBtn: q('#keyLightGoboBtn'),
       goboButtons: document.querySelectorAll('[data-gobo]'),
       goboEnabled: q('#goboEnabled'),
@@ -661,7 +677,9 @@ export class UIManager {
       goboScale: q('#goboScale'),
       goboRotation: q('#goboRotation'),
       fillLightCastShadows: q('#fillLightCastShadows'),
+      fillLightColor: q('#fillLightColor'),
       rimLightCastShadows: q('#rimLightCastShadows'),
+      rimLightColor: q('#rimLightColor'),
       dofFocus: q('#dofFocus'),
       dofFocusMode: q('#dofFocusMode'),
       dofForegroundBlur: q('#dofForegroundBlur'),
@@ -3251,6 +3269,24 @@ export class UIManager {
       !backdropOn,
     );
 
+    const infinityCoveOn = !!currentState.infinityCoveEnabled;
+    this.setControlDisabled(
+      [
+        'infinityCoveColor',
+        'infinityCoveMetalness',
+        'infinityCoveRoughness',
+        'infinityCoveSurfacePreset',
+        'infinityCoveSurfaceScale',
+        'infinityCoveSurfaceStrength',
+        'infinityCoveScale',
+        'infinityCoveWidth',
+        'infinityCoveRotation',
+        'infinityCoveY',
+        'infinityCoveSnap',
+      ],
+      !infinityCoveOn,
+    );
+
     // Grid foldout — open state handled in applyMeshFoldouts
     const gridOn = !!currentState.groundWire;
     this.setControlDisabled(
@@ -3310,6 +3346,7 @@ export class UIManager {
     this.setControlDisabled([
       'lightsRotation', // Global Rotate
       'lightsHeight',   // Global Height
+      'lightsRigScale', // Global Rig Scale
       'lightsMaster',   // Global Strength
       // Individual light sliders (strength, height, rotate)
       'keyLightStrength',
@@ -3333,6 +3370,7 @@ export class UIManager {
     // Global sliders are enabled if master is on
     this.setControlDisabled('lightsRotation', !masterEnabled);
     this.setControlDisabled('lightsHeight', !masterEnabled);
+    this.setControlDisabled('lightsRigScale', !masterEnabled);
     this.setControlDisabled('lightsMaster', !masterEnabled);
     
     // Individual light sliders are enabled only if master is on AND that specific light is enabled

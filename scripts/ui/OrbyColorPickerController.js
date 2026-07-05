@@ -40,6 +40,30 @@ export class OrbyColorPickerController {
     this._observeDynamicChips(root);
   }
 
+  /**
+   * Open the picker for a shelf color chip (e.g. viewport light HUD shortcut).
+   * @param {HTMLInputElement} input
+   * @param {{ clientX?: number, clientY?: number, placement?: 'shelf' | 'viewport-hud', clickTarget?: Element }} [point]
+   */
+  openForInput(input, point = {}) {
+    if (!(input instanceof HTMLInputElement)) return;
+    if (input.type !== 'color' || !input.classList.contains('color-chip')) return;
+    if (input.disabled || input.classList.contains('is-disabled-handle')) return;
+
+    if (this._anchor && this._anchor !== input) {
+      this._commitAnchor();
+    }
+
+    this._anchor = input;
+    const rect = input.getBoundingClientRect();
+    this.picker.open(input, {
+      clientX: Number.isFinite(point.clientX) ? point.clientX : rect.left + rect.width / 2,
+      clientY: Number.isFinite(point.clientY) ? point.clientY : rect.top + rect.height / 2,
+      placement: point.placement === 'viewport-hud' ? 'viewport-hud' : 'shelf',
+      clickTarget: point.clickTarget instanceof Element ? point.clickTarget : null,
+    });
+  }
+
   /** @param {Event} event */
   _onAnchorClick(event) {
     const target = event.target;

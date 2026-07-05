@@ -11,6 +11,7 @@ import {
 import {
   collectScrollContainers,
   computePopoverPlacement,
+  computeViewportHudPopoverPlacement,
   getPopoverAnchorRect,
 } from './popoverPlacement.js';
 
@@ -42,6 +43,10 @@ export class OrbyColorPicker {
     this._anchor = null;
     /** @type {{ clientX: number, clientY: number } | null} */
     this._anchorPoint = null;
+    /** @type {Element | null} */
+    this._clickTarget = null;
+    /** @type {'shelf' | 'viewport-hud'} */
+    this._placement = 'shelf';
     /** @type {EventTarget[]} */
     this._scrollTargets = [];
     this._open = false;
@@ -206,7 +211,7 @@ export class OrbyColorPicker {
     this.onEyeDropper = onEyeDropper;
   }
 
-  /** @param {HTMLInputElement} anchor @param {{ clientX?: number, clientY?: number }} [point] */
+  /** @param {HTMLInputElement} anchor @param {{ clientX?: number, clientY?: number, placement?: 'shelf' | 'viewport-hud', clickTarget?: Element | null }} [point] */
   open(anchor, point) {
     if (!(anchor instanceof HTMLInputElement) || anchor.disabled) return;
     this._anchor = anchor;
@@ -214,6 +219,8 @@ export class OrbyColorPicker {
       point?.clientX != null && point?.clientY != null
         ? { clientX: point.clientX, clientY: point.clientY }
         : null;
+    this._placement = point?.placement === 'viewport-hud' ? 'viewport-hud' : 'shelf';
+    this._clickTarget = point?.clickTarget instanceof Element ? point.clickTarget : null;
     this.setScale('hex');
     this.setValue(anchor.value || ORBY_BLACK);
     this._renderRecent();
@@ -224,12 +231,15 @@ export class OrbyColorPicker {
     this._positionPanel();
 
     this._bindRepositionListeners();
-    document.addEventListener('click', this._onDocClick, true);
     document.addEventListener('keydown', this._onDocKey, true);
     requestAnimationFrame(() => {
       this._positionPanel();
       this.hexInput?.focus({ preventScroll: true });
       this.hexInput?.select();
+      // Defer dismiss listener so the opening tap does not immediately close the panel.
+      requestAnimationFrame(() => {
+        document.addEventListener('click', this._onDocClick, true);
+      });
     });
   }
 
@@ -250,6 +260,8 @@ export class OrbyColorPicker {
     this.onClose?.();
     this._anchor = null;
     this._anchorPoint = null;
+    this._clickTarget = null;
+    this._placement = 'shelf';
   }
 
   /** @param {string} hex */
@@ -326,8 +338,13 @@ export class OrbyColorPicker {
       height: panelHeight > 0 ? panelHeight : 320,
     };
 
-    const anchorRect = getPopoverAnchorRect(anchor, this._anchorPoint);
-    const { left, top } = computePopoverPlacement(anchorRect, panel, this._anchorPoint);
+    const anchorRect = getPopoverAnchorRect(anchor, this._anchorPoint, {
+      preferClickPoint: this._placement === 'viewport-hud',
+      clickAnchorSize: 42,
+    });
+    const { left, top } = this._placement === 'viewport-hud'
+      ? computeViewportHudPopoverPlacement(anchorRect, panel)
+      : computePopoverPlacement(anchorRect, panel, this._anchorPoint);
 
     this.root.style.left = `${left}px`;
     this.root.style.top = `${top}px`;
@@ -514,6 +531,13 @@ export class OrbyColorPicker {
       return;
     }
     if (this._anchor?.contains(target)) return;
+    if (this._clickTarget instanceof Element && this._clickTarget.contains(target)) return;
+    if (
+      target instanceof Element
+      && target.closest('.light-indicator-hud__btn--color')
+    ) {
+      return;
+    }
     this.close();
   }
 

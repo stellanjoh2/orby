@@ -539,13 +539,24 @@ export class UIHelpers {
 
     const onEnd = (event) => {
       if (!pending || event.pointerId !== pending.pointerId) return;
-      const { slider, startX, startY } = pending;
+      const { slider, startX, startY, startValue } = pending;
       clearPending();
 
-      if (Math.hypot(event.clientX - startX, event.clientY - startY) > 4) return;
+      const movement = Math.hypot(event.clientX - startX, event.clientY - startY);
+      if (movement > 4) return;
 
-      // Thumb-only gesture — do not require value unchanged between down/up; some
-      // browsers (notably on full-gradient rails) nudge the value on click.
+      const endValue = parseFloat(slider.value);
+      const step = parseFloat(slider.step);
+      const minStep = Number.isFinite(step) && step > 0 ? step : 0.001;
+      const start = Number.isFinite(startValue) ? startValue : endValue;
+      const valueDelta =
+        Number.isFinite(endValue) && Number.isFinite(start) ? Math.abs(endValue - start) : 0;
+
+      // Fine scrub on the thumb (e.g. Studio Backdrop Y): small pointer travel still
+      // changes the value — must not be treated as "click thumb to reset default".
+      // Pure clicks may still nudge one step in some browsers; those have ~0 movement.
+      if (movement > 1 && valueDelta >= minStep * 0.45) return;
+
       this.resetRangeSliderToDefault(slider);
     };
 
@@ -564,6 +575,7 @@ export class UIHelpers {
           pointerId: event.pointerId,
           startX: event.clientX,
           startY: event.clientY,
+          startValue: parseFloat(slider.value),
           onEnd,
         };
         window.addEventListener('pointerup', onEnd, true);

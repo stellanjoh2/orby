@@ -676,6 +676,91 @@ export function syncBackdropSurfaceControls(ctx, state, canEdit) {
   syncBackdropSurfaceStrengthControl(ctx, state, canEdit);
 }
 
+/** Mount shared surface controls into the Infinity Cove panel. */
+export function ensureInfinityCoveSurfaceControlsMounted() {
+  const mount = document.getElementById('infinityCoveSurfaceControlsMount');
+  if (!mount) return;
+  if (mount.dataset.mounted === '1' && mount.querySelector('#infinityCoveSurfaceStrength')) {
+    return;
+  }
+  mount.innerHTML = buildSvgExtrudeSurfaceControlsHtml({
+    presetId: 'infinityCoveSurfacePreset',
+    scaleId: 'infinityCoveSurfaceScale',
+    scaleOutput: 'infinityCoveSurfaceScale',
+    strengthId: 'infinityCoveSurfaceStrength',
+    strengthOutput: 'infinityCoveSurfaceStrength',
+    presetAriaLabel: 'Infinity cove surface material',
+  });
+  mount.dataset.mounted = '1';
+}
+
+function emitInfinityCoveSurface(eventBus, stateStore) {
+  eventBus.emit('studio:infinity-cove-surface', {
+    preset: stateStore.getState().infinityCoveSurfacePreset ?? 'none',
+    scale: Number(stateStore.getState().infinityCoveSurfaceScale ?? 1) || 1.0,
+    strength: clampSurfaceStrength(stateStore.getState().infinityCoveSurfaceStrength ?? 1),
+  });
+}
+
+function syncInfinityCoveSurfaceStrengthControl(ctx, state, canEdit) {
+  const { inputs, helpers, ui } = ctx;
+  if (!inputs.surfaceStrength) return;
+  const config = getSvgExtrudeSurfacePresetConfig(state.infinityCoveSurfacePreset ?? 'none');
+  const isNormalMap = config.kind === 'normalMap';
+  const strength = clampSurfaceStrength(state.infinityCoveSurfaceStrength ?? 1);
+  if (document.activeElement !== inputs.surfaceStrength) {
+    inputs.surfaceStrength.value = strength;
+    helpers.updateValueLabel(inputs.surfaceStrengthOutputKey, strength, 'decimal');
+  }
+  ui.setControlDisabled(inputs.surfaceStrength, !canEdit || !isNormalMap);
+}
+
+export function bindInfinityCoveSurfaceControls(ctx) {
+  const { inputs, stateStore, eventBus, ui, helpers } = ctx;
+
+  inputs.surfacePreset?.addEventListener('change', (event) => {
+    const preset = event?.target?.value || 'none';
+    stateStore.set('infinityCoveSurfacePreset', preset);
+    syncInfinityCoveSurfaceStrengthControl(ctx, stateStore.getState(), true);
+    emitInfinityCoveSurface(eventBus, stateStore);
+  });
+
+  inputs.surfaceScale?.addEventListener('input', (event) => {
+    const value = parseFloat(event.target.value);
+    const scale = clampSurfaceUiScale(Number.isFinite(value) ? value : 1.0);
+    helpers.updateValueLabel(inputs.surfaceScaleOutputKey, formatSurfaceDetailLabel(scale), 'decimal');
+    stateStore.set('infinityCoveSurfaceScale', scale);
+    emitInfinityCoveSurface(eventBus, stateStore);
+  });
+  if (inputs.surfaceScale) helpers.enableSliderKeyboardStepping(inputs.surfaceScale);
+
+  inputs.surfaceStrength?.addEventListener('input', (event) => {
+    const value = parseFloat(event.target.value);
+    const strength = Number.isFinite(value) ? Math.max(0, Math.min(2, value)) : 1.0;
+    helpers.updateValueLabel(inputs.surfaceStrengthOutputKey, strength, 'decimal');
+    stateStore.set('infinityCoveSurfaceStrength', strength);
+    emitInfinityCoveSurface(eventBus, stateStore);
+  });
+  if (inputs.surfaceStrength) helpers.enableSliderKeyboardStepping(inputs.surfaceStrength);
+}
+
+export function syncInfinityCoveSurfaceControls(ctx, state, canEdit) {
+  const { inputs, helpers, ui } = ctx;
+  if (inputs.surfacePreset) {
+    inputs.surfacePreset.value = state.infinityCoveSurfacePreset ?? 'none';
+    ui.setControlDisabled(inputs.surfacePreset, !canEdit);
+  }
+  if (inputs.surfaceScale) {
+    const scale = clampSurfaceUiScale(Number(state.infinityCoveSurfaceScale ?? 1) || 1.0);
+    if (document.activeElement !== inputs.surfaceScale) {
+      inputs.surfaceScale.value = scale;
+      helpers.updateValueLabel(inputs.surfaceScaleOutputKey, formatSurfaceDetailLabel(scale), 'decimal');
+    }
+    ui.setControlDisabled(inputs.surfaceScale, !canEdit);
+  }
+  syncInfinityCoveSurfaceStrengthControl(ctx, state, canEdit);
+}
+
 /** Mount shared surface controls into the SVG Extrude panel (replaces static index.html copy). */
 export function ensureSvgExtrudeSurfaceControlsMounted() {
   const mount = document.getElementById('svgExtrudeSurfaceControlsMount');

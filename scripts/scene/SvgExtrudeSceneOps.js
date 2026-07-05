@@ -149,7 +149,7 @@ export function rebuildSvgExtrudeMeshesAfterImporterChange(scene) {
   scene.refreshBoneHelpers();
   scene.cameraController?.refreshModelBounds?.(scene.currentModel);
   scene._syncShadowCameraBounds?.();
-  scene._applyShadowTintToScene?.();
+  scene._syncStudioGroundSurfaces?.();
   scene.fontTextRevealController?.bindModel?.(scene.currentModel);
   if (scene.currentFile) {
     scene.updateStatsUI(scene.currentFile, scene.currentModel, scene.currentAssetMetadata);

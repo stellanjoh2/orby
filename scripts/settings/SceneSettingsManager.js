@@ -997,6 +997,59 @@ export class SceneSettingsManager {
           strength: st.backdropSurfaceStrength ?? 1,
         });
       }
+      if (payload.infinityCoveEnabled !== undefined) {
+        this.stateStore.set('infinityCoveEnabled', !!payload.infinityCoveEnabled);
+        this.eventBus.emit('studio:infinity-cove-enabled', !!payload.infinityCoveEnabled);
+      }
+      if (payload.infinityCoveScale !== undefined) {
+        this.stateStore.set('infinityCoveScale', payload.infinityCoveScale);
+        this.eventBus.emit('studio:infinity-cove-scale', payload.infinityCoveScale);
+      }
+      if (payload.infinityCoveWidth !== undefined) {
+        this.stateStore.set('infinityCoveWidth', payload.infinityCoveWidth);
+        this.eventBus.emit('studio:infinity-cove-width', payload.infinityCoveWidth);
+      }
+      if (payload.infinityCoveColor !== undefined) {
+        this.stateStore.set('infinityCoveColor', payload.infinityCoveColor);
+        this.eventBus.emit('studio:infinity-cove-color', payload.infinityCoveColor);
+      }
+      if (payload.infinityCoveRotation !== undefined) {
+        this.stateStore.set('infinityCoveRotation', payload.infinityCoveRotation);
+        this.eventBus.emit('studio:infinity-cove-rotation', payload.infinityCoveRotation);
+      }
+      if (payload.infinityCoveY !== undefined) {
+        this.stateStore.set('infinityCoveY', payload.infinityCoveY);
+        this.eventBus.emit('studio:infinity-cove-y', payload.infinityCoveY);
+      }
+      if (payload.infinityCoveMetalness !== undefined) {
+        this.stateStore.set('infinityCoveMetalness', payload.infinityCoveMetalness);
+        this.eventBus.emit('studio:infinity-cove-metalness', payload.infinityCoveMetalness);
+      }
+      if (payload.infinityCoveRoughness !== undefined) {
+        this.stateStore.set('infinityCoveRoughness', payload.infinityCoveRoughness);
+        this.eventBus.emit('studio:infinity-cove-roughness', payload.infinityCoveRoughness);
+      }
+      if (
+        payload.infinityCoveSurfacePreset !== undefined ||
+        payload.infinityCoveSurfaceScale !== undefined ||
+        payload.infinityCoveSurfaceStrength !== undefined
+      ) {
+        if (payload.infinityCoveSurfacePreset !== undefined) {
+          this.stateStore.set('infinityCoveSurfacePreset', payload.infinityCoveSurfacePreset);
+        }
+        if (payload.infinityCoveSurfaceScale !== undefined) {
+          this.stateStore.set('infinityCoveSurfaceScale', payload.infinityCoveSurfaceScale);
+        }
+        if (payload.infinityCoveSurfaceStrength !== undefined) {
+          this.stateStore.set('infinityCoveSurfaceStrength', payload.infinityCoveSurfaceStrength);
+        }
+        const st = this.stateStore.getState();
+        this.eventBus.emit('studio:infinity-cove-surface', {
+          preset: st.infinityCoveSurfacePreset ?? 'none',
+          scale: st.infinityCoveSurfaceScale ?? 1,
+          strength: st.infinityCoveSurfaceStrength ?? 1,
+        });
+      }
       if (payload.gridScale !== undefined) {
         this.stateStore.set('gridScale', payload.gridScale);
         this.eventBus.emit('studio:grid-scale', payload.gridScale);
@@ -1072,6 +1125,10 @@ export class SceneSettingsManager {
       if (payload.lightsHeight !== undefined) {
         this.stateStore.set('lightsHeight', payload.lightsHeight);
         this.eventBus.emit('lights:height', payload.lightsHeight);
+      }
+      if (payload.lightsRigScale !== undefined) {
+        this.stateStore.set('lightsRigScale', payload.lightsRigScale);
+        this.eventBus.emit('lights:rig-scale', payload.lightsRigScale);
       }
       if (payload.lightsAutoRotate !== undefined) {
         this.stateStore.set('lightsAutoRotate', payload.lightsAutoRotate);

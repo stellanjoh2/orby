@@ -713,22 +713,26 @@ export function resolveRenderQualityTier(id) {
 }
 
 /**
- * Low/Medium viewport quality: only the key light may cast shadow maps (fill/rim stay off).
+ * Low viewport quality: only the key light may cast shadow maps (fill/rim stay off).
+ * Medium and Ultra allow per-light cast toggles on all three directionals.
  * @param {string | undefined} renderQuality
  */
 export function isKeyLightOnlyShadowCastingRenderQuality(renderQuality) {
-  return renderQuality === 'low' || renderQuality === 'medium';
+  return renderQuality === 'low';
 }
 
 /**
- * Per-light cast-shadow flags when the global shadows toggle is turned on.
+ * Per-light cast-shadow flags applied when the global shadows master is turned on
+ * and no per-light preference is set yet. Medium defaults to key only (fill/rim are opt-in).
+ * Ultra turns all three on by default; Low is key-only and fill/rim cannot be enabled.
  * @param {string | undefined} renderQuality
  * @returns {Array<'key' | 'fill' | 'rim'>}
  */
 export function castShadowLightIdsForGlobalToggle(renderQuality) {
-  return isKeyLightOnlyShadowCastingRenderQuality(renderQuality)
-    ? ['key']
-    : ['key', 'fill', 'rim'];
+  if (renderQuality === 'max') {
+    return ['key', 'fill', 'rim'];
+  }
+  return ['key'];
 }
 
 /**

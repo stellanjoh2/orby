@@ -106,6 +106,7 @@ export class ModelLifecycleManager {
     s.stateStore.set('objectHidden', false);
     if (s.modelRoot) s.modelRoot.visible = true;
     s.ui.meshControls?.syncHideObjectButton?.({ hidden: false, hasModel: false });
+    s._syncShadowCameraBounds();
     s.eventBus.emit('scene:model-cleared');
   }
 
@@ -265,8 +266,8 @@ export class ModelLifecycleManager {
           s._pendingFontCameraFocusAfterTypography = true;
         }
       } else {
-        s._cancelGroundGridBottomAlignAnimation();
-        s._alignGroundAndGridToCurrentModelBottom();
+        s.studioGroundFacade?.cancelGroundGridBottomAlignAnimation();
+        s.studioGroundFacade?.alignGroundAndGridToCurrentModelBottom();
       }
     }
     s._skipGroundGridAutoAlignOnNextModelLoad = false;
@@ -318,6 +319,7 @@ export class ModelLifecycleManager {
       const intensity = Math.max(0, s.hdriStrength);
       s.updateMaterialsEnvironment(s.scene.environment, intensity);
     }
+    s._syncStudioGroundSurfaces?.();
     s.animationController.setModel(s.currentModel, animations);
     s.animationController.setClipPlaybackMode(
       state.animation?.clipPlaybackMode ?? 'loop',

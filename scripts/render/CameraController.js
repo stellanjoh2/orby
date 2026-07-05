@@ -49,6 +49,7 @@ export class CameraController {
       onModelBoundsChanged = null,
       onPoseChanged = null,
       onNeedRender = null,
+      getIsGizmoDragging = null,
     } = {},
   ) {
     this.camera = camera;
@@ -64,6 +65,7 @@ export class CameraController {
       onModelBoundsChanged,
       onPoseChanged,
       onNeedRender,
+      getIsGizmoDragging,
     };
     this.altLightRotateSensitivity = altLightRotateSensitivity;
     this.altLightHeightSensitivity = altLightHeightSensitivity ?? 0.15;
@@ -275,15 +277,48 @@ export class CameraController {
   _bindOrbitPoseSync() {
     if (!this.controls) return;
     this.controls.addEventListener('start', () => {
-      this._orbitInteractionActive = true;
-      this._unlockOrbitSolve();
+      // TransformControls pointerdown runs after OrbitControls on the same canvas.
+      // Defer so a gizmo grab is not treated as orbit (avoids one-frame camera drift).
+      queueMicrotask(() => {
+        if (this._getIsGizmoDragging()) {
+          this._orbitInteractionActive = false;
+          this._clearOrbitControlDeltas();
+          this._lockOrbitSolve();
+          return;
+        }
+        this._orbitInteractionActive = true;
+        this._unlockOrbitSolve();
+      });
     });
     this.controls.addEventListener('end', () => {
-      this._orbitInteractionActive = false;
-      if (this._suppressPoseEvents || this._exportCameraDriveActive) return;
-      if (this.autoOrbitMode !== 'off') return;
-      this._emitPoseChanged({ persist: true });
+      queueMicrotask(() => {
+        if (this._getIsGizmoDragging()) return;
+        this._orbitInteractionActive = false;
+        if (this._suppressPoseEvents || this._exportCameraDriveActive) return;
+        if (this.autoOrbitMode !== 'off') return;
+        this._emitPoseChanged({ persist: true });
+      });
     });
+  }
+
+  _getIsGizmoDragging() {
+    return !!this.callbacks.getIsGizmoDragging?.();
+  }
+
+  /** Lock orbit pose before mesh gizmo transforms (move / rotate / scale). */
+  onMeshGizmoDragStart() {
+    this._orbitInteractionActive = false;
+    this._clearOrbitControlDeltas();
+    this._lockOrbitSolve();
+  }
+
+  _clearOrbitControlDeltas() {
+    if (this.controls?.sphericalDelta) {
+      this.controls.sphericalDelta.set(0, 0, 0);
+    }
+    if (this.controls?.panOffset) {
+      this.controls.panOffset.set(0, 0, 0);
+    }
   }
 
   _unlockOrbitSolve() {
@@ -304,6 +339,7 @@ export class CameraController {
   }
 
   _shouldRunOrbitSolve() {
+    if (this._getIsGizmoDragging()) return false;
     if (!this._orbitSolveLocked) return true;
     if (this._orbitInteractionActive) return true;
     if (this.isFocusAnimating()) return true;
@@ -1112,7 +1148,9 @@ export class CameraController {
 
       const changed = this._runOrbitSolveAndTilt();
 
-      if (
+      if (this._getIsGizmoDragging()) {
+        // Mesh gizmo drag — keep the settled orbit pose frozen.
+      } else if (
         !this._orbitInteractionActive &&
         !this.isFocusAnimating() &&
         !this.hasViewportInteraction()

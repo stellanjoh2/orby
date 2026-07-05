@@ -16,6 +16,8 @@ export function createLightsDefaults() {
     lightsMaster: 0.30,
     lightsRotation: 0,
     lightsHeight: 5,
+    /** Uniform scale for the 3-point rig — 1 = default spread, 4 = 4× farther from subject. */
+    lightsRigScale: 1,
     lightsAutoRotate: false,
     showLightIndicators: false,
     showLightFalloffIndicators: false,

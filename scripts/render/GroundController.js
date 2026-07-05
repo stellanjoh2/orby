@@ -39,6 +39,7 @@ import {
   DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
   DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
 } from '../import/extrudeDefaults.js';
+import { InfinityCoveController } from './InfinityCoveController.js';
 
 const _backdropShadowCorner = new THREE.Vector3();
 const _backdropShadowBox = new THREE.Box3();
@@ -92,7 +93,7 @@ vec2 orbyGlassReflectionUvOffset() {
       normalize( vOrbyLocalNormal ),
       uOrbyScale
     );
-    return tn.xy * uOrbyNormalStrength * 0.018;
+    return tn.xy * uOrbyNormalStrength * 0.036;
   }
   vec3 p = vOrbyWorldPos * uOrbyScale;
   float mode = uOrbySurfaceMode;
@@ -430,9 +431,30 @@ export class GroundController {
     );
     this.debugWireframeEnabled = !!options.debugWireframeEnabled;
     this.backdrop = null;
+    /** Scale-in/out multiplier from {@link setBackdropAnimationState}. */
+    this._backdropAnimMul = options.backdropEnabled ? 1 : 0;
+    this._backdropAnimVisible = !!options.backdropEnabled;
 
     this.grid = null;
     this.gridMaterials = null;
+    /** SceneManager wires this to {@link SceneManager#_syncStudioGroundSurfaces}. */
+    this.onSurfacePresentationSync = null;
+
+    this.infinityCove = new InfinityCoveController(this.scene, {
+      infinityCoveEnabled: !!options.infinityCoveEnabled,
+      infinityCoveScale: options.infinityCoveScale,
+      infinityCoveWidth: options.infinityCoveWidth,
+      infinityCoveColor: options.infinityCoveColor,
+      infinityCoveRotation: options.infinityCoveRotation,
+      infinityCoveY: options.infinityCoveY,
+      infinityCoveMetalness: options.infinityCoveMetalness,
+      infinityCoveRoughness: options.infinityCoveRoughness,
+      infinityCoveSurfacePreset: options.infinityCoveSurfacePreset,
+      infinityCoveSurfaceScale: options.infinityCoveSurfaceScale,
+      infinityCoveSurfaceStrength: options.infinityCoveSurfaceStrength,
+      debugWireframeEnabled: this.debugWireframeEnabled,
+      onSurfacePresentationSync: () => this._requestSurfacePresentationSync(),
+    });
 
     this.buildGrid();
     this.buildDefaultBase();
@@ -492,6 +514,8 @@ export class GroundController {
   disposeMeshes() {
     this.disposeBase();
     this.disposeBackdrop();
+    this.infinityCove?.dispose();
+    this.infinityCove = null;
     this.disposeGrid();
   }
 
@@ -545,6 +569,7 @@ export class GroundController {
 
     this.setGroundY(this.groundY);
     this.rebuildBaseReflector();
+    this._requestSurfacePresentationSync();
   }
 
   buildDefaultBackdrop() {
@@ -561,7 +586,6 @@ export class GroundController {
     this.backdrop = new THREE.Mesh(geometry, material);
     this.backdrop.userData.orbyStudioBackdrop = true;
     this._syncBackdropShadowFlags();
-    this.backdrop.visible = this.backdropEnabled;
     this.backdrop.position.z = this.backdropSpawnZ;
     this.scene.add(this.backdrop);
     this._applyBackdropTransform();
@@ -698,20 +722,33 @@ export class GroundController {
     this._lastHdriIntensity = intensity;
     this._lastHdriBlurriness = blur;
 
-    const mat = this.podium?.material;
-    if (!mat || (!mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial)) return;
-
     const env = envTexture ?? this.scene.environment ?? null;
-    mat.envMap = env;
-    mat.envMapIntensity = intensity * this.podiumReflection;
-    mat.metalness = this.podiumMetalness;
-    mat.roughness = effectiveRoughnessWithHdriBlur(this.podiumRoughness, blur);
-    if (mat.isMeshPhysicalMaterial) {
-      mat.clearcoat = this.podiumClearcoat;
-      mat.clearcoatRoughness = 0.22;
+    const mat = this.podium?.material;
+    if (mat && (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial)) {
+      mat.envMap = env;
+      mat.envMapIntensity = intensity * this.podiumReflection;
+      mat.metalness = this.podiumMetalness;
+      mat.roughness = effectiveRoughnessWithHdriBlur(this.podiumRoughness, blur);
+      if (mat.isMeshPhysicalMaterial) {
+        mat.clearcoat = this.podiumClearcoat;
+        mat.clearcoatRoughness = 0.22;
+      }
+      if (typeof this.onSurfacePresentationSync !== 'function') {
+        mat.needsUpdate = true;
+      }
     }
-    mat.needsUpdate = true;
+
     this._applyBackdropMaterial();
+    this.applyBaseSurface();
+    this.infinityCove?.syncEnvironment(env, intensity, blur);
+    this._requestSurfacePresentationSync();
+  }
+
+  /** Re-apply surface shaders + shadow/gobo relink after PBR env edits (same path as object surfaces). */
+  _requestSurfacePresentationSync() {
+    if (typeof this.onSurfacePresentationSync === 'function') {
+      this.onSurfacePresentationSync();
+    }
   }
 
   setBaseMetalness(value) {
@@ -744,6 +781,7 @@ export class GroundController {
       this.baseSurfaceStrength = clampSurfaceStrength(strength);
     }
     this.applyBaseSurface();
+    this._requestSurfacePresentationSync();
   }
 
   applyBaseSurface() {
@@ -790,16 +828,16 @@ export class GroundController {
     if (!this.podiumReflector?.material) return;
     if (!this._glassSurfaceUniformRefs) {
       this._glassSurfaceUniformRefs = createOrbySurfaceUniformRefs();
-      applyBaseGlassReflectorShader(
-        this.podiumReflector.material,
-        this.podiumGlassAmount,
-        this.podiumGlassBrightness,
-        this._glassSurfaceUniformRefs,
-      );
     }
     applyOrbySurfaceUniformState(
       this._glassSurfaceUniformRefs,
       this._resolveBaseGlassSurfaceUniformState(),
+    );
+    applyBaseGlassReflectorShader(
+      this.podiumReflector.material,
+      this.podiumGlassAmount,
+      this.podiumGlassBrightness,
+      this._glassSurfaceUniformRefs,
     );
   }
 
@@ -1023,11 +1061,25 @@ export class GroundController {
   setBackdropMetalness(value) {
     this.backdropMetalness = clamp01(value);
     this._applyBackdropMaterial();
+    this._requestSurfacePresentationSync();
   }
 
   setBackdropRoughness(value) {
     this.backdropRoughness = clamp01(value);
     this._applyBackdropMaterial();
+    this._requestSurfacePresentationSync();
+  }
+
+  setInfinityCoveColor(color) {
+    this.infinityCove?.setColor(color);
+  }
+
+  setInfinityCoveMetalness(value) {
+    this.infinityCove?.setMetalness(value);
+  }
+
+  setInfinityCoveRoughness(value) {
+    this.infinityCove?.setRoughness(value);
   }
 
   setBackdropSurface({ preset, scale, strength } = {}) {
@@ -1039,6 +1091,7 @@ export class GroundController {
       this.backdropSurfaceStrength = clampSurfaceStrength(strength);
     }
     this.applyBackdropSurface();
+    this._requestSurfacePresentationSync();
   }
 
   applyBackdropSurface() {
@@ -1069,27 +1122,25 @@ export class GroundController {
   _applyBackdropTransform() {
     if (!this.backdrop) return;
     this._syncBackdropShadowFlags();
-    this.backdrop.position.y = this.backdropY;
     this.backdrop.rotation.y = THREE.MathUtils.degToRad(this.backdropRotation);
     const sx = this.backdropWidth * this.backdropScale;
     const sy = this.backdropScale;
     const sz = this.backdropScale;
-    this.backdrop.scale.set(sx, sy, sz);
     this.backdrop.userData.backdropBaseScale = { x: sx, y: sy, z: sz };
+
+    const m = Number.isFinite(this._backdropAnimMul) ? Math.max(0, this._backdropAnimMul) : 1;
+    this.backdrop.scale.set(sx * m, sy * m, sz * m);
+    // Anchor reveal/hide to the floor edge (bottom vertices), not the mesh center.
+    // Keep the world-space floor contact at backdropY while scaling.
+    this.backdrop.position.y = this.backdropY + (this.backdropCurveRadius * sy * (m - 1));
+    this.backdrop.visible = !!this._backdropAnimVisible;
   }
 
   setBackdropAnimationState(animMul, visible) {
     if (!this.backdrop) return;
-    const base = this.backdrop.userData?.backdropBaseScale;
-    const bx = base?.x ?? (this.backdropWidth * this.backdropScale);
-    const by = base?.y ?? this.backdropScale;
-    const bz = base?.z ?? this.backdropScale;
-    const m = Number.isFinite(animMul) ? Math.max(0, animMul) : 1;
-    this.backdrop.visible = !!visible;
-    this.backdrop.scale.set(bx * m, by * m, bz * m);
-    // Anchor reveal/hide to the floor edge (bottom vertices), not the mesh center.
-    // Keep the world-space floor contact at backdropY while scaling.
-    this.backdrop.position.y = this.backdropY + (this.backdropCurveRadius * by * (m - 1));
+    this._backdropAnimMul = Number.isFinite(animMul) ? Math.max(0, animMul) : 1;
+    this._backdropAnimVisible = !!visible;
+    this._applyBackdropTransform();
   }
 
   /**
@@ -1101,28 +1152,37 @@ export class GroundController {
    * Used to expand directional shadow ortho frusta so cyclorama shadows are not clipped.
    */
   getShadowReceiveRadiusFromCenter(center) {
-    if (!this.backdropEnabled || !this.backdrop || !center) return 0;
-    const box = this.getBackdropRestWorldBox(_backdropShadowBox);
-    if (box.isEmpty()) return 0;
-
+    if (!center) return 0;
     let maxReach = 0;
-    const { min, max } = box;
-    for (let xi = 0; xi < 2; xi += 1) {
-      for (let yi = 0; yi < 2; yi += 1) {
-        for (let zi = 0; zi < 2; zi += 1) {
-          _backdropShadowCorner.set(
-            xi ? max.x : min.x,
-            yi ? max.y : min.y,
-            zi ? max.z : min.z,
-          );
-          maxReach = Math.max(
-            maxReach,
-            _backdropShadowCorner.distanceTo(center),
-          );
+    if (this.backdropEnabled && this.backdrop) {
+      const box = this.getBackdropRestWorldBox(_backdropShadowBox);
+      if (!box.isEmpty()) {
+        const { min, max } = box;
+        for (let xi = 0; xi < 2; xi += 1) {
+          for (let yi = 0; yi < 2; yi += 1) {
+            for (let zi = 0; zi < 2; zi += 1) {
+              _backdropShadowCorner.set(
+                xi ? max.x : min.x,
+                yi ? max.y : min.y,
+                zi ? max.z : min.z,
+              );
+              maxReach = Math.max(
+                maxReach,
+                _backdropShadowCorner.distanceTo(center),
+              );
+            }
+          }
         }
+        maxReach += STUDIO_BACKDROP_SHADOW_REACH_PADDING;
       }
     }
-    return maxReach + STUDIO_BACKDROP_SHADOW_REACH_PADDING;
+    if (this.infinityCove?.enabled && this.infinityCove.mesh) {
+      maxReach = Math.max(
+        maxReach,
+        this.infinityCove.getShadowReceiveRadiusFromCenter(center) ?? 0,
+      );
+    }
+    return maxReach;
   }
 
   getBackdropRestWorldBox(target = new THREE.Box3()) {
@@ -1164,13 +1224,17 @@ export class GroundController {
     const env = this._lastEnvTexture ?? this.scene.environment ?? null;
     material.envMap = env;
     material.envMapIntensity = Math.max(0, this._lastHdriIntensity ?? 1);
-    material.needsUpdate = true;
+    if (typeof this.onSurfacePresentationSync !== 'function') {
+      material.needsUpdate = true;
+    }
+    this.applyBackdropSurface();
   }
 
   setDebugWireframeEnabled(enabled) {
     this.debugWireframeEnabled = !!enabled;
     if (this.podium?.material) this.podium.material.wireframe = this.debugWireframeEnabled;
     if (this.backdrop?.material) this.backdrop.material.wireframe = this.debugWireframeEnabled;
+    this.infinityCove?.setDebugWireframeEnabled(this.debugWireframeEnabled);
   }
 
   getSolidColor() {

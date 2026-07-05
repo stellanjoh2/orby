@@ -137,6 +137,10 @@ export function applyShadowTintToMaterial(material, options = {}) {
   if (!isShadowTintPatchableMaterial(material)) return;
   if (material.userData?.orbyCreativeLook && !material.isMeshPhysicalMaterial) return;
 
+  if (options.forceRepatch && material.userData?.orbyShadowTint?.uniforms) {
+    delete material.userData.orbyShadowTint.uniforms;
+  }
+
   const colorHex = options.color ?? '#080808';
   const strength = normalizeStrength(options.strength ?? 0);
   const opacity = normalizeOpacity(options.opacity ?? DEFAULT_SHADOW_OPACITY);
@@ -170,10 +174,20 @@ export function applyShadowTintToMaterial(material, options = {}) {
     stash.uniforms.color.value.set(colorHex);
     stash.uniforms.strength.value = strength;
     stash.uniforms.opacity.value = opacity;
-    if (material.userData?.svgExtrudeProceduralPatched) {
-      relinkOuterShaderPatchesAfterSurface(material);
+    const surfaceHook = material.userData?.svgExtrudeProceduralOnBeforeCompile;
+    const surfaceChainBroken =
+      material.userData?.svgExtrudeProceduralPatched
+      && typeof surfaceHook === 'function'
+      && stash.previousOnBeforeCompile !== surfaceHook;
+    if (surfaceChainBroken) {
+      // Surface was re-patched — force a full shadow re-wrap so compiled programs include it.
+      delete stash.uniforms;
+    } else {
+      if (material.userData?.svgExtrudeProceduralPatched) {
+        relinkOuterShaderPatchesAfterSurface(material);
+      }
+      return;
     }
-    return;
   }
 
   const goboIsOuter =
@@ -249,6 +263,7 @@ export function applyShadowTintToObject(object, options = {}) {
   object.traverse((child) => {
     if (!child.isMesh || !child.material) return;
     if (!includeStudioBackdrop && child.userData?.orbyStudioBackdrop) return;
+    if (!includeStudioBackdrop && child.userData?.orbyInfinityCove) return;
     if (child.userData?.meshglBaseGlassReflector) return;
     const materials = Array.isArray(child.material) ? child.material : [child.material];
     materials.forEach((mat) => applyShadowTintToMaterial(mat, options));

@@ -51,11 +51,13 @@ export function applyStudioFoldouts(state, setOpen) {
     false
   );
   const backdropOn = !!state.backdropEnabled;
+  const infinityCoveOn = !!state.infinityCoveEnabled;
 
   setOpen('hdri', !!state.hdriEnabled);
   setOpen('base', podiumOn);
   setOpen('base-glass', glassOn);
   setOpen('backdrop', backdropOn);
+  setOpen('infinity-cove', infinityCoveOn);
   setOpen('background-solid', getBackgroundMode(state) === 'solid' && isBackgroundFallbackActive(state));
   setOpen('background-gradient', getBackgroundMode(state) === 'gradient' && isBackgroundFallbackActive(state));
   setOpen('background-image', getBackgroundMode(state) === 'image' && isBackgroundFallbackActive(state));
@@ -108,6 +110,7 @@ export function applyToggleSectionMute(state, setMuted) {
     false
   );
   const backdropOn = !!state.backdropEnabled;
+  const infinityCoveOn = !!state.infinityCoveEnabled;
   const lensFlareOn = !!state.hdriEnabled && !!state.lensFlare?.enabled;
   const godRaysOn = !!state.hdriEnabled && !!state.godRays?.enabled;
   const abOn = !!state.lensFlare?.anamorphicBloom?.enabled;
@@ -131,6 +134,7 @@ export function applyToggleSectionMute(state, setMuted) {
   setMuted('base-material', !podiumOn);
   setMuted('base-glass', !glassOn);
   setMuted('backdrop', !backdropOn);
+  setMuted('infinity-cove', !infinityCoveOn);
   setMuted('lights', !lightsOn);
   setMuted('keyLight', !(lightsOn && state.lights?.key?.enabled === true));
   setMuted('fillLight', !(lightsOn && state.lights?.fill?.enabled === true));

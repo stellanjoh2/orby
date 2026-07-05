@@ -18,7 +18,6 @@ import {
   resolveBloomQualityTier,
   isAnamorphicBloomPipelineActive,
   resolveRenderQualityTier,
-  isKeyLightOnlyShadowCastingRenderQuality,
   castShadowLightIdsForGlobalToggle,
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
@@ -101,6 +100,10 @@ import { RenderLoopController } from './scene/RenderLoopController.js';
 import { ComposerLifecycle } from './scene/ComposerLifecycle.js';
 import { SceneStateApplier } from './scene/SceneStateApplier.js';
 import { ModelLifecycleManager } from './scene/ModelLifecycleManager.js';
+import {
+  resolveLightCastShadowIntent,
+  syncEffectiveCastShadowsFromState,
+} from './lights/lightCastShadowEffective.js';
 import { createBlankCanvasPreset } from './state/blankCanvasPreset.js';
 import {
   shouldBlockFisheyePngExport,
@@ -359,6 +362,9 @@ export class SceneManager {
       getCurrentModel: () => this.currentModel,
       stateStore: this.stateStore,
       eventBus: this.eventBus,
+      hitsLightConeAt: (clientX, clientY) =>
+        this.lightViewportSelection?.hitsLightConeAt?.(clientX, clientY) ?? false,
+      onDeselectLight: () => this.lightViewportSelection?.deselect?.(),
     });
     this.meshClickHandler.attach();
   }
@@ -434,8 +440,20 @@ export class SceneManager {
       backdropSurfacePreset: state.backdropSurfacePreset,
       backdropSurfaceScale: state.backdropSurfaceScale,
       backdropSurfaceStrength: state.backdropSurfaceStrength,
+      infinityCoveEnabled: !!state.infinityCoveEnabled,
+      infinityCoveScale: state.infinityCoveScale ?? 2,
+      infinityCoveWidth: state.infinityCoveWidth ?? 2,
+      infinityCoveColor: state.infinityCoveColor ?? '#808080',
+      infinityCoveRotation: state.infinityCoveRotation ?? 0,
+      infinityCoveY: state.infinityCoveY ?? 0,
+      infinityCoveMetalness: state.infinityCoveMetalness ?? DEFAULT_BACKDROP_METALNESS,
+      infinityCoveRoughness: state.infinityCoveRoughness ?? DEFAULT_BACKDROP_ROUGHNESS,
+      infinityCoveSurfacePreset: state.infinityCoveSurfacePreset,
+      infinityCoveSurfaceScale: state.infinityCoveSurfaceScale,
+      infinityCoveSurfaceStrength: state.infinityCoveSurfaceStrength,
       debugWireframeEnabled: false,
     });
+    this.groundController.onSurfacePresentationSync = () => this._syncStudioGroundSurfaces();
   }
 
   setupMoodController() {
@@ -700,6 +718,7 @@ export class SceneManager {
     this._suppressModeChangeToasts += 1;
     try {
       await this.stateApplier.apply(state);
+      this._syncShadowAndGobo();
     } finally {
       this._suppressModeChangeToasts = Math.max(0, this._suppressModeChangeToasts - 1);
     }
@@ -791,85 +810,16 @@ export class SceneManager {
 
   /** Ground solid / podium — same scale curves as Reference colors (see toggleScaleAnimation.js). */
   _updateBaseAppearAnimation() {
-    const gc = this.groundController;
-    const root = gc?.podiumRoot;
-    const solid = gc?.podium;
-    if (!root || !solid) return;
-
-    const st = this.stateStore.getState();
-    const groundSolid = !!st.groundSolid;
-    const glassOn = !!(
-      st.baseGlassSurface ?? st.podiumReflectMesh ?? false
-    );
-    const r = stepToggleScaleAnimation(
-      this._baseToggleCtx,
-      performance.now(),
-      groundSolid,
-    );
-
-    const baseAnimating =
-      this._baseToggleCtx.phase === 'in' || this._baseToggleCtx.phase === 'out';
-    const glassAnimating =
-      this._baseGlassToggleCtx.phase === 'in' || this._baseGlassToggleCtx.phase === 'out';
-    root.visible = groundSolid || glassOn || baseAnimating || glassAnimating;
-
-    solid.scale.setScalar(r.animMul);
-
-    if (groundSolid || baseAnimating) {
-      solid.visible = r.visible;
-      if (solid.material) {
-        solid.material.visible =
-          r.visible && (groundSolid || this._baseToggleCtx.phase === 'out');
-      }
-    } else if (glassOn) {
-      solid.visible = false;
-      if (solid.material) solid.material.visible = false;
-    } else {
-      solid.visible = r.visible;
-      if (solid.material) solid.material.visible = true;
-    }
+    this.studioGroundFacade?.updateBaseAppearAnimation();
   }
 
   /** Base glass on the base top — same shared scale curves as base toggles. */
   _updateBaseGlassAppearAnimation() {
-    const reflector = this.groundController?.podiumReflector;
-    const st = this.stateStore.getState();
-    const glassOn = !!(
-      st.baseGlassSurface ?? st.podiumReflectMesh ?? false
-    );
-
-    if (!reflector) {
-      this._baseGlassToggleCtx.prevEnabled = glassOn;
-      return;
-    }
-
-    const r = stepToggleScaleAnimation(
-      this._baseGlassToggleCtx,
-      performance.now(),
-      glassOn,
-    );
-    reflector.visible = r.visible;
-    reflector.scale.setScalar(r.animMul);
-    if (
-      !glassOn &&
-      !r.visible &&
-      this._baseGlassToggleCtx.phase === 'idle' &&
-      this.groundController?.podiumReflector
-    ) {
-      this.groundController.disposeBaseReflector();
-    }
+    this.studioGroundFacade?.updateBaseGlassAppearAnimation();
   }
 
   _updateBackdropAppearAnimation() {
-    const backdrop = this.groundController?.backdrop;
-    if (!backdrop) return;
-    const enabled = !!this.stateStore.getState().backdropEnabled;
-    const r = stepToggleScaleAnimation(
-      this._backdropToggleCtx,
-      performance.now(),
-      enabled,
-    );
-    this.groundController?.setBackdropAnimationState(r.animMul, r.visible);
+    this.studioGroundFacade?.updateBackdropAppearAnimation();
   }
 
   /**
@@ -1164,6 +1114,7 @@ export class SceneManager {
       intensity,
       this.hdriBlurriness,
     );
+    this._syncStudioGroundSurfaces();
     this._syncColorCheckerReferenceProbes(envTexture, intensity, this.hdriBlurriness);
   }
 
@@ -1642,12 +1593,7 @@ export class SceneManager {
   }
 
   setGroundSolid(enabled) {
-    this.groundController?.setSolidEnabled(enabled);
-    this.backgroundController?.setGroundSolid(!!enabled);
-    this._syncShadowCameraBounds();
-    this._updateBaseAppearAnimation();
-    this._updateBaseGlassAppearAnimation();
-    this.ui?.applyBlockStates?.(this.stateStore.getState());
+    this.studioGroundFacade?.setGroundSolid(enabled);
   }
 
   setAutoRotateSpeed(speed, { silent = false } = {}) {
@@ -1688,274 +1634,95 @@ export class SceneManager {
   }
 
   setGroundY(value) {
-    this.groundController?.setGroundY(value);
-    this.backgroundController?.setGroundY(value);
-    this._updateHdriShadowReceiverContact();
-    this._syncShadowCameraBounds();
+    this.studioGroundFacade?.setGroundY(value);
   }
 
-  /**
-   * Align podium + grid Y to the current model bottom without forcing visibility changes.
-   * Used for first-load QoL so toggling them on starts at the correct vertical placement.
-   */
-
-  _alignGroundAndGridToCurrentModelBottom({
-    updateState = true,
-    includePodium = true,
-    includeGrid = true,
-  } = {}) {
-    if (!this.currentModel) return null;
-    const bounds = new THREE.Box3().setFromObject(this.currentModel);
-    if (!bounds || !isFinite(bounds.min.y)) return null;
-
-    const podiumY = includePodium ? this.groundController?.snapBaseToBounds(bounds) : null;
-    const gridY = includeGrid ? this.groundController?.snapGridToBounds(bounds) : null;
-
-    if (updateState) {
-      if (includePodium && podiumY !== null && podiumY !== undefined) {
-        this.stateStore.set('groundY', podiumY);
-      }
-      if (includeGrid && gridY !== null && gridY !== undefined) {
-        this.stateStore.set('gridY', gridY);
-      }
-    }
-    return {
-      podiumY,
-      gridY,
-    };
+  _alignGroundAndGridToCurrentModelBottom(options) {
+    return this.studioGroundFacade?.alignGroundAndGridToCurrentModelBottom(options);
   }
 
   _cancelGroundGridBottomAlignAnimation() {
-    if (this._groundGridBottomAlignRaf) {
-      cancelAnimationFrame(this._groundGridBottomAlignRaf);
-      this._groundGridBottomAlignRaf = 0;
-    }
+    this.studioGroundFacade?.cancelGroundGridBottomAlignAnimation();
   }
 
-  _animateGroundAndGridToCurrentModelBottom({ durationMs = 420 } = {}) {
-    const snap = this._alignGroundAndGridToCurrentModelBottom({
-      updateState: false,
-      includePodium: true,
-      includeGrid: true,
-    });
-    if (!snap) return false;
-
-    const targetGroundY = Number.isFinite(snap.podiumY) ? snap.podiumY : null;
-    const targetGridY = Number.isFinite(snap.gridY) ? snap.gridY : null;
-    if (targetGroundY === null && targetGridY === null) return false;
-
-    const startGroundYRaw = this.groundController?.getGroundY?.();
-    const startGridYRaw = this.groundController?.getGridY?.();
-    const startGroundY = Number.isFinite(startGroundYRaw) ? startGroundYRaw : targetGroundY;
-    const startGridY = Number.isFinite(startGridYRaw) ? startGridYRaw : targetGridY;
-
-    const groundDelta =
-      targetGroundY === null || startGroundY === null ? 0 : Math.abs(targetGroundY - startGroundY);
-    const gridDelta =
-      targetGridY === null || startGridY === null ? 0 : Math.abs(targetGridY - startGridY);
-    if (groundDelta < 1e-5 && gridDelta < 1e-5) {
-      if (targetGroundY !== null) this.stateStore.set('groundY', targetGroundY);
-      if (targetGridY !== null) this.stateStore.set('gridY', targetGridY);
-      return true;
-    }
-
-    this._cancelGroundGridBottomAlignAnimation();
-    const start = performance.now();
-    const easeOutCubic = (t) => 1 - (1 - t) ** 3;
-
-    const tick = () => {
-      const t = Math.min(1, (performance.now() - start) / Math.max(1, durationMs));
-      const e = easeOutCubic(t);
-
-      if (targetGroundY !== null && startGroundY !== null) {
-        const y = startGroundY + (targetGroundY - startGroundY) * e;
-        this.groundController?.setGroundY(y);
-      }
-      if (targetGridY !== null && startGridY !== null) {
-        const y = startGridY + (targetGridY - startGridY) * e;
-        this.groundController?.setGridY(y);
-      }
-
-      if (t < 1) {
-        this._groundGridBottomAlignRaf = requestAnimationFrame(tick);
-      } else {
-        this._groundGridBottomAlignRaf = 0;
-        if (targetGroundY !== null) this.stateStore.set('groundY', targetGroundY);
-        if (targetGridY !== null) this.stateStore.set('gridY', targetGridY);
-      }
-    };
-
-    this._groundGridBottomAlignRaf = requestAnimationFrame(tick);
-    return true;
+  _animateGroundAndGridToCurrentModelBottom(options) {
+    return this.studioGroundFacade?.animateGroundAndGridToCurrentModelBottom(options);
   }
 
   snapBaseToBottom() {
-    if (!this.currentModel) {
-      this.ui?.showToast?.('Load a mesh before snapping the base');
-      return;
-    }
-
-    const bounds = new THREE.Box3().setFromObject(this.currentModel);
-    if (!bounds || !isFinite(bounds.min.y)) {
-      this.ui?.showToast?.('Unable to align to mesh');
-      return;
-    }
-
-    const bottomY = this.groundController?.snapBaseToBounds(bounds);
-    if (bottomY === null || bottomY === undefined) {
-      this.ui?.showToast?.('Unable to align to mesh');
-      return;
-    }
-    this.stateStore.set('groundY', bottomY);
-
-    const currentState = this.stateStore.getState();
-    const glassOn = !!(
-      currentState.baseGlassSurface ?? currentState.podiumReflectMesh ?? false
-    );
-    if (!currentState.groundSolid && !glassOn) {
-      this.setGroundSolid(true);
-      this.stateStore.set('groundSolid', true);
-    }
-
-    this.ui?.showToast?.(
-      'Base snapped to mesh',
-      3200,
-      { notification: false },
-    );
+    this.studioGroundFacade?.snapBaseToBottom();
   }
 
   snapGridToBottom() {
-    if (!this.currentModel) {
-      this.ui?.showToast?.('Load a mesh before snapping the grid');
-      return;
-    }
-
-    const bounds = new THREE.Box3().setFromObject(this.currentModel);
-    if (!bounds || !isFinite(bounds.min.y)) {
-      this.ui?.showToast?.('Unable to align to mesh');
-      return;
-    }
-
-    const bottomY = this.groundController?.snapGridToBounds(bounds);
-    if (bottomY === null || bottomY === undefined) {
-      this.ui?.showToast?.('Unable to align to mesh');
-      return;
-    }
-    this.stateStore.set('gridY', bottomY);
-    this.ui?.showToast?.(
-      'Grid snapped to mesh',
-      3200,
-      { notification: false },
-    );
+    this.studioGroundFacade?.snapGridToBottom();
   }
 
   setBaseScale(value, { updateState = true } = {}) {
-    const newGroundY = this.groundController?.setBaseScale(value);
-    if (updateState && typeof newGroundY === 'number') {
-      this.stateStore.set('groundY', newGroundY);
-    }
-    this._syncShadowCameraBounds();
+    this.studioGroundFacade?.setBaseScale(value, { updateState });
   }
 
   setBaseSurface(settings = {}, { updateState = true } = {}) {
-    const state = this.stateStore.getState();
-    const preset = settings.preset ?? state.baseSurfacePreset ?? 'none';
-    const scale = settings.scale ?? state.baseSurfaceScale ?? 1;
-    const strength = settings.strength ?? state.baseSurfaceStrength ?? 1;
-    if (updateState) {
-      if (settings.preset !== undefined) this.stateStore.set('baseSurfacePreset', preset);
-      if (settings.scale !== undefined) this.stateStore.set('baseSurfaceScale', scale);
-      if (settings.strength !== undefined) this.stateStore.set('baseSurfaceStrength', strength);
-    }
-    this.groundController?.setBaseSurface({ preset, scale, strength });
+    this.studioGroundFacade?.setBaseSurface(settings, { updateState });
   }
 
   setBaseGlassSurface(enabled, { updateState = true } = {}) {
-    const on = !!enabled;
-    this.groundController?.setBaseGlassSurface(on);
-    if (updateState) this.stateStore.set('baseGlassSurface', on);
-    this._updateBaseAppearAnimation();
-    this._updateBaseGlassAppearAnimation();
-    this.ui?.applyBlockStates?.(this.stateStore.getState());
+    this.studioGroundFacade?.setBaseGlassSurface(enabled, { updateState });
   }
 
   setBackdropEnabled(enabled, { updateState = true } = {}) {
-    const on = !!enabled;
-    this.groundController?.setBackdropEnabled(on);
-    if (updateState) this.stateStore.set('backdropEnabled', on);
-    this._updateBackdropAppearAnimation();
-    this._syncShadowAndGobo();
-    this._syncShadowCameraBounds();
-    this.ui?.applyBlockStates?.(this.stateStore.getState());
+    this.studioGroundFacade?.setBackdropEnabled(enabled, { updateState });
   }
 
   setBackdropScale(value, { updateState = true } = {}) {
-    this.groundController?.setBackdropScale(value);
-    if (updateState) this.stateStore.set('backdropScale', value);
-    this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
-    this._syncShadowCameraBounds();
+    this.studioGroundFacade?.setBackdropScale(value, { updateState });
   }
 
   setBackdropWidth(value, { updateState = true } = {}) {
-    this.groundController?.setBackdropWidth(value);
-    if (updateState) this.stateStore.set('backdropWidth', value);
-    this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
-    this._syncShadowCameraBounds();
+    this.studioGroundFacade?.setBackdropWidth(value, { updateState });
   }
 
   setBackdropRotation(value, { updateState = true } = {}) {
-    this.groundController?.setBackdropRotation(value);
-    if (updateState) this.stateStore.set('backdropRotation', value);
-    this._syncShadowCameraBounds();
+    this.studioGroundFacade?.setBackdropRotation(value, { updateState });
   }
 
   setBackdropY(value, { updateState = true } = {}) {
-    this.groundController?.setBackdropY(value);
-    if (updateState) this.stateStore.set('backdropY', value);
-    this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
-    this._syncShadowCameraBounds();
+    this.studioGroundFacade?.setBackdropY(value, { updateState });
   }
 
   setBackdropSurface(settings = {}, { updateState = true } = {}) {
-    const state = this.stateStore.getState();
-    const preset = settings.preset ?? state.backdropSurfacePreset ?? 'none';
-    const scale = settings.scale ?? state.backdropSurfaceScale ?? 1;
-    const strength = settings.strength ?? state.backdropSurfaceStrength ?? 1;
-    if (updateState) {
-      if (settings.preset !== undefined) this.stateStore.set('backdropSurfacePreset', preset);
-      if (settings.scale !== undefined) this.stateStore.set('backdropSurfaceScale', scale);
-      if (settings.strength !== undefined) this.stateStore.set('backdropSurfaceStrength', strength);
-    }
-    this.groundController?.setBackdropSurface({ preset, scale, strength });
+    this.studioGroundFacade?.setBackdropSurface(settings, { updateState });
+  }
+
+  setInfinityCoveEnabled(enabled, { updateState = true } = {}) {
+    this.studioGroundFacade?.setInfinityCoveEnabled(enabled, { updateState });
+  }
+
+  setInfinityCoveScale(value, { updateState = true } = {}) {
+    this.studioGroundFacade?.setInfinityCoveScale(value, { updateState });
+  }
+
+  setInfinityCoveWidth(value, { updateState = true } = {}) {
+    this.studioGroundFacade?.setInfinityCoveWidth(value, { updateState });
+  }
+
+  setInfinityCoveRotation(value, { updateState = true } = {}) {
+    this.studioGroundFacade?.setInfinityCoveRotation(value, { updateState });
+  }
+
+  setInfinityCoveY(value, { updateState = true } = {}) {
+    this.studioGroundFacade?.setInfinityCoveY(value, { updateState });
+  }
+
+  setInfinityCoveSurface(settings = {}, { updateState = true } = {}) {
+    this.studioGroundFacade?.setInfinityCoveSurface(settings, { updateState });
+  }
+
+  snapInfinityCoveToBottom() {
+    this.studioGroundFacade?.snapInfinityCoveToBottom();
   }
 
   snapBackdropToBottom() {
-    if (!this.currentModel) {
-      this.ui?.showToast?.('Load a mesh before snapping the backdrop');
-      return;
-    }
-    const bounds = new THREE.Box3().setFromObject(this.currentModel);
-    if (!bounds || !isFinite(bounds.min.y)) {
-      this.ui?.showToast?.('Unable to align to mesh');
-      return;
-    }
-    const backdropY = this.groundController?.snapBackdropToBounds(bounds);
-    if (backdropY === null || backdropY === undefined) {
-      this.ui?.showToast?.('Unable to align to mesh');
-      return;
-    }
-    this.stateStore.set('backdropY', backdropY);
-    if (!this.stateStore.getState().backdropEnabled) {
-      this.setBackdropEnabled(true);
-      this.stateStore.set('backdropEnabled', true);
-    } else {
-      this._syncShadowCameraBounds();
-    }
-    this.ui?.showToast?.(
-      'Backdrop snapped to mesh',
-      3200,
-      { notification: false },
-    );
+    this.studioGroundFacade?.snapBackdropToBottom();
   }
 
   setSceneGeometryWireframe(enabled) {
@@ -2014,6 +1781,9 @@ export class SceneManager {
     this._syncEffectiveCastShadows();
     this._syncShadowAndGobo();
     this._syncHdriShadowReceiverFromState();
+    if (this.lightsEnabled) {
+      this._syncLightIndicatorCenterFallback();
+    }
   }
 
   _isShadowTintActive() {
@@ -2021,20 +1791,7 @@ export class SceneManager {
   }
 
   _syncEffectiveCastShadows() {
-    const state = this.stateStore.getState();
-    const globalCast = this._isShadowTintActive();
-    const lightsState = state.lights ?? {};
-    const keyOnly = isKeyLightOnlyShadowCastingRenderQuality(state.renderQuality);
-    ['key', 'fill', 'rim'].forEach((lightId) => {
-      let perLight =
-        globalCast
-        && lightsState[lightId]?.enabled === true
-        && lightsState[lightId]?.castShadows === true;
-      if (keyOnly && lightId !== 'key') {
-        perLight = false;
-      }
-      this.lightsController?.updateLightProperty(lightId, 'castShadows', perLight);
-    });
+    syncEffectiveCastShadowsFromState(this);
     this._applyKeyLightGoboShadowOverride();
   }
 
@@ -2082,7 +1839,10 @@ export class SceneManager {
       );
     }
 
-    if (state.backdropEnabled && this.groundController?.backdropEnabled) {
+    if (
+      (state.backdropEnabled && this.groundController?.backdropEnabled)
+      || (state.infinityCoveEnabled && this.groundController?.infinityCove?.enabled)
+    ) {
       radius = Math.max(
         radius,
         this.groundController.getShadowReceiveRadiusFromCenter(center) ?? 0,
@@ -2103,10 +1863,23 @@ export class SceneManager {
   }
 
   _syncShadowCameraBounds(bounds = this.cameraController?.getModelBounds()) {
-    if (!bounds) return;
-    this.lightsController?.setModelBounds(bounds, {
-      receiveSurfaceRadius: this._getShadowReceiveSurfaceRadius(bounds),
-    });
+    if (bounds) {
+      this.lightsController?.setModelBounds(bounds, {
+        receiveSurfaceRadius: this._getShadowReceiveSurfaceRadius(bounds),
+      });
+    } else {
+      this.lightsController?.setModelBounds(null, { receiveSurfaceRadius: 0 });
+      this._syncLightIndicatorCenterFallback();
+    }
+  }
+
+  /** Aim spotlight guides + HUD at orbit target when no mesh bounds exist. */
+  _syncLightIndicatorCenterFallback() {
+    const center =
+      this.controls?.target
+      ?? this.cameraController?.getModelBounds()?.center
+      ?? new THREE.Vector3(0, 1, 0);
+    this.lightsController?.setIndicatorCenterFallback(center);
   }
 
   /**
@@ -2119,7 +1892,7 @@ export class SceneManager {
       this.lightsController.updateLightProperty('key', 'castShadows', false);
       return;
     }
-    const keyCast = this.stateStore.getState().lights?.key?.castShadows === true;
+    const keyCast = resolveLightCastShadowIntent(this.stateStore.getState(), 'key');
     this.lightsController.updateLightProperty('key', 'castShadows', keyCast);
   }
 
@@ -2131,24 +1904,40 @@ export class SceneManager {
 
   setShowLightIndicators(enabled) {
     if (enabled) {
-      // Bounds must be current before createIndicators — toggling on with no mesh yet
-      // still no-ops, but after load this avoids a silent miss when bounds were stale.
       this._syncShadowCameraBounds();
+      this._syncLightIndicatorCenterFallback();
+    } else {
+      this.lightViewportSelection?.deselect?.();
     }
     this.lightsController?.setIndicatorsVisible(enabled);
+    this.lightIndicatorHud?.update();
     this.requestRender();
   }
 
   setShowLightFalloffIndicators(enabled) {
     if (enabled) {
       this._syncShadowCameraBounds();
+      this._syncLightIndicatorCenterFallback();
     }
     this.lightsController?.setFalloffIndicatorsVisible(enabled);
     this.requestRender();
   }
 
   updateLightIndicators() {
+    this._syncLightRigToSceneFocusIfNoModel();
     this.lightsController?.updateIndicators();
+    this.lightViewportSelection?.updateWidget?.();
+    this.lightIndicatorHud?.update();
+  }
+
+  /** Orbit target becomes the light rig focus when the viewport has no mesh. */
+  _syncLightRigToSceneFocusIfNoModel() {
+    if (this.currentModel || !this.lightsEnabled) return;
+    const target = this.controls?.target;
+    if (!target?.isVector3) return;
+    const fallback = this.lightsController?._indicatorCenterFallback;
+    if (fallback && fallback.distanceToSquared(target) < 1e-8) return;
+    this.lightsController?.setIndicatorCenterFallback(target);
   }
 
   setLightsRotation(value, { updateUi = true, updateState = true } = {}) {
@@ -2198,6 +1987,19 @@ export class SceneManager {
     this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
   }
 
+  setLightsRigScale(value, { updateUi = true, updateState = true } = {}) {
+    if (!this.lightsController) return;
+    const normalized = this.lightsController.setRigScale(value);
+    if (updateState) {
+      this.stateStore.set('lightsRigScale', normalized);
+    }
+    if (updateUi) {
+      this.ui?.syncControls?.(this.stateStore.getState());
+    }
+    this.updateLightIndicators();
+    this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
+  }
+
   /**
    * When global shadows turn on and no per-light cast flag is set, apply quality-tier defaults.
    * Preserves existing per-light preferences across global shadow toggles.
@@ -2231,6 +2033,8 @@ export class SceneManager {
     this._syncShadowAndGobo();
     this._syncHdriShadowReceiverFromState();
     this.ui?.syncControls?.(this.stateStore.getState());
+    this.updateLightIndicators();
+    this.requestRender();
   }
 
   setLightsShadowQuality(quality) {
@@ -2329,13 +2133,30 @@ export class SceneManager {
     }
   }
 
+  _syncStudioGroundSurfaces() {
+    const color = this.lightsShadowColor ?? '#080808';
+    const strength = this._isShadowTintActive() ? 1 : 0;
+    const opacity = this.lightsShadowOpacity ?? 0.25;
+    this.materialController?.setShadowTintSettings({ color, strength, opacity });
+    this.materialController?.reapplyStudioGroundSurfaceShaders(this.groundController);
+    if (typeof this.renderer?.compile === 'function' && this.scene && this.camera) {
+      try {
+        this.renderer.compile(this.scene, this.camera);
+      } catch (_) {
+        /* ignore compile failures on partial rebuild */
+      }
+    }
+    this.wakeViewportPresentation(8);
+  }
+
   _syncShadowAndGobo() {
     this._applyKeyLightGoboShadowOverride();
-    this._applyShadowTintToScene();
     this._syncGoboShadowSettings();
+    this._syncStudioGroundSurfaces();
     this._applyGoboToScene();
     if (this.goboProjection?.enabled) {
       this.goboProjection.syncUniformsOnScene(this._getGoboSceneTargets());
+      this._syncStudioGroundSurfaces();
     }
   }
 
@@ -2344,6 +2165,7 @@ export class SceneManager {
     return {
       model: this.currentModel,
       backdrop: ground?.backdrop ?? null,
+      infinityCove: ground?.infinityCove?.mesh ?? null,
       podium: ground?.podium ?? null,
     };
   }
@@ -2365,7 +2187,7 @@ export class SceneManager {
     } else {
       this.goboProjection?.removeFromScene(this._getGoboSceneTargets());
       this._applyKeyLightGoboShadowOverride();
-      this._applyShadowTintToScene();
+      this._syncStudioGroundSurfaces();
     }
   }
 
@@ -2385,19 +2207,7 @@ export class SceneManager {
   }
 
   _applyShadowTintToScene() {
-    const color = this.lightsShadowColor ?? '#080808';
-    const strength = this._isShadowTintActive() ? 1 : 0;
-    const opacity = this.lightsShadowOpacity ?? 0.25;
-    this.materialController?.setShadowTintSettings({ color, strength, opacity });
-    const ground = this.groundController;
-    const tintOpts = { color, strength, opacity };
-    if (ground?.podium) this.materialController?.applyShadowTintToObject(ground.podium, tintOpts);
-    if (ground?.backdrop) {
-      this.materialController?.applyShadowTintToObject(ground.backdrop, {
-        ...tintOpts,
-        includeStudioBackdrop: true,
-      });
-    }
+    this._syncStudioGroundSurfaces();
   }
 
   setLightsShadowTwoSided(enabled) {
@@ -3380,6 +3190,7 @@ export class SceneManager {
   /** Repaint immediately after surface shader swaps (idle loop + async normal maps). */
   _presentObjectSurfaceChange() {
     this.materialController?.relinkObjectSurfacePresentation?.();
+    this.materialController?.reapplyStudioGroundSurfaceShaders?.(this.groundController);
     this.wakeViewportPresentation(8);
     this.materialController?.deferCreativeLookSurfaceResync?.(() => {
       this.wakeViewportPresentation(4);

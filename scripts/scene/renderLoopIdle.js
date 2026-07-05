@@ -66,6 +66,7 @@ export function needsContinuousFrames(scene, ctx) {
   if (toggleScaleAnimActive(scene._baseToggleCtx)) return true;
   if (toggleScaleAnimActive(scene._baseGlassToggleCtx)) return true;
   if (toggleScaleAnimActive(scene._backdropToggleCtx)) return true;
+  if (toggleScaleAnimActive(scene._infinityCoveToggleCtx)) return true;
 
   if (scene.fontTextRevealController?.shouldRunLiveUpdate?.(scene)) return true;
   if (scene.fontTextConstantController?.shouldRunLiveUpdate?.(scene)) return true;
@@ -109,6 +110,9 @@ export function buildRenderLoopFrameContext(scene) {
     backdropAppearActive:
       !!scene.groundController?.backdrop ||
       toggleScaleAnimActive(scene._backdropToggleCtx),
+    infinityCoveAppearActive:
+      !!scene.groundController?.infinityCove?.mesh ||
+      toggleScaleAnimActive(scene._infinityCoveToggleCtx),
     diagnosticsActive: !!scene.diagnosticsController?.hasActiveDiagnostics?.(),
     wireframeOverlayActive:
       (scene.materialController?.wireframeOverlayMeshes?.length ?? 0) > 0,

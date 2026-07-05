@@ -127,6 +127,7 @@ import {
   isMaterialObjectSurfaceEnabled,
   removeSvgExtrudeProceduralFromMaterial,
 } from './SvgExtrudeSurfaceShader.js';
+import { syncStudioGroundRenderSurfaces } from './studioGroundSurfaceApply.js';
 import { materialMatchesFbxGroup } from '../import/fbxMaterialReport.js';
 import {
   getFbxTuningForImportMaterial,
@@ -5354,6 +5355,28 @@ export class MaterialController {
     this.reapplyCreativeLookSurfaceShaders();
   }
 
+  /**
+   * Base, backdrop, infinity cove, and base glass — same presentation order as object surfaces.
+   * @param {import('./GroundController.js').GroundController | null | undefined} groundController
+   */
+  reapplyStudioGroundSurfaceShaders(groundController) {
+    if (!groundController) return;
+    const tintOpts = {
+      color: this.shadowTintColor ?? '#080808',
+      strength: this.shadowTintStrength ?? 0,
+      opacity: this.shadowTintOpacity ?? 0.25,
+    };
+    const onTextureReadyRefresh = () => {
+      this.reapplyStudioGroundSurfaceShaders(groundController);
+      if (typeof this.onObjectSurfacePresentationRefresh === 'function') {
+        this.onObjectSurfacePresentationRefresh();
+      }
+    };
+    syncStudioGroundRenderSurfaces(groundController, this, tintOpts, {
+      onTextureReadyRefresh,
+    });
+  }
+
   /** Force program cache + hook relink after surface toggles (shadow early-return skips re-wrap). */
   relinkObjectSurfacePresentation() {
     if (!this.currentModel) return;
@@ -5427,6 +5450,7 @@ export class MaterialController {
       strength,
       opacity,
       includeStudioBackdrop: options.includeStudioBackdrop,
+      forceRepatch: options.forceRepatch,
     });
     this._syncCreativeLookShadowTint();
   }

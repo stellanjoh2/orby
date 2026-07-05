@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { DEFAULT_GOBO_TEXTURE_ID, DEFAULT_GOBO_SOFTNESS, getGoboPreset } from '../config/gobos.js';
 import { goboBlurModeForQuality, normalizeShadowQuality } from '../config/shadowQuality.js';
+import { relinkOuterShaderPatchesAfterSurface } from './SvgExtrudeSurfaceShader.js';
 
 const OPAQUE_FRAGMENT = '#include <opaque_fragment>';
 const WORLDpos_VERTEX = '#include <worldpos_vertex>';
@@ -288,6 +289,9 @@ export function applyGoboToMaterial(material, controller) {
   if (hookIntact && stash.uniforms?.strength && stash.uniforms?.color
     && stash.uniforms?.scale && stash.uniforms?.pivot && stash.uniforms?.blurMode) {
     controller?.syncMaterialUniforms(material);
+    if (material.userData?.svgExtrudeProceduralPatched) {
+      relinkOuterShaderPatchesAfterSurface(material);
+    }
     return;
   }
 
@@ -635,22 +639,24 @@ export class GoboProjectionController {
     );
   }
 
-  applyToScene({ model, backdrop, podium } = {}) {
+  applyToScene({ model, backdrop, infinityCove, podium } = {}) {
     if (!this.enabled || !this._goboTexture) return;
     this.updateProjectionMatrix();
     if (model) applyGoboToObject(model, this);
     if (podium) applyGoboToObject(podium, this);
     if (backdrop) applyGoboToObject(backdrop, this);
-    this.syncUniformsOnScene({ model, backdrop, podium });
+    if (infinityCove) applyGoboToObject(infinityCove, this);
+    this.syncUniformsOnScene({ model, backdrop, infinityCove, podium });
   }
 
-  removeFromScene({ model, backdrop, podium } = {}) {
+  removeFromScene({ model, backdrop, infinityCove, podium } = {}) {
     if (model) clearGoboFromObject(model);
     if (podium) clearGoboFromObject(podium);
     if (backdrop) clearGoboFromObject(backdrop);
+    if (infinityCove) clearGoboFromObject(infinityCove);
   }
 
-  syncUniformsOnScene({ model, backdrop, podium } = {}) {
+  syncUniformsOnScene({ model, backdrop, infinityCove, podium } = {}) {
     if (!this.enabled) return;
     this.updateProjectionMatrix();
     const sync = (root) => {
@@ -664,6 +670,7 @@ export class GoboProjectionController {
     sync(model);
     sync(podium);
     sync(backdrop);
+    sync(infinityCove);
   }
 
   dispose() {

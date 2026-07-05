@@ -1,5 +1,6 @@
 import { registerSceneManifestHandlers } from '../state/controlManifestCore.js';
 import { SCENE_CONTROL_MANIFEST } from '../state/sceneControlManifest.js';
+import { setPerLightCastShadows } from '../lights/lightCastShadowEffective.js';
 import { isOrbySceneFile } from '../import/dispatchImportFile.js';
 import { handoffFileToMobileAppIfLanding } from '../orbyMobileHandoff.js';
 
@@ -140,7 +141,8 @@ export class EventManager {
         s.setLensFlareKeyLightConnected(false);
       }
       if (property === 'castShadows') {
-        s._syncEffectiveCastShadows();
+        setPerLightCastShadows(s, lightId, value === true);
+        return;
       } else {
         s.lightsController?.updateLightProperty(lightId, property, value);
         if (property === 'enabled' && lightId !== 'ambient') {

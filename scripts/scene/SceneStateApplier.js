@@ -128,6 +128,31 @@ function createStateApplySteps() {
       },
     },
     {
+      id: 'infinity-cove',
+      apply: (s, state) => {
+        s.setInfinityCoveEnabled(!!state.infinityCoveEnabled, { updateState: false });
+        s.setInfinityCoveScale(state.infinityCoveScale ?? 2, { updateState: false });
+        s.setInfinityCoveWidth(state.infinityCoveWidth ?? 2, { updateState: false });
+        s.groundController?.setInfinityCoveColor(state.infinityCoveColor ?? '#808080');
+        s.setInfinityCoveRotation(state.infinityCoveRotation ?? 0, { updateState: false });
+        s.setInfinityCoveY(state.infinityCoveY ?? 0, { updateState: false });
+        s.groundController?.setInfinityCoveMetalness(
+          state.infinityCoveMetalness ?? DEFAULT_BACKDROP_METALNESS,
+        );
+        s.groundController?.setInfinityCoveRoughness(
+          state.infinityCoveRoughness ?? DEFAULT_BACKDROP_ROUGHNESS,
+        );
+        s.setInfinityCoveSurface(
+          {
+            preset: state.infinityCoveSurfacePreset,
+            scale: state.infinityCoveSurfaceScale,
+            strength: state.infinityCoveSurfaceStrength,
+          },
+          { updateState: false },
+        );
+      },
+    },
+    {
       id: 'wireframe-grid',
       apply: (s, state) => {
         s.setSceneGeometryWireframe(false);
@@ -172,6 +197,7 @@ function createStateApplySteps() {
         s.lightsController?.setMaster(s.lightsMaster, state.lights);
         s.setLightsRotation(state.lightsRotation ?? 0);
         s.setLightsHeight(state.lightsHeight ?? 5);
+        s.setLightsRigScale(state.lightsRigScale ?? 1, { updateState: false });
         s.setShowLightIndicators(state.showLightIndicators ?? false);
         s.setShowLightFalloffIndicators(state.showLightFalloffIndicators ?? false);
         s.setLightsAutoRotate(state.lightsAutoRotate ?? false);

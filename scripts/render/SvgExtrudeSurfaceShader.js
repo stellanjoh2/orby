@@ -142,6 +142,13 @@ function getNormalMapTexture(url) {
   return tex;
 }
 
+/** Normal-map texture for a surface preset (shared cache with object surfaces). */
+export function getSurfacePresetNormalMapTexture(presetId) {
+  const config = getSvgExtrudeSurfacePresetConfig(presetId);
+  if (config?.kind !== 'normalMap') return null;
+  return getNormalMapTexture(config.normalMapUrl);
+}
+
 /**
  * Mesh bbox center for triplanar anchoring (local units, no inverse-size stretch).
  * @param {THREE.Mesh} mesh
@@ -350,6 +357,10 @@ export function relinkOuterShaderPatchesAfterSurface(material) {
       material.onBeforeCompile = goboHook;
       dirty = true;
     }
+    if (stash.uniforms) {
+      delete stash.uniforms;
+      dirty = true;
+    }
   }
 
   material.needsUpdate = true;
@@ -440,6 +451,7 @@ uniform float uOrbyScale;
 uniform float uOrbyNormalStrength;
 uniform sampler2D uOrbyNormalMap;
 uniform vec3 uOrbyNormalOrigin;
+uniform vec3 uOrbyNormalInvSize;
 float orbyQ(vec3 p) {
   return fract(sin(dot(p, vec3(12.9898, 78.233, 37.199))) * 43758.5453);
 }
@@ -453,6 +465,19 @@ float orbyFbm3(vec3 p) {
 }
 mat3 orbyNormalMatrix() {
   return mat3( vOrbyNm0, vOrbyNm1, vOrbyNm2 );
+}
+vec3 orbyDecodeNormalMap( vec2 st ) {
+  vec3 tn = texture2D( uOrbyNormalMap, st ).xyz * 2.0 - 1.0;
+  tn.y = -tn.y;
+  return tn;
+}
+vec3 orbySurfaceLocalNormal() {
+  vec3 n = normalize( vOrbyLocalNormal );
+  // Match Three.js faceDirection for DoubleSide / BackSide (geometry normal is unflipped in varyings).
+  if ( ! gl_FrontFacing ) {
+    n = -n;
+  }
+  return n;
 }
 vec3 orbyTriplanarAxisNormal( vec3 n, vec3 tn, vec3 ref, vec3 refAlt ) {
   vec3 t = cross( ref, n );
@@ -468,13 +493,13 @@ vec3 orbyTriplanarAxisNormal( vec3 n, vec3 tn, vec3 ref, vec3 refAlt ) {
 }
 vec3 orbyTriplanarNormalObject( vec3 localPos, vec3 localNormal, float scale ) {
   vec3 n = normalize( localNormal );
-  vec3 p = ( localPos - uOrbyNormalOrigin ) * scale;
+  vec3 p = ( localPos - uOrbyNormalOrigin ) * uOrbyNormalInvSize * scale;
   vec3 blend = abs( n );
   blend = pow( max( blend, vec3( 0.00001 ) ), vec3( 4.0 ) );
   blend /= ( blend.x + blend.y + blend.z );
-  vec3 tX = texture2D( uOrbyNormalMap, p.zy ).xyz * 2.0 - 1.0;
-  vec3 tY = texture2D( uOrbyNormalMap, p.xz ).xyz * 2.0 - 1.0;
-  vec3 tZ = texture2D( uOrbyNormalMap, p.xy ).xyz * 2.0 - 1.0;
+  vec3 tX = orbyDecodeNormalMap( p.zy );
+  vec3 tY = orbyDecodeNormalMap( p.xz );
+  vec3 tZ = orbyDecodeNormalMap( p.xy );
   vec3 nx = orbyTriplanarAxisNormal( n, tX, vec3( 0.0, 1.0, 0.0 ), vec3( 0.0, 0.0, 1.0 ) );
   vec3 ny = orbyTriplanarAxisNormal( n, tY, vec3( 0.0, 0.0, 1.0 ), vec3( 1.0, 0.0, 0.0 ) );
   vec3 nz = orbyTriplanarAxisNormal( n, tZ, vec3( 1.0, 0.0, 0.0 ), vec3( 0.0, 1.0, 0.0 ) );
@@ -482,7 +507,7 @@ vec3 orbyTriplanarNormalObject( vec3 localPos, vec3 localNormal, float scale ) {
 }
 float orbyTriplanarNormalDetail( vec3 localPos, vec3 localNormal, float scale ) {
   vec3 n = normalize( localNormal );
-  vec3 p = ( localPos - uOrbyNormalOrigin ) * scale;
+  vec3 p = ( localPos - uOrbyNormalOrigin ) * uOrbyNormalInvSize * scale;
   vec3 blend = abs( n );
   blend = pow( max( blend, vec3( 0.00001 ) ), vec3( 4.0 ) );
   blend /= ( blend.x + blend.y + blend.z );
@@ -504,6 +529,7 @@ uniform float uOrbyScale;
 uniform float uOrbyNormalStrength;
 uniform sampler2D uOrbyNormalMap;
 uniform vec3 uOrbyNormalOrigin;
+uniform vec3 uOrbyNormalInvSize;
 float orbyQ(vec3 p) {
   return fract(sin(dot(p, vec3(12.9898, 78.233, 37.199))) * 43758.5453);
 }
@@ -514,6 +540,11 @@ float orbyFbm3(vec3 p) {
   t += a * orbyQ(p); p = p * 1.8 + 0.1; a *= 0.5;
   t += a * orbyQ(p);
   return t;
+}
+vec3 orbyDecodeNormalMap( vec2 st ) {
+  vec3 tn = texture2D( uOrbyNormalMap, st ).xyz * 2.0 - 1.0;
+  tn.y = -tn.y;
+  return tn;
 }
 vec3 orbyTriplanarAxisNormal( vec3 n, vec3 tn, vec3 ref, vec3 refAlt ) {
   vec3 t = cross( ref, n );
@@ -529,13 +560,13 @@ vec3 orbyTriplanarAxisNormal( vec3 n, vec3 tn, vec3 ref, vec3 refAlt ) {
 }
 vec3 orbyTriplanarNormalObject( vec3 localPos, vec3 localNormal, float scale ) {
   vec3 n = normalize( localNormal );
-  vec3 p = ( localPos - uOrbyNormalOrigin ) * scale;
+  vec3 p = ( localPos - uOrbyNormalOrigin ) * uOrbyNormalInvSize * scale;
   vec3 blend = abs( n );
   blend = pow( max( blend, vec3( 0.00001 ) ), vec3( 4.0 ) );
   blend /= ( blend.x + blend.y + blend.z );
-  vec3 tX = texture2D( uOrbyNormalMap, p.zy ).xyz * 2.0 - 1.0;
-  vec3 tY = texture2D( uOrbyNormalMap, p.xz ).xyz * 2.0 - 1.0;
-  vec3 tZ = texture2D( uOrbyNormalMap, p.xy ).xyz * 2.0 - 1.0;
+  vec3 tX = orbyDecodeNormalMap( p.zy );
+  vec3 tY = orbyDecodeNormalMap( p.xz );
+  vec3 tZ = orbyDecodeNormalMap( p.xy );
   vec3 nx = orbyTriplanarAxisNormal( n, tX, vec3( 0.0, 1.0, 0.0 ), vec3( 0.0, 0.0, 1.0 ) );
   vec3 ny = orbyTriplanarAxisNormal( n, tY, vec3( 0.0, 0.0, 1.0 ), vec3( 1.0, 0.0, 0.0 ) );
   vec3 nz = orbyTriplanarAxisNormal( n, tZ, vec3( 1.0, 0.0, 0.0 ), vec3( 0.0, 1.0, 0.0 ) );
@@ -579,13 +610,15 @@ const METALNESS_INJECT = /* glsl */ `	#include <metalnessmap_fragment>
 			}
 		}
 		if ( uOrbyNormalStrength > 0.0001 && mode < 0.5 ) {
-			vec3 localN = normalize( vOrbyLocalNormal );
+			vec3 localN = orbySurfaceLocalNormal();
 			vec3 tn = orbyTriplanarNormalObject( vOrbyLocalPos, localN, uOrbyScale );
 			float bump = length( tn - localN );
 			float texDetail = orbyTriplanarNormalDetail( vOrbyLocalPos, localN, uOrbyScale );
 			float detail = max( bump, texDetail );
 			#ifdef ORBY_GLASS_TRANSMISSION
 				roughnessFactor = clamp( roughnessFactor + detail * uOrbyNormalStrength * 0.55, 0.04, 1.0 );
+			#else
+				roughnessFactor = clamp( roughnessFactor + detail * uOrbyNormalStrength * 0.42, 0.04, 1.0 );
 			#endif
 		}
 	}
@@ -597,9 +630,10 @@ const ORBY_SURFACE_BODY_INJECT = METALNESS_INJECT.replace('\t#include <metalness
 const NORMAL_INJECT_AFTER_MAPS = /* glsl */ `	#include <normal_fragment_maps>
 	// orby_svg_norm
 	if ( uOrbyNormalStrength > 0.0001 ) {
+		vec3 orbyLocalN = orbySurfaceLocalNormal();
 		vec3 orbyLocalTn = orbyTriplanarNormalObject(
 			vOrbyLocalPos,
-			normalize( vOrbyLocalNormal ),
+			orbyLocalN,
 			uOrbyScale
 		);
 		vec3 orbyViewTn = normalize( orbyNormalMatrix() * orbyLocalTn );
@@ -611,9 +645,10 @@ const NORMAL_INJECT_AFTER_MAPS = /* glsl */ `	#include <normal_fragment_maps>
 const NORMAL_INJECT_LEGACY = /* glsl */ `	#include <normal_fragment>
 	// orby_svg_norm
 	if ( uOrbyNormalStrength > 0.0001 ) {
+		vec3 orbyLocalN = orbySurfaceLocalNormal();
 		vec3 orbyLocalTn = orbyTriplanarNormalObject(
 			vOrbyLocalPos,
-			normalize( vOrbyLocalNormal ),
+			orbyLocalN,
 			uOrbyScale
 		);
 		vec3 orbyViewTn = normalize( orbyNormalMatrix() * orbyLocalTn );
@@ -772,8 +807,20 @@ export function syncSvgExtrudeSurfaceProgramCacheKey(material) {
     material.userData?.svgExtrudeProceduralUniforms?.uOrbyNormalStrength?.value ?? 0;
   const fresnelSuffix = material.userData?.fresnelPatched ? ':f' : '';
   const glassSuffix = material.userData?.orbySurfaceTransmissionSafe ? ':tg' : '';
+  const existingKey = material.customProgramCacheKey;
+  if (
+    !material.userData.orbySvgSurfBaseCacheKey
+    && typeof existingKey === 'function'
+    && !String(existingKey).includes('orbySvgSurf')
+  ) {
+    material.userData.orbySvgSurfBaseCacheKey = existingKey.bind(material);
+  }
+  const basePrefix =
+    typeof material.userData.orbySvgSurfBaseCacheKey === 'function'
+      ? `${material.userData.orbySvgSurfBaseCacheKey()}|`
+      : '';
   material.customProgramCacheKey = () =>
-    `orbySvgSurf:v13:${presetId}:${Number(scale).toFixed(3)}:${Number(normalStrength).toFixed(3)}${fresnelSuffix}${glassSuffix}`;
+    `${basePrefix}orbySvgSurf:v21:${presetId}:${Number(scale).toFixed(3)}:${Number(normalStrength).toFixed(3)}${fresnelSuffix}${glassSuffix}`;
 }
 
 function getOrUpdateUniformRefs(material, opts) {
@@ -909,18 +956,52 @@ export function removeSvgExtrudeProceduralFromMaterial(material) {
   if (!material || !material.userData?.svgExtrudeProceduralPatched) return;
   const fresnelHook =
     material.userData.fresnelPatched && material.userData.fresnelOnBeforeCompile;
+  const shadowHook = material.userData?.shadowTintOnBeforeCompile;
+  const goboHook = material.userData?.goboOnBeforeCompile;
   const live = material.onBeforeCompile;
+  const inner = material.userData.svgExtrudeProceduralPrevious;
+
+  let nextLive = null;
   if (typeof fresnelHook === 'function' && live?.__orbySvgSurfPatch) {
-    // SVG was outer; keep Fresnel as the live hook instead of stale svgExtrudeProceduralPrevious.
-    material.onBeforeCompile = fresnelHook;
-  } else {
-    const prev = material.userData.svgExtrudeProceduralPrevious;
-    if (typeof prev === 'function') {
-      material.onBeforeCompile = prev;
-    } else {
-      delete material.onBeforeCompile;
+    nextLive = fresnelHook;
+  } else if (
+    material.userData?.goboPatched
+    && typeof goboHook === 'function'
+    && (live === goboHook || live?.__orbySvgSurfPatch)
+  ) {
+    nextLive = goboHook;
+    const goboInner =
+      typeof inner === 'function' && !inner.__orbySvgSurfPatch
+        ? inner
+        : resolveGoboInnerForSurfaceInsert(material);
+    if (material.userData.orbyGobo) {
+      material.userData.orbyGobo.previousOnBeforeCompile = goboInner;
     }
+  } else if (
+    material.userData?.shadowTintPatched
+    && typeof shadowHook === 'function'
+    && (live === shadowHook || live?.__orbySvgSurfPatch)
+  ) {
+    nextLive = shadowHook;
+    const shadowInner =
+      typeof inner === 'function' && !inner.__orbySvgSurfPatch
+        ? inner
+        : resolveShadowInnerForSurfaceInsert(material);
+    if (material.userData.orbyShadowTint) {
+      material.userData.orbyShadowTint.previousOnBeforeCompile = shadowInner;
+    }
+  } else if (typeof inner === 'function') {
+    nextLive = inner;
+  } else if (typeof live === 'function' && !live.__orbySvgSurfPatch) {
+    nextLive = live;
   }
+
+  if (typeof nextLive === 'function') {
+    material.onBeforeCompile = nextLive;
+  } else {
+    delete material.onBeforeCompile;
+  }
+
   delete material.userData.svgExtrudeProceduralPatched;
   delete material.userData.svgExtrudeProceduralPrevious;
   delete material.userData.svgExtrudeProceduralOnBeforeCompile;
@@ -932,7 +1013,15 @@ export function removeSvgExtrudeProceduralFromMaterial(material) {
   delete material.userData.svgExtrudeNormalBounds;
   delete material.userData.orbySurfaceTransmissionSafe;
   delete material.userData.orbySurfaceTransmissionSafeWas;
-  delete material.customProgramCacheKey;
+
+  if (material.userData?.shadowTintPatched && material.userData.orbyShadowTint) {
+    const stash = material.userData.orbyShadowTint;
+    material.customProgramCacheKey = function orbyShadowTintCacheKeyAfterSurfaceRemove() {
+      return `orbyShadowTint:${stash.color.getHexString()}:${stash.strength}:${stash.opacity}`;
+    };
+  } else {
+    delete material.customProgramCacheKey;
+  }
   material.needsUpdate = true;
 }
 
@@ -1248,6 +1337,11 @@ float orbyCreativeSurfaceHeight(vec3 worldPos) {
   }
   return 0.5;
 }
+vec3 orbyCreativeDecodeNormalMap(vec2 st) {
+  vec3 tn = texture2D(uOrbyNormalMap, st).xyz * 2.0 - 1.0;
+  tn.y = -tn.y;
+  return tn;
+}
 vec3 orbyCreativeTriplanarAxisNormal(vec3 n, vec3 tn, vec3 ref, vec3 refAlt) {
   vec3 t = cross(ref, n);
   if (dot(t, t) < 1e-8) t = cross(refAlt, n);
@@ -1262,9 +1356,9 @@ vec3 orbyCreativeTriplanarNormalObject(vec3 localPos, vec3 localNormal, float sc
   vec3 blend = abs(n);
   blend = pow(max(blend, vec3(0.00001)), vec3(4.0));
   blend /= (blend.x + blend.y + blend.z);
-  vec3 tX = texture2D(uOrbyNormalMap, p.zy).xyz * 2.0 - 1.0;
-  vec3 tY = texture2D(uOrbyNormalMap, p.xz).xyz * 2.0 - 1.0;
-  vec3 tZ = texture2D(uOrbyNormalMap, p.xy).xyz * 2.0 - 1.0;
+  vec3 tX = orbyCreativeDecodeNormalMap(p.zy);
+  vec3 tY = orbyCreativeDecodeNormalMap(p.xz);
+  vec3 tZ = orbyCreativeDecodeNormalMap(p.xy);
   vec3 nx = orbyCreativeTriplanarAxisNormal(n, tX, vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0));
   vec3 ny = orbyCreativeTriplanarAxisNormal(n, tY, vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0));
   vec3 nz = orbyCreativeTriplanarAxisNormal(n, tZ, vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0));

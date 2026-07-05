@@ -8,6 +8,8 @@ export class SceneMeshClickHandler {
     this.getCurrentModel = deps.getCurrentModel;
     this.stateStore = deps.stateStore;
     this.eventBus = deps.eventBus;
+    this.hitsLightConeAt = deps.hitsLightConeAt ?? null;
+    this.onDeselectLight = deps.onDeselectLight ?? null;
 
     this.raycaster = new THREE.Raycaster();
     this._ndc = new THREE.Vector2();
@@ -64,9 +66,18 @@ export class SceneMeshClickHandler {
               -((this.mouseDownPos.y - rect.top) / rect.height) * 2 + 1;
             this.raycaster.setFromCamera(this._ndc, this.camera);
           }
+
+          if (this.hitsLightConeAt?.(this.mouseDownPos.x, this.mouseDownPos.y)) {
+            this.mouseDownPos = null;
+            this.mouseDownTime = null;
+            this.mouseDownOnCanvas = false;
+            return;
+          }
+
           const intersects = this.raycaster.intersectObject(currentModel, true);
 
           if (intersects.length > 0) {
+            this.onDeselectLight?.();
             this.stateStore.set('moveWidgetEnabled', false);
             this.stateStore.set('rotateWidgetEnabled', true);
             this.stateStore.set('scaleWidgetEnabled', false);
@@ -74,6 +85,7 @@ export class SceneMeshClickHandler {
             this.eventBus.emit('mesh:rotate-widget-enabled', true);
             this.eventBus.emit('mesh:scale-widget-enabled', false);
           } else {
+            this.onDeselectLight?.();
             this.stateStore.set('moveWidgetEnabled', false);
             this.stateStore.set('rotateWidgetEnabled', false);
             this.stateStore.set('scaleWidgetEnabled', false);
@@ -83,6 +95,7 @@ export class SceneMeshClickHandler {
           }
         }
       } else if (!this.mouseDownOnCanvas) {
+        this.onDeselectLight?.();
         this.stateStore.set('moveWidgetEnabled', false);
         this.stateStore.set('rotateWidgetEnabled', false);
         this.stateStore.set('scaleWidgetEnabled', false);

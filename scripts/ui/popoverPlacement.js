@@ -12,8 +12,19 @@ const RIGHT_EDGE_PENALTY_PX = 24;
  *
  * @param {HTMLElement} anchor
  * @param {PopoverClickPoint | null | undefined} click
+ * @param {{ preferClickPoint?: boolean, clickAnchorSize?: number }} [options]
  */
-export function getPopoverAnchorRect(anchor, click) {
+export function getPopoverAnchorRect(anchor, click, options = {}) {
+  if (options.preferClickPoint && click) {
+    const size = options.clickAnchorSize ?? 42;
+    return new DOMRect(
+      click.clientX - size / 2,
+      click.clientY - size / 2,
+      size,
+      size,
+    );
+  }
+
   const primary = anchor.getBoundingClientRect();
   if (primary.width > 0 || primary.height > 0) return primary;
 
@@ -24,10 +35,67 @@ export function getPopoverAnchorRect(anchor, click) {
   }
 
   if (click) {
+    const size = options.clickAnchorSize ?? 0;
+    if (size > 0) {
+      return new DOMRect(
+        click.clientX - size / 2,
+        click.clientY - size / 2,
+        size,
+        size,
+      );
+    }
     return new DOMRect(click.clientX, click.clientY, 0, 0);
   }
 
   return primary;
+}
+
+/**
+ * Popover placement for viewport spotlight HUD color chips — opens beside the in-scene control.
+ *
+ * @param {DOMRect} anchorRect
+ * @param {{ width: number, height: number }} panel
+ */
+export function computeViewportHudPopoverPlacement(anchorRect, panel) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const pad = VIEWPORT_PAD_PX;
+  const gap = GAP_PX;
+  const { width, height } = panel;
+
+  const anchorCenterX = anchorRect.left + anchorRect.width / 2;
+  const anchorTop = anchorRect.top;
+  const anchorBottom = anchorRect.bottom;
+
+  const minLeft = pad;
+  const maxLeft = Math.max(minLeft, vw - width - pad);
+  const minTop = pad;
+  const maxTop = Math.max(minTop, vh - height - pad);
+
+  const clampPos = (top, left) => ({
+    top: Math.max(minTop, Math.min(top, maxTop)),
+    left: Math.max(minLeft, Math.min(left, maxLeft)),
+  });
+
+  /** @type {{ top: number, left: number, score: number }[]} */
+  const candidates = [
+    { ...clampPos(anchorBottom + gap, anchorCenterX - width / 2), score: 1000 },
+    { ...clampPos(anchorTop - height - gap, anchorCenterX - width / 2), score: 900 },
+    { ...clampPos(anchorTop, anchorRect.left - width - gap), score: 850 },
+    { ...clampPos(anchorTop, anchorRect.right + gap), score: 750 },
+  ];
+
+  let best = candidates[0];
+  for (const candidate of candidates) {
+    if (candidate.score > best.score) {
+      best = candidate;
+    }
+  }
+
+  return {
+    left: Math.round(best.left),
+    top: Math.round(best.top),
+  };
 }
 
 /**

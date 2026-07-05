@@ -165,6 +165,7 @@ const NOT_FOUND_PRESET = {
   lightsMaster: 0.3,
   lightsRotation: 0,
   lightsHeight: 5,
+  lightsRigScale: 1,
   lightsAutoRotate: false,
   showLightIndicators: false,
   showLightFalloffIndicators: false,

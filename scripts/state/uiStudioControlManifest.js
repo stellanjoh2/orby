@@ -276,6 +276,54 @@ export const STUDIO_UI_CONTROL_MANIFEST = [
     labelKey: 'backdropY',
     labelType: 'distance',
   },
+  {
+    inputId: 'infinityCoveColor',
+    statePath: 'infinityCoveColor',
+    event: 'studio:infinity-cove-color',
+    inputType: 'color',
+  },
+  {
+    inputId: 'infinityCoveMetalness',
+    statePath: 'infinityCoveMetalness',
+    event: 'studio:infinity-cove-metalness',
+    labelKey: 'infinityCoveMetalness',
+    labelType: 'decimal',
+  },
+  {
+    inputId: 'infinityCoveRoughness',
+    statePath: 'infinityCoveRoughness',
+    event: 'studio:infinity-cove-roughness',
+    labelKey: 'infinityCoveRoughness',
+    labelType: 'decimal',
+  },
+  {
+    inputId: 'infinityCoveScale',
+    statePath: 'infinityCoveScale',
+    event: 'studio:infinity-cove-scale',
+    labelKey: 'infinityCoveScale',
+    labelType: 'decimal',
+  },
+  {
+    inputId: 'infinityCoveWidth',
+    statePath: 'infinityCoveWidth',
+    event: 'studio:infinity-cove-width',
+    labelKey: 'infinityCoveWidth',
+    labelType: 'decimal',
+  },
+  {
+    inputId: 'infinityCoveRotation',
+    statePath: 'infinityCoveRotation',
+    event: 'studio:infinity-cove-rotation',
+    labelKey: 'infinityCoveRotation',
+    labelType: 'angle',
+  },
+  {
+    inputId: 'infinityCoveY',
+    statePath: 'infinityCoveY',
+    event: 'studio:infinity-cove-y',
+    labelKey: 'infinityCoveY',
+    labelType: 'distance',
+  },
 ];
 
 /** @type {UiControlManifestEntry[]} */

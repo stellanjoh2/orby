@@ -552,6 +552,124 @@
                 </div>
               </div>
 
+              <div class="panel-block" data-block="infinity-cove">
+                <div class="block-title has-toggle has-reset">
+                  <span>Infinity Cove</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="infinity-cove" aria-label="Reset Infinity Cove" data-tooltip="Reset Infinity Cove settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                    <label class="effect-toggle" data-tooltip="Show/hide seamless 360° infinity cove (flat floor + curved wall)">
+                      <input type="checkbox" id="infinityCoveEnabled" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable infinity cove</span>
+                    </label>
+                  </div>
+                </div>
+                <div
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                  data-effect-foldout="infinity-cove"
+                  aria-hidden="true"
+                >
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="infinityCoveColor"
+                      class="color-chip"
+                      value="#808080"
+                    />
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="PBR metalness — higher reads more like metal">Metalness</span>
+                    <input
+                      id="infinityCoveMetalness"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.02"
+                    />
+                    <span class="value" data-output="infinityCoveMetalness">0.02</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Lower roughness = glossier surface">Roughness</span>
+                    <input
+                      id="infinityCoveRoughness"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.90"
+                    />
+                    <span class="value" data-output="infinityCoveRoughness">0.90</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Uniform size of the cove">Scale</span>
+                    <input
+                      id="infinityCoveScale"
+                      type="range"
+                      min="0.5"
+                      max="3"
+                      step="0.01"
+                      value="2"
+                    />
+                    <span class="value" data-output="infinityCoveScale">2.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Radius of the flat circular floor stage">Width</span>
+                    <input
+                      id="infinityCoveWidth"
+                      type="range"
+                      min="0.5"
+                      max="3"
+                      step="0.01"
+                      value="2"
+                    />
+                    <span class="value" data-output="infinityCoveWidth">2.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Rotate cove around scene center">Rotation</span>
+                    <input
+                      id="infinityCoveRotation"
+                      type="range"
+                      min="0"
+                      max="360"
+                      step="1"
+                      value="0"
+                    />
+                    <span class="value" data-output="infinityCoveRotation">0°</span>
+                  </label>
+                  <div class="slider-line">
+                    <span class="block-title-name slider-line-label">
+                      <span id="infinityCoveYLabel" data-tooltip="Vertical position of the cove floor">Y Position</span>
+                      <button
+                        id="infinityCoveSnap"
+                        class="slider-snap-btn"
+                        type="button"
+                        aria-label="Snap infinity cove to mesh"
+                        data-tooltip="Align cove floor to mesh base"
+                      >
+                        <i class="fa-solid fa-magnet" aria-hidden="true"></i>
+                      </button>
+                    </span>
+                    <input
+                      id="infinityCoveY"
+                      type="range"
+                      min="-2"
+                      max="2"
+                      step="0.01"
+                      value="0"
+                      aria-labelledby="infinityCoveYLabel"
+                    />
+                    <span class="value" data-output="infinityCoveY">0.00m</span>
+                  </div>
+                  <div class="panel-block-divider" aria-hidden="true"></div>
+                  <div id="infinityCoveSurfaceControlsMount" class="surface-controls-mount"></div>
+                </div>
+              </div>
+
               <div class="panel-block lights" data-block="lights">
                 <div class="block-title has-toggle">
                   <span id="lightsTitle">Lights</span>
@@ -598,6 +716,18 @@
                       value="5"
                     />
                     <span class="value" data-output="lightsHeight">5.0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Scale the entire 3-point light rig — spreads lights farther from or closer to the subject">Rig Scale</span>
+                    <input
+                      id="lightsRigScale"
+                      type="range"
+                      min="0.25"
+                      max="4"
+                      step="0.01"
+                      value="1"
+                    />
+                    <span class="value" data-output="lightsRigScale">1.00×</span>
                   </label>
                   <label class="slider-line">
                     <span data-tooltip="Rotate all lights around the object">Rotate</span>

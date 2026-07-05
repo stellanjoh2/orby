@@ -8692,6 +8692,346 @@ html.orby-home-scroll:not(.mobile-landing) .viewport-load-spinner {
   overflow: hidden;
 }
 
+.light-indicator-hud-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  overflow: visible;
+  --light-indicator-hud-size: 2.875rem;
+  --light-indicator-hud-hit-slop: 0.4rem;
+  --light-indicator-hud-frosted-idle: rgba(8, 8, 8, 0.58);
+  --light-indicator-hud-frosted-pinned: rgba(8, 8, 8, 0.48);
+  --light-indicator-hud-shadow: 0 4px 12px color-mix(in srgb, var(--orby-black) 55%, transparent);
+  --light-indicator-hud-intensity-width: 10.125rem;
+  --light-indicator-hud-lift: 2.75rem;
+  --light-indicator-hud-slider-size: var(--shelf-slider-size, 12px);
+  --light-indicator-hud-slider-track-bg: var(--shelf-slider-track-bg, var(--ui-control-surface));
+  --light-indicator-hud-slider-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.light-indicator-hud__cluster {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.light-indicator-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transform: translate(-50%, calc(-50% - var(--light-indicator-hud-lift)));
+  pointer-events: none;
+  flex-shrink: 0;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.light-indicator-hud--flip-y {
+  transform: translate(-50%, calc(-50% + var(--light-indicator-hud-lift)));
+}
+
+.light-indicator-hud--edge-pinned {
+  transform: translate(-50%, calc(-50% - var(--light-indicator-hud-lift))) scale(0.75);
+  transform-origin: center center;
+  transition: opacity 0.12s ease, transform 0.15s ease;
+}
+
+.light-indicator-hud--edge-pinned.light-indicator-hud--flip-y {
+  transform: translate(-50%, calc(-50% + var(--light-indicator-hud-lift))) scale(0.75);
+}
+
+.light-indicator-hud--edge-pinned .light-indicator-hud__btn--shadow,
+.light-indicator-hud--edge-pinned .light-indicator-hud__btn--bulb,
+.light-indicator-hud--edge-pinned .light-indicator-hud__intensity {
+  background: var(--light-indicator-hud-frosted-pinned);
+}
+
+.light-indicator-hud__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  pointer-events: none;
+}
+
+.light-indicator-hud__intensity {
+  display: flex;
+  flex-shrink: 0;
+  width: var(--light-indicator-hud-intensity-width);
+  height: var(--light-indicator-hud-size);
+  border-radius: 999px;
+  pointer-events: auto;
+  background: var(--light-indicator-hud-frosted-idle);
+  backdrop-filter: blur(var(--ui-frosted-blur));
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
+  box-shadow: var(--light-indicator-hud-shadow);
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.65rem;
+  box-sizing: border-box;
+  transition: background 0.12s ease, transform 0.12s ease;
+}
+
+.light-indicator-hud__intensity-range {
+  width: 100%;
+  height: var(--light-indicator-hud-slider-size);
+  margin: 0;
+  border-radius: calc(var(--light-indicator-hud-slider-size) / 2);
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  outline: none;
+  touch-action: none;
+  cursor: ew-resize;
+}
+
+/* Beat generic input[type='range'] { height: 2px; margin-top: -5px } — pill track = thumb diameter */
+.light-indicator-hud__intensity input.light-indicator-hud__intensity-range {
+  height: var(--light-indicator-hud-slider-size);
+  background: transparent;
+}
+
+.light-indicator-hud__intensity input.light-indicator-hud__intensity-range::-webkit-slider-runnable-track {
+  width: 100%;
+  height: var(--light-indicator-hud-slider-size);
+  border-radius: calc(var(--light-indicator-hud-slider-size) / 2);
+  border: none;
+  background: linear-gradient(
+    to right,
+    var(--light-indicator-hud-slider-track-bg) 0%,
+    var(--light-indicator-hud-slider-track-bg) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
+    var(--light-indicator-hud-slider-track-bg) var(--slider-fill-end, 0%),
+    var(--light-indicator-hud-slider-track-bg) 100%
+  );
+  transition: background 0.2s ease;
+}
+
+.light-indicator-hud__intensity input.light-indicator-hud__intensity-range:is(:active, :focus-visible)::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to right,
+    var(--light-indicator-hud-slider-track-bg) 0%,
+    var(--light-indicator-hud-slider-track-bg) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
+    var(--light-indicator-hud-slider-track-bg) var(--slider-fill-end, 0%),
+    var(--light-indicator-hud-slider-track-bg) 100%
+  );
+}
+
+.light-indicator-hud__intensity input.light-indicator-hud__intensity-range::-moz-range-track {
+  width: 100%;
+  height: var(--light-indicator-hud-slider-size);
+  border-radius: calc(var(--light-indicator-hud-slider-size) / 2);
+  border: none;
+  background: linear-gradient(
+    to right,
+    var(--light-indicator-hud-slider-track-bg) 0%,
+    var(--light-indicator-hud-slider-track-bg) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
+    var(--light-indicator-hud-slider-track-bg) var(--slider-fill-end, 0%),
+    var(--light-indicator-hud-slider-track-bg) 100%
+  );
+  transition: background 0.2s ease;
+}
+
+.light-indicator-hud__intensity input.light-indicator-hud__intensity-range:is(:active, :focus-visible)::-moz-range-track {
+  background: linear-gradient(
+    to right,
+    var(--light-indicator-hud-slider-track-bg) 0%,
+    var(--light-indicator-hud-slider-track-bg) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
+    var(--light-indicator-hud-slider-track-bg) var(--slider-fill-end, 0%),
+    var(--light-indicator-hud-slider-track-bg) 100%
+  );
+}
+
+.light-indicator-hud__intensity input.light-indicator-hud__intensity-range::-webkit-slider-thumb {
+  appearance: none;
+  width: var(--light-indicator-hud-slider-size);
+  height: var(--light-indicator-hud-slider-size);
+  margin-top: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgba(120, 120, 120, 0.95),
+    var(--light-indicator-hud-slider-thumb-shadow);
+}
+
+.light-indicator-hud__intensity input.light-indicator-hud__intensity-range::-moz-range-thumb {
+  width: var(--light-indicator-hud-slider-size);
+  height: var(--light-indicator-hud-slider-size);
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+  transform: none;
+  box-shadow:
+    0 0 0 1px rgba(120, 120, 120, 0.95),
+    var(--light-indicator-hud-slider-thumb-shadow);
+}
+
+.light-indicator-hud__intensity input.light-indicator-hud__intensity-range:is(:hover, :active)::-webkit-slider-thumb {
+  transform: scale(1.083);
+  box-shadow:
+    0 0 0 1px rgba(120, 120, 120, 0.95),
+    var(--light-indicator-hud-slider-thumb-shadow);
+}
+
+.light-indicator-hud__intensity input.light-indicator-hud__intensity-range:is(:hover, :active)::-moz-range-thumb {
+  transform: scale(1.083);
+  box-shadow:
+    0 0 0 1px rgba(120, 120, 120, 0.95),
+    var(--light-indicator-hud-slider-thumb-shadow);
+}
+
+.light-indicator-hud__btn {
+  position: relative;
+  width: var(--light-indicator-hud-size);
+  height: var(--light-indicator-hud-size);
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  cursor: pointer;
+  box-shadow: var(--light-indicator-hud-shadow);
+  transform: none;
+  transition: background 0.12s ease, transform 0.12s ease, color 0.12s ease;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+
+.light-indicator-hud__btn::after {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--light-indicator-hud-hit-slop));
+  border-radius: inherit;
+}
+
+.light-indicator-hud--edge-pinned .light-indicator-hud__btn::after {
+  inset: calc(-1 * var(--light-indicator-hud-hit-slop) * 1.35);
+}
+
+.light-indicator-hud__btn--shadow,
+.light-indicator-hud__btn--bulb {
+  background: var(--light-indicator-hud-frosted-idle);
+  backdrop-filter: blur(var(--ui-frosted-blur));
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
+  color: var(--text-dim);
+}
+
+.light-indicator-hud__btn--shadow.light-indicator-hud__btn--active,
+.light-indicator-hud__btn--bulb.light-indicator-hud__btn--active {
+  background: var(--accent);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  color: var(--brand-text);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    var(--light-indicator-hud-shadow);
+}
+
+.light-indicator-hud__btn--color {
+  background: color-mix(in srgb, var(--light-chip, #ffffff) 62%, transparent);
+  backdrop-filter: blur(var(--ui-frosted-blur));
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--orby-black) 18%, transparent),
+    var(--light-indicator-hud-shadow);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .light-indicator-hud__btn--shadow:not(.light-indicator-hud__btn--active):hover,
+  .light-indicator-hud__btn--shadow:not(.light-indicator-hud__btn--active):focus-visible,
+  .light-indicator-hud__btn--bulb:not(.light-indicator-hud__btn--active):hover,
+  .light-indicator-hud__btn--bulb:not(.light-indicator-hud__btn--active):focus-visible {
+    background: var(--ui-frosted-bg);
+    color: var(--brand-primary);
+    transform: scale(1.08);
+  }
+
+  .light-indicator-hud__btn--shadow.light-indicator-hud__btn--active:hover,
+  .light-indicator-hud__btn--shadow.light-indicator-hud__btn--active:focus-visible,
+  .light-indicator-hud__btn--bulb.light-indicator-hud__btn--active:hover,
+  .light-indicator-hud__btn--bulb.light-indicator-hud__btn--active:focus-visible {
+    transform: scale(1.08);
+  }
+
+  .light-indicator-hud__btn--color:hover,
+  .light-indicator-hud__btn--color:focus-visible {
+    background: color-mix(in srgb, var(--light-chip, #ffffff) 78%, transparent);
+    transform: scale(1.08);
+  }
+
+  .light-indicator-hud__intensity:hover,
+  .light-indicator-hud__intensity:focus-within {
+    background: var(--ui-frosted-bg);
+    transform: scale(1.04);
+  }
+}
+
+.light-indicator-hud__btn:active {
+  transform: scale(1.04);
+}
+
+.light-indicator-hud__btn i {
+  font-size: 1.05rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.light-shadow-badges {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.light-shadow-badge {
+  position: absolute;
+  width: 2.625rem;
+  height: 2.625rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  cursor: pointer;
+  color: #fff;
+  background: var(--orby-black);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  opacity: 0.5;
+  /* Screen-space HUD — fixed px size, not perspective-scaled with world depth */
+  transform: translate(-50%, -50%) scale(1.125);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.light-shadow-badge--active {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.5);
+}
+
+.light-shadow-badge i {
+  font-size: 1.425rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
 .joint-name-label {
   position: absolute;
   top: 0;
@@ -10354,10 +10694,10 @@ body.ui-hidden .shelf {
   box-sizing: border-box;
   border-radius: var(--orby-color-picker-radius);
   border: none;
-  background: var(--shelf-card-bg);
+  background: var(--ui-frosted-bg);
   backdrop-filter: blur(var(--ui-frosted-blur));
   -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 10px 36px color-mix(in srgb, var(--orby-black) 42%, transparent);
   pointer-events: auto;
   overflow: hidden;
   visibility: hidden;

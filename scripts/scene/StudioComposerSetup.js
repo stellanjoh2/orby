@@ -82,8 +82,12 @@ export function setupStudioComposer(scene) {
       },
       getWireframeOverlayMeshes: () =>
         scene.materialController?.wireframeOverlayMeshes ?? [],
-      getLightIndicatorOverlayGroups: () =>
-        scene.lightsController?.getIndicatorOverlayGroups?.() ?? [],
+      getLightIndicatorOverlayGroups: () => {
+        const roots = scene.lightsController?.getIndicatorOverlayGroups?.() ?? [];
+        const manipulator = scene.lightViewportSelection?.getOverlayRoot?.();
+        if (manipulator) roots.push(manipulator);
+        return roots;
+      },
       getRenderState: () => scene.stateStore.peekState(),
       syncPostProcessingForLogicalSize: (w, h) =>
         scene.syncPostProcessingForLogicalSize(w, h),
