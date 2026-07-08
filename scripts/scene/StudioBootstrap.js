@@ -126,6 +126,9 @@ export function initStudioShell(scene, initialState) {
     scene.goboRotation = Number.isFinite(initialState.gobo?.rotation)
       ? ((initialState.gobo.rotation % 360) + 360) % 360
       : 0;
+    scene.goboSoftnessQuality = normalizeShadowQuality(
+      initialState.gobo?.softnessQuality ?? 'medium',
+    );
 
     scene.modelLoader = new ModelLoader();
     scene.modelLifecycle = new ModelLifecycleManager(scene);
@@ -650,7 +653,7 @@ export async function bootstrapStudio(scene) {
       scale: scene.goboScale,
       rotation: scene.goboRotation,
     });
-    scene.goboProjection.setShadowQuality(scene.lightsShadowQuality);
+    scene.goboProjection.setSoftnessQuality(scene.goboSoftnessQuality);
     void scene.goboProjection.setTextureId(scene.goboTextureId);
     scene.setupLights();
     scene.lightViewportSelection?.dispose?.();

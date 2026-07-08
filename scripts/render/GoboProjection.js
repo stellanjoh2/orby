@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { DEFAULT_GOBO_TEXTURE_ID, DEFAULT_GOBO_SOFTNESS, getGoboPreset } from '../config/gobos.js';
 import { goboBlurModeForQuality, normalizeShadowQuality } from '../config/shadowQuality.js';
-import { relinkOuterShaderPatchesAfterSurface } from './SvgExtrudeSurfaceShader.js';
 
 const OPAQUE_FRAGMENT = '#include <opaque_fragment>';
 const WORLDpos_VERTEX = '#include <worldpos_vertex>';
@@ -25,38 +24,58 @@ uniform vec2 uOrbyGoboPivot;
 uniform vec3 uOrbyGoboShadowColor;
 `;
 
+const GOBO_AXIS5_WEIGHT_SUM = 0.227027027 + 2 * 0.1945945946 + 2 * 0.1216216216;
+
 const GOBO_FUNCTION_GLSL = `
 float orbyGoboTapOcc( vec2 uv ) {
 	if ( uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0 ) return 0.0;
 	float raw = texture2D( uOrbyGoboMap, uv ).r;
 	return 1.0 - smoothstep( 0.88, 0.97, raw );
 }
+float orbyGoboBlurAxis5( vec2 uv, vec2 delta ) {
+	float c0 = orbyGoboTapOcc( uv );
+	float c1 = orbyGoboTapOcc( uv + delta ) + orbyGoboTapOcc( uv - delta );
+	float c2 = orbyGoboTapOcc( uv + delta * 2.0 ) + orbyGoboTapOcc( uv - delta * 2.0 );
+	return ( c0 * 0.227027027 + c1 * 0.1945945946 + c2 * 0.1216216216 ) / ${GOBO_AXIS5_WEIGHT_SUM.toFixed(9) };
+}
+float orbyGoboBlurSeparable5( vec2 uv, float radius ) {
+	vec2 h = vec2( radius, 0.0 );
+	vec2 v = vec2( 0.0, radius );
+	float row0 = orbyGoboBlurAxis5( uv, h );
+	float row1 = orbyGoboBlurAxis5( uv + v, h ) + orbyGoboBlurAxis5( uv - v, h );
+	float row2 = orbyGoboBlurAxis5( uv + v * 2.0, h ) + orbyGoboBlurAxis5( uv - v * 2.0, h );
+	return row0 * 0.227027027 + row1 * 0.1945945946 + row2 * 0.1216216216;
+}
+float orbyGoboBlurSeparable7( vec2 uv, float radius ) {
+	vec2 h = vec2( radius, 0.0 );
+	vec2 v = vec2( 0.0, radius );
+	float row0 = orbyGoboBlurAxis5( uv, h );
+	float row1 = orbyGoboBlurAxis5( uv + v * 0.666667, h ) + orbyGoboBlurAxis5( uv - v * 0.666667, h );
+	float row2 = orbyGoboBlurAxis5( uv + v * 1.333333, h ) + orbyGoboBlurAxis5( uv - v * 1.333333, h );
+	float row3 = orbyGoboBlurAxis5( uv + v * 2.0, h ) + orbyGoboBlurAxis5( uv - v * 2.0, h );
+	return row0 * 0.3077 + row1 * 0.2921 + row2 * 0.2339 + row3 * 0.1201;
+}
 float orbySampleGoboOcc( vec2 uv ) {
 	if ( uOrbyGoboBlurRadius <= 0.00001 ) return orbyGoboTapOcc( uv );
 	if ( uOrbyGoboBlurMode < 0.5 ) return orbyGoboTapOcc( uv );
-	vec2 o = vec2( uOrbyGoboBlurRadius, 0.0 );
-	float c0 = orbyGoboTapOcc( uv );
 	if ( uOrbyGoboBlurMode < 1.5 ) {
-		float cx1 = orbyGoboTapOcc( uv + o ) + orbyGoboTapOcc( uv - o );
-		float cx2 = orbyGoboTapOcc( uv + o * 2.0 ) + orbyGoboTapOcc( uv - o * 2.0 );
-		float hx = c0 * 0.227027027 + cx1 * 0.1945945946 + cx2 * 0.1216216216;
-		o = vec2( 0.0, uOrbyGoboBlurRadius );
-		float cy1 = orbyGoboTapOcc( uv + o ) + orbyGoboTapOcc( uv - o );
-		float cy2 = orbyGoboTapOcc( uv + o * 2.0 ) + orbyGoboTapOcc( uv - o * 2.0 );
-		float hy = hx * 0.227027027 + cy1 * 0.1945945946 + cy2 * 0.1216216216;
-		return hy / 0.857054054;
+		vec2 br = vec2( uOrbyGoboBlurRadius );
+		float c0 = orbyGoboTapOcc( uv );
+		float occ = c0 * 0.25;
+		occ += (
+			orbyGoboTapOcc( uv + vec2( br.x, 0.0 ) ) + orbyGoboTapOcc( uv - vec2( br.x, 0.0 ) )
+			+ orbyGoboTapOcc( uv + vec2( 0.0, br.y ) ) + orbyGoboTapOcc( uv - vec2( 0.0, br.y ) )
+		) * 0.125;
+		occ += (
+			orbyGoboTapOcc( uv + br ) + orbyGoboTapOcc( uv - br )
+			+ orbyGoboTapOcc( uv + vec2( br.x, -br.y ) ) + orbyGoboTapOcc( uv + vec2( -br.x, br.y ) )
+		) * 0.0625;
+		return occ;
 	}
-	vec2 br = vec2( uOrbyGoboBlurRadius );
-	float occ = c0 * 0.25;
-	occ += (
-		orbyGoboTapOcc( uv + vec2( br.x, 0.0 ) ) + orbyGoboTapOcc( uv - vec2( br.x, 0.0 ) )
-		+ orbyGoboTapOcc( uv + vec2( 0.0, br.y ) ) + orbyGoboTapOcc( uv - vec2( 0.0, br.y ) )
-	) * 0.125;
-	occ += (
-		orbyGoboTapOcc( uv + br ) + orbyGoboTapOcc( uv - br )
-		+ orbyGoboTapOcc( uv + vec2( br.x, -br.y ) ) + orbyGoboTapOcc( uv + vec2( -br.x, br.y ) )
-	) * 0.0625;
-	return occ;
+	if ( uOrbyGoboBlurMode < 2.5 ) {
+		return orbyGoboBlurSeparable5( uv, uOrbyGoboBlurRadius );
+	}
+	return orbyGoboBlurSeparable7( uv, uOrbyGoboBlurRadius );
 }
 `;
 
@@ -65,8 +84,12 @@ const GOBO_APPLY_GLSL = `
 	vec2 orbyGoboUv = ( uOrbyGoboMatrix * vec4( vOrbyGoboWorldPos, 1.0 ) ).xy;
 	vec2 orbyGoboCentered = orbyGoboUv - uOrbyGoboPivot;
 	orbyGoboUv = orbyGoboCentered / max( uOrbyGoboScale, 0.001 ) + uOrbyGoboPivot;
-	float orbyGoboInProj = step( 0.0, orbyGoboUv.x ) * step( orbyGoboUv.x, 1.0 )
-		* step( 0.0, orbyGoboUv.y ) * step( orbyGoboUv.y, 1.0 );
+	float orbyGoboProjEdge = max( uOrbyGoboBlurRadius, 0.00025 );
+	float orbyGoboInProj =
+		smoothstep( 0.0, orbyGoboProjEdge, orbyGoboUv.x )
+		* ( 1.0 - smoothstep( 1.0 - orbyGoboProjEdge, 1.0, orbyGoboUv.x ) )
+		* smoothstep( 0.0, orbyGoboProjEdge, orbyGoboUv.y )
+		* ( 1.0 - smoothstep( 1.0 - orbyGoboProjEdge, 1.0, orbyGoboUv.y ) );
 	float orbyGoboOcc = orbySampleGoboOcc( orbyGoboUv );
 	float orbyGoboAmt = orbyGoboOcc * uOrbyGoboStrength * orbyGoboInProj;
 	outgoingLight.rgb = mix( outgoingLight.rgb, uOrbyGoboShadowColor, clamp( orbyGoboAmt, 0.0, 1.0 ) );
@@ -89,6 +112,19 @@ function softnessToBlurRadius(softness) {
   if (s <= 0) return 0;
   // Penumbra spread in UV space — kept modest (5-tap kernel reaches ~2× radius).
   return (s / 4) * 0.012;
+}
+
+/**
+ * Scale blur radius so every quality tier shares the same ~2× max sample reach.
+ * Medium 3×3 only spans 1× per axis; high/ultra separable kernels reach 2×.
+ */
+export function goboBlurRadiusForPresentation(softness, blurMode) {
+  const base = softnessToBlurRadius(softness);
+  if (base <= 0) return 0;
+  const mode = Number(blurMode);
+  if (mode < 0.5) return base;
+  if (mode < 1.5) return base * 2;
+  return base;
 }
 
 export const GOBO_UI_MIN = 0;
@@ -284,14 +320,19 @@ export function applyGoboToMaterial(material, controller) {
   const hookIntact =
     material.userData.goboPatched
     && material.userData.goboOnBeforeCompile
-    && stash.shaderVersion === 10;
+    && stash.shaderVersion === 12;
 
   if (hookIntact && stash.uniforms?.strength && stash.uniforms?.color
     && stash.uniforms?.scale && stash.uniforms?.pivot && stash.uniforms?.blurMode) {
-    controller?.syncMaterialUniforms(material);
-    if (material.userData?.svgExtrudeProceduralPatched) {
-      relinkOuterShaderPatchesAfterSurface(material);
+    if (stash.textureId !== controller?.textureId || stash.textureRevision !== controller?._textureRevision) {
+      if (stash.uniforms.map) stash.uniforms.map.value = controller?._goboTexture ?? null;
+      stash.textureId = controller?.textureId;
+      stash.textureRevision = controller?._textureRevision;
     }
+    if (stash.shadowSettingsRevision !== controller?._shadowSettingsRevision) {
+      stash.shadowSettingsRevision = controller?._shadowSettingsRevision;
+    }
+    controller?.syncMaterialUniforms(material);
     return;
   }
 
@@ -326,11 +367,13 @@ export function applyGoboToMaterial(material, controller) {
   attachGoboCompileHook(material, goboCompile, stash);
   material.userData.goboPatched = true;
   material.userData.goboOnBeforeCompile = goboCompile;
-  stash.shaderVersion = 10;
+  stash.shaderVersion = 12;
+  stash.textureId = controller?.textureId;
+  stash.textureRevision = controller?._textureRevision;
   const prevCacheKey = material.customProgramCacheKey?.bind(material);
   material.customProgramCacheKey = function orbyGoboCacheKey() {
     const base = typeof prevCacheKey === 'function' ? prevCacheKey() : '';
-    return `${base}|orbyGobo:v10:${controller?.enabled ? 1 : 0}:${controller?.textureId}:${controller?.goboSoftness}:${controller?.shadowOpacity}:${controller?.goboScale}:${controller?.goboRotationDeg}:${controller?.goboBlurMode}:${controller?.shadowColor?.getHexString?.() ?? '080808'}`;
+    return `${base}|orbyGobo:v12:${controller?.enabled ? 1 : 0}:${controller?.textureId}:${controller?.goboSoftness}:${controller?.softnessQuality}:${controller?.shadowOpacity}:${controller?.goboScale}:${controller?.goboRotationDeg}:${controller?.goboBlurMode}:${controller?.shadowColor?.getHexString?.() ?? '080808'}`;
   };
   material.needsUpdate = true;
 }
@@ -386,7 +429,7 @@ export class GoboProjectionController {
     this.goboSoftness = DEFAULT_GOBO_SOFTNESS;
     this.goboScale = GOBO_UI_DEFAULT;
     this.goboRotationDeg = 0;
-    this.shadowQuality = 'medium';
+    this.softnessQuality = 'medium';
     this.goboBlurMode = goboBlurModeForQuality('medium');
     this.shadowOpacity = 0.25;
     this.shadowColor = new THREE.Color('#080808');
@@ -394,6 +437,8 @@ export class GoboProjectionController {
     this._sourceTexture = null;
     this._goboTexture = null;
     this._loadToken = 0;
+    this._textureRevision = 0;
+    this._shadowSettingsRevision = 0;
 
     this._goboCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
     this._goboMatrix = new THREE.Matrix4();
@@ -421,7 +466,7 @@ export class GoboProjectionController {
       shader.uniforms.uOrbyGoboMap.value = this._goboTexture;
     }
     const strength = this.enabled ? normalizeStrength(this.shadowOpacity) : 0;
-    const blur = softnessToBlurRadius(this.goboSoftness);
+    const blur = goboBlurRadiusForPresentation(this.goboSoftness, this.goboBlurMode);
     const scale = effectiveGoboScaleFromController(this.goboScale);
     if (!shader.uniforms.uOrbyGoboStrength) {
       shader.uniforms.uOrbyGoboStrength = { value: strength };
@@ -463,6 +508,8 @@ export class GoboProjectionController {
       scale: shader.uniforms.uOrbyGoboScale,
       pivot: shader.uniforms.uOrbyGoboPivot,
     };
+    stash.textureId = this.textureId;
+    stash.textureRevision = this._textureRevision;
   }
 
   syncMaterialUniforms(material) {
@@ -473,7 +520,9 @@ export class GoboProjectionController {
     if (uniforms.strength) {
       uniforms.strength.value = this.enabled ? normalizeStrength(this.shadowOpacity) : 0;
     }
-    if (uniforms.blur) uniforms.blur.value = softnessToBlurRadius(this.goboSoftness);
+    if (uniforms.blur) {
+      uniforms.blur.value = goboBlurRadiusForPresentation(this.goboSoftness, this.goboBlurMode);
+    }
     if (uniforms.blurMode) uniforms.blurMode.value = this.goboBlurMode;
     if (uniforms.color) uniforms.color.value.copy(this.shadowColor);
     if (uniforms.scale) uniforms.scale.value = effectiveGoboScaleFromController(this.goboScale);
@@ -503,6 +552,7 @@ export class GoboProjectionController {
           texture.minFilter = THREE.LinearFilter;
           texture.magFilter = THREE.LinearFilter;
           this._goboTexture = texture;
+          this._textureRevision += 1;
           resolve(true);
         },
         undefined,
@@ -516,12 +566,16 @@ export class GoboProjectionController {
   }
 
   setShadowSettings({ opacity, color } = {}) {
+    let changed = false;
     if (opacity !== undefined) {
       this.shadowOpacity = normalizeStrength(opacity);
+      changed = true;
     }
     if (color !== undefined) {
       this.shadowColor.set(color);
+      changed = true;
     }
+    if (changed) this._shadowSettingsRevision += 1;
   }
 
   setGoboSettings({ softness, scale, rotation } = {}) {
@@ -536,9 +590,34 @@ export class GoboProjectionController {
     }
   }
 
+  setSoftnessQuality(quality) {
+    const normalized = normalizeShadowQuality(quality);
+    const prevMode = this.goboBlurMode;
+    this.softnessQuality = normalized;
+    this.goboBlurMode = goboBlurModeForQuality(this.softnessQuality);
+    return prevMode !== this.goboBlurMode;
+  }
+
+  /** @deprecated Gobo softness quality is independent from shadow-map quality. */
   setShadowQuality(quality) {
-    this.shadowQuality = normalizeShadowQuality(quality);
-    this.goboBlurMode = goboBlurModeForQuality(this.shadowQuality);
+    return this.setSoftnessQuality(quality);
+  }
+
+  markProgramsDirty({ model, backdrop, infinityCove, podium } = {}) {
+    const mark = (root) => {
+      if (!root) return;
+      root.traverse((child) => {
+        if (!child.isMesh || !child.material || !child.userData?.goboPatched) return;
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach((mat) => {
+          mat.needsUpdate = true;
+        });
+      });
+    };
+    mark(model);
+    mark(podium);
+    mark(backdrop);
+    mark(infinityCove);
   }
 
   updateProjectionMatrix() {

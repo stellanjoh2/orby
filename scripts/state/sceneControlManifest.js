@@ -409,6 +409,7 @@ export const SCENE_CONTROL_MANIFEST = [
   { event: 'lights:shadow-two-sided', apply: 'setLightsShadowTwoSided' },
   { event: 'lights:shadow-settings', apply: 'setLightsShadowSettings' },
   { event: 'lights:gobo-softness', apply: 'setGoboSoftness' },
+  { event: 'lights:gobo-softness-quality', apply: 'setGoboSoftnessQuality' },
   { event: 'lights:gobo-scale', apply: 'setGoboScale' },
   { event: 'lights:gobo-rotation', apply: 'setGoboRotation' },
 

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { lightsAutoRotateDegreesPerSecond } from '../config/lightsAutoRotate.js';
 import {
   SHADOW_MAP_SIZE_BY_QUALITY,
+  LIGHT_BEAM_ORTHO_PADDING,
   normalizeShadowQuality,
   shadowBlurSamplesForQuality,
   shadowCameraOrthoPaddingForQuality,
@@ -36,6 +37,9 @@ const LIGHT_INDICATOR_WIRE_OPACITY = 0.88;
 /** Apex of the cone — slightly back along the beam and above the frustum silhouette. */
 const LIGHT_SHADOW_BADGE_BACK_SCALE = 0.12;
 const LIGHT_SHADOW_BADGE_UP_SCALE = 0.42;
+/** HUD anchor uses fixed cone scale so brightness drags do not shift the shelf. */
+const LIGHT_SHADOW_BADGE_ANCHOR_INTENSITY_SCALE =
+  (LIGHT_INDICATOR_INTENSITY_SCALE_MIN + LIGHT_INDICATOR_INTENSITY_SCALE_MAX) / 2;
 const LIGHT_FALLOFF_SEGMENTS = 32;
 const LIGHT_FALLOFF_LINE_OPACITY = 0.72;
 /** ConeGeometry tip is +Y; beam opens toward -Y — align opening with light→target. */
@@ -195,17 +199,17 @@ export class LightsController {
     const meshRadius = Number.isFinite(this.modelBounds?.radius)
       ? Math.max(MIN_SHADOW_BOUNDS_RADIUS, this.modelBounds.radius)
       : 3;
-    const padding = shadowCameraOrthoPaddingForQuality(this.shadowQuality);
+    const shadowPadding = shadowCameraOrthoPaddingForQuality(this.shadowQuality);
     const farMultiplier =
       SHADOW_FAR_MULTIPLIER_BY_QUALITY[this.shadowQuality]
       ?? SHADOW_FAR_MULTIPLIER_BY_QUALITY.medium;
-    const meshExtent = meshRadius * padding;
+    const meshShadowExtent = meshRadius * shadowPadding;
     const receiveReach = Number.isFinite(this.receiveSurfaceRadius)
       ? Math.max(0, this.receiveSurfaceRadius)
       : 0;
-    const extent = Math.max(meshExtent, receiveReach);
+    const extent = Math.max(meshShadowExtent, receiveReach);
     this._shadowFrustumExtent = extent;
-    this._indicatorFrustumExtent = meshExtent;
+    this._indicatorFrustumExtent = meshRadius * LIGHT_BEAM_ORTHO_PADDING;
     const farPlane = Math.max(20, Math.max(meshRadius, receiveReach) * farMultiplier);
     ['key', 'fill', 'rim'].forEach((lightId) => {
       const light = this.lights[lightId];
@@ -535,6 +539,7 @@ export class LightsController {
     this.shadowQuality = normalized;
     this.setShadowMapResolution(SHADOW_MAP_SIZE_BY_QUALITY[this.shadowQuality]);
     this._applyShadowSoftnessToLights();
+    this._applyShadowCameraBounds();
   }
 
   setShadowSoftness(value) {
@@ -709,9 +714,10 @@ export class LightsController {
   }
 
   /**
-   * Match solid cone frustum to beam wireframes: length light→target, radius = mesh shadow extent.
+   * Match solid cone frustum to beam wireframes: length light→target, radius = mesh fit.
    * Intensity scales both axes uniformly so the half-angle stays fixed.
-   * Uses {@link _indicatorFrustumExtent} — not the expanded receive-surface shadow frustum.
+   * Uses {@link _indicatorFrustumExtent} ({@link LIGHT_BEAM_ORTHO_PADDING}) — not shadow
+   * quality tier padding or the expanded receive-surface shadow frustum.
    */
   _getBeamConeDimensions(beamLength, extent, intensityScale) {
     const safeLength = Math.max(Number(beamLength) || 0, 1e-6);
@@ -1018,11 +1024,10 @@ export class LightsController {
       light.getWorldPosition(_LIGHT_ORIGIN);
       const target = this._resolveLightTargetWorld(light, center, _LIGHT_TARGET);
       this._resolveLightBeamBasis(_LIGHT_ORIGIN, target, scratch);
-      const intensityScale = this._getBeamConeIntensityScaleForLightId(lightId);
       const { coneLength, coneRadius } = this._getBeamConeDimensions(
         scratch.beamLength,
         extent,
-        intensityScale,
+        LIGHT_SHADOW_BADGE_ANCHOR_INTENSITY_SCALE,
       );
       layout.world
         .copy(_LIGHT_ORIGIN)

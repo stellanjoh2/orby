@@ -183,9 +183,6 @@ export function applyShadowTintToMaterial(material, options = {}) {
       // Surface was re-patched — force a full shadow re-wrap so compiled programs include it.
       delete stash.uniforms;
     } else {
-      if (material.userData?.svgExtrudeProceduralPatched) {
-        relinkOuterShaderPatchesAfterSurface(material);
-      }
       return;
     }
   }

@@ -206,6 +206,22 @@ body.ui-hidden .shape-library-panel:not([hidden]) .shape-library-panel__chrome {
   );
 }
 
+.shape-library-tile--empty {
+  cursor: default;
+  opacity: 0.35;
+  background: color-mix(in srgb, var(--orby-black) 92%, var(--text-dim) 8%);
+}
+
+.shape-library-tile--empty:hover,
+.shape-library-tile--empty:focus-visible {
+  transform: none;
+  background: color-mix(in srgb, var(--orby-black) 92%, var(--text-dim) 8%);
+}
+
+.shape-library-tile--empty::after {
+  box-shadow: none;
+}
+
 .shape-library-drag-ghost {
   position: fixed;
   top: -9999px;

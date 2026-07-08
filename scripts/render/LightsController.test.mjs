@@ -189,3 +189,29 @@ test('light cone keeps scaling with intensity slider when runtime intensity is c
 
   controller.clearIndicators();
 });
+
+test('light beam frustum ignores shadow quality tier', () => {
+  const scene = new THREE.Scene();
+  const controller = new LightsController(scene, { enabled: true, shadowQuality: 'low' });
+  controller.setModelBounds({
+    center: new THREE.Vector3(0, 0, 0),
+    radius: 2,
+  });
+  const beamExtentLow = controller._indicatorFrustumExtent;
+  const shadowExtentLow = controller._shadowFrustumExtent;
+
+  controller.setShadowQuality('ultra');
+  assert.equal(
+    controller._indicatorFrustumExtent,
+    beamExtentLow,
+    'beam guide extent should not change with shadow quality',
+  );
+  assert.notEqual(
+    controller._shadowFrustumExtent,
+    shadowExtentLow,
+    'shadow frustum should still tighten on higher quality',
+  );
+
+  controller.setShadowQuality('low');
+  assert.equal(controller._indicatorFrustumExtent, beamExtentLow);
+});

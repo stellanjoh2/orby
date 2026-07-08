@@ -313,6 +313,7 @@ export function createBlankCanvasPreset() {
       panelOpen: false,
       texture: 'palm',
       softness: 0.3,
+      softnessQuality: 'medium',
       scale: 5,
       scaleSpace: 'ui',
       rotation: 0,

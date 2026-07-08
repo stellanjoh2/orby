@@ -2709,7 +2709,7 @@ html.orby-dropzone-shell-pending .workspace {
   visibility: hidden;
 }
 
-.viewport.is-offline-export-capture > .viewport-load-spinner {
+html:has(.viewport.is-offline-export-capture) .viewport-load-spinner {
   display: none;
 }
 
@@ -3174,6 +3174,7 @@ body.export-overlay-debug #dropzone {
   --composition-grid-fade-duration: 0.1s;
   --comp-guide-alpha: 0.52;
   --comp-guide-alpha-muted: 0.26;
+  --comp-guide-alpha-thumb: 0.5;
 }
 
 /* Only when visible: `display: flex` must not apply while `[hidden]` or it overrides UA display:none */
@@ -3213,6 +3214,32 @@ body.export-overlay-debug #dropzone {
 
 .composition-grid-overlay--inverted .composition-grid-overlay__viewport-guides line {
   stroke: rgba(0, 0, 0, var(--comp-guide-alpha));
+}
+
+/* Centered square — largest fit in viewport; matches shape-library thumb center-crop */
+.composition-grid-overlay__thumb-safe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 4;
+  width: min(100cqw, 100cqh);
+  height: min(100cqw, 100cqh);
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  border: 2px solid rgba(255, 255, 255, var(--comp-guide-alpha-thumb));
+  pointer-events: none;
+}
+
+.composition-grid-overlay--inverted .composition-grid-overlay__thumb-safe {
+  border-color: rgba(0, 0, 0, var(--comp-guide-alpha-thumb));
+}
+
+@supports not (width: 1cqw) {
+  .composition-grid-overlay__thumb-safe {
+    width: min(100%, 100vh);
+    height: min(100%, 100vh);
+    aspect-ratio: 1;
+  }
 }
 
 /* Full-width horizontal thirds — avoids SVG meet-letterboxing shortening lines on wide panels */
@@ -4605,7 +4632,7 @@ html:not(.mobile-landing) .viewport > .demo-logotype {
   max-width: calc(440px * var(--studio-ui-scale));
 }
 
-html:not(.mobile-landing) .viewport > .viewport-load-spinner {
+html:not(.mobile-landing) .viewport-load-spinner {
   position: fixed;
   bottom: calc(
     max(var(--viewport-chrome-inset-y), env(safe-area-inset-bottom, 0px)) +
@@ -4618,12 +4645,12 @@ html:not(.mobile-landing) .viewport > .viewport-load-spinner {
   height: calc(70px * var(--studio-ui-scale));
 }
 
-html:not(.mobile-landing) .viewport > .viewport-load-spinner img {
+html:not(.mobile-landing) .viewport-load-spinner img {
   width: calc(70px * var(--studio-ui-scale));
   height: calc(70px * var(--studio-ui-scale));
 }
 
-html:not(.mobile-landing) .viewport > .viewport-load-spinner__elapsed {
+html:not(.mobile-landing) .viewport-load-spinner__elapsed {
   font-size: calc(22px * var(--studio-ui-scale));
 }
 

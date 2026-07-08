@@ -1102,6 +1102,10 @@ export class ResetControls {
             this.eventBus.emit('lights:gobo-enabled', defaults.gobo?.enabled ?? false);
             this.eventBus.emit('lights:gobo-texture', defaults.gobo?.texture ?? 'palm');
             this.eventBus.emit('lights:gobo-softness', defaults.gobo?.softness ?? DEFAULT_GOBO_SOFTNESS);
+            this.eventBus.emit(
+              'lights:gobo-softness-quality',
+              defaults.gobo?.softnessQuality ?? 'medium',
+            );
             this.eventBus.emit('lights:gobo-scale', defaults.gobo?.scale ?? GOBO_UI_DEFAULT);
             this.eventBus.emit('lights:gobo-rotation', defaults.gobo?.rotation ?? 0);
             this.ui.syncControls(this.stateStore.getState());

@@ -168,9 +168,11 @@ export class LightManipulatorWidget {
    *   center: import('three').Vector3,
    *   lightPosition: import('three').Vector3,
    *   extent: number,
+   *   rotateMotionX?: number,
+   *   rotateMotionZ?: number,
    * }} layout
    */
-  updateLayout({ center, lightPosition, extent }) {
+  updateLayout({ center, lightPosition, extent, rotateMotionX = 0, rotateMotionZ = 0 }) {
     const safeExtent = Math.max(Number(extent) || 0, 0.5);
     const widgetSize = Math.max(safeExtent * 0.42 * LIGHT_MANIP_BOOST, 0.35 * LIGHT_MANIP_BOOST);
     const ringRadius = Math.max(
@@ -185,8 +187,14 @@ export class LightManipulatorWidget {
     const dx = lightPosition.x - center.x;
     const dz = lightPosition.z - center.z;
     const orbitLen = Math.hypot(dx, dz) || 1;
-    _TANGENT_CCW.set(-dz / orbitLen, 0, dx / orbitLen);
-    _TANGENT_CW.set(dz / orbitLen, 0, -dx / orbitLen);
+    const motionLen = Math.hypot(rotateMotionX, rotateMotionZ);
+    if (motionLen > 1e-6) {
+      _TANGENT_CCW.set(rotateMotionX / motionLen, 0, rotateMotionZ / motionLen);
+      _TANGENT_CW.set(-rotateMotionX / motionLen, 0, -rotateMotionZ / motionLen);
+    } else {
+      _TANGENT_CCW.set(-dz / orbitLen, 0, dx / orbitLen);
+      _TANGENT_CW.set(dz / orbitLen, 0, -dx / orbitLen);
+    }
 
     this._handlesGroup.position.copy(lightPosition);
 

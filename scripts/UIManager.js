@@ -395,6 +395,7 @@ export class UIManager {
     this.dom.fullscreenToggle = q('#fullscreenToggle');
     this.dom.loadSpinner = q('#viewportLoadSpinner');
     this.dom.loadSpinnerElapsed = q('#viewportLoadSpinnerElapsed');
+    this._portalLoadSpinnerToBody();
     this.dom.topBarTitle = q('#topBarTitle');
     this.dom.topBarAnimation = q('#topBarAnimation');
     this.dom.resetAll = q('#resetAll');
@@ -674,6 +675,7 @@ export class UIManager {
       goboButtons: document.querySelectorAll('[data-gobo]'),
       goboEnabled: q('#goboEnabled'),
       goboSoftness: q('#goboSoftness'),
+      goboSoftnessQuality: q('#goboSoftnessQuality'),
       goboScale: q('#goboScale'),
       goboRotation: q('#goboRotation'),
       fillLightCastShadows: q('#fillLightCastShadows'),
@@ -1527,15 +1529,19 @@ export class UIManager {
   }
 
   setDropzoneVisible(visible) {
-    if (
-      !visible &&
-      !document.documentElement.classList.contains('mobile-landing')
-    ) {
-      document.documentElement.classList.remove('orby-home-scroll');
+    if (!document.documentElement.classList.contains('mobile-landing')) {
+      document.documentElement.classList.toggle('orby-home-scroll', visible);
     }
     if (this.startMenuController) {
       this.startMenuController.setVisible(visible);
     }
+  }
+
+  /** Keep fixed positioning on the visual viewport (.viewport uses container-type:size). */
+  _portalLoadSpinnerToBody() {
+    const el = this.dom.loadSpinner;
+    if (!el || el.parentElement === document.body) return;
+    document.body.appendChild(el);
   }
 
   /**

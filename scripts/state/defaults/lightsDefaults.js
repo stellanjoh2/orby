@@ -43,6 +43,8 @@ export function createLightsDefaults() {
       texture: 'palm',
       /** Gobo mask blur — independent from cast-shadow softness. */
       softness: DEFAULT_GOBO_SOFTNESS,
+      /** Gobo penumbra sample tier — independent from shadow-map quality. */
+      softnessQuality: 'medium',
       /** Pattern size — UI 0–10 (higher = smaller pattern; 5 ≈ former 0.50). */
       scale: GOBO_UI_DEFAULT,
       scaleSpace: 'ui',

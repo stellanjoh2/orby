@@ -12,13 +12,18 @@ import { LightManipulatorWidget } from '../render/LightManipulatorWidget.js';
 
 const CLICK_THRESHOLD_PX = 14;
 const CLICK_TIME_MS = 280;
+/** Fallback when the height axis is edge-on to the camera. */
 const HEIGHT_DRAG_SENSITIVITY = 0.1;
 const ROTATE_DRAG_SENSITIVITY = 0.5;
 const _NDC = new THREE.Vector2();
-const _PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-const _HIT = new THREE.Vector3();
 const _CENTER = new THREE.Vector3();
 const _LIGHT_POS = new THREE.Vector3();
+const _WORLD_TIP = new THREE.Vector3();
+const _NDC3 = new THREE.Vector3();
+const _SCREEN_ORIGIN = new THREE.Vector2();
+const _SCREEN_TIP = new THREE.Vector2();
+const _SCREEN_AXIS = new THREE.Vector2();
+let _rotatePixelsPerDegree = 1;
 
 /**
  * Click-to-select spotlight cones; drag orbit line or axis arrows to adjust per-light transform.
@@ -46,16 +51,12 @@ export class LightViewportSelectionController {
      *   kind: 'rotate' | 'rotateLeft' | 'rotateRight' | 'heightUp' | 'heightDown',
      *   lightId: string,
      *   pointerId: number,
-     *   startAngle?: number,
      *   startX?: number,
      *   baseRotate?: number,
      *   baseHeight?: number,
      *   startY?: number,
      *   currentRotate?: number,
      *   currentHeight?: number,
-     *   planeY?: number,
-     *   centerX?: number,
-     *   centerZ?: number,
      * }} */
     this._drag = null;
     /** @type {{ pan: boolean, rotate: boolean } | null} */
@@ -151,10 +152,15 @@ export class LightViewportSelectionController {
 
     light.getWorldPosition(_LIGHT_POS);
     lc._getIndicatorCenter?.(_CENTER);
+    const { rotate } = readPerLightTransform(this.scene, this._selectedLightId);
+    this._computeLightWorldPositionAtRotate(lc, this._selectedLightId, rotate, _LIGHT_POS);
+    this._computeLightWorldPositionAtRotate(lc, this._selectedLightId, rotate + 1, _WORLD_TIP);
     this.widget.updateLayout({
       center: _CENTER,
       lightPosition: _LIGHT_POS,
       extent: lc._indicatorFrustumExtent ?? 3,
+      rotateMotionX: _WORLD_TIP.x - _LIGHT_POS.x,
+      rotateMotionZ: _WORLD_TIP.z - _LIGHT_POS.z,
     });
     this.widget.setVisible(true);
   }
@@ -222,11 +228,11 @@ export class LightViewportSelectionController {
     event.preventDefault();
 
     if (this._drag.kind === 'rotate') {
-      this._applyOrbitDrag(event.clientX, event.clientY);
+      this._applyScreenSpaceRotateDrag(event.clientX, event.clientY);
     } else if (this._drag.kind === 'rotateLeft' || this._drag.kind === 'rotateRight') {
-      this._applyArrowRotateDrag(event.clientX);
+      this._applyScreenSpaceRotateDrag(event.clientX, event.clientY);
     } else {
-      this._applyHeightDrag(event.clientY);
+      this._applyHeightDrag(event.clientX, event.clientY);
     }
   }
 
@@ -380,22 +386,6 @@ export class LightViewportSelectionController {
       startY: event.clientY,
     };
 
-    if (kind === 'rotate') {
-      const lc = this.scene.lightsController;
-      lc?.lights?.[lightId]?.getWorldPosition(_LIGHT_POS);
-      lc?._getIndicatorCenter?.(_CENTER);
-      drag.planeY = _LIGHT_POS.y;
-      drag.centerX = _CENTER.x;
-      drag.centerZ = _CENTER.z;
-      drag.startAngle = this._angleOnPlane(
-        event.clientX,
-        event.clientY,
-        drag.planeY,
-        drag.centerX,
-        drag.centerZ,
-      );
-    }
-
     this._drag = drag;
     this.scene._lightMoveDragActive = true;
     this.scene.cameraController?.onMeshGizmoDragStart?.();
@@ -412,43 +402,82 @@ export class LightViewportSelectionController {
     }
   }
 
-  /** @param {number} clientX @param {number} clientY @param {number} planeY @param {number} cx @param {number} cz */
-  _angleOnPlane(clientX, clientY, planeY, cx, cz) {
-    _PLANE.constant = -planeY;
-    if (!this.raycaster.ray.intersectPlane(_PLANE, _HIT)) return 0;
-    return Math.atan2(_HIT.z - cz, _HIT.x - cx);
+  /**
+   * @param {import('../render/LightsController.js').LightsController} lc
+   * @param {string} lightId
+   * @param {number} rotateDeg
+   * @param {import('three').Vector3} out
+   */
+  _computeLightWorldPositionAtRotate(lc, lightId, rotateDeg, out) {
+    const base = lc.basePositions[lightId];
+    const props = lc.individualProperties[lightId];
+    const globalRadians = THREE.MathUtils.degToRad(lc.rotation ?? 0);
+    const individualRadians = THREE.MathUtils.degToRad(rotateDeg);
+    const totalRotation = globalRadians + individualRadians;
+    const cos = Math.cos(totalRotation);
+    const sin = Math.sin(totalRotation);
+    const scale = lc.rigScale ?? 1;
+    const rawY = props?.height ?? lc.lightsHeight ?? base.y;
+    const y = (Number.isFinite(Number(rawY)) ? Number(rawY) : base.y) * scale;
+    out.set(
+      (base.x * cos + base.z * sin) * scale,
+      y,
+      (-base.x * sin + base.z * cos) * scale,
+    );
+  }
+
+  /**
+   * Screen-space axis for +1° individual rotate (or −1° for rotateLeft).
+   * Uses actual light motion, not the orbit ring tangent around the indicator center.
+   * @param {string} lightId
+   * @param {number} rotateDeg
+   * @param {'rotate' | 'rotateLeft' | 'rotateRight'} kind
+   * @param {THREE.Vector2} outAxis
+   * @returns {boolean}
+   */
+  _getRotateScreenDragScale(lightId, rotateDeg, kind, outAxis) {
+    const lc = this.scene.lightsController;
+    if (!lc?.basePositions?.[lightId]) return false;
+
+    const stepDeg = kind === 'rotateLeft' ? -1 : 1;
+    this._computeLightWorldPositionAtRotate(lc, lightId, rotateDeg, _LIGHT_POS);
+    this._computeLightWorldPositionAtRotate(lc, lightId, rotateDeg + stepDeg, _WORLD_TIP);
+    this._worldToClientXY(_LIGHT_POS, _SCREEN_ORIGIN);
+    this._worldToClientXY(_WORLD_TIP, _SCREEN_TIP);
+    outAxis.subVectors(_SCREEN_TIP, _SCREEN_ORIGIN);
+    _rotatePixelsPerDegree = outAxis.length();
+    if (!(_rotatePixelsPerDegree > 1e-4)) {
+      outAxis.set(kind === 'rotateLeft' ? -1 : 1, 0);
+      _rotatePixelsPerDegree = 0;
+      return false;
+    }
+    outAxis.divideScalar(_rotatePixelsPerDegree);
+    return true;
   }
 
   /** @param {number} clientX @param {number} clientY */
-  _applyOrbitDrag(clientX, clientY) {
+  _applyScreenSpaceRotateDrag(clientX, clientY) {
     const drag = this._drag;
-    if (!drag || drag.kind !== 'rotate') return;
-
-    const currentAngle = this._angleOnPlane(
-      clientX,
-      clientY,
-      drag.planeY ?? 0,
-      drag.centerX ?? 0,
-      drag.centerZ ?? 0,
-    );
-    const deltaDeg = THREE.MathUtils.radToDeg(currentAngle - (drag.startAngle ?? 0));
-    drag.currentRotate = applyPerLightRotateDelta(drag.baseRotate ?? 0, deltaDeg, {
-      fine: false,
-    });
-
-    this._applyRotateLive(drag);
-  }
-
-  /** @param {number} clientX */
-  _applyArrowRotateDrag(clientX) {
-    const drag = this._drag;
-    if (!drag || (drag.kind !== 'rotateLeft' && drag.kind !== 'rotateRight')) return;
+    if (
+      !drag
+      || (drag.kind !== 'rotate'
+        && drag.kind !== 'rotateLeft'
+        && drag.kind !== 'rotateRight')
+    ) {
+      return;
+    }
 
     const deltaX = clientX - (drag.startX ?? clientX);
-    const signedDelta = drag.kind === 'rotateLeft' ? -deltaX : deltaX;
+    const deltaY = clientY - (drag.startY ?? clientY);
+
+    let signedDelta = (drag.kind === 'rotateLeft' ? -deltaX : deltaX) * ROTATE_DRAG_SENSITIVITY;
+    if (this._getRotateScreenDragScale(drag.lightId, drag.baseRotate ?? 0, drag.kind, _SCREEN_AXIS)) {
+      signedDelta = (deltaX * _SCREEN_AXIS.x + deltaY * _SCREEN_AXIS.y) / _rotatePixelsPerDegree;
+    }
+
     drag.currentRotate = applyPerLightRotateDelta(
       drag.baseRotate ?? 0,
-      signedDelta * ROTATE_DRAG_SENSITIVITY,
+      signedDelta,
       { fine: false },
     );
 
@@ -464,17 +493,79 @@ export class LightViewportSelectionController {
     this.scene.lightIndicatorHud?.update?.();
   }
 
-  /** @param {number} clientY */
-  _applyHeightDrag(clientY) {
+  /** @param {import('three').Vector3} world @param {THREE.Vector2} out */
+  _worldToClientXY(world, out) {
+    const rect = this.canvas.getBoundingClientRect();
+    _NDC3.copy(world).project(this.scene.camera);
+    out.x = (_NDC3.x * 0.5 + 0.5) * rect.width + rect.left;
+    out.y = (-_NDC3.y * 0.5 + 0.5) * rect.height + rect.top;
+  }
+
+  /**
+   * Screen pixels per one logical height unit at the current camera/light pose.
+   * @param {import('three').Vector3} lightWorldPos
+   * @returns {number}
+   */
+  _logicalHeightPixelsPerUnit(lightWorldPos) {
+    const rigScale = this.scene.lightsController?.rigScale ?? 1;
+    this._worldToClientXY(lightWorldPos, _SCREEN_ORIGIN);
+    _WORLD_TIP.set(lightWorldPos.x, lightWorldPos.y + rigScale, lightWorldPos.z);
+    this._worldToClientXY(_WORLD_TIP, _SCREEN_TIP);
+    return Math.max(_SCREEN_ORIGIN.distanceTo(_SCREEN_TIP), 1e-3);
+  }
+
+  /**
+   * Screen-space unit axis for height drag — matches the grabbed arrow direction.
+   * @param {'heightUp' | 'heightDown'} kind
+   * @param {import('three').Vector3} lightWorldPos
+   * @param {THREE.Vector2} out
+   * @returns {boolean}
+   */
+  _getHeightDragScreenAxis(kind, lightWorldPos, out) {
+    const rigScale = this.scene.lightsController?.rigScale ?? 1;
+    this._worldToClientXY(lightWorldPos, _SCREEN_ORIGIN);
+    _WORLD_TIP.copy(lightWorldPos).y += rigScale;
+    this._worldToClientXY(_WORLD_TIP, _SCREEN_TIP);
+    out.subVectors(_SCREEN_TIP, _SCREEN_ORIGIN);
+    if (kind === 'heightDown') {
+      out.multiplyScalar(-1);
+    }
+    const len = out.length();
+    if (!(len > 1e-4)) {
+      out.set(0, kind === 'heightDown' ? 1 : -1);
+      return false;
+    }
+    out.divideScalar(len);
+    return true;
+  }
+
+  /** @param {number} clientX @param {number} clientY */
+  _applyHeightDrag(clientX, clientY) {
     const drag = this._drag;
     if (!drag || drag.kind === 'rotate' || drag.kind === 'rotateLeft' || drag.kind === 'rotateRight') {
       return;
     }
 
+    const deltaX = clientX - (drag.startX ?? clientX);
     const deltaY = clientY - (drag.startY ?? clientY);
+
+    const lc = this.scene.lightsController;
+    lc?.lights?.[drag.lightId]?.getWorldPosition(_LIGHT_POS);
+
+    let heightDelta = -deltaY * HEIGHT_DRAG_SENSITIVITY;
+    if (
+      (drag.kind === 'heightUp' || drag.kind === 'heightDown')
+      && this._getHeightDragScreenAxis(drag.kind, _LIGHT_POS, _SCREEN_AXIS)
+    ) {
+      const pixelsPerUnit = this._logicalHeightPixelsPerUnit(_LIGHT_POS);
+      heightDelta = (deltaX * _SCREEN_AXIS.x + deltaY * _SCREEN_AXIS.y) / pixelsPerUnit;
+    } else if (drag.kind === 'heightDown') {
+      heightDelta = deltaY * HEIGHT_DRAG_SENSITIVITY;
+    }
+
     drag.currentHeight = applyPerLightHeightDelta(
       drag.baseHeight ?? 0,
-      -deltaY * HEIGHT_DRAG_SENSITIVITY,
+      heightDelta,
       { fine: false },
     );
 

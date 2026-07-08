@@ -80,6 +80,12 @@ export class GoboControls {
       this.eventBus.emit('lights:gobo-softness', value);
     });
 
+    this.ui.inputs.goboSoftnessQuality?.addEventListener('change', (event) => {
+      const value = event.target.value || 'medium';
+      this.stateStore.set('gobo.softnessQuality', value);
+      this.eventBus.emit('lights:gobo-softness-quality', value);
+    });
+
     this.ui.inputs.goboScale?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.helpers.updateValueLabel('goboScale', value, 'decimal', 2);
@@ -136,6 +142,9 @@ export class GoboControls {
       const softness = Number.isFinite(gobo.softness) ? gobo.softness : DEFAULT_GOBO_SOFTNESS;
       this.ui.inputs.goboSoftness.value = softness;
       this.helpers.updateValueLabel('goboSoftness', softness, 'decimal', 2);
+    }
+    if (this.ui.inputs.goboSoftnessQuality) {
+      this.ui.inputs.goboSoftnessQuality.value = gobo.softnessQuality ?? 'medium';
     }
     if (this.ui.inputs.goboScale) {
       const scale = normalizeStoredGoboScale(gobo.scale, gobo.scaleSpace) ?? GOBO_UI_DEFAULT;

@@ -333,12 +333,16 @@ export function relinkOuterShaderPatchesAfterSurface(material) {
       material.onBeforeCompile = shadowHook;
       dirty = true;
     }
-    const surfaceKeyFn = material.customProgramCacheKey.bind(material);
     const colorHex = stash.color?.getHexString?.() ?? '080808';
-    material.customProgramCacheKey = function orbyShadowTintCacheKey() {
-      return `${surfaceKeyFn()}|orbyShadowTint:${colorHex}:${stash.strength}:${stash.opacity}`;
-    };
-    dirty = true;
+    const nextTintKey = `${colorHex}:${stash.strength}:${stash.opacity}`;
+    if (stash.programCacheKey !== nextTintKey) {
+      stash.programCacheKey = nextTintKey;
+      const surfaceKeyFn = material.customProgramCacheKey.bind(material);
+      material.customProgramCacheKey = function orbyShadowTintCacheKey() {
+        return `${surfaceKeyFn()}|orbyShadowTint:${nextTintKey}`;
+      };
+      dirty = true;
+    }
   }
 
   if (material.userData?.goboPatched && material.userData.orbyGobo) {
@@ -357,13 +361,11 @@ export function relinkOuterShaderPatchesAfterSurface(material) {
       material.onBeforeCompile = goboHook;
       dirty = true;
     }
-    if (stash.uniforms) {
-      delete stash.uniforms;
-      dirty = true;
-    }
   }
 
-  material.needsUpdate = true;
+  if (dirty) {
+    material.needsUpdate = true;
+  }
   return dirty;
 }
 

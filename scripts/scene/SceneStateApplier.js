@@ -235,6 +235,7 @@ function createStateApplySteps() {
         const gobo = state.gobo ?? {};
         await s.setGoboTexture(gobo.texture ?? 'palm', { updateState: false });
         s.setGoboSoftness(gobo.softness ?? DEFAULT_GOBO_SOFTNESS, { updateState: false });
+        s.setGoboSoftnessQuality(gobo.softnessQuality ?? 'medium', { updateState: false });
         s.setGoboScale(
           normalizeStoredGoboScale(gobo.scale, gobo.scaleSpace) ?? GOBO_UI_DEFAULT,
           { updateState: false },

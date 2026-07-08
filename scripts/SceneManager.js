@@ -237,29 +237,40 @@ export class SceneManager {
    * @param {{ skipSound?: boolean }} [options]
    */
   async enterBlankStudio(options = {}) {
-    await this.ui.ensureStudioUiReady();
-    await this.ensureStudioReady();
-    // Apply the minimal "blank canvas" snapshot (HDRI panorama hidden → solid
-    // black void, lights off, ground wireframe on) before the viewport is shown.
-    // Bootstrap uses default hdriBackground:true; revealing WebGL first would flash
-    // the beach HDRI for a frame before this preset lands.
-    try {
-      await this.ui.sceneSettingsManager?.loadFromText(
-        JSON.stringify(createBlankCanvasPreset()),
-      );
-    } catch (error) {
-      console.error('Failed to apply blank canvas preset', error);
-    }
+    // Match model load — hide the dropzone before bootstrap/spinner so the indicator
+    // lands in studio chrome (bottom-left), not over the marketing hero.
     this.ui.setDropzoneVisible(false);
-    await this.syncViewportSize();
-    this.startRenderLoop();
-    this.ui.updateTitle('Blank canvas');
-    this.ui.updateTopBarDetail('No model — generate text or import a file');
-    this.ui.revealShelf({ skipSound: options.skipSound !== false });
-    this.ui.syncControls(this.stateStore.getState());
-    this.ui.showToast('Blank canvas — generate text or import a file', 3200, {
-      notification: false,
-    });
+    this.ui.setLoadSpinnerStatusPrefix?.('Loading');
+    this.ui.beginLoadSpinner();
+    this.ui.beginLoadSpinnerElapsed?.();
+    await deferSpinnerPaint();
+
+    try {
+      await this.ui.ensureStudioUiReady();
+      await this.ensureStudioReady();
+      // Apply the minimal "blank canvas" snapshot (HDRI panorama hidden → solid
+      // black void, lights off, ground wireframe on) before the viewport is shown.
+      // Bootstrap uses default hdriBackground:true; revealing WebGL first would flash
+      // the beach HDRI for a frame before this preset lands.
+      try {
+        await this.ui.sceneSettingsManager?.loadFromText(
+          JSON.stringify(createBlankCanvasPreset()),
+        );
+      } catch (error) {
+        console.error('Failed to apply blank canvas preset', error);
+      }
+      await this.syncViewportSize();
+      this.startRenderLoop();
+      this.ui.updateTitle('Blank canvas');
+      this.ui.updateTopBarDetail('No model — generate text or import a file');
+      this.ui.revealShelf({ skipSound: options.skipSound !== false });
+      this.ui.syncControls(this.stateStore.getState());
+      this.ui.showToast('Blank canvas — generate text or import a file', 3200, {
+        notification: false,
+      });
+    } finally {
+      this.ui.endLoadSpinner();
+    }
   }
 
   async shutdownStudio() {
@@ -2040,8 +2051,8 @@ export class SceneManager {
   setLightsShadowQuality(quality) {
     this.lightsShadowQuality = normalizeShadowQuality(quality);
     this.lightsController?.setShadowQuality(this.lightsShadowQuality);
-    this.goboProjection?.setShadowQuality(this.lightsShadowQuality);
     this.applyRenderQualitySettings();
+    this._syncShadowCameraBounds();
     this._syncShadowAndGobo();
   }
 
@@ -2073,7 +2084,7 @@ export class SceneManager {
     if (this.stateStore.getState().lightsShadowColor !== next) {
       this.stateStore.set('lightsShadowColor', next);
     }
-    this._syncShadowAndGobo();
+    this._syncShadowAndGobo({ presentationOnly: true });
   }
 
   setLightsShadowOpacity(value) {
@@ -2084,7 +2095,7 @@ export class SceneManager {
     if (this.stateStore.getState().lightsShadowOpacity !== this.lightsShadowOpacity) {
       this.stateStore.set('lightsShadowOpacity', this.lightsShadowOpacity);
     }
-    this._syncShadowAndGobo();
+    this._syncShadowAndGobo({ presentationOnly: true });
     this.backgroundController?.setShadowReceiverOpacity(this.lightsShadowOpacity);
   }
 
@@ -2098,6 +2109,22 @@ export class SceneManager {
       scale: this.goboScale,
       rotation: this.goboRotation,
     });
+    this.goboProjection?.setSoftnessQuality(this.goboSoftnessQuality);
+  }
+
+  setGoboSoftnessQuality(quality, { updateState = true } = {}) {
+    const next = normalizeShadowQuality(quality);
+    this.goboSoftnessQuality = next;
+    if (updateState) this.stateStore.set('gobo.softnessQuality', next);
+    const modeChanged = this.goboProjection?.setSoftnessQuality(next) === true;
+    this._syncGoboShadowSettings();
+    if (this.goboProjection?.enabled) {
+      const targets = this._getGoboSceneTargets();
+      if (modeChanged) {
+        this.goboProjection.markProgramsDirty(targets);
+      }
+      this.goboProjection.syncUniformsOnScene(targets);
+    }
   }
 
   setGoboSoftness(value, { updateState = true } = {}) {
@@ -2133,11 +2160,16 @@ export class SceneManager {
     }
   }
 
-  _syncStudioGroundSurfaces() {
+  _syncStudioGroundSurfaces({ presentationOnly = false } = {}) {
     const color = this.lightsShadowColor ?? '#080808';
     const strength = this._isShadowTintActive() ? 1 : 0;
     const opacity = this.lightsShadowOpacity ?? 0.25;
     this.materialController?.setShadowTintSettings({ color, strength, opacity });
+    if (presentationOnly) {
+      this._applyShadowTintPresentation({ color, strength, opacity });
+      this.wakeViewportPresentation(2);
+      return;
+    }
     this.materialController?.reapplyStudioGroundSurfaceShaders(this.groundController);
     if (typeof this.renderer?.compile === 'function' && this.scene && this.camera) {
       try {
@@ -2149,14 +2181,43 @@ export class SceneManager {
     this.wakeViewportPresentation(8);
   }
 
-  _syncShadowAndGobo() {
+  _applyShadowTintPresentation({ color, strength, opacity } = {}) {
+    const mc = this.materialController;
+    if (!mc) return;
+    const tintOpts = {
+      color: color ?? '#080808',
+      strength: strength ?? 0,
+      opacity: opacity ?? 0.25,
+      forceRepatch: false,
+    };
+    if (this.currentModel) {
+      mc.applyShadowTintToObject(this.currentModel, tintOpts);
+    }
+    const ground = this.groundController;
+    if (ground?.podium) {
+      mc.applyShadowTintToObject(ground.podium, tintOpts);
+    }
+    if (ground?.backdrop) {
+      mc.applyShadowTintToObject(ground.backdrop, {
+        ...tintOpts,
+        includeStudioBackdrop: true,
+      });
+    }
+    if (ground?.infinityCove?.mesh) {
+      mc.applyShadowTintToObject(ground.infinityCove.mesh, {
+        ...tintOpts,
+        includeStudioBackdrop: true,
+      });
+    }
+  }
+
+  _syncShadowAndGobo({ presentationOnly = false } = {}) {
     this._applyKeyLightGoboShadowOverride();
     this._syncGoboShadowSettings();
-    this._syncStudioGroundSurfaces();
+    this._syncStudioGroundSurfaces({ presentationOnly });
     this._applyGoboToScene();
     if (this.goboProjection?.enabled) {
       this.goboProjection.syncUniformsOnScene(this._getGoboSceneTargets());
-      this._syncStudioGroundSurfaces();
     }
   }
 
@@ -2198,6 +2259,7 @@ export class SceneManager {
     await this.goboProjection?.setTextureId(nextId);
     if (this.goboEnabled) {
       this._syncShadowAndGobo();
+      this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
     }
   }
 

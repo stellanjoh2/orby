@@ -8,8 +8,14 @@ Document anything shipped in [Credits](../../credits/).
 
 ## Shape library (`shape-library/`)
 
-Low-poly Orby-original placeholders for **Object → Shape Library**. Each GLB ships **POSITION**, **NORMAL**, and **TEXCOORD_0**. Regenerate with:
+Low-poly Orby-original shapes for **Object → Shape Library**. Each GLB ships **POSITION**, **NORMAL**, and **TEXCOORD_0**.
+
+Grid thumbnails live in `assets/images/shape-library-{id}.png`.
+
+**Recommended:** drop viewport screenshots into `assets/images/shape-library-sources/` as `cube.png`, `cone.png`, `pipe.png`, then:
 
 ```bash
-node scripts/shapeLibrary/generatePlaceholderAssets.mjs
+npm run import:shape-library-thumbs
 ```
+
+The import script center-crops to square and resizes to 128px.

@@ -106,7 +106,7 @@ export function syncStudioGroundRenderSurfaces(
     color: tintOpts.color ?? '#080808',
     strength: tintOpts.strength ?? 0,
     opacity: tintOpts.opacity ?? 0.25,
-    forceRepatch: true,
+    forceRepatch: options.forceRepatch === true,
   };
 
   if (groundController.podium) {

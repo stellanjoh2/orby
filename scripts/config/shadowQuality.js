@@ -10,6 +10,10 @@ export const SHADOW_CAMERA_ORTHO_PADDING_BY_QUALITY = {
   ultra: 1.0,
 };
 
+/** Viewport light-beam guides — fixed mesh padding, not shadow-map quality tier. */
+export const LIGHT_BEAM_ORTHO_PADDING =
+  SHADOW_CAMERA_ORTHO_PADDING_BY_QUALITY.medium;
+
 /** HdriShadowReceiver disc sizing — keep in sync with shadow camera padding above. */
 export const SHADOW_CATCHER_ORTHO_PADDING = 2.8;
 
@@ -37,14 +41,15 @@ export const SHADOW_BLUR_SAMPLES_BY_QUALITY = {
 };
 
 /**
- * Gobo softness kernel tier — 0 = single tap, 1 = 5-tap separable (~9 fetches),
- * 2 = isotropic 3×3 (~9 fetches). Ultra uses the widest kernel.
+ * Gobo softness sample tier (independent from shadow-map quality).
+ * 0 = single tap, 1 = 3×3 isotropic (~9 fetches), 2 = 5-tap separable (~25),
+ * 3 = 7-row separable (~49) — same 2× reach as high, denser vertical sampling.
  */
 export const GOBO_BLUR_MODE_BY_QUALITY = {
   low: 0,
   medium: 1,
-  high: 1,
-  ultra: 2,
+  high: 2,
+  ultra: 3,
 };
 
 export function normalizeShadowQuality(quality) {

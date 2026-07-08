@@ -7,6 +7,7 @@
     "start": "node scripts/static-dev-server.mjs",
     "dev": "node scripts/static-dev-server.mjs",
     "restart": "node -e \"require('child_process').execSync('lsof -ti :8000 | xargs kill -9 2>/dev/null||true',{stdio:'inherit'})\" && node scripts/static-dev-server.mjs",
+    "import:shape-library-thumbs": "node scripts/dev/importShapeLibraryThumbnails.mjs",
     "dev:python": "python3 -m http.server 8000 --bind 0.0.0.0",
     "build": "node build.js",
     "bundle:marketing-css": "node scripts/marketing/bundleMarketingCss.mjs",

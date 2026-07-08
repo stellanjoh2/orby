@@ -5359,7 +5359,7 @@ export class MaterialController {
    * Base, backdrop, infinity cove, and base glass — same presentation order as object surfaces.
    * @param {import('./GroundController.js').GroundController | null | undefined} groundController
    */
-  reapplyStudioGroundSurfaceShaders(groundController) {
+  reapplyStudioGroundSurfaceShaders(groundController, { forceRepatch = true } = {}) {
     if (!groundController) return;
     const tintOpts = {
       color: this.shadowTintColor ?? '#080808',
@@ -5367,13 +5367,14 @@ export class MaterialController {
       opacity: this.shadowTintOpacity ?? 0.25,
     };
     const onTextureReadyRefresh = () => {
-      this.reapplyStudioGroundSurfaceShaders(groundController);
+      this.reapplyStudioGroundSurfaceShaders(groundController, { forceRepatch: true });
       if (typeof this.onObjectSurfacePresentationRefresh === 'function') {
         this.onObjectSurfacePresentationRefresh();
       }
     };
     syncStudioGroundRenderSurfaces(groundController, this, tintOpts, {
       onTextureReadyRefresh,
+      forceRepatch,
     });
   }
 

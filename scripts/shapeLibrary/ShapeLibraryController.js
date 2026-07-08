@@ -4,7 +4,10 @@
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/GLTFLoader.js';
 import { registerKHRMaterialsPbrSpecularGlossiness } from '../render/gltfKHRSpecularGlossinessPlugin.js';
 import { normalizeImportScale } from '../import/normalizeImportScale.js';
-import { findShapeLibraryEntry, applyShapeLibraryPresentationTilt } from './shapeLibraryCatalog.js';
+import {
+  findBakeableShapeLibraryEntry,
+  applyShapeLibraryPresentationTilt,
+} from './shapeLibraryCatalog.js';
 
 function configureGLTFLoader(loader) {
   registerKHRMaterialsPbrSpecularGlossiness(loader);
@@ -29,7 +32,7 @@ export class ShapeLibraryController {
    * @returns {Promise<boolean>} true when a shape was loaded
    */
   async insertShape(shapeId) {
-    const entry = findShapeLibraryEntry(shapeId);
+    const entry = findBakeableShapeLibraryEntry(shapeId);
     if (!entry) return false;
 
     const scene = this.getScene?.();

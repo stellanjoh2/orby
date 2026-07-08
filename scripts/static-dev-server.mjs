@@ -275,4 +275,8 @@ server.listen(port, '0.0.0.0', () => {
     'Creative look thumbs → load a mesh, frame the shot, then in the browser console:\n' +
       '  await orby.dev.bakeCreativeLookThumbnails()',
   );
+  console.log(
+    'Shape library thumbs → drop PNGs in assets/images/shape-library-sources/, then:\n' +
+      '  npm run import:shape-library-thumbs',
+  );
 });

@@ -5,9 +5,9 @@ import {
   SHAPE_LIBRARY,
   SHAPE_LIBRARY_DRAG_MIME,
   SHAPE_LIBRARY_PANEL_WIDTH_PX,
-  findShapeLibraryEntry,
+  findBakeableShapeLibraryEntry,
+  shapeLibraryThumbUrl,
 } from '../shapeLibrary/shapeLibraryCatalog.js';
-import { renderShapeLibraryThumb } from '../shapeLibrary/shapeLibraryThumbRenderer.js';
 import {
   bindFloatingPanelHeaderDrag,
   setFloatingPanelDragging,
@@ -160,12 +160,23 @@ export class ShapeLibraryUI {
     for (const entry of SHAPE_LIBRARY) {
       const tile = document.createElement('div');
       tile.className = 'shape-library-tile';
-      tile.draggable = true;
-      tile.role = 'button';
-      tile.tabIndex = 0;
+      tile.role = entry.empty ? 'presentation' : 'button';
+      tile.tabIndex = entry.empty ? -1 : 0;
       tile.dataset.shapeId = entry.id;
-      tile.setAttribute('aria-label', 'Shape library item');
-      tile.setAttribute('data-tooltip', 'Drag into the viewport or click to insert');
+
+      if (entry.empty) {
+        tile.classList.add('shape-library-tile--empty');
+        tile.setAttribute('aria-hidden', 'true');
+        this._panelGrid.appendChild(tile);
+        continue;
+      }
+
+      tile.draggable = true;
+      tile.setAttribute('aria-label', entry.label || 'Shape library item');
+      tile.setAttribute(
+        'data-tooltip',
+        `${entry.label} — drag into the viewport or click to insert`,
+      );
 
       const thumb = document.createElement('img');
       thumb.className = 'shape-library-tile__thumb';
@@ -192,14 +203,24 @@ export class ShapeLibraryUI {
       });
 
       this._panelGrid.appendChild(tile);
-      void renderShapeLibraryThumb(entry.glbUrl, 320)
-        .then((url) => {
-          thumb.src = url;
-        })
-        .catch(() => {
-          tile.classList.add('shape-library-tile--pending');
-        });
+      this._loadTileThumb(tile, thumb, entry);
     }
+  }
+
+  /**
+   * @param {HTMLElement} tile
+   * @param {HTMLImageElement} thumb
+   * @param {import('../shapeLibrary/shapeLibraryCatalog.js').ShapeLibraryEntry} entry
+   */
+  _loadTileThumb(tile, thumb, entry) {
+    thumb.src = shapeLibraryThumbUrl(entry.id);
+    thumb.addEventListener(
+      'error',
+      () => {
+        tile.classList.add('shape-library-tile--pending');
+      },
+      { once: true },
+    );
   }
 
   /**
@@ -277,7 +298,7 @@ export class ShapeLibraryUI {
     if (list.includes(SHAPE_LIBRARY_DRAG_MIME)) return true;
     if (list.includes('text/plain')) {
       const id = event.dataTransfer?.getData('text/plain')?.trim();
-      return !!id && !!findShapeLibraryEntry(id);
+      return !!id && !!findBakeableShapeLibraryEntry(id);
     }
     return false;
   }
@@ -288,13 +309,13 @@ export class ShapeLibraryUI {
    */
   _readShapeDragId(event) {
     const fromMime = event.dataTransfer?.getData(SHAPE_LIBRARY_DRAG_MIME)?.trim();
-    if (fromMime && findShapeLibraryEntry(fromMime)) return fromMime;
+    if (fromMime && findBakeableShapeLibraryEntry(fromMime)) return fromMime;
 
     const fromText = event.dataTransfer?.getData('text/plain')?.trim();
-    if (fromText && findShapeLibraryEntry(fromText)) return fromText;
+    if (fromText && findBakeableShapeLibraryEntry(fromText)) return fromText;
 
     const active = this._activeDragShapeId?.trim();
-    if (active && findShapeLibraryEntry(active)) return active;
+    if (active && findBakeableShapeLibraryEntry(active)) return active;
 
     return null;
   }
