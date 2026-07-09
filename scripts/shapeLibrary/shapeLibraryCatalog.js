@@ -3,9 +3,14 @@
  */
 export const SHAPE_LIBRARY_PANEL_WIDTH_PX = 760;
 
+/** Object → Material defaults when inserting a shape-library GLB (absolute sliders, not import multipliers). */
+export const SHAPE_LIBRARY_DEFAULT_METALNESS = 1;
+/** Near-mirror chrome — matches color-checker reference probe base roughness. */
+export const SHAPE_LIBRARY_DEFAULT_ROUGHNESS = 0.035;
+
 /** @typedef {{ id: string, glbUrl: string, sourceId: string, label: string, empty?: boolean }} ShapeLibraryEntry */
 
-const SHAPE_LIBRARY_ASSET_VERSION = 8;
+const SHAPE_LIBRARY_ASSET_VERSION = 9;
 const SHAPE_LIBRARY_THUMB_VERSION = 6;
 
 const shapeLibraryGlbUrl = (file) =>

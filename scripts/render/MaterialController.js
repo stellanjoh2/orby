@@ -137,6 +137,10 @@ import {
 import { syncFbxOrmPackingOnMaterial } from './fbxOrmPackingShader.js';
 import { isTextureImageReady } from '../utils/textureReady.js';
 import { effectiveRoughnessWithHdriBlur } from './hdriBlur.js';
+import {
+  SHAPE_LIBRARY_DEFAULT_METALNESS,
+  SHAPE_LIBRARY_DEFAULT_ROUGHNESS,
+} from '../shapeLibrary/shapeLibraryCatalog.js';
 import { NormalViewOverlay } from './NormalViewOverlay.js';
 import { UvCheckerOverlay } from './UvCheckerOverlay.js';
 import { MapInspectPreview } from './MapInspectPreview.js';
@@ -486,7 +490,7 @@ export class MaterialController {
     );
     this.stateStore?.set(
       'material.importUsesAuthoredPbr',
-      this._modelHasAuthoredPbrMaterials(model),
+      this._modelHasAuthoredPbrMaterials(model) && !model.userData?.orbyShapeLibrary,
     );
     this.stateStore?.set('material.surfaceEligible', this._modelSurfaceEligible(model));
     this._migrateLegacyExtrudeSurfaceStateToMaterial();
@@ -1228,6 +1232,13 @@ export class MaterialController {
   _syncImportPbrFromModel(model, options = {}) {
     if (!this._modelHasAuthoredPbrMaterials(model)) return;
     if (options.preserveSession) return;
+    if (model.userData?.orbyShapeLibrary) {
+      this.materialSettings.metalness = SHAPE_LIBRARY_DEFAULT_METALNESS;
+      this.materialSettings.roughness = SHAPE_LIBRARY_DEFAULT_ROUGHNESS;
+      this.stateStore?.set('material.metalness', SHAPE_LIBRARY_DEFAULT_METALNESS);
+      this.stateStore?.set('material.roughness', SHAPE_LIBRARY_DEFAULT_ROUGHNESS);
+      return;
+    }
     const neutral = IMPORT_MATERIAL_MR_MULTIPLIER;
     this.materialSettings.metalness = neutral;
     this.materialSettings.roughness = neutral;
@@ -1248,6 +1259,18 @@ export class MaterialController {
     const globalR = Number.isFinite(this.materialSettings.roughness)
       ? this.materialSettings.roughness
       : IMPORT_MATERIAL_MR_MULTIPLIER;
+
+    // Shape library primitives use absolute Object → Material sliders (playground clay, not file fidelity).
+    if (this.currentModel?.userData?.orbyShapeLibrary) {
+      target.metalness = THREE.MathUtils.clamp(globalM, 0, 1);
+      target.roughness = effectiveRoughnessWithHdriBlur(
+        THREE.MathUtils.clamp(globalR, 0, 1),
+        this._lastHdriBlurriness,
+      );
+      if ('metalnessMap' in target) target.metalnessMap = null;
+      if ('roughnessMap' in target) target.roughnessMap = null;
+      return;
+    }
 
     const authored = this._resolveAuthoredMetalRoughness(importMat);
     if (authored) {
