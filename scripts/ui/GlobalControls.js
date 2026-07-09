@@ -526,12 +526,19 @@ export class GlobalControls {
       // S - Reset scale to 1
       if (key === 's') {
         event.preventDefault();
-        this.stateStore.set('scale', 1);
+        this.stateStore.batch(() => {
+          this.stateStore.set('scale', 1);
+          this.stateStore.set('scaleY', 1);
+          this.stateStore.set('scaleZ', 1);
+        });
         this.eventBus.emit('mesh:scale', 1);
-        if (this.ui.inputs.scale) {
-          this.ui.inputs.scale.value = 1;
-          this.helpers.updateValueLabel('scale', 1, 'multiplier');
-        }
+        this.eventBus.emit('mesh:scale-y', 1);
+        this.eventBus.emit('mesh:scale-z', 1);
+        this.ui.meshControls?.syncTransformSliders({
+          scale: 1,
+          scaleY: 1,
+          scaleZ: 1,
+        });
       }
 
       // Y - Reset position offsets
@@ -560,48 +567,37 @@ export class GlobalControls {
       // 0 - Reset transform
       if (key === '0') {
         event.preventDefault();
-        this.stateStore.set('scale', 1);
-        this.stateStore.set('xOffset', 0);
-        this.stateStore.set('yOffset', 0);
-        this.stateStore.set('zOffset', 0);
-        this.stateStore.set('rotationX', 0);
-        this.stateStore.set('rotationY', 0);
-        this.stateStore.set('rotationZ', 0);
+        this.stateStore.batch(() => {
+          this.stateStore.set('scale', 1);
+          this.stateStore.set('scaleY', 1);
+          this.stateStore.set('scaleZ', 1);
+          this.stateStore.set('xOffset', 0);
+          this.stateStore.set('yOffset', 0);
+          this.stateStore.set('zOffset', 0);
+          this.stateStore.set('rotationX', 0);
+          this.stateStore.set('rotationY', 0);
+          this.stateStore.set('rotationZ', 0);
+        });
         this.eventBus.emit('mesh:scale', 1);
+        this.eventBus.emit('mesh:scale-y', 1);
+        this.eventBus.emit('mesh:scale-z', 1);
         this.eventBus.emit('mesh:xOffset', 0);
         this.eventBus.emit('mesh:yOffset', 0);
         this.eventBus.emit('mesh:zOffset', 0);
         this.eventBus.emit('mesh:rotationX', 0);
         this.eventBus.emit('mesh:rotationY', 0);
         this.eventBus.emit('mesh:rotationZ', 0);
-        if (this.ui.inputs.scale) {
-          this.ui.inputs.scale.value = 1;
-          this.helpers.updateValueLabel('scale', 1, 'multiplier');
-        }
-        if (this.ui.inputs.xOffset) {
-          this.ui.inputs.xOffset.value = 0;
-          this.helpers.updateValueLabel('xOffset', 0, 'distance');
-        }
-        if (this.ui.inputs.yOffset) {
-          this.ui.inputs.yOffset.value = 0;
-          this.helpers.updateValueLabel('yOffset', 0, 'distance');
-        }
-        if (this.ui.inputs.zOffset) {
-          this.ui.inputs.zOffset.value = 0;
-          this.helpers.updateValueLabel('zOffset', 0, 'distance');
-        }
-        if (this.ui.inputs.rotationX) {
-          this.ui.inputs.rotationX.value = 0;
-          this.helpers.updateValueLabel('rotationX', 0, 'angle');
-        }
-        if (this.ui.inputs.rotationY) {
-          this.ui.inputs.rotationY.value = 0;
-          this.helpers.updateValueLabel('rotationY', 0, 'angle');
-        }
-        if (this.ui.inputs.rotationZ) {
-          this.ui.inputs.rotationZ.value = 0;
-          this.helpers.updateValueLabel('rotationZ', 0, 'angle');
-        }
+        this.ui.meshControls?.syncTransformSliders({
+          scale: 1,
+          scaleY: 1,
+          scaleZ: 1,
+          xOffset: 0,
+          yOffset: 0,
+          zOffset: 0,
+          rotationX: 0,
+          rotationY: 0,
+          rotationZ: 0,
+        });
       }
 
       // A - Cycle mesh turntable speeds

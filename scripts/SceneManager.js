@@ -3454,6 +3454,8 @@ export class SceneManager {
     if (!this.modelRoot) {
       return {
         scale: 1,
+        scaleY: 1,
+        scaleZ: 1,
         xOffset: 0,
         yOffset: 0,
         zOffset: 0,
@@ -3464,6 +3466,8 @@ export class SceneManager {
     }
     return {
       scale: this.modelRoot.scale.x,
+      scaleY: this.modelRoot.scale.y,
+      scaleZ: this.modelRoot.scale.z,
       xOffset: this.modelRoot.position.x,
       yOffset: this.modelRoot.position.y,
       zOffset: this.modelRoot.position.z,
@@ -3489,6 +3493,8 @@ export class SceneManager {
 
     this.stateStore.batch(() => {
       this.stateStore.set('scale', values.scale);
+      this.stateStore.set('scaleY', values.scaleY);
+      this.stateStore.set('scaleZ', values.scaleZ);
       this.stateStore.set('xOffset', values.xOffset);
       this.stateStore.set('yOffset', values.yOffset);
       this.stateStore.set('zOffset', values.zOffset);
@@ -3507,11 +3513,37 @@ export class SceneManager {
   }
 
   setScale(value) {
-    this.transformController?.setScale(value);
-    // Update transform controls if attached
+    this.transformController?.setScaleX(value);
+    this._syncScaleGizmoMatrix();
+  }
+
+  setScaleY(value) {
+    this.transformController?.setScaleY(value);
+    this._syncScaleGizmoMatrix();
+  }
+
+  setScaleZ(value) {
+    this.transformController?.setScaleZ(value);
+    this._syncScaleGizmoMatrix();
+  }
+
+  _syncScaleGizmoMatrix() {
     if (this.transformControlsScale?.object === this.modelRoot) {
       this.transformControlsScale.updateMatrixWorld();
     }
+  }
+
+  /**
+   * Apply per-axis scale from gizmo commits or scene settings restore.
+   * @param {{ x?: number, y?: number, z?: number }} vector
+   */
+  setScaleVector(vector) {
+    const state = this.stateStore.getState();
+    const x = vector?.x ?? state.scale ?? 1;
+    const y = vector?.y ?? state.scaleY ?? x;
+    const z = vector?.z ?? state.scaleZ ?? x;
+    this.transformController?.setScaleVector(x, y, z);
+    this._syncScaleGizmoMatrix();
   }
 
   setXOffset(value) {

@@ -20,6 +20,9 @@ export function parseOverlayTogglePayload(payload) {
 export const SCENE_CONTROL_MANIFEST = [
   // ── Mesh / transform ──────────────────────────────────────────────────────
   { event: 'mesh:scale', apply: 'setScale' },
+  { event: 'mesh:scale-y', apply: 'setScaleY' },
+  { event: 'mesh:scale-z', apply: 'setScaleZ' },
+  { event: 'mesh:scale-vector', apply: 'setScaleVector' },
   { event: 'mesh:xOffset', apply: 'setXOffset' },
   { event: 'mesh:yOffset', apply: 'setYOffset' },
   { event: 'mesh:zOffset', apply: 'setZOffset' },

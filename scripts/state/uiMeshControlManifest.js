@@ -22,11 +22,34 @@ import { DEFAULT_MATERIAL_BRIGHTNESS, MATERIAL_EMISSIVE_SLIDER_MAX } from '../co
 /** @type {UiControlManifestEntry[]} */
 export const MESH_UI_CONTROL_MANIFEST = [
   {
-    inputId: 'scale',
+    inputId: 'scaleX',
     statePath: 'scale',
     event: 'mesh:scale',
     labelKey: 'scale',
     labelType: 'multiplier',
+    clampMin: 0.1,
+    clampMax: 4,
+    fallback: 1,
+  },
+  {
+    inputId: 'scaleY',
+    statePath: 'scaleY',
+    event: 'mesh:scale-y',
+    labelKey: 'scaleY',
+    labelType: 'multiplier',
+    clampMin: 0.1,
+    clampMax: 4,
+    fallback: 1,
+  },
+  {
+    inputId: 'scaleZ',
+    statePath: 'scaleZ',
+    event: 'mesh:scale-z',
+    labelKey: 'scaleZ',
+    labelType: 'multiplier',
+    clampMin: 0.1,
+    clampMax: 4,
+    fallback: 1,
   },
   {
     inputId: 'xOffset',

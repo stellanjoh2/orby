@@ -124,7 +124,7 @@ const RESET_DIRTY_PATHS = {
   vignette: ['camera.vignetteEnabled', 'camera.vignette', 'camera.vignetteColor'],
   'tone-curve': ['toneCurve'],
   transform: [
-    'scale', 'xOffset', 'yOffset', 'zOffset',
+    'scale', 'scaleY', 'scaleZ', 'xOffset', 'yOffset', 'zOffset',
     'rotationX', 'rotationY', 'rotationZ',
   ],
   'svg-extrude': [
@@ -617,6 +617,8 @@ export class ResetControls {
       try {
       this.eventBus.emit('mesh:shading', defaults.shading);
       this.eventBus.emit('mesh:scale', defaults.scale);
+      this.eventBus.emit('mesh:scale-y', defaults.scaleY ?? defaults.scale);
+      this.eventBus.emit('mesh:scale-z', defaults.scaleZ ?? defaults.scale);
       this.eventBus.emit('mesh:xOffset', defaults.xOffset ?? 0);
       this.eventBus.emit('mesh:yOffset', defaults.yOffset);
       this.eventBus.emit('mesh:zOffset', defaults.zOffset ?? 0);
@@ -1487,6 +1489,8 @@ export class ResetControls {
           case 'transform':
             this.stateStore.resetSlice(RESET_DIRTY_PATHS.transform);
             this.eventBus.emit('mesh:scale', defaults.scale);
+            this.eventBus.emit('mesh:scale-y', defaults.scaleY ?? defaults.scale);
+            this.eventBus.emit('mesh:scale-z', defaults.scaleZ ?? defaults.scale);
             this.eventBus.emit('mesh:xOffset', defaults.xOffset);
             this.eventBus.emit('mesh:yOffset', defaults.yOffset);
             this.eventBus.emit('mesh:zOffset', defaults.zOffset);

@@ -1471,9 +1471,17 @@ export class MeshControls {
 
   syncTransformSliders(values) {
     if (!values) return;
-    if (this.ui.inputs.scale) {
-      this.ui.inputs.scale.value = values.scale;
+    if (this.ui.inputs.scaleX) {
+      this.ui.inputs.scaleX.value = values.scale;
       this.helpers.updateValueLabel('scale', values.scale, 'multiplier');
+    }
+    if (this.ui.inputs.scaleY) {
+      this.ui.inputs.scaleY.value = values.scaleY;
+      this.helpers.updateValueLabel('scaleY', values.scaleY, 'multiplier');
+    }
+    if (this.ui.inputs.scaleZ) {
+      this.ui.inputs.scaleZ.value = values.scaleZ;
+      this.helpers.updateValueLabel('scaleZ', values.scaleZ, 'multiplier');
     }
     if (this.ui.inputs.xOffset) {
       this.ui.inputs.xOffset.value = values.xOffset;
@@ -1571,6 +1579,8 @@ export class MeshControls {
   sync(state) {
     this.syncTransformSliders({
       scale: state.scale,
+      scaleY: state.scaleY ?? state.scale ?? 1,
+      scaleZ: state.scaleZ ?? state.scale ?? 1,
       xOffset: state.xOffset ?? 0,
       yOffset: state.yOffset,
       zOffset: state.zOffset ?? 0,

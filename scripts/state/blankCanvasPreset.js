@@ -16,6 +16,8 @@ export function createBlankCanvasPreset() {
   return {
     shading: 'shaded',
     scale: 1,
+    scaleY: 1,
+    scaleZ: 1,
     xOffset: 0,
     yOffset: 0,
     zOffset: 0,

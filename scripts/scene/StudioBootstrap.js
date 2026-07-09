@@ -26,7 +26,7 @@ import {
   normalizeCreativeLookPreset,
 } from '../render/CreativeLookMaterials.js';
 import { AutoExposureController } from '../render/AutoExposureController.js';
-import { TransformController } from '../render/TransformController.js';
+import { TransformController, clampMeshScaleComponents } from '../render/TransformController.js';
 import { LensDirtController } from '../render/LensDirtController.js';
 import { BackgroundController } from '../render/BackgroundController.js';
 import { BackgroundGradientController } from '../render/backgroundGradient/BackgroundGradientController.js';
@@ -491,6 +491,7 @@ export async function bootstrapStudio(scene) {
         controls.enabled = !event.value;
       }
       if (event.value) {
+        scene.eventBus?.emit('undo:prepare');
         scene._gizmoDragActive = true;
         scene.cameraController?.onMeshGizmoDragStart?.();
       } else if (scene._gizmoDragActive) {
@@ -504,11 +505,11 @@ export async function bootstrapStudio(scene) {
     scene.transformControlsScale.addEventListener('dragging-changed', handleGizmoDraggingChanged);
     
     const handleGizmoChange = () => {
-      if (scene.transformControlsScale.object === scene.modelRoot) {
-        const avgScale = (
-          scene.modelRoot.scale.x + scene.modelRoot.scale.y + scene.modelRoot.scale.z
-        ) / 3;
-        scene.modelRoot.scale.setScalar(avgScale);
+      if (
+        scene.transformControlsScale.object === scene.modelRoot
+        && scene.transformControlsScale.dragging
+      ) {
+        clampMeshScaleComponents(scene.modelRoot.scale);
       }
       if (scene._gizmoDragActive) {
         scene._updateTransformSliderUI();

@@ -1,5 +1,28 @@
 import * as THREE from 'three';
 
+/** Prevent flipped / collapsed meshes from per-axis scale handles. */
+export const MIN_MESH_SCALE = 0.01;
+
+/**
+ * @param {THREE.Vector3} scale
+ */
+export function clampMeshScaleComponents(scale) {
+  scale.x = Math.max(MIN_MESH_SCALE, scale.x);
+  scale.y = Math.max(MIN_MESH_SCALE, scale.y);
+  scale.z = Math.max(MIN_MESH_SCALE, scale.z);
+}
+
+/**
+ * @param {object} state
+ * @returns {{ x: number, y: number, z: number }}
+ */
+export function resolveMeshScaleFromState(state) {
+  const x = Math.max(MIN_MESH_SCALE, Number(state?.scale ?? 1) || 1);
+  const y = Math.max(MIN_MESH_SCALE, Number(state?.scaleY ?? x) || x);
+  const z = Math.max(MIN_MESH_SCALE, Number(state?.scaleZ ?? x) || x);
+  return { x, y, z };
+}
+
 /**
  * Manages model transform operations (scale, position, rotation).
  * All transforms are applied to the modelRoot group.
@@ -24,16 +47,57 @@ export class TransformController {
     if (!this.modelRoot) return;
     this.modelRoot.rotation.set(0, 0, 0);
     this.modelRoot.position.set(0, 0, 0);
-    this.modelRoot.scale.setScalar(1);
+    this.modelRoot.scale.set(1, 1, 1);
   }
 
   /**
-   * Set the scale of the model
-   * @param {number} value - Scale value (1.0 = 100%)
+   * Scale along X from the shelf slider (state key `scale`).
+   * @param {number} value
+   */
+  setScaleX(value) {
+    if (!this.modelRoot) return;
+    this.modelRoot.scale.x = Math.max(MIN_MESH_SCALE, Number(value) || 1);
+  }
+
+  /**
+   * Scale along Y from the shelf slider.
+   * @param {number} value
+   */
+  setScaleY(value) {
+    if (!this.modelRoot) return;
+    this.modelRoot.scale.y = Math.max(MIN_MESH_SCALE, Number(value) || 1);
+  }
+
+  /**
+   * Scale along Z from the shelf slider.
+   * @param {number} value
+   */
+  setScaleZ(value) {
+    if (!this.modelRoot) return;
+    this.modelRoot.scale.z = Math.max(MIN_MESH_SCALE, Number(value) || 1);
+  }
+
+  /**
+   * @deprecated Use {@link setScaleX}. Kept for `mesh:scale` event compat.
+   * @param {number} value
    */
   setScale(value) {
+    this.setScaleX(value);
+  }
+
+  /**
+   * Per-axis scale from the gizmo or scene settings restore.
+   * @param {number} x
+   * @param {number} y
+   * @param {number} z
+   */
+  setScaleVector(x, y, z) {
     if (!this.modelRoot) return;
-    this.modelRoot.scale.setScalar(value);
+    this.modelRoot.scale.set(
+      Math.max(MIN_MESH_SCALE, Number(x) || 1),
+      Math.max(MIN_MESH_SCALE, Number(y) || 1),
+      Math.max(MIN_MESH_SCALE, Number(z) || 1),
+    );
   }
 
   /**
@@ -96,7 +160,8 @@ export class TransformController {
    */
   applyState(state) {
     if (!this.modelRoot) return;
-    this.setScale(state.scale ?? 1);
+    const { x, y, z } = resolveMeshScaleFromState(state);
+    this.setScaleVector(x, y, z);
     this.setXOffset(state.xOffset ?? 0);
     this.setYOffset(state.yOffset ?? 0);
     this.setZOffset(state.zOffset ?? 0);

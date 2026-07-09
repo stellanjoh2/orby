@@ -372,9 +372,18 @@ export class SceneSettingsManager {
         this.eventBus.emit('mesh:material-brightness', payload.diffuseBrightness);
       }
       // Apply transform settings
-      if (payload.scale !== undefined) {
-        this.stateStore.set('scale', payload.scale);
-        this.eventBus.emit('mesh:scale', payload.scale);
+      if (
+        payload.scale !== undefined
+        || payload.scaleY !== undefined
+        || payload.scaleZ !== undefined
+      ) {
+        const sx = payload.scale ?? 1;
+        const sy = payload.scaleY ?? sx;
+        const sz = payload.scaleZ ?? sx;
+        this.stateStore.set('scale', sx);
+        this.stateStore.set('scaleY', sy);
+        this.stateStore.set('scaleZ', sz);
+        this.eventBus.emit('mesh:scale-vector', { x: sx, y: sy, z: sz });
       }
       if (payload.yOffset !== undefined) {
         this.stateStore.set('yOffset', payload.yOffset);

@@ -460,7 +460,10 @@ export class UIManager {
 
     this.inputs = {
       shading: document.querySelectorAll('input[name="shading"]'),
-      scale: q('#scaleControl'),
+      scale: q('#scaleXControl'),
+      scaleX: q('#scaleXControl'),
+      scaleY: q('#scaleYControl'),
+      scaleZ: q('#scaleZControl'),
       xOffset: q('#xOffsetControl'),
       yOffset: q('#yOffsetControl'),
       zOffset: q('#zOffsetControl'),
