@@ -13,6 +13,11 @@ const MODAL_CONTENT_OPEN_DURATION = 0.42;
 const MODAL_BACKDROP_REVEAL_DURATION = 0.22;
 const MODAL_CONTENT_OPEN_DELAY_WITH_BACKDROP = 0.07;
 const MODAL_BACKDROP_BLUR_TARGET = '8px';
+/** Drop shadow on popup chrome — pair with `rgba(..., calc(strength * var(--popup-chrome-shadow-alpha)))` in CSS */
+const POPUP_CHROME_SHADOW_VAR = '--popup-chrome-shadow-alpha';
+const POPUP_CHROME_SHADOW_FADE_IN_DURATION = 0.5;
+const POPUP_CHROME_SHADOW_FADE_OUT_DURATION = 0.26;
+const POPUP_CONTENT_CLEAR_PROPS = `clipPath,transform,${POPUP_CHROME_SHADOW_VAR}`;
 
 /**
  * Instantly hide a modal and clear GSAP state (e.g. dismiss / recovery when animation was interrupted).
@@ -24,7 +29,7 @@ export function snapModalHidden(modal, panel = null) {
   const kill = content ? [modal, content] : [modal];
   gsap.killTweensOf(kill);
   modal.style.display = 'none';
-  if (content) gsap.set(content, { clearProps: 'clipPath,transform' });
+  if (content) gsap.set(content, { clearProps: POPUP_CONTENT_CLEAR_PROPS });
   gsap.set(modal, { clearProps: 'clipPath,transform,--modal-backdrop-blur' });
 }
 
@@ -48,7 +53,7 @@ export function animateModalOpen(modal, panel = null, options = {}) {
   if (prefersReducedMotion()) {
     gsap.killTweensOf([modal, content]);
     modal.style.display = 'flex';
-    gsap.set([modal, content], { clearProps: 'clipPath,transform' });
+    gsap.set([modal, content], { clearProps: `clipPath,transform,${POPUP_CHROME_SHADOW_VAR}` });
     return Promise.resolve();
   }
 
@@ -58,7 +63,11 @@ export function animateModalOpen(modal, panel = null, options = {}) {
   if (!revealBackdrop) {
     gsap.set(modal, { '--modal-backdrop-blur': '0px' });
   }
-  gsap.set(content, { y: 40, clipPath: 'inset(0 0 100% 0)' });
+  gsap.set(content, {
+    y: 40,
+    clipPath: 'inset(0 0 100% 0)',
+    [POPUP_CHROME_SHADOW_VAR]: 0,
+  });
 
   return new Promise((resolve) => {
     const contentStart = revealBackdrop ? MODAL_CONTENT_OPEN_DELAY_WITH_BACKDROP : 0;
@@ -66,7 +75,7 @@ export function animateModalOpen(modal, panel = null, options = {}) {
       defaults: { ease: 'power3.out' },
       onComplete: () => {
         gsap.set(modal, { clearProps: 'clipPath,--modal-backdrop-blur' });
-        gsap.set(content, { clearProps: 'clipPath,transform' });
+        gsap.set(content, { clearProps: POPUP_CONTENT_CLEAR_PROPS });
         resolve();
       },
     });
@@ -92,6 +101,15 @@ export function animateModalOpen(modal, panel = null, options = {}) {
       { y: 0, clipPath: 'inset(0 0 0%)', duration: MODAL_CONTENT_OPEN_DURATION },
       contentStart,
     );
+    tl.to(
+      content,
+      {
+        [POPUP_CHROME_SHADOW_VAR]: 1,
+        duration: POPUP_CHROME_SHADOW_FADE_IN_DURATION,
+        ease: 'power2.out',
+      },
+      contentStart,
+    );
   });
 }
 
@@ -113,7 +131,7 @@ export function animateModalClose(modal, panel = null, afterHidden, preserveView
   const finish = () => {
     modalCloseInProgress.delete(modal);
     modal.style.display = 'none';
-    if (content) gsap.set(content, { clearProps: 'clipPath,transform' });
+    if (content) gsap.set(content, { clearProps: POPUP_CONTENT_CLEAR_PROPS });
     gsap.set(modal, { clearProps: 'clipPath,transform,--modal-backdrop-blur' });
     afterHidden?.();
   };
@@ -140,7 +158,16 @@ export function animateModalClose(modal, panel = null, afterHidden, preserveView
     defaults: { ease: 'power3.in' },
     onComplete: finish,
   });
-  tl.to(content, { y: 32, clipPath: 'inset(100% 0 0 0)', duration: 0.26 }, 0);
+  tl.to(
+    content,
+    {
+      y: 32,
+      clipPath: 'inset(100% 0 0 0)',
+      [POPUP_CHROME_SHADOW_VAR]: 0,
+      duration: POPUP_CHROME_SHADOW_FADE_OUT_DURATION,
+    },
+    0,
+  );
   if (!preserveViewportBackdrop) {
     if (revealBackdrop) {
       tl.to(modal, { clipPath: 'inset(0 0 100% 0)', duration: MODAL_BACKDROP_REVEAL_DURATION }, 0.05);

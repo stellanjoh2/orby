@@ -831,7 +831,7 @@ export class LightsController {
     });
   }
 
-  /** Groups composited after post when Shader Lab / DOF would stylize viewport guides. */
+  /** Groups composited after post when visible — viewport light guides, not scene geometry. */
   getIndicatorOverlayGroups() {
     /** @type {import('three').Group[]} */
     const groups = [];

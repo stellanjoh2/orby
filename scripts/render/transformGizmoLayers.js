@@ -1,18 +1,18 @@
 import { resetRendererFullViewport } from './resetRendererFullViewport.js';
+import { primeSceneDepthForHelperOverlay } from './primeSceneDepthForHelperOverlay.js';
 
 /**
- * Transform widgets must composite after post so they stay crisp (Shader Lab, DOF, etc.).
- * @param {import('./PostProcessingPipeline.js').PostProcessingPipeline | null | undefined} postPipeline
- * @param {boolean} shaderLabOn
+ * Transform widgets are viewport helpers — composite after post so AO, bloom, DoF, grading, etc. stay off them.
+ * @param {Array<import('three').Object3D | null | undefined> | null | undefined} gizmos
  * @returns {boolean}
  */
-export function shouldOverlayTransformGizmos(postPipeline, shaderLabOn) {
-  if (shaderLabOn) return true;
-  return postPipeline?.bokehPass?.enabled === true;
+export function shouldOverlayTransformGizmos(gizmos) {
+  if (!gizmos?.length) return false;
+  return gizmos.some((gizmo) => gizmo?.visible === true);
 }
 
 /**
- * Hide transform widgets for the Shader Lab scene draw (ASCII / post stack).
+ * Hide transform widgets for the main scene draw (composited after the post stack).
  * @param {Array<import('three').Object3D | null | undefined>} gizmos
  * @returns {Array<{ gizmo: import('three').Object3D, visible: boolean }>}
  */
@@ -38,7 +38,7 @@ export function restoreTransformGizmosFromPass(snapshot) {
 }
 
 /**
- * Draw transform widgets on top after the post stack (Shader Lab, DOF, bloom, grading, etc.).
+ * Draw transform widgets on top after the post stack — crisp helpers, no AO / bloom / DoF / grading.
  * Renders each gizmo subtree individually so the main scene is not double-drawn.
  * @param {{
  *   renderer: import('three').WebGLRenderer,
@@ -66,7 +66,16 @@ export function renderTransformGizmoOverlay({ renderer, camera, gizmos }) {
 }
 
 /**
- * Hide the studio ground grid for the ASCII scene draw (it is composited after the post pass).
+ * Studio ground grid is a helper — composite after post so AO, bloom, DoF, grading, etc. stay off it.
+ * @param {import('three').Object3D | null | undefined} grid
+ * @returns {boolean}
+ */
+export function shouldOverlayGroundGrid(grid) {
+  return grid?.visible === true;
+}
+
+/**
+ * Hide the studio ground grid for the main scene draw (composited after the post stack).
  * @param {import('three').Object3D | null | undefined} grid
  * @returns {{ grid: import('three').Object3D, visible: boolean } | null}
  */
@@ -86,15 +95,23 @@ export function restoreGroundGridFromPass(snapshot) {
 }
 
 /**
- * Draw the ground grid after the ASCII post stack — crisp lines, not glyph conversion.
+ * Draw the ground grid after the post stack — crisp helper lines, no AO / bloom / DoF / grading.
+ * Depth-tests against scene meshes so the grid does not draw through solid geometry.
  * @param {{
  *   renderer: import('three').WebGLRenderer,
  *   camera: import('three').Camera,
+ *   scene?: import('three').Scene | null,
  *   grid: import('three').Object3D | null | undefined,
  *   renderTarget?: import('three').WebGLRenderTarget | null,
  * }} ctx
  */
-export function renderGroundGridOverlay({ renderer, camera, grid, renderTarget = null }) {
+export function renderGroundGridOverlay({
+  renderer,
+  camera,
+  scene = null,
+  grid,
+  renderTarget = null,
+}) {
   if (!renderer || !camera || !grid?.visible) return;
 
   const material = grid.material;
@@ -104,6 +121,16 @@ export function renderGroundGridOverlay({ renderer, camera, grid, renderTarget =
     : [];
   /** @type {Array<{ mat: import('three').Material, depthTest: boolean, depthWrite: boolean }>} */
   const depthSnapshots = [];
+
+  const depthPrimed = scene
+    ? primeSceneDepthForHelperOverlay({
+        renderer,
+        scene,
+        camera,
+        renderTarget,
+        exclude: [grid],
+      })
+    : false;
 
   const prevAutoClear = renderer.autoClear;
   const prevRenderTarget = renderer.getRenderTarget();
@@ -118,20 +145,26 @@ export function renderGroundGridOverlay({ renderer, camera, grid, renderTarget =
     if (typeof renderer.setScissorTest === 'function') {
       renderer.setScissorTest(false);
     }
-    // Composer RTs keep RenderPass depth; post is color-only — clear depth so grid isn't occluded.
-    renderer.clearDepth();
-    for (const mat of mats) {
-      if (!mat) continue;
-      depthSnapshots.push({
-        mat,
-        depthTest: mat.depthTest,
-        depthWrite: mat.depthWrite,
-      });
-      mat.depthTest = false;
-      mat.depthWrite = false;
-    }
   } else {
     resetRendererFullViewport(renderer);
+  }
+
+  if (!depthPrimed) {
+    renderer.clearDepth();
+  }
+
+  for (const mat of mats) {
+    if (!mat) continue;
+    depthSnapshots.push({
+      mat,
+      depthTest: mat.depthTest,
+      depthWrite: mat.depthWrite,
+    });
+    mat.depthTest = depthPrimed;
+    mat.depthWrite = false;
+    if (!depthPrimed) {
+      mat.depthTest = false;
+    }
   }
 
   try {

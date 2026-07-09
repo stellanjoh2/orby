@@ -100,6 +100,9 @@ export function wireframeLineWidthToPixels(width) {
 
 /** Default ground grid thickness slider value (maps to CSS-pixel weight via LineMaterial). */
 export const DEFAULT_GRID_LINE_WIDTH = 1;
+/** Default ground grid line color — sRGB 100,100,100. */
+export const DEFAULT_GROUND_WIRE_COLOR = '#646464';
+export const DEFAULT_GROUND_WIRE_OPACITY = 0.5;
 
 export function clampGridLineWidth(value) {
   return Math.min(2.5, Math.max(0.5, Number(value) || DEFAULT_GRID_LINE_WIDTH));

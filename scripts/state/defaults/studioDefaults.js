@@ -4,9 +4,10 @@ import {
   DEFAULT_BASE_GLASS_BLUR,
   DEFAULT_BASE_GLASS_AMOUNT,
   DEFAULT_BASE_GLASS_BRIGHTNESS,
+  DEFAULT_GROUND_WIRE_COLOR,
+  DEFAULT_GROUND_WIRE_OPACITY,
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
-  ORBY_LIME,
 } from '../../constants.js';
 import {
   DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
@@ -31,7 +32,7 @@ export function createStudioDefaults() {
     hdriReceiveShadowsAo: false,
     groundSolid: false,
     groundWire: false,
-    groundWireOpacity: 1.0,
+    groundWireOpacity: DEFAULT_GROUND_WIRE_OPACITY,
     groundY: 0,
     gridY: 0,
     baseScale: 1,
@@ -72,7 +73,7 @@ export function createStudioDefaults() {
     infinityCoveSurfaceScale: DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
     infinityCoveSurfaceStrength: DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
     groundSolidColor: '#808080',
-    groundWireColor: ORBY_LIME,
+    groundWireColor: DEFAULT_GROUND_WIRE_COLOR,
     lensFlare: {
       enabled: false,
       rotation: 0,

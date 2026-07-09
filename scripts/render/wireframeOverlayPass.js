@@ -1,14 +1,13 @@
 import { resetRendererFullViewport } from './resetRendererFullViewport.js';
 
 /**
- * Wireframe must composite after post so lines stay crisp (Shader Lab, DOF, etc.).
- * @param {import('./PostProcessingPipeline.js').PostProcessingPipeline | null | undefined} postPipeline
- * @param {boolean} shaderLabOn
+ * Wireframe overlay is a viewport helper — composite after post so AO, bloom, DoF, grading, etc. stay off it.
+ * @param {import('three').Mesh[] | null | undefined} wireframeMeshes
  * @returns {boolean}
  */
-export function shouldOverlayWireframeMeshes(postPipeline, shaderLabOn) {
-  if (shaderLabOn) return true;
-  return postPipeline?.bokehPass?.enabled === true;
+export function shouldOverlayWireframeMeshes(wireframeMeshes) {
+  if (!wireframeMeshes?.length) return false;
+  return wireframeMeshes.some((mesh) => mesh?.visible === true);
 }
 
 /**
@@ -39,7 +38,7 @@ export function restoreWireframeOverlaysFromPass(snapshot) {
 }
 
 /**
- * Draw wireframe overlays after the post stack — crisp lines, not DoF blur or Shader Lab stylization.
+ * Draw wireframe overlays after the post stack — crisp helper lines, no AO / bloom / DoF / grading.
  * @param {{
  *   renderer: import('three').WebGLRenderer,
  *   camera: import('three').Camera,

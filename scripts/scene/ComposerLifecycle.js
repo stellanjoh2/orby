@@ -10,6 +10,7 @@ import {
   renderTransformGizmoOverlay,
   restoreGroundGridFromPass,
   restoreTransformGizmosFromPass,
+  shouldOverlayGroundGrid,
   shouldOverlayTransformGizmos,
 } from '../render/transformGizmoLayers.js';
 import {
@@ -210,22 +211,17 @@ export class ComposerLifecycle {
       this.applyCreativeLookBloomSuppression();
     }
     const shaderLabOn = this.getCreativeLookEnabled() === true;
+    const gizmos = this.getTransformControls?.() ?? [];
     const overlayGizmos =
-      overlayTransformGizmos &&
-      shouldOverlayTransformGizmos(this.postPipeline, shaderLabOn);
+      overlayTransformGizmos && shouldOverlayTransformGizmos(gizmos);
     const wireframeMeshes = this.getWireframeOverlayMeshes?.() ?? [];
-    const overlayWireframe =
-      wireframeMeshes.length > 0 &&
-      shouldOverlayWireframeMeshes(this.postPipeline, shaderLabOn);
+    const overlayWireframe = shouldOverlayWireframeMeshes(wireframeMeshes);
     const lightIndicatorRoots = this.getLightIndicatorOverlayGroups?.() ?? [];
     const overlayLights =
       overlayLightIndicators &&
-      lightIndicatorRoots.length > 0 &&
-      shouldOverlayLightIndicators(this.postPipeline, shaderLabOn);
+      shouldOverlayLightIndicators(lightIndicatorRoots);
     if (overlayGizmos) {
-      this._gizmoPassVisibility = hideTransformGizmosForPass(
-        this.getTransformControls?.() ?? [],
-      );
+      this._gizmoPassVisibility = hideTransformGizmosForPass(gizmos);
     }
     if (overlayWireframe) {
       this._wireframePassVisibility = hideWireframeOverlaysForPass(wireframeMeshes);
@@ -235,7 +231,7 @@ export class ComposerLifecycle {
         hideLightIndicatorOverlaysForPass(lightIndicatorRoots);
     }
     const grid = this.getGroundGrid?.();
-    const overlayGrid = asciiTerminal && grid?.visible === true;
+    const overlayGrid = shouldOverlayGroundGrid(grid);
     if (overlayGrid) {
       this._gridPassVisibility = hideGroundGridForPass(grid);
     }
@@ -379,7 +375,7 @@ export class ComposerLifecycle {
     }
   }
 
-  /** Crisp transform widgets on top of post stack (Shader Lab, DOF, etc.). */
+  /** Transform widgets on top of post stack — crisp helpers, not AO / bloom / DoF / grading. */
   _renderTransformGizmoOverlay() {
     renderTransformGizmoOverlay({
       renderer: this.renderer,
@@ -388,19 +384,20 @@ export class ComposerLifecycle {
     });
   }
 
-  /** Ground grid on top of ASCII terminal post — normal line art, not glyphs. */
+  /** Ground grid on top of post stack — crisp helper lines, not AO / bloom / DoF / grading. */
   _renderGroundGridOverlay() {
     // Offline capture composites grid on the byte readback RT (captureReadback.js).
     if (this.composer?.renderToScreen === false) return;
     renderGroundGridOverlay({
       renderer: this.renderer,
       camera: this.camera,
+      scene: this.scene,
       grid: this.getGroundGrid?.(),
       renderTarget: null,
     });
   }
 
-  /** Wireframe on top of post stack — crisp lines, not DoF blur or Shader Lab stylization. */
+  /** Wireframe on top of post stack — crisp helper lines, not AO / bloom / DoF / grading. */
   _renderWireframeOverlay() {
     renderWireframeOverlay({
       renderer: this.renderer,
@@ -409,7 +406,7 @@ export class ComposerLifecycle {
     });
   }
 
-  /** Spotlight cones and beam guides on top of post — not Shader Lab pixel looks or DoF blur. */
+  /** Light guides on top of post stack — crisp helpers, not AO / bloom / DoF / grading. */
   _renderLightIndicatorOverlay() {
     renderLightIndicatorOverlay({
       renderer: this.renderer,

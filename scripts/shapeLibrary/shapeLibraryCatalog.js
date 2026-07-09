@@ -12,7 +12,7 @@ export const SHAPE_LIBRARY_DEFAULT_COLOR = '#ffffff';
 
 /** @typedef {{ id: string, glbUrl: string, sourceId: string, label: string, empty?: boolean }} ShapeLibraryEntry */
 
-const SHAPE_LIBRARY_ASSET_VERSION = 9;
+const SHAPE_LIBRARY_ASSET_VERSION = 11;
 const SHAPE_LIBRARY_THUMB_VERSION = 6;
 
 const shapeLibraryGlbUrl = (file) =>

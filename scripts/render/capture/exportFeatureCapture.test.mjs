@@ -19,7 +19,7 @@ import {
 import {
   compositeAsciiGroundGridOnByteTarget,
   resolveCaptureGridLineWidthPx,
-  shouldCompositeAsciiGroundGridForCapture,
+  shouldCompositeGroundGridForCapture,
 } from './capturePostStackOverlays.js';
 
 describe('artistic paper backdrop keying', () => {
@@ -49,7 +49,7 @@ describe('artistic paper backdrop keying', () => {
   });
 });
 
-describe('ASCII ground grid capture composite', () => {
+describe('ground grid capture composite', () => {
   it('resolveCaptureGridLineWidthPx scales with export size', () => {
     assert.equal(resolveCaptureGridLineWidthPx(1, 1), 1);
     assert.equal(resolveCaptureGridLineWidthPx(2, 1), 2);
@@ -58,25 +58,22 @@ describe('ASCII ground grid capture composite', () => {
     assert.equal(resolveCaptureGridLineWidthPx(0.25, 1), 0.5);
   });
 
-  it('requires flat-post active and visible grid', () => {
+  it('requires visible grid regardless of post preset', () => {
     assert.equal(
-      shouldCompositeAsciiGroundGridForCapture({
-        getCreativeLookAsciiActive: () => true,
+      shouldCompositeGroundGridForCapture({
         getGroundGrid: () => ({ visible: true }),
       }),
       true,
     );
     assert.equal(
-      shouldCompositeAsciiGroundGridForCapture({
-        getCreativeLookAsciiActive: () => false,
-        getGroundGrid: () => ({ visible: true }),
+      shouldCompositeGroundGridForCapture({
+        getGroundGrid: () => ({ visible: false }),
       }),
       false,
     );
     assert.equal(
-      shouldCompositeAsciiGroundGridForCapture({
-        getCreativeLookAsciiActive: () => true,
-        getGroundGrid: () => ({ visible: false }),
+      shouldCompositeGroundGridForCapture({
+        getGroundGrid: () => null,
       }),
       false,
     );

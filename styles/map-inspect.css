@@ -145,7 +145,8 @@
   background: var(--shelf-bg, var(--ui-frosted-bg));
   backdrop-filter: blur(var(--ui-frosted-blur, 15px));
   -webkit-backdrop-filter: blur(var(--ui-frosted-blur, 15px));
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  --popup-chrome-shadow-alpha: 1;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, calc(0.35 * var(--popup-chrome-shadow-alpha)));
   pointer-events: auto;
   box-sizing: border-box;
 }

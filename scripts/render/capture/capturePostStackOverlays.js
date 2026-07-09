@@ -20,15 +20,19 @@ export function resolveCaptureGridLineWidthPx(
 }
 
 /**
- * Flat-post presets (ASCII, EGA, …) hide the grid for the scene draw and overlay it after post.
+ * Export readback composites the grid after the post stack (same as the live viewport overlay).
  * @param {{
- *   getCreativeLookAsciiActive?: () => boolean,
  *   getGroundGrid?: () => import('three').Object3D | null | undefined,
  * }} deps
  */
-export function shouldCompositeAsciiGroundGridForCapture(deps) {
+export function shouldCompositeGroundGridForCapture(deps) {
   const grid = deps.getGroundGrid?.();
-  return deps.getCreativeLookAsciiActive?.() === true && grid?.visible === true;
+  return grid?.visible === true;
+}
+
+/** @deprecated Use {@link shouldCompositeGroundGridForCapture} */
+export function shouldCompositeAsciiGroundGridForCapture(deps) {
+  return shouldCompositeGroundGridForCapture(deps);
 }
 
 /**
@@ -74,6 +78,7 @@ export function compositeAsciiGroundGridOnByteTarget(deps, byteTarget) {
     renderGroundGridOverlay({
       renderer: deps.renderer,
       camera: deps.camera,
+      scene: deps.scene ?? null,
       grid,
       renderTarget: byteTarget,
     });

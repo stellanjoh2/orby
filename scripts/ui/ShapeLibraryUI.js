@@ -1,6 +1,7 @@
 /**
  * Object → Shape Library — shelf toggle + left floating panel + viewport drag-and-drop.
  */
+import gsap from 'gsap';
 import {
   SHAPE_LIBRARY,
   SHAPE_LIBRARY_DRAG_MIME,
@@ -12,6 +13,15 @@ import {
   bindFloatingPanelHeaderDrag,
   setFloatingPanelDragging,
 } from './floatingPanelHeaderDrag.js';
+import {
+  animateModalClose,
+  animateModalOpen,
+  prefersReducedMotion,
+} from './modalReveal.js';
+
+const TILE_REVEAL_DURATION = 0.36;
+const TILE_REVEAL_STAGGER = 0.042;
+const TILE_REVEAL_DELAY = 0.08;
 
 export class ShapeLibraryUI {
   /**
@@ -32,6 +42,8 @@ export class ShapeLibraryUI {
     /** @type {string | null} */
     this._activeDragShapeId = null;
     this._gridBuilt = false;
+    /** Skip reveal on first state sync (scene load / mount). */
+    this._allowPanelReveal = false;
     /** @type {(() => void) | null} */
     this._stateUnsub = null;
   }
@@ -78,6 +90,7 @@ export class ShapeLibraryUI {
     this._bound = true;
 
     this._panel = document.getElementById('shapeLibraryPanel');
+    this._panelChrome = this._panel?.querySelector('.shape-library-panel__chrome') ?? null;
     this._panelGrid = document.getElementById('shapeLibraryGrid');
     this._panelClose = document.getElementById('shapeLibraryPanelClose');
     this._panelHeader = this._panel?.querySelector('.shape-library-panel__header') ?? null;
@@ -85,10 +98,10 @@ export class ShapeLibraryUI {
     this._webgl = document.getElementById('webgl');
 
     this.syncFromState(this.stateStore.getState());
+    this._allowPanelReveal = true;
     this._stateUnsub = this.stateStore.subscribe((state) => this.syncFromState(state));
 
     this._panelOpenToggle?.addEventListener('change', (event) => {
-      this.ui.uiSounds?.playSelect();
       const open = !!event.target.checked;
       this.stateStore.set('shapeLibrary.panelOpen', open);
     });
@@ -136,21 +149,142 @@ export class ShapeLibraryUI {
     this.stateStore.set('shapeLibrary.panelOpen', open);
   }
 
-  _showPanel() {
-    if (!this._panel) return;
+  _showPanel({ animate = this._allowPanelReveal } = {}) {
+    if (!this._panel || !this._panelChrome) return;
+    if (
+      this._panelOpen &&
+      !this._panel.hidden &&
+      this._panel.style.display !== 'none' &&
+      !gsap.isTweening(this._panelChrome)
+    ) {
+      return;
+    }
+
     this._panelOpen = true;
-    this._panel.hidden = false;
     this._positionPanelDefault();
     if (!this._gridBuilt) {
       this._renderGrid();
       this._gridBuilt = true;
+      this._resetGridTiles();
     }
+
+    this._panel.removeAttribute('hidden');
+    this._panel.style.display = '';
+
+    if (animate) this.ui.uiSounds?.playShelfShow();
+
+    if (!animate || prefersReducedMotion()) {
+      this._snapPanelVisible();
+      return;
+    }
+
+    this._revealGridTiles({ animate: true });
+    void animateModalOpen(this._panel, this._panelChrome, { revealBackdrop: false }).then(() => {
+      this._panel.style.display = '';
+    });
   }
 
-  _hidePanel() {
-    if (!this._panel) return;
+  _hidePanel({ animate = this._allowPanelReveal } = {}) {
+    if (!this._panel || !this._panelChrome) return;
+    const isVisible = !this._panel.hidden && this._panel.style.display !== 'none';
+    if (!isVisible) {
+      this._panelOpen = false;
+      return;
+    }
+
+    if (animate) this.ui.uiSounds?.playShelfHide();
+
+    this._resetGridTiles();
+
+    if (!animate || prefersReducedMotion()) {
+      this._snapPanelHidden();
+      return;
+    }
+
+    animateModalClose(
+      this._panel,
+      this._panelChrome,
+      () => {
+        this._panelOpen = false;
+        this._panel.setAttribute('hidden', '');
+        this._panel.style.display = '';
+      },
+      false,
+      { revealBackdrop: false },
+    );
+  }
+
+  _snapPanelVisible() {
+    if (!this._panel || !this._panelChrome) return;
+    gsap.killTweensOf([this._panel, this._panelChrome]);
+    gsap.set(this._panelChrome, { clearProps: 'clipPath,transform,--popup-chrome-shadow-alpha' });
+    gsap.set(this._panel, { clearProps: 'clipPath,transform,--modal-backdrop-blur' });
+    this._revealGridTiles({ animate: false });
+  }
+
+  _snapPanelHidden() {
+    if (!this._panel || !this._panelChrome) return;
+    gsap.killTweensOf([this._panel, this._panelChrome]);
     this._panelOpen = false;
-    this._panel.hidden = true;
+    this._panel.setAttribute('hidden', '');
+    this._panel.style.display = '';
+    gsap.set(this._panelChrome, { clearProps: 'clipPath,transform,--popup-chrome-shadow-alpha' });
+    gsap.set(this._panel, { clearProps: 'clipPath,transform,--modal-backdrop-blur' });
+    this._resetGridTiles();
+  }
+
+  _getGridTiles() {
+    return this._panelGrid ? [...this._panelGrid.querySelectorAll('.shape-library-tile')] : [];
+  }
+
+  _partitionGridTiles() {
+    const tiles = this._getGridTiles();
+    const live = [];
+    const empty = [];
+    for (const tile of tiles) {
+      if (tile.classList.contains('shape-library-tile--empty')) empty.push(tile);
+      else live.push(tile);
+    }
+    return { live, empty };
+  }
+
+  /**
+   * @param {{ animate?: boolean }} [options]
+   */
+  _revealGridTiles({ animate = true } = {}) {
+    const { live, empty } = this._partitionGridTiles();
+    const targets = [...live, ...empty];
+    if (!targets.length) return;
+
+    gsap.killTweensOf(targets);
+
+    // Coming-soon slots stay at CSS opacity — GSAP opacity causes flicker against the 0.35 rule.
+    empty.forEach((tile) => gsap.set(tile, { clearProps: 'opacity' }));
+
+    if (!live.length) return;
+
+    if (!animate || prefersReducedMotion()) {
+      gsap.set(live, { opacity: 1 });
+      return;
+    }
+
+    gsap.set(live, { opacity: 0 });
+    gsap.to(live, {
+      opacity: 1,
+      duration: TILE_REVEAL_DURATION,
+      stagger: TILE_REVEAL_STAGGER,
+      delay: TILE_REVEAL_DELAY,
+      ease: 'power2.out',
+    });
+  }
+
+  _resetGridTiles() {
+    const { live, empty } = this._partitionGridTiles();
+    const targets = [...live, ...empty];
+    if (!targets.length) return;
+    gsap.killTweensOf(targets);
+    if (live.length) gsap.set(live, { opacity: 0 });
+    empty.forEach((tile) => gsap.set(tile, { clearProps: 'opacity' }));
   }
 
   _renderGrid() {
@@ -167,6 +301,8 @@ export class ShapeLibraryUI {
       if (entry.empty) {
         tile.classList.add('shape-library-tile--empty');
         tile.setAttribute('aria-hidden', 'true');
+        tile.appendChild(this._createComingSoonLabel());
+        tile.addEventListener('pointerdown', (event) => event.preventDefault());
         this._panelGrid.appendChild(tile);
         continue;
       }
@@ -205,6 +341,13 @@ export class ShapeLibraryUI {
       this._panelGrid.appendChild(tile);
       this._loadTileThumb(tile, thumb, entry);
     }
+  }
+
+  _createComingSoonLabel() {
+    const label = document.createElement('span');
+    label.className = 'shape-library-tile__soon';
+    label.textContent = 'Coming soon';
+    return label;
   }
 
   /**

@@ -19,6 +19,8 @@ import {
   DEFAULT_BACKDROP_ROUGHNESS,
   ORBY_LIME,
   DEFAULT_GRID_LINE_WIDTH,
+  DEFAULT_GROUND_WIRE_COLOR,
+  DEFAULT_GROUND_WIRE_OPACITY,
   clampGridLineWidth,
   resolveViewportGridLineWidthPx,
 } from '../constants.js';
@@ -347,8 +349,8 @@ export class GroundController {
     this.solidEnabled = options.solidEnabled ?? false;
     this.wireEnabled = options.wireEnabled ?? false;
     this.solidColor = options.solidColor ?? '#31363f';
-    this.wireColor = options.wireColor ?? ORBY_LIME;
-    this.wireOpacity = options.wireOpacity ?? 1.0;
+    this.wireColor = options.wireColor ?? DEFAULT_GROUND_WIRE_COLOR;
+    this.wireOpacity = options.wireOpacity ?? DEFAULT_GROUND_WIRE_OPACITY;
     this.groundY = options.groundY ?? 0;
     this.gridY = options.gridY ?? 0;
     this.podiumScale = clampBaseScale(options.baseScale ?? options.podiumScale ?? 1);

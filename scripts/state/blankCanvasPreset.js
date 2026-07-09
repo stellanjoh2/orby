@@ -1,4 +1,4 @@
-import { APP_BACKGROUND } from '../constants.js';
+import { APP_BACKGROUND, DEFAULT_GROUND_WIRE_COLOR, DEFAULT_GROUND_WIRE_OPACITY } from '../constants.js';
 import { DEFAULT_EXPORT_VIDEO_FPS } from '../render/exportVideoResolution.js';
 
 /**
@@ -183,7 +183,7 @@ export function createBlankCanvasPreset() {
     hdriReceiveShadowsAo: false,
     groundSolid: false,
     groundWire: true,
-    groundWireOpacity: 1,
+    groundWireOpacity: DEFAULT_GROUND_WIRE_OPACITY,
     groundY: 0,
     gridY: 0,
     baseScale: 1,
@@ -223,7 +223,7 @@ export function createBlankCanvasPreset() {
     infinityCoveSurfaceScale: 1,
     infinityCoveSurfaceStrength: 1,
     groundSolidColor: '#808080',
-    groundWireColor: '#c4ff00',
+    groundWireColor: DEFAULT_GROUND_WIRE_COLOR,
     lensFlare: {
       enabled: false,
       rotation: 0,

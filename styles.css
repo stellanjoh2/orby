@@ -898,6 +898,7 @@ html.orby-sr-on .orby-sr,
 }
 
 /* Load Settings Modal */
+/* Popup chrome drop shadows: use --popup-chrome-shadow-alpha (0–1) — animated by modalReveal.js */
 .load-settings-modal {
   position: fixed;
   top: 0;

@@ -107,11 +107,8 @@ export class MeshglRenderPass extends RenderPass {
           );
           blitGradient();
         } else {
-          renderer.clear(
-            renderer.autoClearColor,
-            renderer.autoClearDepth,
-            renderer.autoClearStencil,
-          );
+          // Always clear color on the active RT — bloom passes can leave autoClearColor false.
+          renderer.clear(true, renderer.autoClearDepth, renderer.autoClearStencil);
         }
       } else if (useGpuGradientBlit) {
         blitGradient();

@@ -322,6 +322,7 @@ export class UIManagerModalOverlays {
       '#loadSceneSettingsModal',
       '#bugReportModal',
       '#orbyFullscreenPrompt',
+      '#shapeLibraryPanel',
     ];
     for (const sel of selectors) {
       const modal = document.querySelector(sel);

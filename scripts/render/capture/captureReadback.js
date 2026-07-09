@@ -7,7 +7,7 @@ import { ensureExportCapturePixelRatio } from './forceExportCaptureFramebuffer.j
 import { pinRenderTargetPhysicalViewport } from '../resetRendererFullViewport.js';
 import {
   compositeAsciiGroundGridOnByteTarget,
-  shouldCompositeAsciiGroundGridForCapture,
+  shouldCompositeGroundGridForCapture,
 } from './capturePostStackOverlays.js';
 
 /**
@@ -143,7 +143,7 @@ function readComposerPixelsOnce(deps, requestedW, requestedH) {
     composer.copyPass.render(renderer, byteRT, outputRT, 0, false);
     if (
       deps.camera
-      && shouldCompositeAsciiGroundGridForCapture(deps)
+      && shouldCompositeGroundGridForCapture(deps)
     ) {
       compositeAsciiGroundGridOnByteTarget(deps, byteRT);
     }

@@ -1,6 +1,12 @@
 import './main.js';
 import * as THREE from 'three';
-import { DEFAULT_MATERIAL_BRIGHTNESS, ORBY_BLACK, ORBY_LIME } from './constants.js';
+import {
+  DEFAULT_GROUND_WIRE_COLOR,
+  DEFAULT_GROUND_WIRE_OPACITY,
+  DEFAULT_MATERIAL_BRIGHTNESS,
+  ORBY_BLACK,
+  ORBY_LIME,
+} from './constants.js';
 import { DEFAULT_GOBO_SOFTNESS } from './config/gobos.js';
 import { DEFAULT_LIGHTS_SHADOW_SOFTNESS } from './config/shadowQuality.js';
 
@@ -102,8 +108,8 @@ const NOT_FOUND_PRESET = {
   groundWire: false,
   groundSolidColor: '#808080',
   baseColor: '#e8e8e8',
-  groundWireColor: ORBY_LIME,
-  groundWireOpacity: 1,
+  groundWireColor: DEFAULT_GROUND_WIRE_COLOR,
+  groundWireOpacity: DEFAULT_GROUND_WIRE_OPACITY,
   groundY: -0.28860217332839966,
   gridY: -0.28860217332839966,
   baseScale: 1,

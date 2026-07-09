@@ -1,15 +1,13 @@
 import { resetRendererFullViewport } from './resetRendererFullViewport.js';
 
 /**
- * Spotlight cones and beam wireframes composite after post so they stay crisp
- * (Shader Lab pixel looks, DOF, etc.).
- * @param {import('./PostProcessingPipeline.js').PostProcessingPipeline | null | undefined} postPipeline
- * @param {boolean} shaderLabOn
+ * Light guides are viewport helpers — composite after post so AO, bloom, DoF, grading, etc. stay off them.
+ * @param {Array<import('three').Object3D | null | undefined> | null | undefined} roots
  * @returns {boolean}
  */
-export function shouldOverlayLightIndicators(postPipeline, shaderLabOn) {
-  if (shaderLabOn) return true;
-  return postPipeline?.bokehPass?.enabled === true;
+export function shouldOverlayLightIndicators(roots) {
+  if (!roots?.length) return false;
+  return roots.some((root) => root?.visible === true);
 }
 
 /**
@@ -62,7 +60,7 @@ function snapshotDepthState(root, depthSnapshots) {
 }
 
 /**
- * Draw spotlight cones and beam wireframes after the post stack.
+ * Draw spotlight cones and beam wireframes after the post stack — crisp helpers, no AO / bloom / DoF / grading.
  * @param {{
  *   renderer: import('three').WebGLRenderer,
  *   camera: import('three').Camera,

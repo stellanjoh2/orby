@@ -100,12 +100,7 @@ export class PostProcessingPipeline {
 
     const rw = Math.max(1, Math.floor(size.x));
     const rh = Math.max(1, Math.floor(size.y));
-    this.n8aoPass = new MeshglN8AOPass(scene, camera, rw, rh, {
-      resolveBackgroundGradientController:
-        typeof opts.getBackgroundGradientController === 'function'
-          ? opts.getBackgroundGradientController
-          : null,
-    });
+    this.n8aoPass = new MeshglN8AOPass(scene, camera, rw, rh);
     this.n8aoPass.enabled = false;
     /** Last N8AO preset applied via `setQualityMode` (shader recompile if changed). */
     this._n8aoAppliedMode = 'Medium';
@@ -1733,8 +1728,8 @@ export class PostProcessingPipeline {
   }
 
   /**
-   * Screen-space ambient occlusion (N8AO / WebGL). When active, replaces RenderPass:
-   * N8AOPass renders the scene and composites AO in one pass.
+   * Screen-space ambient occlusion (N8AO / WebGL). MeshglRenderPass stays enabled;
+   * MeshglN8AOPass seeds N8AO's beauty plate from the composer color buffer.
    * @param {object} settings
    * @param {boolean} forceOffTier - Render-quality tier disables AO (e.g. Low)
    */
@@ -1742,7 +1737,7 @@ export class PostProcessingPipeline {
     if (!this.n8aoPass || !this.renderPass) return;
     const wants = Boolean(settings?.enabled);
     const active = wants && !forceOffTier;
-    this.renderPass.enabled = !active;
+    this.renderPass.enabled = true;
     this.n8aoPass.enabled = active;
     if (!active) return;
 

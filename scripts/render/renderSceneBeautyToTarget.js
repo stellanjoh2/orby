@@ -8,11 +8,15 @@ import {
 } from './resetRendererFullViewport.js';
 
 /**
- * @param {import('./backgroundGradient/BackgroundGradientController.js').BackgroundGradientController | null | undefined} gradientCtrl
+ * @param {{
+ *   backgroundController?: import('./BackgroundController.js').BackgroundController | null,
+ *   backgroundGradientController?: import('./backgroundGradient/BackgroundGradientController.js').BackgroundGradientController | null,
+ * }} sources
  * @returns {{ usesFallbackBackdrop: boolean, useGpuGradientBlit: boolean, clearColor: string | null }}
  */
-function resolveStudioBackdropForBeauty(gradientCtrl) {
-  const bgCtrl = gradientCtrl?.backgroundController ?? null;
+function resolveStudioBackdropForBeauty(sources = {}) {
+  const gradientCtrl = sources.backgroundGradientController ?? null;
+  const bgCtrl = sources.backgroundController ?? gradientCtrl?.backgroundController ?? null;
   if (bgCtrl?.usesFallbackBackdrop?.() !== true) {
     return { usesFallbackBackdrop: false, useGpuGradientBlit: false, clearColor: null };
   }
@@ -44,6 +48,7 @@ function resolveStudioBackdropForBeauty(gradientCtrl) {
  * @param {import('three').WebGLRenderTarget | null} renderTarget
  * @param {{
  *   resolveBackgroundGradientController?: (() => unknown) | null,
+ *   resolveBackgroundController?: (() => unknown) | null,
  *   clearAlpha?: number,
  *   clear?: boolean,
  * }} [opts]
@@ -51,6 +56,7 @@ function resolveStudioBackdropForBeauty(gradientCtrl) {
 export function renderSceneBeautyToTarget(renderer, scene, camera, renderTarget, opts = {}) {
   const {
     resolveBackgroundGradientController = null,
+    resolveBackgroundController = null,
     clearAlpha = 1,
     clear = true,
   } = opts;
@@ -71,7 +77,14 @@ export function renderSceneBeautyToTarget(renderer, scene, camera, renderTarget,
     typeof resolveBackgroundGradientController === 'function'
       ? resolveBackgroundGradientController()
       : null;
-  const backdrop = resolveStudioBackdropForBeauty(gradientCtrl);
+  const backgroundController =
+    typeof resolveBackgroundController === 'function'
+      ? resolveBackgroundController()
+      : null;
+  const backdrop = resolveStudioBackdropForBeauty({
+    backgroundGradientController: gradientCtrl,
+    backgroundController,
+  });
   const captureBlit = gradientCtrl?.shouldBlitForCapture?.() === true;
 
   let savedSceneBackground = null;
@@ -118,7 +131,12 @@ export function renderSceneBeautyToTarget(renderer, scene, camera, renderTarget,
         renderer.setClearColor(new THREE.Color(backdrop.clearColor), clearAlpha);
         renderer.clear(true, true, true);
       } else {
-        renderer.clear(true, true, true);
+        // Match MeshglRenderPass — BackgroundController already set renderer clear color.
+        renderer.clear(
+          renderer.autoClearColor,
+          renderer.autoClearDepth,
+          renderer.autoClearStencil,
+        );
       }
     } else if (backdrop.useGpuGradientBlit) {
       blitGradient();
