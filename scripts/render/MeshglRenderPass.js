@@ -59,10 +59,10 @@ export class MeshglRenderPass extends RenderPass {
     }
 
     let savedSceneBackground = null;
+    const gradientCtrl = this._resolveBackgroundGradientController();
+    const useGpuGradientBlit = gradientCtrl?.shouldGpuBlitGradient?.() === true;
+    const captureBlit = gradientCtrl?.shouldBlitForCapture?.() === true;
     try {
-      const gradientCtrl = this._resolveBackgroundGradientController();
-      const useGpuGradientBlit = gradientCtrl?.shouldGpuBlitGradient?.() === true;
-      const captureBlit = gradientCtrl?.shouldBlitForCapture?.() === true;
       if (captureBlit) {
         ensureExportCapturePixelRatio({
           renderer,
@@ -94,18 +94,7 @@ export class MeshglRenderPass extends RenderPass {
 
       const blitGradient = () => {
         if (!useGpuGradientBlit) return;
-        const rt = this.renderToScreen ? null : readBuffer;
-        let gw;
-        let gh;
-        if (rt?.width > 0 && rt?.height > 0) {
-          gw = rt.width;
-          gh = rt.height;
-        } else {
-          ({ width: gw, height: gh } = getDrawingBufferPixels(renderer));
-        }
-        if (gradientCtrl.shouldBlitForCapture?.()) {
-          gradientCtrl.syncToDrawingBuffer(gw, gh, { forceRedraw: true });
-        }
+        gradientCtrl.syncToDrawingBuffer(undefined, undefined, { forceRedraw: true });
         gradientCtrl.blitFullViewport(renderer);
       };
 
@@ -148,7 +137,15 @@ export class MeshglRenderPass extends RenderPass {
       if (camera && savedCameraViewport !== undefined) {
         camera.viewport = savedCameraViewport;
       }
-      if (!this._keepExportCaptureViewport) {
+      if (captureBlit) {
+        const rt = renderer.getRenderTarget();
+        if (rt?.width > 0 && rt?.height > 0) {
+          pinRenderTargetPhysicalViewport(renderer, rt.width, rt.height);
+        } else {
+          const { width, height } = getDrawingBufferPixels(renderer);
+          pinRenderTargetPhysicalViewport(renderer, width, height);
+        }
+      } else if (!this._keepExportCaptureViewport) {
         resetRendererFullViewport(renderer);
       }
     }

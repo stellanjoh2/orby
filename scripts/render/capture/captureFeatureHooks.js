@@ -67,11 +67,13 @@ export class CaptureFeatureSession {
     }
   }
 
-  /** @param {import('./captureContext.js').CaptureSize & { transparent?: boolean, exportTimeSec?: number }} ctx */
+  /** @param {import('./captureContext.js').CaptureSize & { transparent?: boolean, exportTimeSec?: number, lensDistortionActive?: boolean }} ctx */
   prepareFrame(ctx) {
     if (!this._active) return;
-    this.environmentController?.prepareForCapture?.(ctx);
-    this.backgroundController?.gradientController?.prepareForCapture?.(ctx);
+    const lensDistortionActive = this.postPipeline?.lensDistortionPass?.enabled === true;
+    const captureCtx = { ...ctx, lensDistortionActive };
+    this.environmentController?.prepareForCapture?.(captureCtx);
+    this.backgroundController?.gradientController?.prepareForCapture?.(captureCtx);
     if (this.creativeLookCaptureDeps) {
       prepareArtisticCreativeLookForCapture(ctx, this.creativeLookCaptureDeps);
     }
@@ -94,15 +96,18 @@ export class CaptureFeatureSession {
  * @param {{
  *   backgroundController?: import('../BackgroundController.js').BackgroundController,
  *   environmentController?: import('../EnvironmentController.js').EnvironmentController,
+ *   postPipeline?: import('../PostProcessingPipeline.js').PostProcessingPipeline,
  *   creativeLookCaptureDeps?: import('./captureArtisticLookPrep.js').ArtisticLookCaptureDeps,
  * }} deps
  * @param {CaptureFrameContext} ctx
  */
 export function prepareCaptureFeatures(deps, ctx) {
-  deps.environmentController?.prepareForCapture?.(ctx);
-  deps.backgroundController?.gradientController?.prepareForCapture?.(ctx);
+  const lensDistortionActive = deps.postPipeline?.lensDistortionPass?.enabled === true;
+  const captureCtx = { ...ctx, lensDistortionActive };
+  deps.environmentController?.prepareForCapture?.(captureCtx);
+  deps.backgroundController?.gradientController?.prepareForCapture?.(captureCtx);
   if (deps.creativeLookCaptureDeps) {
-    prepareArtisticCreativeLookForCapture(ctx, deps.creativeLookCaptureDeps);
+    prepareArtisticCreativeLookForCapture(captureCtx, deps.creativeLookCaptureDeps);
   }
 }
 

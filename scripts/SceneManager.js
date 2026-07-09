@@ -609,6 +609,8 @@ export class SceneManager {
     if (this.postPipeline?.bokehPass?.setSize) {
       this.postPipeline.bokehPass.setSize(width, height);
     }
+    // N8AO sizing is handled by composer.setSize above (logical × pixelRatio). A second
+    // setSize here at logical dimensions would halve the beauty buffer at Ultra DPR.
     this.syncPerspectiveCameraFovAndLens();
   }
 

@@ -67,6 +67,7 @@ export class MeshglEffectComposer extends EffectComposer {
       pass._keepExportCaptureViewport = false;
       pass.renderToScreen = this.renderToScreen && this.isLastEnabledPass(i);
       pass.render(this.renderer, this.writeBuffer, this.readBuffer, deltaTime, maskActive);
+      this._resetPassViewport(this.renderer);
 
       if (pass.needsSwap) {
         if (maskActive) {

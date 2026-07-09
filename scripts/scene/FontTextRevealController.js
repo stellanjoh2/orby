@@ -869,6 +869,19 @@ export class FontTextRevealController {
     this._wordCount = hasWordData ? Math.max(...indices) + 1 : 0;
   }
 
+  /**
+   * Rest pose plus live typography offsets (align / tracking / line-height).
+   * @param {import('./fontTextRevealTypes.js').RevealGlyphState} state
+   * @param {THREE.Vector3} [target]
+   */
+  _typographyAdjustedGlyphPosition(state, target = new THREE.Vector3()) {
+    return target.set(
+      state.restPosition.x + (Number(state.lastTypographyX) || 0),
+      state.restPosition.y + (Number(state.lastTypographyY) || 0),
+      state.restPosition.z,
+    );
+  }
+
   _buildWordGroupMeta() {
     this._wordGroupMeta = new Map();
     if (!this._glyphWordIndices || this._wordCount <= 0 || !this._glyphStates.length) return;
@@ -885,6 +898,14 @@ export class FontTextRevealController {
       const parent = this._glyphStates[glyphIndices[0]]?.group?.parent;
       if (!parent) continue;
 
+      /** @type {THREE.Vector3[]} */
+      const savedPositions = [];
+      for (const glyphIndex of glyphIndices) {
+        const state = this._glyphStates[glyphIndex];
+        savedPositions.push(state.group.position.clone());
+        state.group.position.copy(this._typographyAdjustedGlyphPosition(state));
+      }
+
       parent.updateMatrixWorld(true);
       const box = new THREE.Box3();
       for (const glyphIndex of glyphIndices) {
@@ -892,6 +913,11 @@ export class FontTextRevealController {
         group.updateMatrixWorld(true);
         box.expandByObject(group);
       }
+
+      for (let i = 0; i < glyphIndices.length; i += 1) {
+        this._glyphStates[glyphIndices[i]].group.position.copy(savedPositions[i]);
+      }
+
       if (box.isEmpty()) continue;
 
       const centerWorld = box.getCenter(new THREE.Vector3());
@@ -1326,6 +1352,10 @@ export class FontTextRevealController {
     }
 
     this._applyTypographyTracking(elapsedSec, options);
+
+    if (this.getRevealUnit() === 'word' && this._glyphWordIndices) {
+      this._buildWordGroupMeta();
+    }
 
     if (revealActive) {
       const slideDepth = this.getSlideDepth();

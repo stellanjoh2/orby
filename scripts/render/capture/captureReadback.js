@@ -3,6 +3,8 @@ import { getComposerOutputRenderTarget } from '../composerOutputBuffer.js';
 import { getDrawingBufferPixels } from '../drawingBufferSize.js';
 import { fullViewportLogicalSize } from '../fullViewportLogicalSize.js';
 import { LOG_CAPTURE_DEBUG } from '../../constants.js';
+import { ensureExportCapturePixelRatio } from './forceExportCaptureFramebuffer.js';
+import { pinRenderTargetPhysicalViewport } from '../resetRendererFullViewport.js';
 import {
   compositeAsciiGroundGridOnByteTarget,
   shouldCompositeAsciiGroundGridForCapture,
@@ -151,6 +153,42 @@ function readComposerPixelsOnce(deps, requestedW, requestedH) {
   } finally {
     byteRT.dispose();
   }
+}
+
+/**
+ * Read the default framebuffer after `composer.renderToScreen === true` at export DPR 1.
+ * Matches the live viewport path (fisheye renders to screen) — avoids ping-pong margin ghosts.
+ *
+ * @param {{ renderer: import('three').WebGLRenderer }} deps
+ * @param {{ width: number, height: number, logDebug?: boolean }} opts
+ * @returns {{ pixels: Uint8Array, width: number, height: number, topDown: true }}
+ */
+export function captureDrawingBufferReadback(deps, opts) {
+  const requestedW = Math.max(1, Math.round(opts.width));
+  const requestedH = Math.max(1, Math.round(opts.height));
+  const { renderer } = deps;
+  ensureExportCapturePixelRatio({ renderer, composer: null });
+  renderer.setRenderTarget(null);
+  pinRenderTargetPhysicalViewport(renderer, requestedW, requestedH);
+
+  const gl = renderer.getContext();
+  const pixels = new Uint8Array(requestedW * requestedH * 4);
+  gl.readPixels(0, 0, requestedW, requestedH, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+  if (opts.logDebug) {
+    logCaptureDebug(
+      { renderer, composer: null },
+      requestedW,
+      requestedH,
+      { phase: 'drawingBufferReadback' },
+    );
+  }
+
+  return {
+    pixels,
+    width: requestedW,
+    height: requestedH,
+  };
 }
 
 /**

@@ -3174,7 +3174,8 @@ body.export-overlay-debug #dropzone {
   --composition-grid-fade-duration: 0.1s;
   --comp-guide-alpha: 0.52;
   --comp-guide-alpha-muted: 0.26;
-  --comp-guide-alpha-thumb: 0.5;
+  /* Centered square — half opacity of primary guides (lower-importance framing aid) */
+  --comp-guide-alpha-thumb: calc(var(--comp-guide-alpha) * 0.5);
 }
 
 /* Only when visible: `display: flex` must not apply while `[hidden]` or it overrides UA display:none */
@@ -7892,12 +7893,16 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
 .export-capture-preview-thumb-frame {
   width: 100%;
   max-width: 20rem;
+  overflow: hidden;
 }
 
 .export-capture-preview-thumb img {
   display: block;
   width: 100%;
   height: auto;
+  max-height: 11.25rem;
+  object-fit: contain;
+  object-position: center;
   border-radius: 0.35rem;
   border: 1px solid color-mix(in srgb, var(--text-dim) 28%, transparent);
   background: var(--orby-black);

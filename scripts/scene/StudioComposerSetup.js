@@ -155,6 +155,9 @@ export function setupStudioComposer(scene) {
       scene.setHdriRotation(rot, { updateState: false, updateUi: false });
       scene.backgroundController?.refreshAppearance?.();
     };
+    scene.imageExporter.setSuppressResizeForExport = (active) => {
+      scene._suppressResizeForExport = active === true;
+    };
 
     const szComposer = new THREE.Vector2();
     scene.renderer.getSize(szComposer);

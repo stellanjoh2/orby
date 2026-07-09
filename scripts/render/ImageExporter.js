@@ -19,8 +19,9 @@ import {
   resolvePngExportCaptureSize,
 } from './capture/CaptureSizePolicy.js';
 import { runOfflineCaptureSession } from './capture/OfflineCaptureSession.js';
-import { captureReadback } from './capture/captureReadback.js';
+import { captureReadback, captureDrawingBufferReadback } from './capture/captureReadback.js';
 import { readGradientMergedFromComposerOutput } from './capture/captureGradientComposite.js';
+import { renderDisplayGradedGradientPlate } from './capture/captureDisplayGradedGradient.js';
 import {
   ensureExportCapturePixelRatio,
   forceExportCaptureFramebuffer,
@@ -96,6 +97,8 @@ export class ImageExporter {
     this.composer = composer;
     this.postPipeline = postPipeline;
     this.isLensDistortionActive = isLensDistortionActive ?? (() => false);
+    /** @type {((active: boolean) => void) | null} */
+    this.setSuppressResizeForExport = null;
     this.backgroundController = backgroundController;
     this.syncPostProcessingForLogicalSize = syncPostProcessingForLogicalSize;
     this.syncPerspectiveProjection = syncPerspectiveProjection;
@@ -564,6 +567,20 @@ export class ImageExporter {
     if (useGradientComposite) {
       const width = Math.max(1, Math.round(fallbackWidth));
       const height = Math.max(1, Math.round(fallbackHeight));
+      const gradedPlate = renderDisplayGradedGradientPlate(
+        {
+          renderer: this.renderer,
+          composer,
+          postPipeline: this.postPipeline,
+          imageExporter: this,
+          backgroundController: this.backgroundController,
+        },
+        width,
+        height,
+      );
+      if (gradedPlate) {
+        gradientCtrl.setDisplayGradedCapturePlate(gradedPlate);
+      }
       const merged = readGradientMergedFromComposerOutput({
         renderer: this.renderer,
         scene: this.scene,
@@ -583,6 +600,15 @@ export class ImageExporter {
         console.debug('[Orby capture] gradient CPU composite', { width, height });
       }
       return { pixels: merged, width, height, topDown: true };
+    }
+
+    const width = Math.max(1, Math.round(fallbackWidth));
+    const height = Math.max(1, Math.round(fallbackHeight));
+    if (this.isLensDistortionActive?.() === true && opts.transparent !== true) {
+      return captureDrawingBufferReadback(
+        { renderer: this.renderer },
+        { width, height, logDebug },
+      );
     }
 
     return captureReadback(
@@ -759,6 +785,7 @@ export class ImageExporter {
       syncPerspectiveProjection: this.syncPerspectiveProjection,
       isLensDistortionActive: this.isLensDistortionActive,
       getHdriRotationDegrees: this.getHdriRotationDegrees,
+      setSuppressResizeForExport: this.setSuppressResizeForExport ?? undefined,
       onAfterRestore: this.reapplyStudioAfterCapture,
     };
   }

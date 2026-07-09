@@ -50,6 +50,20 @@ export function getViewportBackingStorePixels(renderer) {
 }
 
 /**
+ * Logical studio viewport pixels — live gradient canvas size.
+ * Independent of Ultra DPR; the GPU blit stretches to the active render target.
+ * @param {THREE.WebGLRenderer} renderer
+ * @returns {{ width: number, height: number }}
+ */
+export function getViewportLogicalPixels(renderer) {
+  const logical = getDrawingBufferLogicalSize(renderer);
+  return {
+    width: Math.max(1, Math.round(logical.x)),
+    height: Math.max(1, Math.round(logical.y)),
+  };
+}
+
+/**
  * Resize renderer logical units + pixel ratio and coerce the WebGL backing store to match.
  * Required after export capture (setDrawingBufferSize at DPR 1) before gradient/viewport sync.
  *
