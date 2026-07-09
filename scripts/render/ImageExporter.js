@@ -11,7 +11,7 @@ import { buildScreenPixelSvgFromGlPixels } from './screenPixelSvgExport.js';
 import { SvgVectorizer } from './SvgVectorizer.js';
 import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/EffectComposer.js';
 import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js';
-import { USE_CAPTURE_SESSION, ALLOW_CAPTURE_RESAMPLE, LOG_CAPTURE_DEBUG } from '../constants.js';
+import { USE_CAPTURE_SESSION, ALLOW_CAPTURE_RESAMPLE, LOG_CAPTURE_DEBUG, resolveRenderQualityTier } from '../constants.js';
 import { fillCinematicLetterbox219Mattes } from './capture/cinematicLetterbox219.js';
 import { keyArtisticPaperBackdropToAlpha } from './capture/keyArtisticPaperBackdrop.js';
 import {
@@ -623,6 +623,8 @@ export class ImageExporter {
           const w = this.getRenderState?.()?.gridLineWidth;
           return Number.isFinite(w) ? w : 1;
         },
+        getStudioPixelRatio: () =>
+          resolveRenderQualityTier(this.getRenderState?.()?.renderQuality).maxPixelRatio,
         exportScale: opts.exportScale ?? 1,
         ensureComposerMatchesDrawingBuffer: (o) =>
           this._ensureComposerMatchesDrawingBuffer(o),

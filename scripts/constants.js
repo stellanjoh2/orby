@@ -98,6 +98,40 @@ export function wireframeLineWidthToPixels(width) {
   return clampWireframeLineWidth(width);
 }
 
+/** Default ground grid thickness slider value (maps to CSS-pixel weight via LineMaterial). */
+export const DEFAULT_GRID_LINE_WIDTH = 1;
+
+export function clampGridLineWidth(value) {
+  return Math.min(2.5, Math.max(0.5, Number(value) || DEFAULT_GRID_LINE_WIDTH));
+}
+
+/**
+ * Ground grid linewidth in framebuffer pixels. Weight tracks render-quality tier DPR (Ultra = 2×)
+ * even when export capture runs at DPR 1. When the buffer upscales to the display (Medium/Low on
+ * HiDPI), enforces a minimum width so LineMaterial edge falloff survives the browser scale-up.
+ * @param {number} gridLineWidth — studio slider (0.5–2.5)
+ * @param {number} [rendererPixelRatio=1]
+ * @param {number} [displayPixelRatio=rendererPixelRatio]
+ * @param {number} [studioPixelRatio=rendererPixelRatio]
+ */
+export function resolveViewportGridLineWidthPx(
+  gridLineWidth,
+  rendererPixelRatio = 1,
+  displayPixelRatio = rendererPixelRatio,
+  studioPixelRatio = rendererPixelRatio,
+) {
+  const base = clampGridLineWidth(gridLineWidth);
+  const rDpr = Math.max(0.25, Number(rendererPixelRatio) || 1);
+  const dDpr = Math.max(rDpr, Number(displayPixelRatio) || rDpr);
+  const studioDpr = Math.max(0.25, Number(studioPixelRatio) || rDpr);
+  let linePx = base * studioDpr;
+  if (dDpr > rDpr + 1e-3) {
+    // Medium/Low on Retina: 1 framebuffer px upscales blocky — need ≥2 px for soft edges.
+    linePx = Math.max(linePx, 2);
+  }
+  return Math.min(5, Math.max(0.5, linePx));
+}
+
 export const PODIUM_TOP_RADIUS_OFFSET = 0.08;
 export const PODIUM_SEGMENTS = 96;
 /** Samples along the podium’s rounded top outer edge (replaces a single flat chamfer). */

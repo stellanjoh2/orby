@@ -1,17 +1,22 @@
+import { resolveViewportGridLineWidthPx } from '../../constants.js';
 import { renderGroundGridOverlay } from '../transformGizmoLayers.js';
-
-const clampGridLineWidth = (value) => Math.min(2.5, Math.max(0.5, Number(value) || 1));
 
 /**
  * Screen-space grid linewidth for capture readback. Scales with export size so 2× PNG matches
  * viewport weight (LineMaterial linewidth is absolute pixels on the render target).
  * @param {number} gridLineWidth — studio slider (0.5–2.5)
  * @param {number} [exportScale=1] — export UI size multiplier (1 or 2)
+ * @param {number} [studioPixelRatio=1] — render quality tier DPR (Ultra = 2)
  */
-export function resolveCaptureGridLineWidthPx(gridLineWidth, exportScale = 1) {
-  const base = clampGridLineWidth(gridLineWidth);
+export function resolveCaptureGridLineWidthPx(
+  gridLineWidth,
+  exportScale = 1,
+  studioPixelRatio = 1,
+) {
   const scale = Math.max(0.25, Number(exportScale) || 1);
-  return Math.min(5, Math.max(0.5, base * scale));
+  const studio = Math.max(0.25, Number(studioPixelRatio) || 1);
+  const linePx = resolveViewportGridLineWidthPx(gridLineWidth, 1, 1, studio);
+  return Math.min(5, Math.max(0.5, linePx * scale));
 }
 
 /**
@@ -35,6 +40,7 @@ export function shouldCompositeAsciiGroundGridForCapture(deps) {
  *   camera: import('three').Camera,
  *   getGroundGrid?: () => import('three').Object3D | null | undefined,
  *   getGridLineWidth?: () => number,
+ *   getStudioPixelRatio?: () => number,
  *   exportScale?: number,
  * }} deps
  * @param {import('three').WebGLRenderTarget} byteTarget
@@ -48,6 +54,7 @@ export function compositeAsciiGroundGridOnByteTarget(deps, byteTarget) {
   const lineWidthPx = resolveCaptureGridLineWidthPx(
     deps.getGridLineWidth?.() ?? 1,
     deps.exportScale ?? 1,
+    deps.getStudioPixelRatio?.() ?? deps.exportScale ?? 1,
   );
   const prevState = mats.map((mat) => ({
     linewidth: mat?.linewidth,

@@ -436,6 +436,8 @@ export class SceneManager {
       baseSurfaceScale: state.baseSurfaceScale,
       baseSurfaceStrength: state.baseSurfaceStrength,
       renderer: this.renderer,
+      getStudioPixelRatio: () =>
+        resolveRenderQualityTier(this.stateStore.getState().renderQuality).maxPixelRatio,
       baseGlassSurface: !!(state.baseGlassSurface ?? state.podiumReflectMesh ?? false),
       baseGlassBlur: state.baseGlassBlur ?? DEFAULT_BASE_GLASS_BLUR,
       baseGlassAmount: state.baseGlassAmount ?? DEFAULT_BASE_GLASS_AMOUNT,

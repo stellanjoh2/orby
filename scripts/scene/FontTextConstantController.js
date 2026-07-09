@@ -130,7 +130,7 @@ export class FontTextConstantController {
     if (reapply) {
       const reveal = this._revealController;
       if (!this.isEnabled() && reveal) {
-        this._snapGlyphsWithoutConstant(reveal);
+        this._disableConstantMotion(reveal);
       } else {
         this._reapplyComposite();
       }
@@ -194,7 +194,7 @@ export class FontTextConstantController {
     reveal.ensureBoundToModel(model ?? reveal._boundModel);
     this._syncConstantTypeChange();
     if (!this.isEnabled()) {
-      this._snapGlyphsWithoutConstant(reveal);
+      this._disableConstantMotion(reveal);
     } else {
       this._reapplyComposite();
     }
@@ -269,6 +269,10 @@ export class FontTextConstantController {
 
     const reveal = this._revealController;
     if (!reveal) return;
+    if (!isFontConstantTypeEnabled(nextType, this.getIntensity())) {
+      this._disableConstantMotion(reveal);
+      return;
+    }
     this._snapGlyphsWithoutConstant(reveal);
   }
 
@@ -293,12 +297,52 @@ export class FontTextConstantController {
     reveal.applyAtTime(this._resolveRevealElapsedForComposite(reveal), { skipConstant: true });
   }
 
+  /**
+   * Turn off looping motion and restore the pre-loop reveal/rest pose (never
+   * leave glyphs frozen mid-cycle).
+   * @param {import('./FontTextRevealController.js').FontTextRevealController} reveal
+   */
+  _disableConstantMotion(reveal) {
+    if (!reveal?.ensureBoundToModel(reveal._boundModel)) return;
+
+    this._elapsed = 0;
+    this.setPreviewElapsed(0);
+    this._lastAppliedType = this.getType();
+
+    const inPreview = reveal.isPreviewPlaying?.() || reveal.isPreviewPaused?.();
+    const previewIsConstantOnly = inPreview
+      && !reveal.isEnabled?.()
+      && !reveal.isTrackingAnimatorActive?.();
+
+    if (previewIsConstantOnly) {
+      reveal._previewMode = 'idle';
+      reveal._stopPreviewLoop?.();
+      reveal._resetCompositeClocks?.();
+      reveal.applyAtTime(0, { skipConstant: true });
+      reveal._notifyPreviewTime?.();
+      return;
+    }
+
+    if (inPreview) {
+      reveal.applyAtTime(reveal.getPreviewElapsed(), { skipConstant: true });
+      return;
+    }
+
+    reveal._syncIdleCompositeClocks?.();
+    reveal.applyAtTime(reveal.getPreviewElapsed(), { skipConstant: true });
+  }
+
   _reapplyComposite() {
     const reveal = this._revealController;
     if (!reveal) return;
     if (reveal.isPreviewPlaying?.()) return;
 
     if (!reveal.ensureBoundToModel(reveal._boundModel)) return;
+
+    if (!this.isEnabled()) {
+      this._disableConstantMotion(reveal);
+      return;
+    }
 
     reveal.applyAtTime(this._resolveRevealElapsedForComposite(reveal));
   }

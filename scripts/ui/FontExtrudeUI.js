@@ -118,6 +118,8 @@ export class FontExtrudeUI {
     /** @type {Promise<void> | null} */
     this._fontsLoadPromise = null;
     this._generating = false;
+    /** Skip controller sync on first constant UI hydrate; set after first pass. */
+    this._lastConstantSettingsSignature = null;
     this._fonts = [];
     this._fontFamilies = [];
     this._fontFamilyByPostscript = new Map();
@@ -1473,16 +1475,35 @@ export class FontExtrudeUI {
     const constantType = normalizeFontConstantType(
       state?.fontExtrude?.constantType ?? DEFAULT_FONT_CONSTANT_TYPE,
     );
-    if (this.els.constantType && document.activeElement !== this.els.constantType) {
-      this.els.constantType.value = constantType;
-    }
-    const constantTypeForIntensity = normalizeFontConstantType(
-      state?.fontExtrude?.constantType ?? DEFAULT_FONT_CONSTANT_TYPE,
-    );
+    const constantTypeForIntensity = constantType;
     const constantIntensity = clampFontConstantIntensityForType(
       constantTypeForIntensity,
       state?.fontExtrude?.constantIntensity ?? DEFAULT_FONT_CONSTANT_INTENSITY,
     );
+    const constantSpeedSec = clampFontConstantSpeedSec(
+      state?.fontExtrude?.constantSpeedSec ?? DEFAULT_FONT_CONSTANT_SPEED_SEC,
+    );
+    const constantSpread = clampFontConstantSpread(
+      state?.fontExtrude?.constantSpread ?? DEFAULT_FONT_CONSTANT_SPREAD,
+    );
+    const signature = [
+      constantType,
+      constantIntensity,
+      constantSpeedSec,
+      constantSpread,
+    ].join('|');
+    const signatureChanged =
+      this._lastConstantSettingsSignature !== null
+      && this._lastConstantSettingsSignature !== signature;
+    const userEditingConstant =
+      document.activeElement === this.els.constantType
+      || document.activeElement === this.els.constantIntensity
+      || document.activeElement === this.els.constantSpeed
+      || document.activeElement === this.els.constantSpread;
+
+    if (this.els.constantType && document.activeElement !== this.els.constantType) {
+      this.els.constantType.value = constantType;
+    }
     if (this.els.constantIntensity && document.activeElement !== this.els.constantIntensity) {
       this.els.constantIntensity.value = String(constantIntensity);
       this.ui.updateValueLabel(
@@ -1490,16 +1511,10 @@ export class FontExtrudeUI {
         formatFontConstantIntensityLabel(constantTypeForIntensity, constantIntensity),
       );
     }
-    const constantSpeedSec = clampFontConstantSpeedSec(
-      state?.fontExtrude?.constantSpeedSec ?? DEFAULT_FONT_CONSTANT_SPEED_SEC,
-    );
     if (this.els.constantSpeed && document.activeElement !== this.els.constantSpeed) {
       this.els.constantSpeed.value = String(constantSpeedSec);
       this.ui.updateValueLabel('fontExtrudeConstantSpeed', `${constantSpeedSec.toFixed(1)}s`);
     }
-    const constantSpread = clampFontConstantSpread(
-      state?.fontExtrude?.constantSpread ?? DEFAULT_FONT_CONSTANT_SPREAD,
-    );
     if (this.els.constantSpread && document.activeElement !== this.els.constantSpread) {
       this.els.constantSpread.value = String(constantSpread);
       this.ui.updateValueLabel(
@@ -1508,6 +1523,13 @@ export class FontExtrudeUI {
       );
     }
     this._syncConstantControlsVisibility();
+
+    if (signatureChanged && !userEditingConstant) {
+      this._withConstantController((controller, model) => {
+        controller.onSettingsChange?.(model);
+      });
+    }
+    this._lastConstantSettingsSignature = signature;
   }
 
   _syncConstantControlsVisibility() {

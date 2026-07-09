@@ -18,6 +18,9 @@ import {
   DEFAULT_BACKDROP_METALNESS,
   DEFAULT_BACKDROP_ROUGHNESS,
   ORBY_LIME,
+  DEFAULT_GRID_LINE_WIDTH,
+  clampGridLineWidth,
+  resolveViewportGridLineWidthPx,
 } from '../constants.js';
 import { BaseGlassSeparableBlur } from './BaseGlassSeparableBlur.js';
 import { effectiveRoughnessWithHdriBlur } from './hdriBlur.js';
@@ -160,14 +163,7 @@ function applyBaseGlassReflectorShader(material, reflection01, surfaceBrightness
 
 const clampScale = (value) => Math.min(3, Math.max(0.5, value));
 const clampBaseScale = (value) => Math.min(10, Math.max(0.5, value));
-const clampGridLineWidth = (value) => Math.min(2.5, Math.max(0.5, Number(value) || 1));
 const GRID_DIVISIONS = 32;
-const DEFAULT_GRID_LINE_WIDTH = 1;
-
-/** Slider value maps to screen-space line width in pixels (LineMaterial). */
-function gridLineWidthToPixels(width) {
-  return clampGridLineWidth(width);
-}
 
 function buildGridLinePositions(size, divisions) {
   const half = size / 2;
@@ -383,6 +379,7 @@ export class GroundController {
 
     /** WebGLRenderer — required for planar mesh reflection on the base top. */
     this.renderer = options.renderer ?? null;
+    this.getStudioPixelRatio = options.getStudioPixelRatio ?? null;
     /** Planar “glass surface” reflection (realtime scene mesh; optional toggle). */
     const glassFromState =
       options.baseGlassSurface !== undefined
@@ -841,7 +838,7 @@ export class GroundController {
     );
   }
 
-  _syncGridLineResolution(width, height) {
+  _syncGridLineMaterial(width, height) {
     if (!this.gridMaterials?.length) return;
     const logical = new THREE.Vector2();
     if (this.renderer?.getSize) {
@@ -849,16 +846,26 @@ export class GroundController {
     }
     const w = width ?? (logical.x > 0 ? logical.x : window.innerWidth);
     const h = height ?? (logical.y > 0 ? logical.y : window.innerHeight);
-    const dpr = Math.max(1e-6, this.renderer?.getPixelRatio?.() ?? window.devicePixelRatio ?? 1);
-    const resX = Math.max(1, Math.floor(w * dpr));
-    const resY = Math.max(1, Math.floor(h * dpr));
+    const rDpr = Math.max(1e-6, this.renderer?.getPixelRatio?.() ?? 1);
+    const dDpr = Math.max(rDpr, window.devicePixelRatio ?? rDpr);
+    const studioDpr = Math.max(rDpr, this.getStudioPixelRatio?.() ?? rDpr);
+    const resX = Math.max(1, Math.floor(w * rDpr));
+    const resY = Math.max(1, Math.floor(h * rDpr));
+    const linePx = resolveViewportGridLineWidthPx(
+      this.gridLineWidth,
+      rDpr,
+      dDpr,
+      studioDpr,
+    );
     this.gridMaterials.forEach((mat) => {
-      if (mat?.resolution) mat.resolution.set(resX, resY);
+      if (!mat) return;
+      if (mat.resolution) mat.resolution.set(resX, resY);
+      mat.linewidth = linePx;
     });
   }
 
   resizeGridLines(width, height) {
-    this._syncGridLineResolution(width, height);
+    this._syncGridLineMaterial(width, height);
   }
 
   /** Full-opacity grid lines write depth so wide Line2 quads do not draw through solid meshes (esp. on ANGLE/WebGL). */
@@ -882,9 +889,17 @@ export class GroundController {
     const geometry = new LineSegmentsGeometry();
     geometry.setPositions(buildGridLinePositions(size, GRID_DIVISIONS));
     const gridOpaque = this.wireOpacity >= 1;
+    const rDpr = Math.max(1e-6, this.renderer?.getPixelRatio?.() ?? 1);
+    const dDpr = Math.max(rDpr, window.devicePixelRatio ?? rDpr);
+    const studioDpr = Math.max(rDpr, this.getStudioPixelRatio?.() ?? rDpr);
     const material = new LineMaterial({
       color: new THREE.Color(this.wireColor).getHex(),
-      linewidth: gridLineWidthToPixels(this.gridLineWidth),
+      linewidth: resolveViewportGridLineWidthPx(
+        this.gridLineWidth,
+        rDpr,
+        dDpr,
+        studioDpr,
+      ),
       transparent: !gridOpaque,
       opacity: this.wireOpacity,
       depthWrite: gridOpaque,
@@ -896,7 +911,7 @@ export class GroundController {
     this.grid.userData.skipBokehDepth = true;
     this.gridMaterials = [material];
     this._syncGridMaterialDepthState();
-    this._syncGridLineResolution();
+    this._syncGridLineMaterial();
     this.grid.visible = this.wireEnabled;
     this.scene.add(this.grid);
     this.setGridY(this.gridY);
@@ -1017,12 +1032,7 @@ export class GroundController {
 
   setGridLineWidth(value) {
     this.gridLineWidth = clampGridLineWidth(value ?? this.gridLineWidth);
-    const pixels = gridLineWidthToPixels(this.gridLineWidth);
-    if (this.gridMaterials) {
-      this.gridMaterials.forEach((mat) => {
-        if (mat) mat.linewidth = pixels;
-      });
-    }
+    this._syncGridLineMaterial();
   }
 
   setBackdropEnabled(enabled) {
