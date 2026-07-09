@@ -28,6 +28,7 @@ import {
   clampFontRevealEmissiveDecaySec,
   clampFontRevealEmissiveStrength,
   computeGlyphEmissiveSlamFactor,
+  computeRevealEmissiveSettledElapsedSec,
   DEFAULT_FONT_REVEAL_EMISSIVE_COLOR,
   DEFAULT_FONT_REVEAL_EMISSIVE_DECAY_SEC,
   DEFAULT_FONT_REVEAL_EMISSIVE_SLAM,
@@ -534,7 +535,18 @@ export class FontTextRevealController {
   _revealFullySettledElapsedSec() {
     const duration = this.getDurationSec();
     const decaySec = this._revealEmissiveDecaySec();
-    return duration + decaySec;
+    if (decaySec <= 0) return duration;
+    const count =
+      this.getRevealUnit() === 'word' && this._wordCount > 0
+        ? this._wordCount
+        : this._glyphStates.length;
+    if (count <= 0) return duration;
+    return computeRevealEmissiveSettledElapsedSec(
+      count,
+      duration,
+      decaySec,
+      this._revealTimingOptions(),
+    );
   }
 
   /**
@@ -546,13 +558,9 @@ export class FontTextRevealController {
   _resolveExportRevealElapsed(exportTimeSec) {
     const duration = this.getDurationSec();
     if (duration <= 0) return 0;
-    const decaySec = this._revealEmissiveDecaySec();
-    const endTime = duration + decaySec;
+    const endTime = this._revealFullySettledElapsedSec();
     const t = Math.max(0, exportTimeSec);
-    if (decaySec > 0) {
-      return Math.min(t, endTime);
-    }
-    return Math.min(t, duration);
+    return Math.min(t, endTime);
   }
 
   _areRevealEmissiveSlamMaterialsSettled(elapsedSec = this._elapsed) {

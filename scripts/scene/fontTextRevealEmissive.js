@@ -1,11 +1,7 @@
 import * as THREE from 'three';
 import { ORBY_LIME } from '../constants.js';
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
-import {
-  computeGlyphRevealLandSec,
-  computeGlyphRevealStartSec,
-  easeSlideSoftOut,
-} from './fontTextRevealTypes.js';
+import { computeGlyphRevealStartSec } from './fontTextRevealTypes.js';
 
 export const DEFAULT_FONT_REVEAL_EMISSIVE_SLAM = false;
 export const DEFAULT_FONT_REVEAL_EMISSIVE_STRENGTH = 1;
@@ -13,7 +9,7 @@ export const DEFAULT_FONT_REVEAL_EMISSIVE_DECAY_SEC = 0.35;
 export const DEFAULT_FONT_REVEAL_EMISSIVE_COLOR = ORBY_LIME;
 
 export const MIN_FONT_REVEAL_EMISSIVE_STRENGTH = 0;
-export const MAX_FONT_REVEAL_EMISSIVE_STRENGTH = 2;
+export const MAX_FONT_REVEAL_EMISSIVE_STRENGTH = 5;
 export const MIN_FONT_REVEAL_EMISSIVE_DECAY_SEC = 0.05;
 export const MAX_FONT_REVEAL_EMISSIVE_DECAY_SEC = 0.8;
 
@@ -50,7 +46,8 @@ export function normalizeFontRevealEmissiveColor(value) {
 }
 
 /**
- * 0–1 emissive envelope: full while the glyph is revealing, then ease-out decay after land.
+ * 0–1 emissive envelope: peak on the first reveal frame, then linear decay to rest.
+ * Decay duration matches Emissive Time 1:1 (no hold through the reveal motion).
  * @param {number} glyphIndex
  * @param {number} glyphCount
  * @param {number} elapsedSec
@@ -73,21 +70,35 @@ export function computeGlyphEmissiveSlamFactor(
     totalDurationSec,
     timing,
   );
-  const landElapsed = computeGlyphRevealLandSec(
-    glyphIndex,
-    glyphCount,
-    totalDurationSec,
-    timing,
-  );
 
   if (elapsedSec < slotStart) return 0;
 
-  if (elapsedSec < landElapsed) return 1;
+  const sinceStart = elapsedSec - slotStart;
+  if (sinceStart >= decaySec) return 0;
+  return 1 - sinceStart / decaySec;
+}
 
-  const sinceLand = elapsedSec - landElapsed;
-  if (sinceLand >= decaySec) return 0;
-  const decayLinear = sinceLand / decaySec;
-  return easeSlideSoftOut(1 - decayLinear);
+/**
+ * Wall-clock time when every glyph's reveal emissive slam has reached rest.
+ * @param {number} glyphCount
+ * @param {number} totalDurationSec
+ * @param {number} decaySec
+ * @param {{ slideDepth?: number, slideTime?: number, staggerEasing?: string }} [timing]
+ */
+export function computeRevealEmissiveSettledElapsedSec(
+  glyphCount,
+  totalDurationSec,
+  decaySec,
+  timing = {},
+) {
+  if (glyphCount <= 0 || totalDurationSec <= 0) return totalDurationSec;
+  if (decaySec <= 0) return totalDurationSec;
+  let maxEnd = 0;
+  for (let i = 0; i < glyphCount; i += 1) {
+    const start = computeGlyphRevealStartSec(i, glyphCount, totalDurationSec, timing);
+    maxEnd = Math.max(maxEnd, start + decaySec);
+  }
+  return Math.max(totalDurationSec, maxEnd);
 }
 
 /**

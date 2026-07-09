@@ -1667,7 +1667,7 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
 export const FONT_EXTRUDE_REVEAL_EMISSIVE_HTML = `
               <div class="font-extrude-reveal-emissive" role="group" aria-label="Emissive reveal">
                 <label class="slider-line slider-line--toggle-only font-extrude-reveal-emissive-slam">
-                  <span data-tooltip="Each letter reveals with emissive glow, then fades to rest after it lands">Emissive Slam</span>
+                  <span data-tooltip="Each letter flashes emissive at peak on its first reveal frame, then fades to rest over Emissive Time">Emissive Slam</span>
                   <label class="effect-toggle font-extrude-reveal-emissive-toggle">
                     <input type="checkbox" id="fontExtrudeRevealEmissiveSlam" />
                     <span class="effect-indicator" aria-hidden="true"></span>
@@ -1675,12 +1675,12 @@ export const FONT_EXTRUDE_REVEAL_EMISSIVE_HTML = `
                   </label>
                 </label>
                 <label class="slider-line font-extrude-reveal-emissive-strength font-extrude-reveal-emissive-detail" hidden>
-                  <span data-tooltip="Emissive intensity while each letter is revealing and during fade-out">Emissive Strength</span>
-                  <input id="fontExtrudeRevealEmissiveStrength" type="range" min="0" max="2" step="0.05" value="1" />
+                  <span data-tooltip="Peak emissive intensity on the first reveal frame of each letter">Emissive Strength</span>
+                  <input id="fontExtrudeRevealEmissiveStrength" type="range" min="0" max="5" step="0.05" value="1" />
                   <span class="value" data-output="fontExtrudeRevealEmissiveStrength">1.00</span>
                 </label>
                 <label class="slider-line font-extrude-reveal-emissive-decay font-extrude-reveal-emissive-detail" hidden>
-                  <span data-tooltip="How long emissive fades to rest after each letter lands">Emissive Time</span>
+                  <span data-tooltip="Seconds for emissive to fade from peak to rest after each letter begins revealing">Emissive Time</span>
                   <input id="fontExtrudeRevealEmissiveDecay" type="range" min="0.05" max="0.8" step="0.01" value="0.35" />
                   <span class="value" data-output="fontExtrudeRevealEmissiveDecay">0.35s</span>
                 </label>
