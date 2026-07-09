@@ -33,7 +33,7 @@ import { restoreRevealGlyphEmissive } from './fontTextRevealEmissive.js';
  */
 
 /** @typedef {'none' | 'scale' | 'fade' | 'slideUp' | 'slideDown' | 'drop' | 'dropSmooth' | 'pop' | 'rotate' | 'elastic'} FontRevealTypeId */
-/** @typedef {'back' | 'front'} FontRevealSlideDirection */
+/** @typedef {'back' | 'front' | 'left' | 'right'} FontRevealSlideDirection */
 /** @typedef {'character' | 'word'} FontRevealUnitId */
 
 export const DEFAULT_FONT_REVEAL_TYPE = 'scale';
@@ -128,8 +128,41 @@ export const FONT_REVEAL_TYPE_OPTIONS = [
 ];
 
 const VALID_IDS = new Set(FONT_REVEAL_TYPE_OPTIONS.map((o) => o.id));
-const VALID_SLIDE_DIRECTIONS = new Set(['back', 'front']);
+const _SLIDE_AXIS = new THREE.Vector3();
+const _SLIDE_Y_AXIS = new THREE.Vector3(0, 1, 0);
+
+/**
+ * @param {FontRevealSlideDirection} slideDirection
+ * @param {number} rotationY
+ * @returns {{ axis: THREE.Vector3, sign: number }}
+ */
+function resolveRevealSlideTravel(slideDirection, rotationY) {
+  const normalized = normalizeFontRevealSlideDirection(slideDirection);
+  let sign = -1;
+  switch (normalized) {
+    case 'front':
+      _SLIDE_AXIS.set(0, 0, 1);
+      sign = 1;
+      break;
+    case 'right':
+      _SLIDE_AXIS.set(1, 0, 0);
+      sign = 1;
+      break;
+    case 'left':
+      _SLIDE_AXIS.set(1, 0, 0);
+      sign = -1;
+      break;
+    case 'back':
+    default:
+      _SLIDE_AXIS.set(0, 0, 1);
+      sign = -1;
+      break;
+  }
+  _SLIDE_AXIS.applyAxisAngle(_SLIDE_Y_AXIS, rotationY);
+  return { axis: _SLIDE_AXIS, sign };
+}
 const VALID_REVEAL_UNITS = new Set(FONT_REVEAL_UNIT_OPTIONS.map((o) => o.id));
+const VALID_SLIDE_DIRECTIONS = new Set(['back', 'front', 'left', 'right']);
 
 /** @param {unknown} value @returns {FontRevealTypeId} */
 export function normalizeFontRevealType(value) {
@@ -681,11 +714,9 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
 
   if (slideDepth > 0) {
     const travelEased = easeSlideSoftOut(slideProgress);
-    const directionSign = slideDirection === 'front' ? 1 : -1;
-    const offset = directionSign * slideDepth * (1 - travelEased);
-    const slideAxis = new THREE.Vector3(0, 0, 1);
-    slideAxis.applyAxisAngle(new THREE.Vector3(0, 1, 0), group.rotation.y);
-    group.position.addScaledVector(slideAxis, offset);
+    const { axis, sign } = resolveRevealSlideTravel(slideDirection, group.rotation.y);
+    const offset = sign * slideDepth * (1 - travelEased);
+    group.position.addScaledVector(axis, offset);
   }
 }
 

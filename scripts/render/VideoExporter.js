@@ -24,6 +24,8 @@ import {
 import { lightsRotationForExportFrame } from '../config/lightsAutoRotate.js';
 import { buildOfflineExportOverlaySummary } from './offlineExportOverlaySummary.js';
 import { forceExportCaptureFramebuffer } from './capture/forceExportCaptureFramebuffer.js';
+import { runOfflineCaptureSession } from './capture/OfflineCaptureSession.js';
+import { resolvePngExportCaptureSize } from './capture/CaptureSizePolicy.js';
 import {
   exportVideoAspectSequenceSuffix,
   getExportVideoResolutionPixelLabel,
@@ -622,6 +624,132 @@ export class VideoExporter {
       bytes[i] = binary.charCodeAt(i);
     }
     return new Blob([bytes], { type: mime });
+  }
+
+  _videoExportSizeSnapshot(exportWidth, exportHeight) {
+    const previousSize = new THREE.Vector2();
+    this.renderer.getSize(previousSize);
+    return {
+      previousSize,
+      previousPixelRatio: this.renderer.getPixelRatio(),
+      previousAspect: this.camera.aspect,
+      exportWidth: Math.max(1, Math.round(exportWidth)),
+      exportHeight: Math.max(1, Math.round(exportHeight)),
+    };
+  }
+
+  _downscaleCaptureCanvasToVideoExport(canvas, outputWidth, outputHeight) {
+    if (canvas.width === outputWidth && canvas.height === outputHeight) {
+      return { canvas, cropped: false };
+    }
+    const out = document.createElement('canvas');
+    out.width = outputWidth;
+    out.height = outputHeight;
+    const ctx = out.getContext('2d');
+    if (!ctx) {
+      return { canvas, cropped: false };
+    }
+    const srcAspect = canvas.width / Math.max(1, canvas.height);
+    const dstAspect = outputWidth / Math.max(1, outputHeight);
+    let sx = 0;
+    let sy = 0;
+    let sw = canvas.width;
+    let sh = canvas.height;
+    let cropped = false;
+    if (Math.abs(srcAspect - dstAspect) > 1e-4) {
+      cropped = true;
+      if (srcAspect > dstAspect) {
+        sw = Math.round(canvas.height * dstAspect);
+        sx = Math.floor((canvas.width - sw) / 2);
+      } else {
+        sh = Math.round(canvas.width / dstAspect);
+        sy = Math.floor((canvas.height - sh) / 2);
+      }
+    }
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, outputWidth, outputHeight);
+    return { canvas: out, cropped };
+  }
+
+  /**
+   * Opaque PNG frame — same transactional path as still Export Image (OfflineCaptureSession).
+   * Renders at viewport backing-store pixels (still PNG path), then downscales to video preset.
+   * Forcing 1920×1080 GL resize from Ultra leaves partial viewports in bloom/AO buffers.
+   * @param {object} frameParams — `_applyVideoExportFrame` args
+   * @param {{ exportWidth?: number, exportHeight?: number }} [opts]
+   * @returns {Promise<{ blob: Blob, width: number, height: number, cropped: boolean }>}
+   */
+  async _captureOpaqueFrameViaOfflineSession(frameParams, { exportWidth, exportHeight } = {}) {
+    const imageExporter = this.imageExporter;
+    if (!imageExporter?._captureSessionDeps) {
+      this._syncExportCaptureFramebuffer();
+      this._applyVideoExportFrame(frameParams);
+      return this._captureCurrentFramePngBlob({ exportWidth, exportHeight });
+    }
+
+    const outputWidth = Math.max(
+      1,
+      Math.round(exportWidth ?? this._exportCaptureSize?.width ?? 1),
+    );
+    const outputHeight = Math.max(
+      1,
+      Math.round(exportHeight ?? this._exportCaptureSize?.height ?? 1),
+    );
+    const cinematicLetterbox219 = this._resolveCinematicLetterbox219();
+
+    const renderCaptureSize = resolvePngExportCaptureSize(
+      this.renderer,
+      1,
+      imageExporter._maxExportPixelArea,
+    );
+
+    return runOfflineCaptureSession(imageExporter._captureSessionDeps(), async (session) => {
+      const synced = session.applyCaptureSize(renderCaptureSize);
+      const renderW = synced.width;
+      const renderH = synced.height;
+
+      this._applyVideoExportFrame(frameParams);
+      session.renderFrame({ transparent: false });
+
+      const gl = this.renderer.getContext();
+      if (gl && typeof gl.finish === 'function') {
+        gl.finish();
+      }
+
+      let canvas = imageExporter._captureComposerOutputAsCanvas(renderW, renderH, {
+        cinematicLetterbox219,
+        retryRender: () => {
+          this._applyVideoExportFrame(frameParams);
+          session.renderFrame({ transparent: false });
+          if (gl && typeof gl.finish === 'function') {
+            gl.finish();
+          }
+        },
+      });
+      if (!canvas) {
+        throw new Error('Video export frame capture failed');
+      }
+
+      const { canvas: outputCanvas, cropped } = this._downscaleCaptureCanvasToVideoExport(
+        canvas,
+        outputWidth,
+        outputHeight,
+      );
+
+      const blob = await new Promise((resolve, reject) => {
+        outputCanvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error('PNG encode failed'))),
+          'image/png',
+        );
+      });
+      return {
+        blob,
+        width: outputWidth,
+        height: outputHeight,
+        cropped,
+      };
+    });
   }
 
   /**
@@ -1336,16 +1464,21 @@ export class VideoExporter {
     let transparentSetupSnapshot = null;
 
     const resolutionLabel = getExportVideoResolutionPixelLabel(resolution, aspectRatio);
-    const sizeSnapshot = this._applyVideoExportSize(
-      outputSize.width,
-      outputSize.height,
-      aspectRatio,
-    );
+    const usePersistentExportSize = shouldUseTransparentFrames;
+    const sizeSnapshot = usePersistentExportSize
+      ? this._applyVideoExportSize(
+          outputSize.width,
+          outputSize.height,
+          aspectRatio,
+        )
+      : this._videoExportSizeSnapshot(outputSize.width, outputSize.height);
     this._exportCaptureSize = {
       width: sizeSnapshot.exportWidth,
       height: sizeSnapshot.exportHeight,
     };
-    this._startVideoCaptureFeatureSession(sizeSnapshot.previousSize);
+    if (usePersistentExportSize) {
+      this._startVideoCaptureFeatureSession(sizeSnapshot.previousSize);
+    }
 
     const exportSession = {
       movements,
@@ -1373,7 +1506,7 @@ export class VideoExporter {
         transparentSetupSnapshot = this._applyTransparentFrameSetup();
       }
       this._beginExportSession({ movements, meshAnimation });
-      const frameCapture = captureVideoExportFrameBlob(
+      const frameCapture = await captureVideoExportFrameBlob(
         this,
         {
           movements,
@@ -1577,16 +1710,21 @@ export class VideoExporter {
       this.ui?.updateOfflineExportOverlayProgress?.({ frameIndex: 0, totalFrames });
       await this._yieldUntilPaintCommitted();
     }
-    const sizeSnapshot = this._applyVideoExportSize(
-      outputSize.width,
-      outputSize.height,
-      aspectRatio,
-    );
+    const usePersistentExportSize = format === 'mp4' || shouldUseTransparentFrames;
+    const sizeSnapshot = usePersistentExportSize
+      ? this._applyVideoExportSize(
+          outputSize.width,
+          outputSize.height,
+          aspectRatio,
+        )
+      : this._videoExportSizeSnapshot(outputSize.width, outputSize.height);
     this._exportCaptureSize = {
       width: sizeSnapshot.exportWidth,
       height: sizeSnapshot.exportHeight,
     };
-    this._startVideoCaptureFeatureSession(sizeSnapshot.previousSize);
+    if (usePersistentExportSize) {
+      this._startVideoCaptureFeatureSession(sizeSnapshot.previousSize);
+    }
     const exportSession = {
       movements,
       movementEasing,
@@ -1704,7 +1842,7 @@ export class VideoExporter {
             break;
           }
           const t = this._cameraMovementLinearT(i, fps, cameraMovementDurationSec);
-          const { blob } = captureVideoExportFrameBlob(
+          const { blob } = await captureVideoExportFrameBlob(
             this,
             {
               movements,

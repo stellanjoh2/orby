@@ -46,16 +46,23 @@ export function resolveVideoExportFrameTiming(
 }
 
 /**
- * Apply export frame drives, sync framebuffer, and read back one PNG blob.
- * Caller owns session setup (size, feature hooks, export drives begin/end).
+ * Apply export frame drives and read back one PNG blob.
+ * Opaque frames use OfflineCaptureSession (same path as still Export Image).
+ * Transparent frames keep the legacy persistent-resize path.
  *
  * @param {import('../VideoExporter.js').VideoExporter} exporter
  * @param {object} frameParams — `_applyVideoExportFrame` args
  * @param {{ transparent?: boolean, exportWidth?: number, exportHeight?: number, transparentFraming?: import('../imageExportFraming.js').TransparentFraming }} [captureOpts]
- * @returns {{ blob: Blob, width: number, height: number, cropped: boolean }}
+ * @returns {Promise<{ blob: Blob, width: number, height: number, cropped: boolean }>}
  */
-export function captureVideoExportFrameBlob(exporter, frameParams, captureOpts = {}) {
-  exporter._syncExportCaptureFramebuffer();
-  exporter._applyVideoExportFrame(frameParams);
-  return exporter._captureCurrentFramePngBlob(captureOpts);
+export async function captureVideoExportFrameBlob(exporter, frameParams, captureOpts = {}) {
+  if (captureOpts.transparent) {
+    exporter._syncExportCaptureFramebuffer();
+    exporter._applyVideoExportFrame(frameParams);
+    return exporter._captureCurrentFramePngBlob(captureOpts);
+  }
+  return exporter._captureOpaqueFrameViaOfflineSession(frameParams, {
+    exportWidth: captureOpts.exportWidth,
+    exportHeight: captureOpts.exportHeight,
+  });
 }

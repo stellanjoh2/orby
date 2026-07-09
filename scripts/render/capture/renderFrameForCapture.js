@@ -2,6 +2,7 @@ import { createCaptureContext } from './captureContext.js';
 import { prepareCaptureFeatures } from './captureFeatureHooks.js';
 import {
   composerRenderTargetsMatchPixels,
+  clearComposerRenderTargets,
   ensureExportCapturePixelRatio,
   forceExportCaptureFramebuffer,
 } from './forceExportCaptureFramebuffer.js';
@@ -9,7 +10,10 @@ import {
   pinLensDistortionForExportCapture,
   unpinLensDistortionForExportCapture,
 } from './capturePostPipelinePins.js';
-import { resetRendererFullViewport } from '../resetRendererFullViewport.js';
+import {
+  pinRenderTargetPhysicalViewport,
+  resetRendererFullViewport,
+} from '../resetRendererFullViewport.js';
 
 /**
  * Canonical offline GL render sequence — one front door for raster capture.
@@ -86,14 +90,19 @@ export function renderFrameForCapture(deps) {
   imageExporter?._ensureComposerMatchesDrawingBuffer?.({ strict: true });
   if (renderer) {
     renderer.setRenderTarget(null);
-    resetRendererFullViewport(renderer);
+    pinRenderTargetPhysicalViewport(renderer, captureW, captureH);
   }
 
   if (captureFeatureSession) {
     captureFeatureSession.prepareFrame(ctx);
   } else {
     prepareCaptureFeatures(
-      { backgroundController, environmentController, creativeLookCaptureDeps },
+      {
+        backgroundController,
+        environmentController,
+        creativeLookCaptureDeps,
+        postPipeline: deps.postPipeline ?? imageExporter?.postPipeline,
+      },
       ctx,
     );
   }
@@ -104,9 +113,13 @@ export function renderFrameForCapture(deps) {
     renderComposerPassForExport
     ?? composerLifecycle?.renderComposerPassForExport?.bind(composerLifecycle);
 
-  const gradientCapture =
-    backgroundController?.gradientController?.shouldCompositeGradientOnReadback?.() === true;
-  composer?.setExportCapturePhysicalViewport?.(gradientCapture);
+  // Always pin — bloom/N8AO can leave a partial GL viewport on any offline capture, not only
+  // gradient sessions. Unpinned passes draw a center strip; fisheye then leaves black L-margins.
+  composer?.setExportCapturePhysicalViewport?.(true);
+
+  if (composer) {
+    clearComposerRenderTargets(renderer, composer);
+  }
 
   if (typeof renderExportPass === 'function') {
     renderExportPass({ transparent: ctx.transparent });
@@ -139,11 +152,16 @@ export function renderFrameForCapture(deps) {
 export function renderFrameForCaptureWithPins(deps) {
   const { imageExporter, composer, postPipeline } = deps;
   const pipeline = postPipeline ?? imageExporter?.postPipeline;
+  const lensDistortionActive = pipeline?.lensDistortionPass?.enabled === true;
   const prevComposerRenderToScreen = composer?.renderToScreen;
   if (composer) {
-    composer.renderToScreen = false;
+    // Fisheye must render to the export drawing buffer (same as live viewport) — RT readback
+    // leaves stale gradient margins in ping-pong buffers ("duplicated bg" artifact).
+    composer.renderToScreen = lensDistortionActive ? true : false;
   }
-  const lensCapturePin = pinLensDistortionForExportCapture(pipeline);
+  const lensCapturePin = lensDistortionActive
+    ? null
+    : pinLensDistortionForExportCapture(pipeline);
   try {
     return renderFrameForCapture(deps);
   } finally {

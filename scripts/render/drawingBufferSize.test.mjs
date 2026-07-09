@@ -8,6 +8,7 @@ import {
   coerceRendererLogicalSize,
   getDrawingBufferLogicalSize,
   getViewportBackingStorePixels,
+  getViewportLogicalPixels,
 } from './drawingBufferSize.js';
 
 function mockRendererWithGlBuffer(logicalW, logicalH, bufferW, bufferH, dpr) {
@@ -64,5 +65,12 @@ describe('drawingBufferSize', () => {
     const px = getViewportBackingStorePixels(renderer);
     assert.equal(px.width, 3840);
     assert.equal(px.height, 2160);
+  });
+
+  it('getViewportLogicalPixels tracks logical layout at Ultra DPR', () => {
+    const renderer = mockRendererWithGlBuffer(1920, 1080, 3840, 2160, 2);
+    const px = getViewportLogicalPixels(renderer);
+    assert.equal(px.width, 1920);
+    assert.equal(px.height, 1080);
   });
 });

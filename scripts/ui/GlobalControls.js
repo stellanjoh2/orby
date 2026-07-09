@@ -462,6 +462,15 @@ export class GlobalControls {
         }
       }
 
+      // C - Toggle composition guides (delegate to shelf handler — syncs overlay + foldout)
+      if (key === 'c') {
+        event.preventDefault();
+        const input = this.ui.inputs.compositionGridEnabled;
+        if (!input) return;
+        input.checked = !input.checked;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
       // L - Toggle 3-point lighting (delegate to shelf handler — syncs key/fill/rim/ambient)
       if (key === 'l') {
         event.preventDefault();

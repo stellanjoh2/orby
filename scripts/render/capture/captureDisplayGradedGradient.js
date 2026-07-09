@@ -60,8 +60,8 @@ function runDisplayGradingOnGradientPlate(deps, sourceRT, width, height) {
     return pixelsBottomUpToTopDownClamped(pixels, w, h);
   }
   const endIdx =
-    lensPass && composer.passes.indexOf(lensPass) >= 0
-      ? composer.passes.indexOf(lensPass)
+    lensPass?.enabled && composer.passes.indexOf(lensPass) >= 0
+      ? composer.passes.indexOf(lensPass) + 1
       : composer.passes.length;
 
   const rtA = createPlateRenderTarget(w, h);
@@ -146,7 +146,7 @@ export function renderDisplayGradedGradientPlate(deps, width, height) {
   ensureExportCapturePixelRatio({ renderer, composer });
   imageExporter?._ensureComposerMatchesDrawingBuffer?.({ strict: true });
 
-  gradientCtrl.syncToDrawingBuffer(w, h, { forceRedraw: true });
+  gradientCtrl.syncToDrawingBuffer(undefined, undefined, { forceRedraw: true });
 
   const rawRT = createPlateRenderTarget(w, h);
   try {

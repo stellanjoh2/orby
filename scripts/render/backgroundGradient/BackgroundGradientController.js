@@ -6,7 +6,10 @@ import {
   getBackgroundGradientFallbackColor,
   normalizeBackgroundGradient,
 } from './backgroundGradientDefaults.js';
-import { getViewportBackingStorePixels } from '../drawingBufferSize.js';
+import {
+  getViewportBackingStorePixels,
+  getViewportLogicalPixels,
+} from '../drawingBufferSize.js';
 import { ensureExportCapturePixelRatio } from '../capture/forceExportCaptureFramebuffer.js';
 import {
   pinRenderTargetPhysicalViewport,
@@ -45,10 +48,16 @@ export class BackgroundGradientController {
     this._lastHeight = 0;
     /** Offline capture — exact hex canvas composited on readback (no GPU blit / no post on gradient). */
     this._captureBlitActive = false;
+    /** Fisheye/lens — GPU blit + full post chain (matches live viewport). */
+    this._gpuBlitDuringCapture = false;
     /** @type {Uint8ClampedArray | null} display-graded plate (exposure/tone, no bloom) */
     this._displayGradedCaptureRgba = null;
     /** @type {BackgroundGradientFullscreenBlit | null} */
     this._fullscreenBlit = null;
+    /** @type {HTMLCanvasElement | null} */
+    this._exportScaleCanvas = null;
+    /** @type {CanvasRenderingContext2D | null} */
+    this._exportScaleCtx = null;
     this._captureWidth = 0;
     this._captureHeight = 0;
   }
@@ -81,11 +90,7 @@ export class BackgroundGradientController {
    */
   applyIfActive() {
     if (!this.isActive()) return false;
-    if (this._captureBlitActive && this._captureWidth > 0 && this._captureHeight > 0) {
-      this.syncToDrawingBuffer(this._captureWidth, this._captureHeight, { forceRedraw: true });
-    } else {
-      this.syncToDrawingBuffer(undefined, undefined, { forceRedraw: true });
-    }
+    this.syncToDrawingBuffer(undefined, undefined, { forceRedraw: true });
     // Gradient is drawn via MeshglRenderPass fullscreen blit — not scene.background
     // (Three background can render into a partial GL viewport on Ultra / bloom passes).
     this.scene.background = null;
@@ -99,29 +104,23 @@ export class BackgroundGradientController {
   }
 
   /**
-   * Resize and redraw the gradient canvas to match the viewport backing store.
-   * Uses Three's logical size × pixel ratio (same basis as `setViewport`) — not raw
-   * `gl.drawingBufferWidth`, which can lag after Ultra / render-quality toggles.
-   * @param {number} [width]
-   * @param {number} [height]
+   * Redraw the gradient canvas at logical studio viewport size.
+   * Export capture scales this plate to export resolution at readback — never resizes the canvas.
+   * @param {number} [width] — ignored (legacy callers)
+   * @param {number} [height] — ignored (legacy callers)
    * @param {{ forceRedraw?: boolean }} [options]
    */
   syncToDrawingBuffer(width, height, { forceRedraw = false } = {}) {
     if (!this.isActive()) return;
+    void width;
+    void height;
     let w;
     let h;
-    if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
-      w = Math.max(1, Math.floor(width));
-      h = Math.max(1, Math.floor(height));
-    } else if (
-      this._captureBlitActive
-      && this._captureWidth > 0
-      && this._captureHeight > 0
-    ) {
-      w = Math.max(1, Math.floor(this._captureWidth));
-      h = Math.max(1, Math.floor(this._captureHeight));
+    if (this._captureBlitActive && this._captureWidth > 0 && this._captureHeight > 0) {
+      w = this._captureWidth;
+      h = this._captureHeight;
     } else {
-      ({ width: w, height: h } = this._getDrawingBufferPixelSize());
+      ({ width: w, height: h } = this._getLiveViewportLogicalSize());
     }
     const resized = w !== this._canvas.width || h !== this._canvas.height;
     if (resized) {
@@ -177,6 +176,10 @@ export class BackgroundGradientController {
     if (!this.isActive() || this._captureWidth <= 0 || this._captureHeight <= 0) {
       return null;
     }
+    const expected = this._captureWidth * this._captureHeight * 4;
+    if (this._displayGradedCaptureRgba?.length >= expected) {
+      return this._displayGradedCaptureRgba;
+    }
     return this.getRawCaptureGradientRgba(this._captureWidth, this._captureHeight);
   }
 
@@ -185,7 +188,7 @@ export class BackgroundGradientController {
     this._displayGradedCaptureRgba = rgba;
   }
 
-  /** Raw 2D canvas RGBA at capture/export size (ungraded). */
+  /** Raw 2D canvas RGBA scaled to capture/export size (ungraded). */
   getRawCaptureGradientRgba(width, height) {
     const w = Math.max(
       1,
@@ -198,10 +201,27 @@ export class BackgroundGradientController {
     if (!this.isActive() || w <= 0 || h <= 0) {
       return null;
     }
-    if (this._canvas.width !== w || this._canvas.height !== h) {
-      this.syncToDrawingBuffer(w, h, { forceRedraw: true });
+    this.syncToDrawingBuffer(undefined, undefined, { forceRedraw: true });
+    return this._readCanvasRgbaScaledTo(w, h);
+  }
+
+  /** @param {number} targetW @param {number} targetH @returns {Uint8ClampedArray} */
+  _readCanvasRgbaScaledTo(targetW, targetH) {
+    const lw = this._canvas.width;
+    const lh = this._canvas.height;
+    if (lw === targetW && lh === targetH) {
+      return new Uint8ClampedArray(this._ctx.getImageData(0, 0, targetW, targetH).data);
     }
-    return new Uint8ClampedArray(this._ctx.getImageData(0, 0, w, h).data);
+    if (!this._exportScaleCanvas) {
+      this._exportScaleCanvas = document.createElement('canvas');
+      this._exportScaleCtx = this._exportScaleCanvas.getContext('2d', { alpha: false });
+    }
+    this._exportScaleCanvas.width = targetW;
+    this._exportScaleCanvas.height = targetH;
+    this._exportScaleCtx.drawImage(this._canvas, 0, 0, targetW, targetH);
+    return new Uint8ClampedArray(
+      this._exportScaleCtx.getImageData(0, 0, targetW, targetH).data,
+    );
   }
 
   /** True while offline capture should composite the 2D canvas (not GL scene.background). */
@@ -209,9 +229,12 @@ export class BackgroundGradientController {
     return this._captureBlitActive && this.isActive();
   }
 
-  /** GPU blit in MeshglRenderPass — live viewport only; capture uses CPU composite. */
+  /** GPU blit in MeshglRenderPass — live viewport, or lens/fisheye capture (full post chain). */
   shouldGpuBlitGradient() {
-    return this.isActive() && !this._captureBlitActive;
+    return (
+      this.isActive()
+      && (!this._captureBlitActive || this._gpuBlitDuringCapture)
+    );
   }
 
   /** @deprecated alias — use {@link shouldGpuBlitGradient} */
@@ -219,13 +242,23 @@ export class BackgroundGradientController {
     return this.shouldGpuBlitGradient();
   }
 
-  /** Opaque export — merge display-graded canvas under post-graded scene (no bloom on bg). */
+  /** Pin GL viewport to full export RT (CPU composite or GPU+fisheye capture). */
+  shouldPinExportCaptureViewport() {
+    return this.shouldBlitForCapture();
+  }
+
+  /** Opaque export — CPU composite under post (skipped when lens/fisheye needs GPU blit). */
   shouldCompositeGradientOnReadback() {
-    return this._captureBlitActive && this.isActive();
+    return (
+      this._captureBlitActive
+      && this.isActive()
+      && !this._gpuBlitDuringCapture
+    );
   }
 
   /**
    * Blit gradient texture into the active render target at exact pixel size.
+   * Export capture only — live viewport uses {@link blitFullViewport}.
    * @param {THREE.WebGLRenderer} renderer
    * @param {number} pixelWidth
    * @param {number} pixelHeight
@@ -267,12 +300,13 @@ export class BackgroundGradientController {
   }
 
   /**
-   * Offline capture — sync exact export-sized canvas for CPU composite on readback.
-   * @param {{ width?: number, height?: number, transparent?: boolean }} [ctx]
+   * Offline capture — record export size; canvas stays at logical viewport until readback scale.
+   * @param {{ width?: number, height?: number, transparent?: boolean, lensDistortionActive?: boolean }} [ctx]
    */
   prepareForCapture(ctx = {}) {
     if (ctx.transparent || !this.isActive()) return;
     this._displayGradedCaptureRgba = null;
+    this._gpuBlitDuringCapture = !!ctx.lensDistortionActive;
     let w;
     let h;
     if (
@@ -288,14 +322,14 @@ export class BackgroundGradientController {
     }
     this._captureWidth = w;
     this._captureHeight = h;
-    this.syncToDrawingBuffer(w, h, { forceRedraw: true });
+    this.syncToDrawingBuffer(undefined, undefined, { forceRedraw: true });
     this._captureBlitActive = true;
-    // Scene renders without gradient; readback composites this canvas at exact hex colors.
   }
 
   /** Drop export-sized viewport pins without resyncing the gradient canvas. */
   clearCaptureMode() {
     this._captureBlitActive = false;
+    this._gpuBlitDuringCapture = false;
     this._captureWidth = 0;
     this._captureHeight = 0;
     this._displayGradedCaptureRgba = null;
@@ -316,8 +350,8 @@ export class BackgroundGradientController {
     this.syncToDrawingBuffer();
   }
 
-  _getDrawingBufferPixelSize() {
-    return getViewportBackingStorePixels(this.renderer);
+  _getLiveViewportLogicalSize() {
+    return getViewportLogicalPixels(this.renderer);
   }
 
   dispose() {
@@ -327,5 +361,7 @@ export class BackgroundGradientController {
     this._texture = null;
     this._ctx = null;
     this._canvas = null;
+    this._exportScaleCtx = null;
+    this._exportScaleCanvas = null;
   }
 }

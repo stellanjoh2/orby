@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { N8AOPass } from 'n8ao';
 import { MeshglEffectComposer } from './MeshglEffectComposer.js';
+import { MeshglN8AOPass } from './MeshglN8AOPass.js';
 import { MeshglRenderPass } from './MeshglRenderPass.js';
 import { focusDistanceToBokehFocalDepth } from './dofFocalDepth.js';
 import { MeshglBokehPass } from './MeshglBokehPass.js';
@@ -100,7 +100,12 @@ export class PostProcessingPipeline {
 
     const rw = Math.max(1, Math.floor(size.x));
     const rh = Math.max(1, Math.floor(size.y));
-    this.n8aoPass = new N8AOPass(scene, camera, rw, rh);
+    this.n8aoPass = new MeshglN8AOPass(scene, camera, rw, rh, {
+      resolveBackgroundGradientController:
+        typeof opts.getBackgroundGradientController === 'function'
+          ? opts.getBackgroundGradientController
+          : null,
+    });
     this.n8aoPass.enabled = false;
     /** Last N8AO preset applied via `setQualityMode` (shader recompile if changed). */
     this._n8aoAppliedMode = 'Medium';

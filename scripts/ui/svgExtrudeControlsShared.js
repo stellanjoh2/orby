@@ -1610,10 +1610,12 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                 <span class="value" data-output="fontExtrudeRevealSlideTime">130%</span>
               </label>
               <label class="select-line font-extrude-reveal-slide-direction">
-                <span data-tooltip="Choose whether depth travel starts from behind or from camera side">Slide Direction</span>
+                <span data-tooltip="Depth travel axis — front/back along Z, left/right along X (all ease into the final pose)">Slide Direction</span>
                 <select id="fontExtrudeRevealSlideDirection" aria-label="Reveal slide direction">
                   <option value="back" selected>From back</option>
                   <option value="front">From front</option>
+                  <option value="left">From left</option>
+                  <option value="right">From right</option>
                 </select>
               </label>
               ${PANEL_BLOCK_DIVIDER_HTML}
