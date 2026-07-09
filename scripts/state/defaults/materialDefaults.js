@@ -28,6 +28,13 @@ export function createMaterialDefaults() {
       surfaceStrength: DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
       /** Set at load — shape library or untextured imports; not persisted in presets. */
       surfaceEligible: false,
+      /** When true, Object → Material colour replaces diffuse tint (multiplies albedo maps). */
+      colorOverride: false,
+      overrideColor: '#ffffff',
+      /** Set at load — shape library or mesh without albedo maps; not persisted in presets. */
+      colorOverrideEligible: false,
+      /** Set at load — any import material has a diffuse/base-color map; not persisted. */
+      hasImportAlbedoMaps: false,
       /** Object → Material surface (toggle + foldout). */
       surfaceEnabled: false,
       /** Restored when re-enabling surface after the toggle was turned off. */

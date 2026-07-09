@@ -515,6 +515,8 @@ export class UIManager {
       materialMetalness: q('#materialMetalness'),
       materialRoughness: q('#materialRoughness'),
       materialEmissive: q('#materialEmissive'),
+      materialColorOverride: q('#materialColorOverride'),
+      materialOverrideColor: q('#materialOverrideColor'),
       svgExtrudeDepth: q('#svgExtrudeDepth'),
       svgExtrudeBevelAmount: q('#svgExtrudeBevelAmount'),
       svgExtrudeDetail: q('#svgExtrudeDetail'),

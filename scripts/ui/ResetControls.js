@@ -49,7 +49,7 @@ import {
  * `bindLocalResetButtons`: every path written there should appear here.
  */
 const RESET_DIRTY_PATHS = {
-  material: ['material.brightness', 'material.metalness', 'material.roughness', 'material.emissive'],
+  material: ['material.brightness', 'material.metalness', 'material.roughness', 'material.emissive', 'material.colorOverride', 'material.overrideColor'],
   clay: ['clay'],
   subsurface: ['subsurface'],
   wireframe: ['wireframe'],
@@ -596,6 +596,7 @@ export class ResetControls {
     const resetMesh = () => {
       this.ui.uiSounds?.playSelect();
       const defaults = this.stateStore.getDefaults();
+      const scene = window.orby?.scene;
       this.stateStore.batch(() => {
         this.stateStore.resetSlice(MESH_TAB_RESET_PATHS);
         const mrDefaults = getMaterialMrResetDefaults(
@@ -605,6 +606,12 @@ export class ResetControls {
         this.stateStore.set('material.metalness', defaults.material?.metalness ?? mrDefaults.metalness);
         this.stateStore.set('material.roughness', defaults.material?.roughness ?? mrDefaults.roughness);
         this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
+        if (scene?.currentModel) {
+          scene.materialController?._syncMaterialColorFromModel?.(scene.currentModel);
+        } else {
+          this.stateStore.set('material.colorOverride', defaults.material?.colorOverride ?? false);
+          this.stateStore.set('material.overrideColor', defaults.material?.overrideColor ?? '#ffffff');
+        }
       });
       this.eventBus.emit('scene:batch-apply-start');
       try {
@@ -631,6 +638,9 @@ export class ResetControls {
         this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? mrDefaults.roughness);
         this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
       }
+      const matState = this.stateStore.getState().material ?? {};
+      this.eventBus.emit('mesh:material-override-color', matState.overrideColor ?? '#ffffff');
+      this.eventBus.emit('mesh:material-color-override', !!matState.colorOverride);
       this.eventBus.emit('render:fresnel', defaults.fresnel);
       this.eventBus.emit('mesh:subsurface', defaults.subsurface);
       resetSvgExtrudeState(this.stateStore, this.eventBus, defaults);

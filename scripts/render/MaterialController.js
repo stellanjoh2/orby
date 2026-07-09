@@ -140,6 +140,7 @@ import { effectiveRoughnessWithHdriBlur } from './hdriBlur.js';
 import {
   SHAPE_LIBRARY_DEFAULT_METALNESS,
   SHAPE_LIBRARY_DEFAULT_ROUGHNESS,
+  SHAPE_LIBRARY_DEFAULT_COLOR,
 } from '../shapeLibrary/shapeLibraryCatalog.js';
 import { NormalViewOverlay } from './NormalViewOverlay.js';
 import { UvCheckerOverlay } from './UvCheckerOverlay.js';
@@ -403,6 +404,8 @@ export class MaterialController {
       metalness: 0.0,
       roughness: DEFAULT_MATERIAL_ROUGHNESS,
       emissive: 0.0,
+      colorOverride: false,
+      overrideColor: '#ffffff',
     };
   }
 
@@ -477,11 +480,16 @@ export class MaterialController {
         ? matFromState.roughness
         : DEFAULT_MATERIAL_ROUGHNESS,
       emissive: matFromState.emissive ?? 0.0,
+      colorOverride: matFromState.colorOverride === true,
+      overrideColor: normalizeGlyphFillHex(matFromState.overrideColor ?? '#ffffff'),
     };
     this.originalMaterials = new WeakMap();
     this._appliedCreativeLookPreset = null;
     this.prepareMesh(model);
     this._syncImportPbrFromModel(model, {
+      preserveSession: initialState.preserveSessionMaterialMr === true,
+    });
+    this._syncMaterialColorFromModel(model, {
       preserveSession: initialState.preserveSessionMaterialMr === true,
     });
     this.stateStore?.set(
@@ -1124,7 +1132,7 @@ export class MaterialController {
           mat.emissiveMap = origMat.emissiveMap;
         }
         const adjustedColor = this._diffuseColorWithBrightness(
-          this._importDiffuseTintForShading(origMat),
+          this._resolveShadingDiffuseTintForShading(origMat),
           bright,
           undefined,
           origMat,
@@ -1229,6 +1237,82 @@ export class MaterialController {
    * On first PBR import, set global MR sliders to neutral multipliers (1.0 = as-authored).
    * When replacing a model, session slider values are kept (see preserveSession).
    */
+  _modelHasImportAlbedoMaps(object) {
+    if (!object) return false;
+    let hasMaps = false;
+    object.traverse((child) => {
+      if (hasMaps || !child.isMesh) return;
+      const stored = this.originalMaterials.get(child);
+      const mats = Array.isArray(stored) ? stored : [stored];
+      for (const mat of mats) {
+        if (mat?.map?.isTexture || mat?.userData?.orbyFbxSlotMaps) {
+          hasMaps = true;
+          return;
+        }
+      }
+    });
+    return hasMaps;
+  }
+
+  /** Shape library primitives and untextured imports get a direct Material colour control. */
+  _modelColorOverrideEligible(object) {
+    if (!object) return false;
+    if (object.userData?.orbyShapeLibrary) return true;
+    return !this._modelHasImportAlbedoMaps(object);
+  }
+
+  _readModelImportColorHex(model) {
+    if (!model) return null;
+    let hex = null;
+    model.traverse((child) => {
+      if (hex || !child.isMesh) return;
+      const stored = this.originalMaterials.get(child);
+      const mat = Array.isArray(stored) ? stored[0] : stored;
+      if (!mat?.color?.getHexString) return;
+      hex = `#${mat.color.getHexString()}`;
+    });
+    return hex ? normalizeGlyphFillHex(hex) : null;
+  }
+
+  /**
+   * Seed Object → Material colour from the import. Shape library / untextured meshes use
+   * direct colour; textured imports keep override off until the user enables it.
+   */
+  _syncMaterialColorFromModel(model, options = {}) {
+    const hasAlbedo = this._modelHasImportAlbedoMaps(model);
+    const eligible = this._modelColorOverrideEligible(model);
+    this.stateStore?.set('material.hasImportAlbedoMaps', hasAlbedo);
+    this.stateStore?.set('material.colorOverrideEligible', eligible || hasAlbedo);
+
+    if (options.preserveSession) return;
+
+    const importHex = this._readModelImportColorHex(model) ?? '#ffffff';
+
+    if (model.userData?.orbyShapeLibrary) {
+      const color = SHAPE_LIBRARY_DEFAULT_COLOR;
+      this.materialSettings.overrideColor = color;
+      this.materialSettings.colorOverride = true;
+      this.stateStore?.set('material.overrideColor', color);
+      this.stateStore?.set('material.colorOverride', true);
+      return;
+    }
+
+    if (eligible) {
+      this.materialSettings.overrideColor = importHex;
+      this.materialSettings.colorOverride = true;
+      this.stateStore?.set('material.overrideColor', importHex);
+      this.stateStore?.set('material.colorOverride', true);
+      return;
+    }
+
+    if (hasAlbedo) {
+      this.materialSettings.overrideColor = importHex;
+      this.materialSettings.colorOverride = false;
+      this.stateStore?.set('material.overrideColor', importHex);
+      this.stateStore?.set('material.colorOverride', false);
+    }
+  }
+
   _syncImportPbrFromModel(model, options = {}) {
     if (!this._modelHasAuthoredPbrMaterials(model)) return;
     if (options.preserveSession) return;
@@ -2407,7 +2491,7 @@ export class MaterialController {
             }
           }
           const brightColor = this._diffuseColorWithBrightness(
-            this._importDiffuseTintForShading(mat),
+            this._resolveShadingDiffuseTintForShading(mat),
             undefined,
             undefined,
             mat,
@@ -2493,7 +2577,7 @@ export class MaterialController {
             const adjustedColor = fbxSlotMaps
               ? cloned.color.clone()
               : this._diffuseColorWithBrightness(
-                  this._importDiffuseTintForShading(mat),
+                  this._resolveShadingDiffuseTintForShading(mat),
                   undefined,
                   undefined,
                   mat,
@@ -4617,6 +4701,27 @@ export class MaterialController {
     return importMat.color?.clone?.() ?? new THREE.Color('#ffffff');
   }
 
+  _shouldUseMaterialColorOverride(importMat) {
+    if (!this.currentModel || !importMat) return false;
+    if (this.currentModel.userData?.orbyShapeLibrary) return true;
+    if (this.materialSettings.colorOverride) return true;
+    if (
+      !importMat.map?.isTexture &&
+      !importMat.userData?.orbyFbxSlotMaps &&
+      this._modelColorOverrideEligible(this.currentModel)
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  _resolveShadingDiffuseTintForShading(importMat) {
+    if (this._shouldUseMaterialColorOverride(importMat)) {
+      return new THREE.Color(this.materialSettings.overrideColor ?? '#ffffff');
+    }
+    return this._importDiffuseTintForShading(importMat);
+  }
+
   _diffuseColorWithBrightness(
     sourceColor,
     brightness = this.materialSettings.brightness,
@@ -4675,6 +4780,20 @@ export class MaterialController {
     this.updateMaterials();
   }
 
+  setMaterialOverrideColor(hex) {
+    const color = normalizeGlyphFillHex(hex);
+    this.materialSettings.overrideColor = color;
+    this.stateStore?.set('material.overrideColor', color);
+    this.updateMaterials();
+  }
+
+  setMaterialColorOverride(enabled) {
+    const on = !!enabled;
+    this.materialSettings.colorOverride = on;
+    this.stateStore?.set('material.colorOverride', on);
+    this.updateMaterials();
+  }
+
   getClayColorWithBrightness() {
     const baseColorHex = this.claySettings?.color ?? '#808080';
     return this._diffuseColorWithBrightness(new THREE.Color(baseColorHex));
@@ -4719,7 +4838,7 @@ export class MaterialController {
           
           const getOriginalColor = (orig, idx = 0) => {
             const importMat = Array.isArray(orig) ? orig[idx] : orig;
-            return this._importDiffuseTintForShading(importMat);
+            return this._resolveShadingDiffuseTintForShading(importMat);
           };
 
           if (Array.isArray(material) && Array.isArray(original)) {
@@ -4755,7 +4874,7 @@ export class MaterialController {
 
           const getOriginalColor = (orig, idx = 0) => {
             const importMat = Array.isArray(orig) ? orig[idx] : orig;
-            return this._importDiffuseTintForShading(importMat);
+            return this._resolveShadingDiffuseTintForShading(importMat);
           };
 
           if (Array.isArray(material) && Array.isArray(original)) {
@@ -6772,6 +6891,8 @@ export class MaterialController {
     this.stateStore?.set('material.importHasMrMaps', false);
     this.stateStore?.set('material.importUsesAuthoredPbr', false);
     this.stateStore?.set('material.surfaceEligible', false);
+    this.stateStore?.set('material.colorOverrideEligible', false);
+    this.stateStore?.set('material.hasImportAlbedoMaps', false);
   }
 
   getClaySettings() {

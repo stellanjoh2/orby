@@ -259,6 +259,12 @@ function createStateApplySteps() {
         if (state.material?.emissive !== undefined) {
           s.materialController.setMaterialEmissive(state.material.emissive);
         }
+        if (state.material?.overrideColor !== undefined) {
+          s.materialController.setMaterialOverrideColor(state.material.overrideColor);
+        }
+        if (state.material?.colorOverride !== undefined) {
+          s.materialController.setMaterialColorOverride(state.material.colorOverride);
+        }
         if (
           state.material?.surfacePreset !== undefined ||
           state.material?.surfaceScale !== undefined ||

@@ -1529,6 +1529,45 @@ export class MeshControls {
       : 'Hide the loaded mesh from the viewport and exports';
   }
 
+  syncMaterialColorControls(state) {
+    const scene = window.orby?.scene;
+    const model = scene?.currentModel;
+    const material = state.material ?? {};
+    const section = document.getElementById('materialColorSection');
+    const toggleRow = document.getElementById('materialColorOverrideToggleRow');
+    const colorRow = document.getElementById('materialColorRow');
+    if (!section) return;
+
+    if (state.creativeLook?.enabled) {
+      section.hidden = true;
+      return;
+    }
+
+    const shapeLib = !!model?.userData?.orbyShapeLibrary;
+    const hasAlbedo = !!material.hasImportAlbedoMaps;
+    const eligible = !!model && (shapeLib || material.colorOverrideEligible || hasAlbedo);
+    section.hidden = !eligible;
+    if (!eligible) return;
+
+    const directColor = shapeLib || !hasAlbedo;
+    const overrideOn = directColor || !!material.colorOverride;
+
+    if (toggleRow) toggleRow.hidden = directColor;
+    if (colorRow) colorRow.hidden = !overrideOn;
+
+    if (this.ui.inputs.materialColorOverride) {
+      this.ui.inputs.materialColorOverride.checked = !!material.colorOverride;
+      this.ui.setControlDisabled('materialColorOverride', directColor);
+    }
+    if (this.ui.inputs.materialOverrideColor) {
+      const color = material.overrideColor ?? '#ffffff';
+      if (document.activeElement !== this.ui.inputs.materialOverrideColor) {
+        this.ui.inputs.materialOverrideColor.value = color;
+      }
+      this.ui.setControlDisabled('materialOverrideColor', !overrideOn);
+    }
+  }
+
   sync(state) {
     this.syncTransformSliders({
       scale: state.scale,
@@ -1578,6 +1617,7 @@ export class MeshControls {
       !!state.material?.importUsesAuthoredPbr,
       !!state.material?.importHasMrMaps,
     );
+    this.syncMaterialColorControls(state);
     syncObjectSurfaceControls(this._objectSurfaceCtx(), state, !!window.orby?.scene?.currentModel);
     syncSvgExtrudeControls(this._svgExtrudeCtx(), state, { requireEnabled: true });
     if (this.ui.inputs.reverseNormals) {

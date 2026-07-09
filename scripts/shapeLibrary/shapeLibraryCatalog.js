@@ -7,6 +7,8 @@ export const SHAPE_LIBRARY_PANEL_WIDTH_PX = 760;
 export const SHAPE_LIBRARY_DEFAULT_METALNESS = 1;
 /** Near-mirror chrome — matches color-checker reference probe base roughness. */
 export const SHAPE_LIBRARY_DEFAULT_ROUGHNESS = 0.035;
+/** Neutral chrome albedo for bundled primitives. */
+export const SHAPE_LIBRARY_DEFAULT_COLOR = '#ffffff';
 
 /** @typedef {{ id: string, glbUrl: string, sourceId: string, label: string, empty?: boolean }} ShapeLibraryEntry */
 

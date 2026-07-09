@@ -325,6 +325,12 @@ export class SceneSettingsManager {
         if (payload.material.emissive !== undefined) {
           this.eventBus.emit('mesh:material-emissive', payload.material.emissive);
         }
+        if (payload.material.overrideColor !== undefined) {
+          this.eventBus.emit('mesh:material-override-color', payload.material.overrideColor);
+        }
+        if (payload.material.colorOverride !== undefined) {
+          this.eventBus.emit('mesh:material-color-override', payload.material.colorOverride);
+        }
         if (
           payload.material.surfacePreset !== undefined ||
           payload.material.surfaceScale !== undefined ||
@@ -348,6 +354,15 @@ export class SceneSettingsManager {
           this.stateStore.set(
             'material.surfaceEligible',
             scene.materialController._modelSurfaceEligible(scene.currentModel),
+          );
+          this.stateStore.set(
+            'material.colorOverrideEligible',
+            scene.materialController._modelColorOverrideEligible(scene.currentModel)
+              || scene.materialController._modelHasImportAlbedoMaps(scene.currentModel),
+          );
+          this.stateStore.set(
+            'material.hasImportAlbedoMaps',
+            scene.materialController._modelHasImportAlbedoMaps(scene.currentModel),
           );
         }
       }

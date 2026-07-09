@@ -50,6 +50,14 @@ export const SCENE_CONTROL_MANIFEST = [
     apply: { controller: 'materialController', method: 'setMaterialEmissive' },
   },
   {
+    event: 'mesh:material-override-color',
+    apply: { controller: 'materialController', method: 'setMaterialOverrideColor' },
+  },
+  {
+    event: 'mesh:material-color-override',
+    apply: { controller: 'materialController', method: 'setMaterialColorOverride' },
+  },
+  {
     event: 'mesh:diffuse-brightness',
     apply: { controller: 'materialController', method: 'setMaterialBrightness' },
   },

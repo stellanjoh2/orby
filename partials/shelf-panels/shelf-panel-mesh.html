@@ -230,6 +230,29 @@
                     />
                     <span class="value" data-output="materialEmissive">0.00</span>
                   </label>
+                  <div id="materialColorSection" hidden>
+                    <div
+                      class="slider-line slider-line--toggle-only"
+                      id="materialColorOverrideToggleRow"
+                      hidden
+                    >
+                      <span data-tooltip="Replace diffuse tint — still multiplies albedo maps when present">Override colour</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="materialColorOverride" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Override material colour</span>
+                      </label>
+                    </div>
+                    <label class="color-line" id="materialColorRow" hidden>
+                      <span>Colour</span>
+                      <input
+                        type="color"
+                        id="materialOverrideColor"
+                        class="color-chip"
+                        value="#ffffff"
+                      />
+                    </label>
+                  </div>
                   <div class="slider-line">
                     <span>Normal Map</span>
                     <label class="effect-toggle" data-tooltip="Use tangent-space normal maps in Shaded and Clay (full PBR materials only)">

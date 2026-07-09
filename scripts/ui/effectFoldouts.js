@@ -86,6 +86,10 @@ export function applyMeshFoldouts(state, setOpen) {
     'svg-color-override',
     !!state.svgExtrude?.enabled && !!state.svgExtrude?.colorOverride,
   );
+  setOpen(
+    'material-color-override',
+    !!state.material?.hasImportAlbedoMaps && !!state.material?.colorOverride,
+  );
   setOpen('font-extrude', !!state.fontExtrude?.panelOpen);
 }
 

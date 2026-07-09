@@ -40,6 +40,10 @@ export function createBlankCanvasPreset() {
       surfaceEligible: false,
       surfaceEnabled: false,
       surfaceLastPreset: 'galvanizedSteel',
+      colorOverride: false,
+      overrideColor: '#ffffff',
+      colorOverrideEligible: false,
+      hasImportAlbedoMaps: false,
     },
     advanced: {
       reverseNormals: false,

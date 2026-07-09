@@ -111,6 +111,12 @@ export const MESH_UI_CONTROL_MANIFEST = [
     fallback: 0,
   },
   {
+    inputId: 'materialOverrideColor',
+    statePath: 'material.overrideColor',
+    event: 'mesh:material-override-color',
+    inputType: 'color',
+  },
+  {
     inputId: 'clayColor',
     statePath: 'clay.color',
     event: 'mesh:clay-color',
@@ -120,6 +126,12 @@ export const MESH_UI_CONTROL_MANIFEST = [
     inputId: 'clayNormalMap',
     statePath: 'clay.normalMap',
     event: 'mesh:clay-normal-map',
+    inputType: 'checkbox',
+  },
+  {
+    inputId: 'materialColorOverride',
+    statePath: 'material.colorOverride',
+    event: 'mesh:material-color-override',
     inputType: 'checkbox',
   },
 ];
