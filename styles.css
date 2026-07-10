@@ -4444,6 +4444,10 @@ html:not(.mobile-landing) .shelf .slider-line input[type='range'] {
 }
 
 html:not(.mobile-landing) .shelf .slider-line input[type='range']::-webkit-slider-runnable-track,
+html:not(.mobile-landing) .shelf .slider-line input[type='range']::-moz-range-progress {
+  background: transparent;
+}
+
 html:not(.mobile-landing) .shelf .slider-line input[type='range']::-moz-range-track {
   height: var(--shelf-slider-size);
   border-radius: calc(var(--shelf-slider-size) / 2);
@@ -6784,6 +6788,10 @@ button.advanced-info-doc-btn {
 }
 
 /* Firefox slider track with fill effect */
+.slider-line input[type='range']::-moz-range-progress {
+  background: transparent;
+}
+
 .slider-line input[type='range']::-moz-range-track {
   width: 100%;
   height: var(--shelf-slider-size, 12px);

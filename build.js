@@ -225,6 +225,14 @@ cpSync(
   join(__dirname, 'scripts', 'orbySafariBrowserBoot.js'),
   join(distDir, 'scripts', 'orbySafariBrowserBoot.js'),
 );
+cpSync(
+  join(__dirname, 'scripts', 'orbyUnsupportedBrowserBoot.js'),
+  join(distDir, 'scripts', 'orbyUnsupportedBrowserBoot.js'),
+);
+cpSync(
+  join(__dirname, 'styles', 'orby-unsupported-browser-gate.css'),
+  join(distDir, 'styles', 'orby-unsupported-browser-gate.css'),
+);
 
 await esbuild.build({
   entryPoints: ['scripts/mobileLearnBoot.js'],

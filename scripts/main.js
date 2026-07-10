@@ -17,18 +17,7 @@ import { showOrbyBootError } from './orbyBootError.js';
 import { ORBY_DEV_BUILD } from './orbyDevBuild.js';
 import { isTabletDevice } from './orbyMobileLanding.js';
 import { blockTabletStudioAccess } from './orbyTabletGate.js';
-
-/**
- * Safari has heavier repaint/compositing cost for large animated blur layers.
- * Detect Safari (desktop+iOS) but exclude Chromium/Gecko shells.
- */
-function isSafariBrowser() {
-  const ua = navigator.userAgent;
-  const isWebKitSafari = /Safari/i.test(ua) && /Apple Computer/i.test(navigator.vendor || '');
-  const excludedShells =
-    /Chrome|CriOS|Chromium|Edg|EdgiOS|OPR|OPiOS|Firefox|FxiOS|SamsungBrowser/i.test(ua);
-  return isWebKitSafari && !excludedShells;
-}
+import { isSafariBrowser, isSupportedOrbyBrowser } from './browserDetection.js';
 
 /** Helps mobile browsers/iOS tint the toolbar and status chrome (--orby-black). */
 function setMobileSplashChromeMetaTags() {
@@ -69,9 +58,17 @@ if (ensureMobileLandingClass()) {
   }
 }
 
-// Idempotent; orbySafariBrowserBoot.js runs in <head> before styles.css.
+// Idempotent; head boot scripts run before styles.css.
 if (isSafariBrowser()) {
   document.documentElement.classList.add('safari-browser');
+}
+
+if (
+  (typeof window !== 'undefined' && window.__ORBY_UNSUPPORTED_BROWSER__ === true) ||
+  !isSupportedOrbyBrowser()
+) {
+  window.__ORBY_UNSUPPORTED_BROWSER__ = true;
+  document.documentElement.classList.add('orby-unsupported-browser');
 }
 
 /** Dev preview: ?uiCrop=1 — keep screenshot UI on the right (see html.orby-marketing-ui-crop). */
@@ -262,13 +259,17 @@ async function boot() {
   }
 }
 
-boot().catch((err) => {
-  console.error('[Orby] Boot failed', err);
-  showOrbyBootError({
-    title: 'Orby could not start',
-    message:
-      'Orby failed to start. Try refreshing the page. If this keeps happening, try another browser or check your connection.',
-    detail: err?.message,
+if (typeof window !== 'undefined' && window.__ORBY_UNSUPPORTED_BROWSER__ === true) {
+  // Unsupported browser gate — orbyUnsupportedBrowserBoot.js mounts the dialog.
+} else {
+  boot().catch((err) => {
+    console.error('[Orby] Boot failed', err);
+    showOrbyBootError({
+      title: 'Orby could not start',
+      message:
+        'Orby failed to start. Try refreshing the page. If this keeps happening, try another browser or check your connection.',
+      detail: err?.message,
+    });
   });
-});
+}
 

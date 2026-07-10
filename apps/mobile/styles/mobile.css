@@ -1469,6 +1469,10 @@ button {
   );
 }
 
+.orby-mobile-fx-grade input[type='range']::-moz-range-progress {
+  background: transparent;
+}
+
 .orby-mobile-fx-grade input[type='range']::-moz-range-track {
   width: 100%;
   height: var(--orby-mobile-slider-track-h);

@@ -3,7 +3,7 @@
  * Applies html.safari-browser before styles.css so marketing/studio Safari
  * fallbacks (blur off, magic-button paths, etc.) apply at first paint.
  *
- * Keep detection in sync with isSafariBrowser() in scripts/main.js.
+ * Keep detection in sync with isSafariBrowser() in scripts/browserDetection.js.
  */
 (function () {
   var ua = navigator.userAgent;

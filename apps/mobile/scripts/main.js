@@ -71,12 +71,16 @@ async function boot() {
   }
 }
 
-void boot().catch((err) => {
-  console.error('[Orby Mobile] Unhandled boot error', err);
-  markMobileDebugLog('main:boot-unhandled', { message: String(err?.message || err) });
-  const root = document.getElementById('orbyMobile');
-  if (root) {
-    root.dataset.boot = 'error';
-    showBootError(root);
-  }
-});
+if (typeof window !== 'undefined' && window.__ORBY_UNSUPPORTED_BROWSER__ === true) {
+  // Gate UI is mounted by orbyUnsupportedBrowserBoot.js.
+} else {
+  void boot().catch((err) => {
+    console.error('[Orby Mobile] Unhandled boot error', err);
+    markMobileDebugLog('main:boot-unhandled', { message: String(err?.message || err) });
+    const root = document.getElementById('orbyMobile');
+    if (root) {
+      root.dataset.boot = 'error';
+      showBootError(root);
+    }
+  });
+}

@@ -54,6 +54,7 @@ import {
 import { isTransparentCropToAsset } from './imageExportFraming.js';
 import { repairInteractiveViewportAfterCapture } from './capture/repairInteractiveViewportAfterCapture.js';
 import { coerceRendererLogicalSize } from './drawingBufferSize.js';
+import { getSupportedVideoRecorderFormat } from './videoRecorderFormat.js';
 
 export class VideoExporter {
   constructor({
@@ -1108,21 +1109,8 @@ export class VideoExporter {
     this.resetRendererViewportToCanvas?.();
   }
 
-  _getSupportedRecorderMimeType() {
-    if (typeof MediaRecorder === 'undefined') return null;
-    const mp4Candidates = [
-      'video/mp4;codecs=avc1.42E01E',
-      'video/mp4;codecs=avc1',
-      'video/mp4',
-    ];
-    for (const mimeType of mp4Candidates) {
-      try {
-        if (MediaRecorder.isTypeSupported(mimeType)) return mimeType;
-      } catch (error) {
-        // Try next.
-      }
-    }
-    return null;
+  _getSupportedRecorderFormat() {
+    return getSupportedVideoRecorderFormat();
   }
 
   /** Yield until the canvas has painted (helps first MediaRecorder frames match WebGL). */
@@ -1151,8 +1139,9 @@ export class VideoExporter {
     movementEasing,
     meshAnimation,
   }) {
-    const mimeType = this._getSupportedRecorderMimeType();
-    if (!mimeType) return null;
+    const recorderFormat = this._getSupportedRecorderFormat();
+    if (!recorderFormat) return null;
+    const { mimeType } = recorderFormat;
 
     const frameDurationMs = 1000 / Math.max(1, fps);
     const totalFrames = Math.max(2, Math.round(durationSec * fps));
@@ -1278,8 +1267,9 @@ export class VideoExporter {
     movementEasing,
     meshAnimation,
   }) {
-    const mimeType = this._getSupportedRecorderMimeType();
-    if (!mimeType) return null;
+    const recorderFormat = this._getSupportedRecorderFormat();
+    if (!recorderFormat) return null;
+    const { mimeType } = recorderFormat;
     const stream = this.renderer.domElement.captureStream(fps);
     const chunks = [];
     const bitrate = this._getMp4BitrateForQuality(quality);
@@ -1363,14 +1353,15 @@ export class VideoExporter {
   }
 
   async _exportTurntableRealtimeRecorder(opts) {
+    const recorderFormat = this._getSupportedRecorderFormat();
     const blob = await this._recordTurntableToMp4Blob(opts);
-    if (!blob) return false;
+    if (!blob || !recorderFormat) return false;
     const safeBase = (opts.baseName || 'orby').replace(/\.[a-z0-9]+$/i, '');
     const { durationSec, fps } = opts;
     const modeLabel = exportVideoMovementLabel(opts.movements);
     this._downloadBlob(
       blob,
-      `${safeBase}_${modeLabel}_${durationSec}s_${fps}fps.mp4`,
+      `${safeBase}_${modeLabel}_${durationSec}s_${fps}fps.${recorderFormat.extension}`,
     );
     return true;
   }
@@ -1756,8 +1747,10 @@ export class VideoExporter {
         const motionSummary = hdriLabel
           ? `${spinSummary}; ${hdriLabel}`
           : spinSummary;
+        const recorderFormat = this._getSupportedRecorderFormat();
+        const videoFormatLabel = recorderFormat?.extension?.toUpperCase() || 'MP4';
         this.ui?.showToast?.(
-          `Recording MP4 (${durationSec}s, ${fps}fps, ${resolutionLabel}, ${mp4Quality}, ${modeLabel}, ${motionSummary})…`,
+          `Recording ${videoFormatLabel} (${durationSec}s, ${fps}fps, ${resolutionLabel}, ${mp4Quality}, ${modeLabel}, ${motionSummary})…`,
         );
         try {
           const success = await this._exportTurntableRealtimeRecorder({
@@ -1779,12 +1772,13 @@ export class VideoExporter {
           });
           if (success) {
             this.ui?.uiSounds?.playRenderFinished();
-            this.ui?.showToast?.('MP4 exported', 3200, { notification: false });
+            const exportedFormat = this._getSupportedRecorderFormat()?.extension?.toUpperCase() || 'Video';
+            this.ui?.showToast?.(`${exportedFormat} exported`, 3200, { notification: false });
           }
-          else this.ui?.showToast?.('MP4 export failed');
+          else this.ui?.showToast?.('Video export failed');
         } catch (error) {
-          console.error('MP4 export failed', error);
-          this.ui?.showToast?.('MP4 export failed');
+          console.error('Video export failed', error);
+          this.ui?.showToast?.('Video export failed');
         } finally {
           this._finishExportSession(exportSession);
         }

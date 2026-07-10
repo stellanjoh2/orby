@@ -150,8 +150,10 @@
       type="image/svg+xml"
       href="./assets/images/favicon.svg"
     />
-    <!-- Safari class before styles.css — blur/magic-button fallbacks at first paint -->
+    <!-- Browser gate + platform classes before styles.css -->
+    <script src="./scripts/orbyUnsupportedBrowserBoot.js"></script>
     <script src="./scripts/orbySafariBrowserBoot.js"></script>
+    <link rel="stylesheet" href="./styles/orby-unsupported-browser-gate.css" />
     <link rel="stylesheet" href="./styles/fontawesome/orby-icons.css" />
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./styles/background-gradient.css" />
@@ -487,7 +489,7 @@
           <div class="dropzone" id="dropzone">
             <p class="dropzone-disclaimer">
               <i class="fa-solid fa-circle-exclamation dropzone-disclaimer__icon" aria-hidden="true"></i>
-              Early release. Currently works best in Chrome or Brave.
+              Early release. Chrome, Brave, and Safari only.
             </p>
             <div class="dropzone-hero-deco" aria-hidden="true">
               <picture class="dropzone-hero-deco__slot dropzone-hero-deco__slot--ur">

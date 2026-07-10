@@ -25,9 +25,39 @@ export const SUBPAGE_SITE_NAV_TARGETS = [
 
 export const SUBPAGE_SITE_NAV_MARKER = '    <!-- orby:subpage-site-nav -->';
 export const SUBPAGE_MOBILE_BOOT_MARKER = '    <!-- orby:subpage-mobile-boot -->';
+export const SUBPAGE_BROWSER_GATE_MARKER = '    <!-- orby:subpage-browser-gate -->';
 
 const LEGACY_NAV_RE =
   /\n[ \t]*<nav\s[^>]*class="[^"]*orby-marketing-scroll-nav[^"]*"[^>]*>[\s\S]*?<\/nav>/;
+
+/**
+ * @param {string} base
+ * @returns {string}
+ */
+export function formatSubpageBrowserGateBlock(base = '../') {
+  return `${SUBPAGE_BROWSER_GATE_MARKER}
+    <script src="${base}scripts/orbyUnsupportedBrowserBoot.js"></script>
+    <link rel="stylesheet" href="${base}styles/orby-unsupported-browser-gate.css" />`;
+}
+
+/**
+ * @param {string} html
+ * @param {string} base
+ * @returns {string}
+ */
+export function injectSubpageBrowserGateIntoHtml(html, base = '../') {
+  const gateBlock = formatSubpageBrowserGateBlock(base);
+  if (html.includes(SUBPAGE_BROWSER_GATE_MARKER)) {
+    return html;
+  }
+
+  const viewportRe = /<meta name="viewport"[^>]*>/;
+  if (viewportRe.test(html)) {
+    return html.replace(viewportRe, (match) => `${match}\n${gateBlock}`);
+  }
+
+  throw new Error('No viewport meta found for browser gate injection');
+}
 
 /**
  * @param {string} base
@@ -77,7 +107,8 @@ export function injectSubpageMobileBootIntoHtml(html, base = '../') {
  * @returns {string}
  */
 export function injectSubpageHeadIntoHtml(html, base = '../') {
-  let next = injectSubpageMobileBootIntoHtml(html, base);
+  let next = injectSubpageBrowserGateIntoHtml(html, base);
+  next = injectSubpageMobileBootIntoHtml(next, base);
   next = injectSubpageSiteNavIntoHtml(next, base);
   return next;
 }
