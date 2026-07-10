@@ -348,7 +348,6 @@ export class StartMenuController {
     this.dropzone.addEventListener('animationend', (event) => {
       if (event.target !== this.dropzone) return;
       if (event.animationName === 'dropzoneHide') {
-        this.dropzone.classList.remove('hiding');
         noteDropzoneHideEnded();
       }
       if (event.animationName === 'dropzoneReveal') {
