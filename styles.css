@@ -1735,6 +1735,12 @@ html.orby-mobile-modal-open body {
   z-index: 10050;
   margin: 0;
   pointer-events: auto;
+  transform-origin: top right;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease;
 }
 
 .orby-turnstile-host[hidden] {
@@ -1744,6 +1750,12 @@ html.orby-mobile-modal-open body {
 .orby-turnstile-host:not([hidden]) {
   display: block;
   min-height: 4rem;
+}
+
+.orby-turnstile-host.orby-turnstile-host--faded {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.97);
+  pointer-events: none;
 }
 
 .bug-report-status {
@@ -3713,7 +3725,7 @@ body.export-overlay-debug #dropzone {
 }
 
 body:not(.dropzone-visible) .dropzone-disclaimer {
-  display: none;
+  pointer-events: none;
 }
 
 html:not(.mobile-landing) .dropzone-disclaimer {

@@ -37,6 +37,12 @@ const BUG_REPORT_THANK_YOU_FULL_TEXT = BUG_REPORT_THANK_YOU_PREFIX + BUG_REPORT_
 /** Backdrop fades in briefly before content (matches prior feel vs full 1s line reveal) */
 const THANK_YOU_SCRIM_IN = 0.22;
 
+/** Fixed top-right Turnstile — eases in after widget render; out with modal close */
+const TURNSTILE_HOST_REVEAL_FROM = { opacity: 0, y: -10, scale: 0.97 };
+const TURNSTILE_HOST_REVEAL_DURATION = 0.38;
+const TURNSTILE_HOST_EXIT_DURATION = 0.28;
+const TURNSTILE_HOST_EXIT_AFTER_VERIFY_DELAY = 0.45;
+
 export class BugReportController {
   /**
    * @param {import('./UIManager.js').UIManager} ui
@@ -49,6 +55,8 @@ export class BugReportController {
     this._turnstileSiteKey = '';
     /** @type {string | null} */
     this._turnstileWidgetId = null;
+    /** @type {gsap.core.Tween | null} */
+    this._turnstileVerifyDelay = null;
     /** @type {Promise<void> | null} */
     this._turnstileScriptPromise = null;
     /** @type {boolean} set when opaque thank-you backdrop is layered under modal (success path only) */
@@ -211,16 +219,90 @@ export class BugReportController {
     return this._turnstileScriptPromise;
   }
 
+  _clearTurnstileVerifyDelay() {
+    this._turnstileVerifyDelay?.kill();
+    this._turnstileVerifyDelay = null;
+  }
+
   _showTurnstileHost() {
     if (!this.turnstileHost) return;
+    this._clearTurnstileVerifyDelay();
+    gsap.killTweensOf(this.turnstileHost);
     this.turnstileHost.removeAttribute('hidden');
     this.turnstileHost.setAttribute('aria-hidden', 'false');
+    gsap.set(this.turnstileHost, TURNSTILE_HOST_REVEAL_FROM);
+  }
+
+  _revealTurnstileHost() {
+    const host = this.turnstileHost;
+    if (!host || host.hasAttribute('hidden')) return;
+    gsap.killTweensOf(host);
+    if (prefersReducedMotion()) {
+      gsap.set(host, { opacity: 1, y: 0, scale: 1, clearProps: 'transform' });
+      host.style.pointerEvents = 'auto';
+      return;
+    }
+    host.style.pointerEvents = 'auto';
+    gsap.to(host, {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      duration: TURNSTILE_HOST_REVEAL_DURATION,
+      ease: 'power2.out',
+      clearProps: 'transform',
+    });
+  }
+
+  _animateTurnstileHostOut() {
+    const host = this.turnstileHost;
+    if (!host || host.hasAttribute('hidden')) return;
+    gsap.killTweensOf(host);
+    if (prefersReducedMotion()) {
+      gsap.set(host, { opacity: 0 });
+      return;
+    }
+    gsap.to(host, {
+      opacity: 0,
+      y: -8,
+      scale: 0.97,
+      duration: TURNSTILE_HOST_EXIT_DURATION,
+      ease: 'power2.in',
+      onComplete: () => {
+        host.style.pointerEvents = 'none';
+      },
+    });
+  }
+
+  _onTurnstileVerified() {
+    this._clearTurnstileVerifyDelay();
+    const delay = prefersReducedMotion() ? 0 : TURNSTILE_HOST_EXIT_AFTER_VERIFY_DELAY;
+    this._turnstileVerifyDelay = gsap.delayedCall(delay, () => {
+      this._turnstileVerifyDelay = null;
+      this._animateTurnstileHostOut();
+    });
+  }
+
+  _onTurnstileExpired() {
+    this._revealTurnstileHost();
+  }
+
+  _turnstileRenderOptions() {
+    return {
+      sitekey: this._turnstileSiteKey,
+      theme: 'auto',
+      callback: () => this._onTurnstileVerified(),
+      'expired-callback': () => this._onTurnstileExpired(),
+    };
   }
 
   _hideTurnstileHost() {
     if (!this.turnstileHost) return;
+    this._clearTurnstileVerifyDelay();
+    gsap.killTweensOf(this.turnstileHost);
+    this.turnstileHost.style.pointerEvents = '';
     this.turnstileHost.setAttribute('hidden', '');
     this.turnstileHost.setAttribute('aria-hidden', 'true');
+    gsap.set(this.turnstileHost, { clearProps: 'opacity,transform' });
   }
 
   _clearTurnstileWidget() {
@@ -247,6 +329,7 @@ export class BugReportController {
         /* ignore */
       }
     }
+    this._revealTurnstileHost();
   }
 
   async _prepareTurnstileForOpen() {
@@ -260,10 +343,8 @@ export class BugReportController {
     }
     this._clearTurnstileWidget();
     try {
-      this._turnstileWidgetId = window.turnstile.render(this.turnstileHost, {
-        sitekey: this._turnstileSiteKey,
-        theme: 'auto',
-      });
+      this._turnstileWidgetId = window.turnstile.render(this.turnstileHost, this._turnstileRenderOptions());
+      this._revealTurnstileHost();
     } catch {
       this.setStatus('Security check failed to start. Try again.', true);
     }
@@ -370,6 +451,7 @@ export class BugReportController {
     /* Same “down” clip as podium / shelf hide — omit on success→thank-you so we don’t stack with notification. */
     if (!opts.skipShelfHideSound) this.ui?.uiSounds?.playShelfHide();
     this._closeBugReportListboxes();
+    this._animateTurnstileHostOut();
     const panel = this.modal.querySelector('.load-settings-content');
     const preserveBackdrop = opts.preserveViewportBackdrop === true;
     animateModalClose(

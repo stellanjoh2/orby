@@ -181,6 +181,18 @@ function initSupportBugReport() {
     turnstileWidgetId = null;
   }
 
+  function fadeTurnstileHostOut() {
+    if (!turnstileHost) return;
+    window.setTimeout(
+      () => turnstileHost?.classList.add('orby-turnstile-host--faded'),
+      450,
+    );
+  }
+
+  function revealTurnstileHost() {
+    turnstileHost?.classList.remove('orby-turnstile-host--faded');
+  }
+
   function resetTurnstile() {
     if (turnstileWidgetId != null && typeof window.turnstile !== 'undefined') {
       try {
@@ -189,10 +201,12 @@ function initSupportBugReport() {
         /* ignore */
       }
     }
+    revealTurnstileHost();
   }
 
   async function prepareTurnstile() {
     if (!turnstileSiteKey || !turnstileHost) return;
+    revealTurnstileHost();
     try {
       await ensureTurnstileScript();
     } catch {
@@ -204,6 +218,8 @@ function initSupportBugReport() {
       turnstileWidgetId = window.turnstile.render(turnstileHost, {
         sitekey: turnstileSiteKey,
         theme: 'auto',
+        callback: () => fadeTurnstileHostOut(),
+        'expired-callback': () => revealTurnstileHost(),
       });
     } catch {
       setStatus('Security check failed to start. Try again.', true);
