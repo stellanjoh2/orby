@@ -3725,7 +3725,19 @@ body.export-overlay-debug #dropzone {
 }
 
 body:not(.dropzone-visible) .dropzone-disclaimer {
+  opacity: 0 !important;
+  visibility: hidden;
   pointer-events: none;
+}
+
+body.dropzone-visible .dropzone-disclaimer {
+  visibility: visible;
+}
+
+.dropzone > .dropzone-disclaimer {
+  position: absolute;
+  z-index: 4;
+  align-self: auto;
 }
 
 html:not(.mobile-landing) .dropzone-disclaimer {

@@ -23,6 +23,9 @@ const FLIP_GALLERY_CYCLE_MS = 1000;
 const FLIP_GALLERY_FADE_S = 0;
 /** Set on the gallery mask while arrow keys should drive slides (see GlobalControls). */
 const SHOWCASE_KEYS_ATTR = 'data-orby-marketing-showcase-keys';
+/** Horizontal swipe must exceed this (px) and dominate vertical movement. */
+const SWIPE_THRESHOLD_PX = 40;
+const SWIPE_DOMINANCE_RATIO = 1.35;
 
 /** @type {WeakMap<HTMLElement, ReturnType<typeof createGalleryController>>} */
 const controllers = new WeakMap();
@@ -146,6 +149,9 @@ function createGalleryController(mask) {
   let intersectionObserver = null;
   let visibilityObserver = null;
   let visible = false;
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchTracking = false;
 
   const preloadFlipFrames = () => {
     if (!isFlipGallery || imgs.length < 2) return;
@@ -400,6 +406,32 @@ function createGalleryController(mask) {
     goTo(slideIndex);
   };
 
+  const onTouchStart = (event) => {
+    if (imgs.length < 2) return;
+    const touch = event.changedTouches[0] ?? event.touches[0];
+    if (!touch) return;
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    touchTracking = true;
+  };
+
+  const onTouchEnd = (event) => {
+    if (!touchTracking || imgs.length < 2 || tweening) return;
+    touchTracking = false;
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
+    if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return;
+    if (Math.abs(dx) < Math.abs(dy) * SWIPE_DOMINANCE_RATIO) return;
+    if (dx < 0) goRelative(1);
+    else goRelative(-1);
+  };
+
+  const onTouchCancel = () => {
+    touchTracking = false;
+  };
+
   const setKeyboardEnabled = (enabled) => {
     keyboardEnabled = enabled;
     if (enabled) mask.setAttribute(SHOWCASE_KEYS_ATTR, '');
@@ -408,6 +440,10 @@ function createGalleryController(mask) {
 
   const bindInteraction = () => {
     if (imgs.length < 2) return;
+
+    mask.addEventListener('touchstart', onTouchStart, { passive: true });
+    mask.addEventListener('touchend', onTouchEnd, { passive: true });
+    mask.addEventListener('touchcancel', onTouchCancel, { passive: true });
 
     if (!isSimpleGallery) {
       mask.addEventListener('click', onDotClick);
@@ -443,6 +479,11 @@ function createGalleryController(mask) {
   };
 
   const unbindInteraction = () => {
+    mask.removeEventListener('touchstart', onTouchStart);
+    mask.removeEventListener('touchend', onTouchEnd);
+    mask.removeEventListener('touchcancel', onTouchCancel);
+    touchTracking = false;
+
     if (!isSimpleGallery) {
       mask.removeEventListener('click', onDotClick);
       window.removeEventListener('keydown', onKeyDown);

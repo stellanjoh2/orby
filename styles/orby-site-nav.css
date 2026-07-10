@@ -74,6 +74,19 @@ html.orby-legal-site-nav .orby-marketing-scroll-nav__brand {
   text-decoration: none;
 }
 
+/* Beat body.legal-doc a { color: var(--text-link) } — logotype stays lime, not Orby blue */
+html.orby-legal-site-nav a.orby-marketing-scroll-nav__brand,
+html.orby-legal-site-nav a.orby-marketing-scroll-nav__brand:visited {
+  color: var(--brand-primary, var(--orby-lime));
+}
+
+html.orby-legal-site-nav a.orby-marketing-scroll-nav__brand:hover,
+html.orby-legal-site-nav a.orby-marketing-scroll-nav__brand:focus-visible,
+html.orby-legal-site-nav a.orby-marketing-scroll-nav__brand:visited:hover,
+html.orby-legal-site-nav a.orby-marketing-scroll-nav__brand:visited:focus-visible {
+  color: #fff;
+}
+
 /* Beat .legal-doc a — same hover as marketing homepage (lime → white + underline bar) */
 html.orby-legal-site-nav .orby-marketing-scroll-nav__link,
 html.orby-legal-site-nav .orby-marketing-scroll-nav__link:visited {

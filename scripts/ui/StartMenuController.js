@@ -552,12 +552,21 @@ export class StartMenuController {
         this.dropzone.style.opacity = '';
         this.dropzone.style.animation =
           'dropzoneReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+        if (this._desktopDropzoneTextRevealed && this.dropzoneDisclaimer) {
+          gsap.set(this.dropzoneDisclaimer, {
+            opacity: 1,
+            y: 0,
+            visibility: 'visible',
+            clearProps: 'transform',
+          });
+        }
       } else {
         this.dropzone.style.pointerEvents = 'none';
         this.dropzone.style.animation = 'none';
         this.dropzone.style.opacity = '0';
       }
     } else {
+      this._animateDropzoneDisclaimerOut();
       // When hiding, first remove any existing animation and inline styles
       this.dropzone.style.animation = '';
       this.dropzone.style.opacity = '';
@@ -578,6 +587,32 @@ export class StartMenuController {
       Boolean(shouldShow && !canRevealChrome),
     );
     this.syncDropzoneLogotypePlayback(shouldShow);
+  }
+
+  /** Early-release disclaimer — last intro beat; eases out when leaving the dropzone. */
+  _animateDropzoneDisclaimerOut() {
+    const disclaimer = this.dropzoneDisclaimer;
+    if (!disclaimer) return;
+    gsap.killTweensOf(disclaimer);
+    const hideDisclaimer = () => {
+      gsap.set(disclaimer, {
+        opacity: 0,
+        y: -8,
+        visibility: 'hidden',
+        clearProps: 'transform',
+      });
+    };
+    if (prefersReducedMotion()) {
+      hideDisclaimer();
+      return;
+    }
+    gsap.to(disclaimer, {
+      opacity: 0,
+      y: -8,
+      duration: 0.28,
+      ease: 'power2.in',
+      onComplete: hideDisclaimer,
+    });
   }
 
   /**
@@ -646,7 +681,7 @@ export class StartMenuController {
 
   /**
    * Desktop start menu after logo: word stagger on headline only, then legacy-style block fades.
-   * Order: 1 logo (CSS) → 2 hero deco UR → 3 hero deco LL → 4 headline → 5 buttons → 6 footer → 7 credits.
+   * Order: 1 logo (CSS) → 2 hero deco UR → 3 hero deco LL → 4 headline → 5 buttons → 6 footer → 7 credits → 8 disclaimer.
    */
   async revealDesktopDropzoneIntroText() {
     if (document.documentElement.classList.contains('mobile-landing')) return;
@@ -701,7 +736,9 @@ export class StartMenuController {
       }
       if (secondary)
         gsap.set(secondary, { opacity: 1, y: 0, clearProps: 'transform' });
-      if (disclaimer) gsap.set(disclaimer, { opacity: 1, clearProps: 'transform' });
+      if (disclaimer) {
+        gsap.set(disclaimer, { opacity: 1, y: 0, visibility: 'visible', clearProps: 'transform' });
+      }
       if (heroDecoUr) {
         gsap.set(heroDecoUr, {
           opacity: DROPZONE_HERO_DECO_OPACITY,
@@ -735,17 +772,9 @@ export class StartMenuController {
 
     if (heroDecoUr) gsap.set(heroDecoUr, { opacity: 0, visibility: 'visible' });
     if (heroDecoLl) gsap.set(heroDecoLl, { opacity: 0, visibility: 'visible' });
-    if (disclaimer) gsap.set(disclaimer, { opacity: 0 });
+    if (disclaimer) gsap.set(disclaimer, { opacity: 0, y: -8, visibility: 'visible' });
 
     let timelineCursor = 0;
-    if (disclaimer) {
-      tl.to(
-        disclaimer,
-        { opacity: 1, duration: blockDur, ease: blockEase },
-        timelineCursor,
-      );
-      timelineCursor = '>';
-    }
     if (heroDecoUr) {
       tl.to(
         heroDecoUr,
@@ -841,6 +870,23 @@ export class StartMenuController {
           secondary != null ? '>' : buttons?.length ? `>-=${blockOverlap}` : blockAfterHead,
         );
       }
+    }
+
+    if (disclaimer) {
+      const disclaimerAfter =
+        credits != null
+          ? '>'
+          : secondary != null
+            ? '>'
+            : buttons?.length
+              ? `>-=${blockOverlap}`
+              : blockAfterHead;
+      tl.fromTo(
+        disclaimer,
+        { opacity: 0, y: -8, visibility: 'visible' },
+        { opacity: 1, y: 0, visibility: 'visible', duration: blockDur, ease: blockEase },
+        disclaimerAfter,
+      );
     }
   }
 
