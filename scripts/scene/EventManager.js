@@ -1,8 +1,13 @@
 import { registerSceneManifestHandlers } from '../state/controlManifestCore.js';
 import { SCENE_CONTROL_MANIFEST } from '../state/sceneControlManifest.js';
+import { MODIFIER_IDS } from '../state/defaults/modifierDefaults.js';
 import { setPerLightCastShadows } from '../lights/lightCastShadowEffective.js';
 import { isOrbySceneFile } from '../import/dispatchImportFile.js';
 import { handoffFileToMobileAppIfLanding } from '../orbyMobileHandoff.js';
+
+const MODIFIER_AMOUNT_SLIDER_IDS = new Set(
+  MODIFIER_IDS.map((id) => `modifier${id.charAt(0).toUpperCase()}${id.slice(1)}Amount`),
+);
 
 /**
  * EventManager - Handles all eventBus event listeners for SceneManager
@@ -35,6 +40,11 @@ export class EventManager {
     const s = scene; // Shorthand for readability
 
     registerSceneManifestHandlers(eventBus, s, SCENE_CONTROL_MANIFEST);
+
+    eventBus.on('ui:range-scrub-end', (slider) => {
+      if (!slider?.id || !MODIFIER_AMOUNT_SLIDER_IDS.has(slider.id)) return;
+      s.syncModifiersSceneAfterScrub();
+    });
 
     // ── Complex handlers (multi-step, async, or conditional) ────────────────
 

@@ -61,6 +61,9 @@ import { keyLightParamsFromLensFlare } from './render/lensFlareKeyLightSync.js';
 import { GodRaysController } from './render/GodRaysController.js';
 import { AutoExposureController } from './render/AutoExposureController.js';
 import { TransformController } from './render/TransformController.js';
+import { MeshModifierController } from './render/MeshModifierController.js';
+import { isShapeLibraryModel } from './shapeLibrary/shapeLibraryCatalog.js';
+import { normalizeModifiersState, modifierActiveFromAmount } from './state/defaults/modifierDefaults.js';
 import { LensDirtController } from './render/LensDirtController.js';
 import { BackgroundController } from './render/BackgroundController.js';
 import { BackgroundGradientController } from './render/backgroundGradient/BackgroundGradientController.js';
@@ -3046,6 +3049,28 @@ export class SceneManager {
     this.applyImportSmoothingFromState();
   }
 
+  /** @param {THREE.BufferGeometry} geometry */
+  _updateReverseNormalsGeometryCache(geometry) {
+    if (!geometry?.attributes) return;
+    const cached = {};
+    Object.keys(geometry.attributes).forEach((name) => {
+      const attr = geometry.attributes[name];
+      if (!attr?.array) return;
+      cached[name] = new attr.array.constructor(attr.array);
+    });
+    this.originalGeometryAttributes.set(geometry, cached);
+  }
+
+  /** Keep Advanced → Reverse Normals snapshots aligned after CPU modifier edits. */
+  _syncReverseNormalsGeometryCacheFromModel() {
+    if (!this.currentModel) return;
+    this.currentModel.traverse((child) => {
+      if (child.isMesh && child.geometry) {
+        this._updateReverseNormalsGeometryCache(child.geometry);
+      }
+    });
+  }
+
   setReverseNormals(enabled) {
     this.reverseNormalsEnabled = !!enabled;
     if (!this.currentModel) return;
@@ -3582,6 +3607,56 @@ export class SceneManager {
     this.transformController?.setRotationZ(value);
   }
 
+  setModifierToggle({ id, enabled } = {}) {
+    if (!id) return;
+    if (enabled && !isShapeLibraryModel(this.currentModel)) {
+      this.stateStore.set(`modifiers.${id}.enabled`, false);
+      this.ui?.modifierControls?.sync(this.stateStore.getState());
+      return;
+    }
+    this.applyModifiersFromState();
+  }
+
+  setModifierAmount({ id, amount } = {}) {
+    if (!id) return;
+    const numeric = Number(amount) || 0;
+    this.stateStore.set(`modifiers.${id}.enabled`, modifierActiveFromAmount(numeric));
+    this.applyModifiersFromState();
+  }
+
+  applyModifiersFromState(state) {
+    const base = state ?? this.stateStore.getState();
+    const snapshot = {
+      ...base,
+      modifiers: normalizeModifiersState(base.modifiers),
+    };
+    if (!isShapeLibraryModel(this.currentModel)) {
+      return;
+    }
+    this.modifierController?.applyFromState(snapshot);
+    if (this.currentModel) {
+      this.currentModel.updateMatrixWorld(true);
+    }
+    if (this.stateStore.isNotifyDeferred?.()) {
+      return;
+    }
+    this.syncModifiersSceneAfterScrub();
+  }
+
+  /** Bounds, shadow contact, overlays — run after modifier slider release. */
+  syncModifiersSceneAfterScrub() {
+    if (!isShapeLibraryModel(this.currentModel)) return;
+    this._syncReverseNormalsGeometryCacheFromModel();
+    if (this.currentModel) {
+      this.currentModel.updateMatrixWorld(true);
+      this.cameraController?.refreshModelBounds(this.currentModel);
+      this._updateHdriShadowReceiverContact?.();
+      this.updateWireframeOverlayTransforms?.();
+      this.updateUvCheckerOverlayTransforms?.();
+      this.updateNormalViewOverlayTransforms?.();
+    }
+  }
+
   setShading(mode) {
     const clearReference =
       !!this.stateStore.getState().colorChecker?.rawColors && mode !== 'textures';
@@ -3599,6 +3674,14 @@ export class SceneManager {
     this.setLightsShadowTwoSided(this.lightsShadowTwoSided);
     // Material instances are recreated when shading changes; reapply reverse mode.
     this.setReverseNormals(this.reverseNormalsEnabled);
+    if (isShapeLibraryModel(this.currentModel)) {
+      this.applyModifiersFromState();
+      const wireframeOn =
+        mode === 'wireframe' || !!this.stateStore.getState()?.wireframe?.alwaysOn;
+      if (wireframeOn) {
+        this.updateWireframeOverlay();
+      }
+    }
     this._refreshViewportAfterOverlayChange();
     if (clearReference) {
       this.ui?.syncUIFromState?.();

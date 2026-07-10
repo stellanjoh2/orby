@@ -104,3 +104,8 @@ export function findBakeableShapeLibraryEntry(id) {
   if (!entry || entry.empty || !entry.glbUrl) return undefined;
   return entry;
 }
+
+/** @param {import('three').Object3D | null | undefined} model */
+export function isShapeLibraryModel(model) {
+  return !!model?.userData?.orbyShapeLibrary;
+}

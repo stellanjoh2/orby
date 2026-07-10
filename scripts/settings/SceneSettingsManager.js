@@ -21,6 +21,7 @@ import { resolveDiscGlowFromState } from '../render/LensFlareController.js';
 import { emitGodRaysStudioEvents } from '../GodRaysEffect.js';
 import { normalizeBackgroundGradient } from '../render/backgroundGradient/backgroundGradientDefaults.js';
 import { deepClone } from '../utils/deepClone.js';
+import { normalizeModifiersState } from '../state/defaults/modifierDefaults.js';
 import { serializeExportSettings } from './exportSettingsPersistence.js';
 import {
   arrayBufferToBase64,
@@ -384,6 +385,10 @@ export class SceneSettingsManager {
         this.stateStore.set('scaleY', sy);
         this.stateStore.set('scaleZ', sz);
         this.eventBus.emit('mesh:scale-vector', { x: sx, y: sy, z: sz });
+      }
+      if (payload.modifiers !== undefined) {
+        this.stateStore.set('modifiers', normalizeModifiersState(payload.modifiers));
+        this.eventBus.emit('mesh:modifiers');
       }
       if (payload.yOffset !== undefined) {
         this.stateStore.set('yOffset', payload.yOffset);

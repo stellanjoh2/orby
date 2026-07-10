@@ -48,6 +48,7 @@ export class UIHelpers {
       multiplier: { decimals: 2, unit: '×' },
       decimal: { decimals: 2, unit: '' },
       integer: { decimals: 0, unit: '' },
+      signedInteger: { decimals: 0, unit: '', signed: true },
     };
     
     const config = formatMap[type] || formatMap.decimal;

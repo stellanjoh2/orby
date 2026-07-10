@@ -27,6 +27,7 @@ import {
 } from '../render/CreativeLookMaterials.js';
 import { AutoExposureController } from '../render/AutoExposureController.js';
 import { TransformController, clampMeshScaleComponents } from '../render/TransformController.js';
+import { MeshModifierController } from '../render/MeshModifierController.js';
 import { LensDirtController } from '../render/LensDirtController.js';
 import { BackgroundController } from '../render/BackgroundController.js';
 import { BackgroundGradientController } from '../render/backgroundGradient/BackgroundGradientController.js';
@@ -288,6 +289,8 @@ export function teardownStudioGpu(scene) {
     scene.groundController = null;
     scene.hdriMood = null;
     scene.transformController = null;
+    scene.modifierController?.release();
+    scene.modifierController = null;
     scene.textureLoader = null;
     scene.stateApplier = null;
 
@@ -452,6 +455,7 @@ export async function bootstrapStudio(scene) {
     scene.transformController = new TransformController({
       modelRoot: scene.modelRoot,
     });
+    scene.modifierController = new MeshModifierController();
 
     // Setup TransformControls (widgets) for visual transform editing
     // Create separate controls for translate (move), rotate, and scale

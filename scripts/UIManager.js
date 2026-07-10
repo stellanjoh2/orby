@@ -36,6 +36,7 @@ import {
 } from './ui/modeChangeToast.js';
 import { UIHelpers } from './ui/UIHelpers.js';
 import { MeshControls } from './ui/MeshControls.js';
+import { ModifierControls } from './ui/ModifierControls.js';
 import { FbxMapSlotsControls } from './ui/FbxMapSlotsControls.js';
 import { MapInspectControls } from './ui/MapInspectControls.js';
 import { TopologyWarningsControls } from './ui/TopologyWarningsControls.js';
@@ -205,6 +206,7 @@ export class UIManager {
       helpers: this.helpers,
     });
     this.meshControls = new MeshControls(this.eventBus, this.stateStore, this, this.helpers);
+    this.modifierControls = new ModifierControls(this.eventBus, this.stateStore, this, this.helpers);
     this.fbxMapSlotsControls = new FbxMapSlotsControls(this.eventBus, this.stateStore, this);
     this.mapInspectControls = new MapInspectControls(this.eventBus, this.stateStore, this);
     this.mapInspectControls.setModelAccessors(
@@ -944,6 +946,7 @@ export class UIManager {
     // Bind all control modules
     this.globalControls.bind();
     this.meshControls.bind();
+    this.modifierControls.bind();
     this.fbxMapSlotsControls.bind();
     this.mapInspectControls.bind();
     this.topologyWarningsControls.bind();
@@ -3082,6 +3085,7 @@ export class UIManager {
   syncControls(state) {
     if (!this._studioUiReady) return;
     this.meshControls.sync(state);
+    this.modifierControls.sync(state);
     this.fbxMapSlotsControls.syncFromState(state);
     this.studioControls.sync(state);
     this.goboControls.sync(state);

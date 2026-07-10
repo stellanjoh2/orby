@@ -1,5 +1,6 @@
 import { APP_BACKGROUND, DEFAULT_GROUND_WIRE_COLOR, DEFAULT_GROUND_WIRE_OPACITY } from '../constants.js';
 import { DEFAULT_EXPORT_VIDEO_FPS } from '../render/exportVideoResolution.js';
+import { createModifierEntryDefaults } from './defaults/modifierDefaults.js';
 
 /**
  * "Blank canvas" preset — the exact scene snapshot applied when the homepage
@@ -29,6 +30,7 @@ export function createBlankCanvasPreset() {
     moveWidgetEnabled: false,
     rotateWidgetEnabled: false,
     scaleWidgetEnabled: false,
+    modifiers: createModifierEntryDefaults(),
     material: {
       brightness: 1.75,
       metalness: 0,

@@ -19,6 +19,9 @@ export function parseOverlayTogglePayload(payload) {
 /** @type {object[]} */
 export const SCENE_CONTROL_MANIFEST = [
   // ── Mesh / transform ──────────────────────────────────────────────────────
+  { event: 'mesh:modifier-toggle', apply: 'setModifierToggle' },
+  { event: 'mesh:modifier-amount', apply: 'setModifierAmount' },
+  { event: 'mesh:modifiers', apply: 'applyModifiersFromState', noArg: true },
   { event: 'mesh:scale', apply: 'setScale' },
   { event: 'mesh:scale-y', apply: 'setScaleY' },
   { event: 'mesh:scale-z', apply: 'setScaleZ' },

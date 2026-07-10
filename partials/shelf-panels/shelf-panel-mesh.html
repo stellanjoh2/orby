@@ -1294,6 +1294,43 @@
                       <span class="value" data-output="rotationZ">0°</span>
                   </label>
                 </div>
+                <div class="subsection" data-subsection="modifiers" hidden>
+                  <div class="block-title has-reset">
+                    <span
+                      class="block-title-name"
+                      data-tooltip="Still in progress and being evaluated."
+                    >Modifiers (Experimental)</span>
+                    <button class="block-reset-btn" data-reset="modifiers" aria-label="Reset Modifiers" data-tooltip="Reset modifier settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                  <label class="slider-line">
+                    <span>Bend</span>
+                    <input id="modifierBendAmount" type="range" min="-100" max="100" value="0" step="1" />
+                    <span class="value" data-output="modifierBendAmount">0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Twist</span>
+                    <input id="modifierTwistAmount" type="range" min="-100" max="100" value="0" step="1" />
+                    <span class="value" data-output="modifierTwistAmount">0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Taper</span>
+                    <input id="modifierTaperAmount" type="range" min="-100" max="100" value="0" step="1" />
+                    <span class="value" data-output="modifierTaperAmount">0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Skew</span>
+                    <input id="modifierSkewAmount" type="range" min="-100" max="100" value="0" step="1" />
+                    <span class="value" data-output="modifierSkewAmount">0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>FFD</span>
+                    <input id="modifierFfdAmount" type="range" min="-100" max="100" value="0" step="1" />
+                    <span class="value" data-output="modifierFfdAmount">0</span>
+                  </label>
+                </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection">
                   <div class="block-title">Turntable</div>

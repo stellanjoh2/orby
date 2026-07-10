@@ -53,6 +53,7 @@ const RESET_DIRTY_PATHS = {
   clay: ['clay'],
   subsurface: ['subsurface'],
   wireframe: ['wireframe'],
+  modifiers: ['modifiers'],
   'creative-look': ['creativeLook'],
   hdri: ['hdri', 'hdriStrength', 'hdriBlurriness', 'hdriRotation', 'hdriBackground', 'hdriReceiveShadowsAo', 'lensFlare'],
   'lens-flare': ['lensFlare'],
@@ -268,6 +269,7 @@ const BLOCK_RESET_TOASTS = {
   material: 'Material reset',
   clay: 'Clay reset',
   wireframe: 'Wireframe reset',
+  modifiers: 'Modifiers reset',
   'creative-look': 'Creative look reset',
   hdri: 'HDRI reset',
   'lens-flare': 'Lens flare reset',
@@ -975,6 +977,12 @@ export class ResetControls {
             this.eventBus.emit('mesh:wireframe-hide-mesh', defaults.wireframe.hideMesh);
             this.eventBus.emit('mesh:wireframe-thickness', defaults.wireframe.thickness ?? 1);
             this.eventBus.emit('mesh:wireframe-opacity', defaults.wireframe.opacity ?? 1);
+            this.ui.syncUIFromState();
+            break;
+
+          case 'modifiers':
+            this.stateStore.resetSlice(RESET_DIRTY_PATHS.modifiers);
+            this.eventBus.emit('mesh:modifiers');
             this.ui.syncUIFromState();
             break;
 

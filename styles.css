@@ -5235,6 +5235,11 @@ a.about-highlight:focus-visible {
   position: relative;
 }
 
+/* Adjacent subsections in one card — full section gap before the next headline */
+.subsection + .subsection {
+  margin-top: var(--shelf-section-gap);
+}
+
 /* Muted UI logic removed - will be reimplemented later */
 
 /*

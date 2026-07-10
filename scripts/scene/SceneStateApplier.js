@@ -34,6 +34,12 @@ function createStateApplySteps() {
       },
     },
     {
+      id: 'modifiers',
+      apply: (s, state) => {
+        s.applyModifiersFromState(state);
+      },
+    },
+    {
       id: 'shading',
       apply: (s, state) => {
         s.setShading(state.shading);

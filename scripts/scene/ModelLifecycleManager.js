@@ -82,6 +82,7 @@ export class ModelLifecycleManager {
       this.disposeNode(child);
       s.modelRoot.remove(child);
     }
+    s.modifierController?.release();
     s.currentModel = null;
     s.transformControlsTranslate?.detach();
     s.transformControlsRotate?.detach();
@@ -294,6 +295,8 @@ export class ModelLifecycleManager {
     s.ui.meshControls?.sync(s.stateStore.getState());
     s._refreshImportSmoothingUi();
     s.repairRenderSurfacesAfterModelLoad?.();
+    s.modifierController?.bindModel(object);
+    s.applyModifiersFromState(state);
     if (state.gobo?.texture) {
       void s.setGoboTexture(state.gobo.texture, { updateState: false });
     }

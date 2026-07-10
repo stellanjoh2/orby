@@ -4,6 +4,7 @@ import { createImportDefaults } from './importDefaults.js';
 import { createLightsDefaults } from './lightsDefaults.js';
 import { createMaterialDefaults } from './materialDefaults.js';
 import { createMeshDefaults } from './meshDefaults.js';
+import { createModifierDefaults } from './modifierDefaults.js';
 import { createRenderDefaults } from './renderDefaults.js';
 import { createStudioDefaults } from './studioDefaults.js';
 
@@ -13,6 +14,7 @@ export { createImportDefaults } from './importDefaults.js';
 export { createLightsDefaults } from './lightsDefaults.js';
 export { createMaterialDefaults } from './materialDefaults.js';
 export { createMeshDefaults } from './meshDefaults.js';
+export { createModifierDefaults } from './modifierDefaults.js';
 export { createRenderDefaults } from './renderDefaults.js';
 export { createStudioDefaults } from './studioDefaults.js';
 
@@ -20,6 +22,7 @@ export { createStudioDefaults } from './studioDefaults.js';
 export function createDefaultState() {
   return {
     ...createMeshDefaults(),
+    ...createModifierDefaults(),
     ...createMaterialDefaults(),
     ...createImportDefaults(),
     ...createStudioDefaults(),
