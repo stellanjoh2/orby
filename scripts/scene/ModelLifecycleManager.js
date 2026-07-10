@@ -251,7 +251,9 @@ export class ModelLifecycleManager {
       s.transformControlsScale.visible = true;
     }
     s.transformController?.applyState(state);
-    if (wasFirstLoad && !s._skipGroundGridAutoAlignOnNextModelLoad) {
+    const alignGroundOnLoad =
+      (wasFirstLoad || options.alignGround === true) && !s._skipGroundGridAutoAlignOnNextModelLoad;
+    if (alignGroundOnLoad) {
       if (isFontModel) {
         s._pendingFontGroundAlignAfterTypography = true;
         if (!s._skipCameraFlightOnNextModelLoad) {
@@ -379,10 +381,12 @@ export class ModelLifecycleManager {
           fadeExposure();
         }
 
-        if (wasFirstLoad) {
-          if (!s._skipCameraFlightOnNextModelLoad && !isFontModel) {
-            s.cameraController?.focusOnObjectAnimated(s.currentModel, 1.0);
-          }
+        const shouldFocusCamera =
+          !s._skipCameraFlightOnNextModelLoad
+          && !isFontModel
+          && (wasFirstLoad || options.focusCamera === true);
+        if (shouldFocusCamera) {
+          s.cameraController?.focusOnObjectAnimated(s.currentModel, 1.0);
           if (!isFontModel) {
             s._skipCameraFlightOnNextModelLoad = false;
           }

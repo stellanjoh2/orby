@@ -1,7 +1,16 @@
+import { STUDIO_IMPORT_TARGET_MAX_DIMENSION } from '../constants.js';
+
 /**
  * Bundled low-poly shapes for Object → Shape Library.
  */
 export const SHAPE_LIBRARY_PANEL_WIDTH_PX = 760;
+
+/** Shape-library spawn is 25% smaller than generic file imports. */
+export const SHAPE_LIBRARY_SPAWN_SCALE = 0.75;
+
+/** Max world AABB dimension after import normalization on insert (1.5 studio units). */
+export const SHAPE_LIBRARY_TARGET_MAX_DIMENSION =
+  STUDIO_IMPORT_TARGET_MAX_DIMENSION * SHAPE_LIBRARY_SPAWN_SCALE;
 
 /** Object → Material defaults when inserting a shape-library GLB (absolute sliders, not import multipliers). */
 export const SHAPE_LIBRARY_DEFAULT_METALNESS = 1;

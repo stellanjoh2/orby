@@ -7,6 +7,7 @@ import { normalizeImportScale } from '../import/normalizeImportScale.js';
 import {
   findBakeableShapeLibraryEntry,
   applyShapeLibraryPresentationTilt,
+  SHAPE_LIBRARY_TARGET_MAX_DIMENSION,
 } from './shapeLibraryCatalog.js';
 
 function configureGLTFLoader(loader) {
@@ -90,7 +91,9 @@ export class ShapeLibraryController {
           buffer,
           '',
           (gltf) => {
-            normalizeImportScale(gltf.scene);
+            normalizeImportScale(gltf.scene, {
+              target: SHAPE_LIBRARY_TARGET_MAX_DIMENSION,
+            });
             applyShapeLibraryPresentationTilt(gltf.scene);
             gltf.scene.userData.orbyShapeLibrary = true;
             gltf.scene.userData.orbyShapeLibraryId = entry.id;
@@ -113,7 +116,11 @@ export class ShapeLibraryController {
       scene.ui.updateTitle(label);
       scene.ui.updateTopBarDetail(`${label} — Idle`);
 
-      scene.modelLifecycle.setModel(asset.object, asset.animations ?? [], { resetTransform: true });
+      scene.modelLifecycle.setModel(asset.object, asset.animations ?? [], {
+        resetTransform: true,
+        focusCamera: true,
+        alignGround: true,
+      });
       scene.modelLifecycle.applyAssetMetadata(asset);
       scene._fbxImportBundle = null;
       scene.isSvgExtrudeModel = false;

@@ -37,9 +37,8 @@ body.legal-doc--support {
 }
 
 .legal-support-quicknav__label--sub {
-  margin-top: 1.35rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--legal-border);
+  margin-top: 0;
+  padding-top: 1.25rem;
 }
 
 .legal-support-quicknav__list {
@@ -49,6 +48,11 @@ body.legal-doc--support {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem 0.85rem;
+}
+
+.legal-support-quicknav__list:not(.legal-support-quicknav__list--sub) {
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--legal-border);
 }
 
 .legal-support-quicknav__list--sub {
