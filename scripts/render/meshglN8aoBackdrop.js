@@ -1,18 +1,128 @@
 /**
  * Meshgl N8AO + HDRI backdrop contract — single source of truth for regression tests.
- * See `.cursor/rules/n8ao-hdri-backdrop.mdc` and `meshglN8aoBackdrop.test.mjs`.
+ * See `docs/n8ao-hdri-base-glass-rules.md`, `.cursor/rules/n8ao-hdri-backdrop.mdc`,
+ * and `meshglN8aoBackdrop.test.mjs`.
  */
 
 /** Raw beauty depth at or above this is treated as sky (cleared far plane). */
 export const N8AO_SKY_DEPTH_THRESHOLD = 0.9995;
 
+/** Reflective studio surfaces — glass mask + RenderPass plate in composite. */
+export const N8AO_EXCLUDED_MESH_USER_DATA_KEYS = ['meshglBaseGlassReflector'];
+
 /**
- * Mirrors `n8aoBackdropRestoreShader` — `mix(backdrop, ao, geometry)`.
+ * @param {import('three').Object3D} object
+ * @returns {boolean}
+ */
+export function isN8aoExcludedMesh(object) {
+  return N8AO_EXCLUDED_MESH_USER_DATA_KEYS.some((key) => object.userData?.[key]);
+}
+
+/**
+ * @param {import('three').Scene} scene
+ * @returns {boolean}
+ */
+export function sceneHasN8aoExcludedMesh(scene) {
+  let found = false;
+  scene.traverse((child) => {
+    if (found || !child.isMesh || !child.visible) return;
+    if (isN8aoExcludedMesh(child)) found = true;
+  });
+  return found;
+}
+
+/**
+ * @param {import('three').Scene} scene
+ * @param {() => void} fn
+ */
+export function withN8aoExcludedMeshesHidden(scene, fn) {
+  /** @type {import('three').Object3D[]} */
+  const hidden = [];
+  scene.traverse((child) => {
+    if (!child.isMesh || !child.visible || !isN8aoExcludedMesh(child)) return;
+    hidden.push(child);
+    child.visible = false;
+  });
+  try {
+    fn();
+  } finally {
+    for (const child of hidden) {
+      child.visible = true;
+    }
+  }
+}
+
+/**
+ * Render pass helper — hide everything except reflective studio surfaces (base glass).
+ *
+ * @param {import('three').Scene} scene
+ * @param {() => void} fn
+ */
+export function withOnlyN8aoExcludedMeshesVisible(scene, fn) {
+  /** @type {Array<[import('three').Object3D, boolean]>} */
+  const toggled = [];
+  scene.traverse((child) => {
+    if (!child.isMesh) return;
+    const keep = isN8aoExcludedMesh(child);
+    if (keep) {
+      if (!child.visible) {
+        toggled.push([child, false]);
+        child.visible = true;
+      }
+      return;
+    }
+    if (child.visible) {
+      toggled.push([child, true]);
+      child.visible = false;
+    }
+  });
+  try {
+    fn();
+  } finally {
+    for (const [node, wasVisible] of toggled) {
+      node.visible = wasVisible;
+    }
+  }
+}
+
+/**
+ * Reflector onBeforeRender captures the scene into its own RT and can leave a partial
+ * GL viewport — pause hooks while drawing the flat glass mask (silhouette only).
+ *
+ * @param {import('three').Scene} scene
+ * @param {() => void} fn
+ */
+export function withN8aoExcludedMeshRenderHooksPaused(scene, fn) {
+  /** @type {Array<[import('three').Object3D, (() => void) | null, (() => void) | null]>} */
+  const paused = [];
+  scene.traverse((child) => {
+    if (!isN8aoExcludedMesh(child)) return;
+    const before = child.onBeforeRender ?? null;
+    const after = child.onAfterRender ?? null;
+    if (!before && !after) return;
+    paused.push([child, before, after]);
+    child.onBeforeRender = () => {};
+    child.onAfterRender = () => {};
+  });
+  try {
+    fn();
+  } finally {
+    for (const [child, before, after] of paused) {
+      child.onBeforeRender = before ?? (() => {});
+      child.onAfterRender = after ?? (() => {});
+    }
+  }
+}
+
+/**
+ * Mirrors `n8aoBackdropRestoreShader` composite.
  *
  * @param {[number, number, number]} backdropRgb
  * @param {[number, number, number]} aoRgb
  * @param {number} rawDepth
  * @param {number} [threshold]
+ * @param {number} [glassMask]
+ * @param {[number, number, number] | null} [beautyRgb]
  * @returns {[number, number, number]}
  */
 export function compositeAoWithBackdrop(
@@ -20,12 +130,25 @@ export function compositeAoWithBackdrop(
   aoRgb,
   rawDepth,
   threshold = N8AO_SKY_DEPTH_THRESHOLD,
+  glassMask = 0,
+  beautyRgb = null,
 ) {
   const geometry = rawDepth < threshold ? 1 : 0;
+  const glass = glassMask >= 0.5 ? 1 : 0;
+
+  if (glass === 1 && beautyRgb) {
+    return backdropRgb.map((backdrop, i) => {
+      const beauty = Math.max(beautyRgb[i], 0.001);
+      const aoFactor = Math.min(1, aoRgb[i] / beauty);
+      return backdrop * aoFactor;
+    });
+  }
+
+  const aoWeight = geometry * (1 - glass);
   return [
-    backdropRgb[0] * (1 - geometry) + aoRgb[0] * geometry,
-    backdropRgb[1] * (1 - geometry) + aoRgb[1] * geometry,
-    backdropRgb[2] * (1 - geometry) + aoRgb[2] * geometry,
+    backdropRgb[0] * (1 - aoWeight) + aoRgb[0] * aoWeight,
+    backdropRgb[1] * (1 - aoWeight) + aoRgb[1] * aoWeight,
+    backdropRgb[2] * (1 - aoWeight) + aoRgb[2] * aoWeight,
   ];
 }
 

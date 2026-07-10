@@ -6,33 +6,42 @@ alwaysApply: false
 
 # N8AO + HDRI backdrop (official)
 
-Screen-space AO must darken **mesh / base / podium** only. **HDRI, solid `#202020`, and gradient** sky pixels stay exactly as `MeshglRenderPass` painted them.
+Screen-space AO must darken **mesh / base / podium** only. **HDRI, solid `#202020`, gradient** sky pixels stay exactly as `MeshglRenderPass` painted them. **Base glass** keeps RenderPass reflections with N8AO darkening applied on top — not a flat backdrop swap and not hidden from the beauty pass.
 
-Regression tests: `scripts/render/meshglN8aoBackdrop.test.mjs` (`npm test`).
+Regression tests: `scripts/render/meshglN8aoBackdrop.test.mjs` (`npm test`).  
+Human-readable rules: `docs/n8ao-hdri-base-glass-rules.md`.
 
 ## Pipeline (do not simplify away)
 
 1. **`MeshglRenderPass` stays enabled** when AO is on — paints full backdrop to composer `readBuffer`; records `lastComposerColorBuffer`.
 2. **`MeshglN8AOPass`** (order matters):
    - Copy RenderPass plate → `_backdropHoldRT` **before** N8AO clobber.
-   - Seed N8AO beauty via `renderSceneBeautyToTarget` (strip `scene.background`; geometry-only depth).
+   - Seed N8AO beauty via `renderSceneBeautyToTarget` (strip `scene.background` only — **glass stays visible** in beauty colour/depth).
    - `_enforceBeautyDepth` — `MeshDepthMaterial` + `colorWrite: false` for imports with `depthWrite: false`.
+   - `_renderGlassMask` — white mask for base glass silhouette only (`withOnlyN8aoExcludedMeshesVisible`; pause Reflector `onBeforeRender` hooks).
    - Run N8AO with `autoRenderBeauty: false`, `transparencyAware: false`, `autoDetectTransparency: false`.
-   - Composite to `readBuffer`: `mix(backdrop, ao, geometry)` using **beauty `depthTexture`** (`tSceneDepth`), not a colour prepass.
+   - Composite to `readBuffer`:
+     - **Sky** (`depth ≥ threshold`): untouched RenderPass backdrop.
+     - **Mesh / podium**: full N8AO plate.
+     - **Glass disc** (`tGlassMask`): `backdrop * clamp(ao / beauty, 0, 1)` — reflections from RenderPass, AO on top.
 3. **`needsSwap = false`** on `MeshglN8AOPass` — final plate stays in `readBuffer` for bloom/grading.
 
 ## Never do
 
 - `renderPass.enabled = !active` when AO is on (black sky; breaks Render Backdrop toggle).
 - Disable RenderPass and rely on N8AO alone for the backdrop plate.
+- Hide `meshglBaseGlassReflector` during beauty seed (podium depth fills the disc → mesh looks masked/cut out).
+- Restore glass with pure `backdrop` and zero AO weight (flat swap — loses contact shadow on glass rim).
 - Restore backdrop by sampling composer buffer **after** copying AO into it (plate becomes AO image).
 - White/colour geometry prepass as the sole sky mask (failed on imports / GPU paths).
 - `ShaderPass.render(renderer, source, dest)` — Three.js API is **`render(renderer, writeBuffer, readBuffer)`** (dest, source).
 - Re-enable N8AO `autoDetectTransparency` on import scenes (corrupts output with `autoRenderBeauty: false`).
 - Copy full composer colour into beauty **without** geometry-only depth first (AO runs on HDRI sky).
+- Move base glass to a dedicated camera layer without enabling that layer on the studio camera (glass vanishes).
 
 ## Manual verify (any AO change)
 
 1. AO on + HDRI backdrop → beach/sky visible; contact shadow on mesh + podium at strength ~5.
 2. Toggle **Render Backdrop** off with AO on → solid `#202020`, AO still on geometry.
 3. Textured/skinned import (e.g. teddy) + shape-library primitive.
+4. Base Glass on + AO on → reflective disc stays bright with AO at contact rim; mesh not transparent/masked by the disc.

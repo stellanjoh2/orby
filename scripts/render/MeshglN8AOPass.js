@@ -4,7 +4,12 @@ import { CopyShader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/
 import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js';
 import { renderSceneBeautyToTarget } from './renderSceneBeautyToTarget.js';
 import { N8aoBackdropRestoreShader } from './n8aoBackdropRestoreShader.js';
-import { N8AO_SKY_DEPTH_THRESHOLD } from './meshglN8aoBackdrop.js';
+import {
+  N8AO_SKY_DEPTH_THRESHOLD,
+  sceneHasN8aoExcludedMesh,
+  withN8aoExcludedMeshRenderHooksPaused,
+  withOnlyN8aoExcludedMeshesVisible,
+} from './meshglN8aoBackdrop.js';
 import { resetRendererFullViewport } from './resetRendererFullViewport.js';
 
 /** Depth-only override — fills beauty depth for imports with depthWrite:false. */
@@ -14,6 +19,11 @@ function createBeautyDepthOverrideMaterial() {
   mat.morphTargets = true;
   mat.colorWrite = false;
   return mat;
+}
+
+/** White fill for the base-glass screen mask (restores RenderPass colour in composite). */
+function createGlassMaskOverrideMaterial() {
+  return new THREE.MeshBasicMaterial({ color: 0xffffff });
 }
 
 /**
@@ -54,7 +64,9 @@ export class MeshglN8AOPass extends N8AOPass {
     this._restoreBackdropPass = new ShaderPass(N8aoBackdropRestoreShader);
     this._restoreBackdropPass.clear = false;
     this._backdropHoldRT = this._createPlateRenderTarget(width, height);
+    this._glassMaskRT = this._createPlateRenderTarget(width, height);
     this._beautyDepthMaterial = createBeautyDepthOverrideMaterial();
+    this._glassMaskMaterial = createGlassMaskOverrideMaterial();
     // Final plate lands in readBuffer — RenderPass wrote there; bloom reads it next.
     this.needsSwap = false;
     this.autoDetectTransparency = false;
@@ -76,6 +88,7 @@ export class MeshglN8AOPass extends N8AOPass {
     if (!beauty) return;
     beauty.setSize(width, height);
     this._backdropHoldRT?.setSize(width, height);
+    this._glassMaskRT?.setSize(width, height);
     const depthTex = beauty.depthTexture;
     if (depthTex?.image) {
       depthTex.image.width = width;
@@ -106,7 +119,7 @@ export class MeshglN8AOPass extends N8AOPass {
     this._copyPass.render(renderer, dest, source);
   }
 
-  /** Geometry-only beauty plate for N8AO (no HDRI depth/colour in sky pixels). */
+  /** Geometry beauty plate for N8AO — glass stays visible so AO samples real contact depth. */
   _seedBeautyForAo(renderer) {
     renderSceneBeautyToTarget(renderer, this.scene, this.camera, this.beautyRenderTarget, {
       resolveBackgroundGradientController: this.resolveBackgroundGradientController,
@@ -114,6 +127,86 @@ export class MeshglN8AOPass extends N8AOPass {
       clearAlpha: 1,
     });
     this._enforceBeautyDepth(renderer);
+  }
+
+  /**
+   * @param {import('three').WebGLRenderer} renderer
+   */
+  _clearGlassMask(renderer) {
+    const maskRT = this._glassMaskRT;
+    if (!maskRT) return;
+    const oldTarget = renderer.getRenderTarget();
+    const oldAutoClear = renderer.autoClear;
+    const oldClearColor = renderer.getClearColor(new THREE.Color());
+    const oldClearAlpha = renderer.getClearAlpha();
+    try {
+      renderer.setClearColor(0x000000, 1);
+      renderer.autoClear = true;
+      renderer.setRenderTarget(maskRT);
+      resetRendererFullViewport(renderer);
+      renderer.clear(true, false, false);
+    } finally {
+      renderer.setClearColor(oldClearColor, oldClearAlpha);
+      renderer.autoClear = oldAutoClear;
+      renderer.setRenderTarget(oldTarget);
+      resetRendererFullViewport(renderer);
+    }
+  }
+
+  /**
+   * Screen mask for base glass — composite restores the RenderPass reflection plate there.
+   *
+   * @param {import('three').WebGLRenderer} renderer
+   */
+  _renderGlassMask(renderer) {
+    const maskRT = this._glassMaskRT;
+    if (!maskRT) return;
+    if (!sceneHasN8aoExcludedMesh(this.scene)) {
+      this._clearGlassMask(renderer);
+      return;
+    }
+
+    withOnlyN8aoExcludedMeshesVisible(this.scene, () => {
+      withN8aoExcludedMeshRenderHooksPaused(this.scene, () => {
+        const camera = this.camera;
+        const savedCameraViewport = camera?.viewport;
+        if (camera && savedCameraViewport !== undefined) {
+          camera.viewport = undefined;
+        }
+
+        const oldTarget = renderer.getRenderTarget();
+        const oldAutoClear = renderer.autoClear;
+        const oldOverride = this.scene.overrideMaterial;
+        const oldClearColor = renderer.getClearColor(new THREE.Color());
+        const oldClearAlpha = renderer.getClearAlpha();
+        let savedSceneBackground = null;
+
+        try {
+          savedSceneBackground = this.scene.background;
+          this.scene.background = null;
+          this.scene.overrideMaterial = this._glassMaskMaterial;
+
+          renderer.setClearColor(0x000000, 1);
+          renderer.autoClear = true;
+          renderer.setRenderTarget(maskRT);
+          resetRendererFullViewport(renderer);
+          renderer.clear(true, true, true);
+          renderer.render(this.scene, camera);
+        } finally {
+          if (savedSceneBackground !== null) {
+            this.scene.background = savedSceneBackground;
+          }
+          this.scene.overrideMaterial = oldOverride;
+          renderer.setClearColor(oldClearColor, oldClearAlpha);
+          renderer.autoClear = oldAutoClear;
+          renderer.setRenderTarget(oldTarget);
+          if (camera && savedCameraViewport !== undefined) {
+            camera.viewport = savedCameraViewport;
+          }
+          resetRendererFullViewport(renderer);
+        }
+      });
+    });
   }
 
   /**
@@ -178,12 +271,16 @@ export class MeshglN8AOPass extends N8AOPass {
    * @param {import('three').WebGLRenderTarget} backdropHold
    */
   _compositeBackdropOverAo(renderer, readBuffer, writeBuffer, backdropHold) {
-    const sceneDepth = this.beautyRenderTarget?.depthTexture;
+    const beauty = this.beautyRenderTarget;
+    const sceneDepth = beauty?.depthTexture;
+    const glassMask = this._glassMaskRT?.texture;
     if (
       !readBuffer?.texture
       || !writeBuffer?.texture
       || !backdropHold?.texture
+      || !beauty?.texture
       || !sceneDepth
+      || !glassMask
     ) {
       return;
     }
@@ -191,7 +288,9 @@ export class MeshglN8AOPass extends N8AOPass {
     const u = this._restoreBackdropPass.uniforms;
     u.tAO.value = writeBuffer.texture;
     u.tBackdrop.value = backdropHold.texture;
+    u.tBeauty.value = beauty.texture;
     u.tSceneDepth.value = sceneDepth;
+    u.tGlassMask.value = glassMask;
     u.skyDepthThreshold.value = N8AO_SKY_DEPTH_THRESHOLD;
     this._restoreBackdropPass.render(renderer, readBuffer, writeBuffer);
   }
@@ -212,6 +311,7 @@ export class MeshglN8AOPass extends N8AOPass {
     const backdropHold = this._preserveBackdropPlate(renderer, backdropBuffer);
 
     this._seedBeautyForAo(renderer);
+    this._renderGlassMask(renderer);
 
     const prevAutoRenderBeauty = this.configuration.autoRenderBeauty;
     const prevTransparencyAware = this.configuration.transparencyAware;

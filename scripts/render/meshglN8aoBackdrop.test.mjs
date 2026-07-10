@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 import {
+  N8AO_EXCLUDED_MESH_USER_DATA_KEYS,
   N8AO_GUARDED_SOURCE_FILES,
   N8AO_SKY_DEPTH_THRESHOLD,
   compositeAoWithBackdrop,
@@ -47,6 +48,16 @@ describe('N8AO backdrop composite math', () => {
     );
   });
 
+  it('applies AO on top of base glass reflections', () => {
+    const backdrop = [0.8, 0.75, 0.7];
+    const beauty = [0.4, 0.38, 0.36];
+    const ao = [0.2, 0.19, 0.18];
+    assert.deepEqual(
+      compositeAoWithBackdrop(backdrop, ao, 0.42, N8AO_SKY_DEPTH_THRESHOLD, 1, beauty),
+      [0.4, 0.375, 0.35],
+    );
+  });
+
   it('shader threshold default matches shared constant', () => {
     const shader = readRepoFile('scripts/render/n8aoBackdropRestoreShader.js');
     assert.match(
@@ -54,7 +65,9 @@ describe('N8AO backdrop composite math', () => {
       new RegExp(`skyDepthThreshold:\\s*\\{\\s*value:\\s*${N8AO_SKY_DEPTH_THRESHOLD}\\s*\\}`),
     );
     assert.match(shader, /uniform highp sampler2D tSceneDepth;/);
-    assert.match(shader, /mix\(backdrop, ao, geometry\)/);
+    assert.match(shader, /uniform sampler2D tGlassMask;/);
+    assert.match(shader, /uniform sampler2D tBeauty;/);
+    assert.match(shader, /backdrop \* aoFactor/);
   });
 });
 
@@ -81,9 +94,26 @@ describe('N8AO + HDRI source invariants', () => {
     assert.match(pass, /configuration\.autoRenderBeauty\s*=\s*false/);
     assert.match(pass, /configuration\.transparencyAware\s*=\s*false/);
     assert.match(pass, /_preserveBackdropPlate/);
-    assert.match(pass, /beautyRenderTarget\?\.depthTexture/);
+    assert.match(pass, /beauty\?\.depthTexture/);
     assert.match(pass, /_enforceBeautyDepth/);
+    assert.match(pass, /_renderGlassMask/);
+    assert.doesNotMatch(pass, /withN8aoExcludedMeshesHidden/);
+    assert.match(pass, /tBeauty\.value/);
     assert.match(pass, /_restoreBackdropPass\.render\(renderer, readBuffer, writeBuffer\)/);
+  });
+
+  it('base glass reflector gets AO on top of RenderPass reflections', () => {
+    assert.ok(N8AO_EXCLUDED_MESH_USER_DATA_KEYS.includes('meshglBaseGlassReflector'));
+    const pass = readRepoFile('scripts/render/MeshglN8AOPass.js');
+    assert.match(pass, /_renderGlassMask/);
+    assert.match(pass, /withOnlyN8aoExcludedMeshesVisible/);
+    assert.match(pass, /withN8aoExcludedMeshRenderHooksPaused/);
+    assert.doesNotMatch(pass, /N8AO_GLASS_LAYER/);
+    assert.doesNotMatch(pass, /withCameraLayerDisabled/);
+    const ground = readRepoFile('scripts/render/GroundController.js');
+    assert.doesNotMatch(ground, /layers\.set/);
+    const backdrop = readRepoFile('scripts/render/meshglN8aoBackdrop.js');
+    assert.match(backdrop, /meshglBaseGlassReflector/);
   });
 
   it('RenderPass records composer colour for backdrop restore', () => {
