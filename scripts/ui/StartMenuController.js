@@ -348,12 +348,22 @@ export class StartMenuController {
     this.dropzone.addEventListener('animationend', (event) => {
       if (event.target !== this.dropzone) return;
       if (event.animationName === 'dropzoneHide') {
+        this._finalizeDropzoneHidden();
         noteDropzoneHideEnded();
       }
       if (event.animationName === 'dropzoneReveal') {
         noteDropzoneRevealEnded();
       }
     });
+  }
+
+  /** Pin marketing dropzone off after hide — inline opacity:1 must not pop back when .hiding ends. */
+  _finalizeDropzoneHidden() {
+    if (!this.dropzone) return;
+    this.dropzone.classList.remove('hiding');
+    this.dropzone.style.opacity = '0';
+    this.dropzone.style.pointerEvents = 'none';
+    this.dropzone.style.animation = 'none';
   }
 
   /**
@@ -596,6 +606,10 @@ export class StartMenuController {
         this.dropzone.style.pointerEvents = 'none';
         this.dropzone.classList.add('hiding');
         noteDropzoneHideStarted();
+        if (prefersReducedMotion()) {
+          this._finalizeDropzoneHidden();
+          noteDropzoneHideEnded();
+        }
       });
     }
     

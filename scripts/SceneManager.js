@@ -271,6 +271,7 @@ export class SceneManager {
       }
       await this.syncViewportSize();
       this.startRenderLoop();
+      this.ui.endLoadSpinner();
       this.ui.updateTitle('Blank canvas');
       this.ui.updateTopBarDetail('No model — generate text or import a file');
       this.ui.revealShelf({ skipSound: options.skipSound !== false });

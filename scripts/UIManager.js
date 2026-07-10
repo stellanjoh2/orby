@@ -73,6 +73,7 @@ import {
   noteOrbyLoadSpinnerBegun,
   noteOrbyLoadSpinnerEnded,
   noteDropzoneRevealStarted,
+  noteStudioEntranceContentReady,
 } from './ui/orbyPageTransition.js';
 import {
   buildOfflineExportOverlaySummary,
@@ -2223,10 +2224,12 @@ export class UIManager {
   }
 
   endLoadSpinner() {
-    this._loadSpinnerDepth = Math.max(0, this._loadSpinnerDepth - 1);
+    if (this._loadSpinnerDepth <= 0) return;
+    this._loadSpinnerDepth -= 1;
     if (this._loadSpinnerDepth === 0) {
       this.endLoadSpinnerElapsed();
       this._loadSpinnerStatusPrefix = 'Rendering';
+      noteStudioEntranceContentReady();
     }
     noteOrbyLoadSpinnerEnded();
     this._syncLoadSpinner();
@@ -2240,6 +2243,7 @@ export class UIManager {
     }
     this.endLoadSpinnerElapsed();
     this._loadSpinnerStatusPrefix = 'Rendering';
+    noteStudioEntranceContentReady();
     this._syncLoadSpinner();
   }
 

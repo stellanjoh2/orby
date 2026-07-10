@@ -564,6 +564,7 @@ export class ModelLifecycleManager {
         svgExtrudeDetail: svgExtrudeState.detail ?? 'high',
       });
       this.setModel(asset.object, asset.animations ?? [], { resetTransform: true });
+      s.ui.endLoadSpinner();
       this.applyAssetMetadata(asset);
       s._fbxImportBundle = null;
       const isFbx = this._configureFbxAfterLoad(file, asset.object);
@@ -629,6 +630,7 @@ export class ModelLifecycleManager {
         s.ui.updateTitle(sourceFile.name);
       }
       this.setModel(asset.object, asset.animations ?? [], { resetTransform: true });
+      s.ui.endLoadSpinner();
       this.applyAssetMetadata(asset);
       s._fbxImportBundle = files;
       const isFbx = this._configureFbxAfterLoad(sourceFile, asset.object);
