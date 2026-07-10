@@ -80,4 +80,8 @@ export function resolveGlbExportKind({
 
 /** User-facing hint when the GLB button is unavailable. */
 export const GLB_EXPORT_UNAVAILABLE_HINT =
-  'Export .GLB needs an SVG extrusion, or Shader Lab Voxel HD / PS2 Crush / PSX / VGA with the look applied';
+  'GLB export needs SVG extrude or Shader Lab';
+
+/** Shape Library — no GLB export path yet (modifiers included). */
+export const GLB_SHAPE_LIBRARY_EXPORT_UNAVAILABLE_HINT =
+  'Exporting modified Shape Library meshes isn\u2019t supported yet';

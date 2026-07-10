@@ -96,6 +96,7 @@ import { HistogramController } from './render/HistogramController.js';
 import { ModelGlbExporter } from './export/ModelGlbExporter.js';
 import {
   GLB_EXPORT_UNAVAILABLE_HINT,
+  GLB_SHAPE_LIBRARY_EXPORT_UNAVAILABLE_HINT,
   resolveGlbExportKind,
 } from './export/resolveGlbExportKind.js';
 import { EventManager } from './scene/EventManager.js';
@@ -4313,7 +4314,10 @@ export class SceneManager {
       modelRoot: this.modelRoot,
     });
     if (!exportKind) {
-      this.ui?.showToast?.(GLB_EXPORT_UNAVAILABLE_HINT);
+      const hint = isShapeLibraryModel(this.currentModel)
+        ? GLB_SHAPE_LIBRARY_EXPORT_UNAVAILABLE_HINT
+        : GLB_EXPORT_UNAVAILABLE_HINT;
+      this.ui?.showToast?.(hint);
       return;
     }
 
