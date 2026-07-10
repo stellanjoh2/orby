@@ -11,7 +11,7 @@ export const ORBY_BLACK = '#080808';
 export const CINEMATIC_LETTERBOX_BLACK = '#000000';
 
 /** Scene / viewport clear color — default blank canvas (Shader Lab, exports, backdrop). */
-export const APP_BACKGROUND = '#202020';
+export const APP_BACKGROUND = ORBY_BLACK;
 
 /** Orby Lime — logotype, CTAs, wireframe default, UI accents. Mirror: --orby-lime */
 export const ORBY_LIME = '#c4ff00';

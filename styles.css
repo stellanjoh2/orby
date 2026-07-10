@@ -309,7 +309,7 @@ body[data-theme='violet'],
 body[data-theme='aqua'] {
   /* Default near-black — surfaces, buttons on lime, scene background */
   --orby-black: #080808;
-  --orby-app-bg: #202020;
+  --orby-app-bg: var(--orby-black);
   /* 21∶9 cinematic letterbox — always pure black, not studio backdrop */
   --cinematic-letterbox-black: #000;
   /* FAQ panels, tooltips — softer than app black so hints don’t read as errors */
@@ -2760,7 +2760,7 @@ html.safari-browser .orby-magic-btn::before {
   overflow: hidden;
 }
 
-/* While start menu hides the dropzone (shell prep); --bg can read gray on some displays */
+/* While start menu hides the dropzone (shell prep) */
 html.orby-dropzone-shell-pending .workspace {
   background: var(--orby-app-bg);
 }
