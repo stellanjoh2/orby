@@ -11,7 +11,7 @@ export const ORBY_BLACK = '#080808';
 export const CINEMATIC_LETTERBOX_BLACK = '#000000';
 
 /** Studio viewport / 3D backdrop — clear color, gradients, exports. Not UI chrome. */
-export const STUDIO_BACKGROUND = '#252525';
+export const STUDIO_BACKGROUND = '#505050';
 
 /** @deprecated Prefer {@link STUDIO_BACKGROUND} — kept for existing imports. */
 export const APP_BACKGROUND = STUDIO_BACKGROUND;

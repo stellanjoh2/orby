@@ -51,7 +51,7 @@ Page transitions lock the viewport to `#080808` via `scripts/ui/orbyPageTransiti
 - CSS `:has(.dropzone.hiding)` / `:has(.viewport-load-spinner.is-visible)`
 - WebGL clear color forced to `TRANSITION_BACKDROP` until unlock
 
-After the spinner ends **and** the dropzone hide animation completes, `flushStudioViewportBackdrop()` applies `STUDIO_BACKGROUND` (`#252525`).
+After the spinner ends **and** the dropzone hide animation completes, `flushStudioViewportBackdrop()` applies `STUDIO_BACKGROUND` (`#505050`).
 
 ## Don't
 
