@@ -103,9 +103,12 @@ function corsHeaders(origin, req) {
     process.env.BUG_REPORT_ALLOWED_ORIGINS?.split(',')
       .map((s) => s.trim())
       .filter(Boolean) ?? null;
+  const productionDefaults = ['https://orby.studio', 'https://www.orby.studio'];
   let allowOrigin = '*';
   if (allow?.length) {
     allowOrigin = allow.includes(origin || '') ? origin : allow[0];
+  } else if (process.env.VERCEL_ENV === 'production') {
+    allowOrigin = productionDefaults.includes(origin || '') ? origin : productionDefaults[0];
   } else if (origin && /^https?:\/\//i.test(origin)) {
     allowOrigin = origin;
   }

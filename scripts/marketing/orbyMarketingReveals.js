@@ -14,7 +14,12 @@ import {
   clearMarketingMediaFilter,
   setMediaPlaceholderOpacity,
 } from './orbyMarketingMediaPlaceholder.js';
-import { playMarketingVideo } from './orbyMarketingVideo.js';
+import {
+  ensureMarketingVideoLoaded,
+  getMarketingVideoSrc,
+  loadSectionMarketingVideos,
+  playMarketingVideo,
+} from './orbyMarketingVideo.js';
 import {
   prepareShowcaseGalleryCredit,
   restartShowcaseGalleryAutoplay,
@@ -59,6 +64,8 @@ const mediaBlurPx = 14;
 const mediaRevealDur = 0.88;
 const mediaEase = 'power3.out';
 const figureCreditInS = 0.48;
+/** Safari can hang without loadeddata/error under content-visibility:auto — never block reveals forever. */
+const MARKETING_VIDEO_READY_TIMEOUT_MS = 10_000;
 
 function useInstantMarketingReveal() {
   return prefersReducedMotion() || isMobileLanding();
@@ -89,7 +96,7 @@ function getMaskMedia(maskEl) {
   const activeShowcase = maskEl.querySelector('.orby-marketing__showcase-img.is-active');
   if (activeShowcase) return activeShowcase;
   return maskEl.querySelector(
-    '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img, .orby-marketing__pro-card-img, .orby-marketing__png-marquee-img',
+    '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__figure-video, .orby-marketing__showcase-img, .orby-marketing__pro-card-img, .orby-marketing__pro-card-video, .orby-marketing__video, .orby-marketing__png-marquee-img',
   );
 }
 
@@ -103,12 +110,36 @@ function whenMediaReady(el, options = {}) {
   if (!el) return Promise.resolve();
 
   if (el instanceof HTMLVideoElement) {
-    if (el.readyState >= 2) return Promise.resolve();
-    if (el.readyState < 1) el.load();
+    ensureMarketingVideoLoaded(el);
+    if (el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) return Promise.resolve();
     return new Promise((resolve) => {
-      const finish = () => resolve();
+      let settled = false;
+      const timer =
+        MARKETING_VIDEO_READY_TIMEOUT_MS > 0
+          ? window.setTimeout(() => finish(), MARKETING_VIDEO_READY_TIMEOUT_MS)
+          : null;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (timer !== null) window.clearTimeout(timer);
+        el.removeEventListener('loadeddata', finish);
+        el.removeEventListener('canplay', finish);
+        el.removeEventListener('error', onError);
+        resolve();
+      };
+      const onError = () => {
+        if (settled) return;
+        ensureMarketingVideoLoaded(el, { force: true });
+        if (el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+          finish();
+          return;
+        }
+        el.addEventListener('loadeddata', finish, { once: true });
+        el.addEventListener('canplay', finish, { once: true });
+      };
       el.addEventListener('loadeddata', finish, { once: true });
-      el.addEventListener('error', finish, { once: true });
+      el.addEventListener('canplay', finish, { once: true });
+      el.addEventListener('error', onError, { once: true });
     });
   }
 
@@ -149,7 +180,7 @@ function shouldPreloadMarketingElement(el) {
   }
   if (el instanceof HTMLImageElement) return Boolean(el.src);
   if (el instanceof HTMLVideoElement) {
-    return Boolean(el.currentSrc || el.src);
+    return Boolean(getMarketingVideoSrc(el));
   }
   return false;
 }
@@ -160,11 +191,15 @@ function shouldPreloadMarketingElement(el) {
  */
 export function preloadSectionMedia(sectionEl) {
   if (!sectionEl) return Promise.resolve();
+  loadSectionMarketingVideos(sectionEl);
+  sectionEl.querySelectorAll('video').forEach((video) => {
+    playMarketingVideo(video);
+  });
   const media = [
     ...sectionEl.querySelectorAll(
-      '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img.is-active, .orby-marketing__pro-card-img, .orby-marketing__pro-card-video, .orby-marketing__intro-asset:not(.orby-marketing__intro-turntable-wrap)',
+      '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img.is-active, .orby-marketing__pro-card-img, .orby-marketing__intro-asset:not(.orby-marketing__intro-turntable-wrap)',
     ),
-  ].filter(shouldPreloadMarketingElement);
+  ].filter((el) => !(el instanceof HTMLVideoElement) && shouldPreloadMarketingElement(el));
   return Promise.all(media.map((el) => whenMediaReady(el, { decode: false })));
 }
 
@@ -354,6 +389,7 @@ export function resumeMarketingVideos(root) {
   if (!root) return;
   root.querySelectorAll('.orby-marketing__section[data-orby-marketing-revealed="1"] video').forEach(
     (video) => {
+      ensureMarketingVideoLoaded(video);
       playMarketingVideo(video);
     },
   );
@@ -404,10 +440,15 @@ function revealMedia(maskEl, tl, position = 0) {
 
   gsap.set(maskEl, { clearProps: 'clipPath' });
 
-  if (media instanceof HTMLVideoElement) playMarketingVideo(media);
-
-  tl.add(() => whenMediaReady(media), position);
-  const revealStart = '>';
+  // Split/showcase videos: do not gate the opacity tween on decode — Safari stalls under
+  // content-visibility:auto and leaves the gray placeholder up indefinitely.
+  let revealStart = position;
+  if (media instanceof HTMLVideoElement) {
+    playMarketingVideo(media);
+  } else {
+    tl.add(() => whenMediaReady(media), position);
+    revealStart = '>';
+  }
   const revealTarget = isPngMarquee ? [track, logotype].filter(Boolean) : track || media;
   const useBlur =
     !isPngMarquee &&
@@ -448,6 +489,7 @@ function revealMedia(maskEl, tl, position = 0) {
           revealFigureCredit(maskEl);
         }
         setMediaPlaceholderOpacity(maskEl, 0);
+        if (media instanceof HTMLVideoElement) playMarketingVideo(media);
       },
     },
     revealStart,
@@ -609,9 +651,13 @@ function prepareProCardMedia(mediaEl) {
  * @returns {Promise<void>}
  */
 function preloadProCardMedia(cardEl) {
+  loadSectionMarketingVideos(cardEl);
+  cardEl.querySelectorAll('video').forEach((video) => {
+    playMarketingVideo(video);
+  });
   const media = [
     ...cardEl.querySelectorAll(
-      '.orby-marketing__pro-card-img, .orby-marketing__pro-card-video, .orby-marketing__showcase-img.is-active',
+      '.orby-marketing__pro-card-img, .orby-marketing__showcase-img.is-active',
     ),
   ].filter(shouldPreloadMarketingElement);
   return Promise.all(media.map((el) => whenMediaReady(el, { decode: false })));
@@ -683,7 +729,11 @@ function revealProFlipGallery(mask) {
  */
 function revealProCardMedia(mediaWrap, media, tl, position) {
   const useBlur = shouldUseMediaBlurReveal() && !(media instanceof HTMLVideoElement);
-  tl.add(() => whenMediaReady(media), position);
+  if (media instanceof HTMLVideoElement) {
+    playMarketingVideo(media);
+  } else {
+    tl.add(() => whenMediaReady(media), position);
+  }
   tl.fromTo(
     media,
     { opacity: 0, ...(useBlur ? { filter: `blur(${mediaBlurPx}px)` } : {}) },
@@ -701,7 +751,7 @@ function revealProCardMedia(mediaWrap, media, tl, position) {
         setMediaPlaceholderOpacity(mediaWrap, 0);
       },
     },
-    `${position}+=0`,
+    media instanceof HTMLVideoElement ? position : `${position}+=0`,
   );
 }
 

@@ -12,8 +12,8 @@ export const SHAPE_LIBRARY_DEFAULT_COLOR = '#ffffff';
 
 /** @typedef {{ id: string, glbUrl: string, sourceId: string, label: string, empty?: boolean }} ShapeLibraryEntry */
 
-const SHAPE_LIBRARY_ASSET_VERSION = 11;
-const SHAPE_LIBRARY_THUMB_VERSION = 6;
+const SHAPE_LIBRARY_ASSET_VERSION = 15;
+const SHAPE_LIBRARY_THUMB_VERSION = 9;
 
 const shapeLibraryGlbUrl = (file) =>
   `./assets/3D-assets/shape-library/${file}?v=${SHAPE_LIBRARY_ASSET_VERSION}`;

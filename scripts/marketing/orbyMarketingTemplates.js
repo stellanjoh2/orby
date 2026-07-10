@@ -509,7 +509,7 @@ function renderCtaSection(section) {
     <div class="orby-marketing__cta-stage" aria-hidden="true">
       <img
         class="orby-marketing__intro-asset orby-marketing__intro-asset--right"
-        src="./assets/marketing/intro-asset-right.png"
+        src="./assets/marketing/intro-asset-right-cta.png"
         alt=""
         width="1440"
         height="1041"
@@ -632,7 +632,7 @@ export function resolveMarketingHomeHref(base = './') {
 /** Shared top-nav link set — same on the marketing homepage and all subpages. */
 const SITE_NAV_LINK_OPTIONS = {
   includeContact: false,
-  includeBonusPages: true,
+  includeBonusPages: false,
   includeStats: true,
   includeGithub: false,
 };
@@ -763,7 +763,7 @@ function renderFooterMeta(section, options = {}) {
   const fields = getMarketingFooterFields(section);
   const sep = '<span class="orby-marketing__footer-meta-sep" aria-hidden="true"> · </span>';
 
-  const lead = `Orby is a free, open-source personal project released under the <a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(fields.licenseHref)}">MIT License</a>.`;
+  const lead = `<span class="orby-marketing__footer-meta-lead">Orby is a free, open-source personal project released under the <a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(fields.licenseHref)}">MIT License</a>.</span>`;
 
   const links = renderMarketingSiteNavLinks(fields, {
     linkClass: 'orby-marketing__footer-meta-link',

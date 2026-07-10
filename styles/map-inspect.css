@@ -127,6 +127,31 @@
   width: auto;
   max-width: calc(100vw - 2 * var(--shelf-inset, 48px));
   pointer-events: none;
+  /* Match shelf show/hide (V) — panel slides left when UI is hidden */
+  --shelf-reveal-dur: 0.45s;
+  --shelf-reveal-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  visibility: visible;
+  transition:
+    opacity var(--shelf-reveal-dur) var(--shelf-reveal-ease),
+    transform var(--shelf-reveal-dur) var(--shelf-reveal-ease),
+    visibility 0s;
+}
+
+body.ui-hidden .map-preview-panel:not([hidden]) {
+  opacity: 0;
+  transform: translate3d(-36px, 0, 0);
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity var(--shelf-reveal-dur) var(--shelf-reveal-ease),
+    transform var(--shelf-reveal-dur) var(--shelf-reveal-ease),
+    visibility 0s linear var(--shelf-reveal-dur);
+}
+
+body.ui-hidden .map-preview-panel:not([hidden]) .map-preview-panel__chrome {
+  pointer-events: none;
 }
 
 .map-preview-panel[hidden] {

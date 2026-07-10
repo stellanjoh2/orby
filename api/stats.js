@@ -70,6 +70,9 @@ function corsHeaders(origin, req) {
   let allowOrigin = '*';
   if (allow?.length) {
     allowOrigin = allow.includes(origin || '') ? origin : allow[0];
+  } else if (process.env.VERCEL_ENV === 'production') {
+    const productionDefaults = ['https://orby.studio', 'https://www.orby.studio'];
+    allowOrigin = productionDefaults.includes(origin || '') ? origin : productionDefaults[0];
   } else if (origin && /^https?:\/\//i.test(origin)) {
     allowOrigin = origin;
   }

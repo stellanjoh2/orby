@@ -4,6 +4,7 @@
  */
 import gsap from 'gsap';
 import { handoffFileToMobileAppIfLanding } from '../orbyMobileHandoff.js';
+import { blockTabletStudioAccess } from '../orbyTabletGate.js';
 import { TEXT_REVEAL_PACE } from './bigMessageHeadlineReveal.js';
 import { ensureLottie } from './lottieLoader.js';
 
@@ -228,6 +229,7 @@ export class StartMenuController {
     this.infoLogotypeAnimation = document.querySelector('#infoLogotypeAnimation');
     this.dropPrimary = document.querySelector('.drop-primary');
     this.dropSecondary = document.querySelector('.drop-secondary');
+    this.dropzoneDisclaimer = document.querySelector('.dropzone-disclaimer');
     this.dropzoneHeroCredit = document.querySelector('.dropzone-hero-credit');
     this.dropzoneHeroDecoUrImg = document.querySelector(
       '.dropzone-hero-deco__slot--ur .dropzone-hero-deco__img',
@@ -258,6 +260,7 @@ export class StartMenuController {
 
     const emitFile = (file) => {
       if (!file) return;
+      if (blockTabletStudioAccess()) return;
       void handoffFileToMobileAppIfLanding(file).then((handled) => {
         if (!handled) this.eventBus.emit('file:selected', file);
       });
@@ -652,6 +655,7 @@ export class StartMenuController {
 
     const primary = this.dropPrimary;
     const secondary = this.dropSecondary;
+    const disclaimer = this.dropzoneDisclaimer;
     const showHeroArt = shouldShowDropzoneHeroArt();
     const credits = showHeroArt ? this.dropzoneHeroCredit : null;
     const heroDecoUr = showHeroArt ? this.dropzoneHeroDecoUrImg : null;
@@ -662,7 +666,9 @@ export class StartMenuController {
       await this.preloadDropzoneHeroDeco();
     }
 
-    const killTargets = [primary, secondary, credits, heroDecoUr, heroDecoLl].filter(Boolean);
+    const killTargets = [primary, secondary, disclaimer, credits, heroDecoUr, heroDecoLl].filter(
+      Boolean,
+    );
     if (buttons?.length) killTargets.push(...buttons);
     gsap.killTweensOf(killTargets);
 
@@ -695,6 +701,7 @@ export class StartMenuController {
       }
       if (secondary)
         gsap.set(secondary, { opacity: 1, y: 0, clearProps: 'transform' });
+      if (disclaimer) gsap.set(disclaimer, { opacity: 1, clearProps: 'transform' });
       if (heroDecoUr) {
         gsap.set(heroDecoUr, {
           opacity: DROPZONE_HERO_DECO_OPACITY,
@@ -728,8 +735,17 @@ export class StartMenuController {
 
     if (heroDecoUr) gsap.set(heroDecoUr, { opacity: 0, visibility: 'visible' });
     if (heroDecoLl) gsap.set(heroDecoLl, { opacity: 0, visibility: 'visible' });
+    if (disclaimer) gsap.set(disclaimer, { opacity: 0 });
 
     let timelineCursor = 0;
+    if (disclaimer) {
+      tl.to(
+        disclaimer,
+        { opacity: 1, duration: blockDur, ease: blockEase },
+        timelineCursor,
+      );
+      timelineCursor = '>';
+    }
     if (heroDecoUr) {
       tl.to(
         heroDecoUr,
@@ -939,6 +955,7 @@ export class StartMenuController {
    * Studio without a mesh — useful for font / text tool debugging.
    */
   async openBlankCanvas() {
+    if (blockTabletStudioAccess()) return;
     const scene = window.orby?.scene;
     if (!scene?.enterBlankStudio) {
       this.ui.showToast('Studio not ready');
@@ -956,6 +973,7 @@ export class StartMenuController {
    * Load test object from server
    */
   async loadTestObject() {
+    if (blockTabletStudioAccess()) return;
     const testFileUrl = './assets/3D-assets/Stitched_Memories_1122161936_texture.glb';
     const fileName = 'Stitched_Memories_1122161936_texture.glb';
     

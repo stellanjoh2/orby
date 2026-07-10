@@ -21,6 +21,7 @@ import { resolveDiscGlowFromState } from '../render/LensFlareController.js';
 import { emitGodRaysStudioEvents } from '../GodRaysEffect.js';
 import { normalizeBackgroundGradient } from '../render/backgroundGradient/backgroundGradientDefaults.js';
 import { deepClone } from '../utils/deepClone.js';
+import { downloadBlob } from '../utils/downloadBlob.js';
 import { normalizeModifiersState } from '../state/defaults/modifierDefaults.js';
 import { serializeExportSettings } from './exportSettingsPersistence.js';
 import {
@@ -166,6 +167,39 @@ export class SceneSettingsManager {
     }
   }
 
+  /**
+   * Restores a pre-paste snapshot after apply fails — state, scene, and export UI.
+   * @param {object} previousState
+   * @param {object | null | undefined} previousExportSettings
+   */
+  async _rollbackPastedSceneSettings(previousState, previousExportSettings) {
+    this.stateStore.replaceState(previousState);
+    this.eventBus.emit('scene:settings-restored');
+    if (this.uiHelper?.restoreFontExtrudeSettings) {
+      await this.uiHelper.restoreFontExtrudeSettings(previousState.fontExtrude);
+    }
+    if (previousExportSettings && this.uiHelper?.restoreExportSettings) {
+      this.uiHelper.restoreExportSettings(previousExportSettings);
+    }
+  }
+
+  /**
+   * @param {unknown} error
+   * @param {boolean} applyStarted
+   */
+  _formatPasteSettingsError(error, applyStarted) {
+    if (error instanceof SyntaxError) {
+      return 'Invalid JSON — could not parse pasted scene settings';
+    }
+    if (applyStarted) {
+      return 'Scene settings could not be applied — your previous settings were restored';
+    }
+    if (typeof error?.message === 'string' && error.message.trim()) {
+      return error.message;
+    }
+    return 'Invalid pasted scene settings';
+  }
+
   async saveOrbyToFile() {
     try {
       const sceneSettings = await this.buildSceneSettingsPayload();
@@ -192,14 +226,7 @@ export class SceneSettingsManager {
       const blob = new Blob([text], { type: 'application/json' });
       const baseName = (sourceFile.name || 'scene').replace(/\.[^/.]+$/, '');
       const fileName = `${baseName}.orby`;
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = fileName;
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, fileName);
       return { success: true, message: '.orby scene saved' };
     } catch (error) {
       console.error('Failed to save .orby scene', error);
@@ -271,6 +298,11 @@ export class SceneSettingsManager {
    * Applies scene settings from pasted JSON text (e.g. from clipboard).
    */
   async loadFromText(text) {
+    let previousState = null;
+    /** @type {object | null | undefined} */
+    let previousExportSettings = null;
+    let applyStarted = false;
+
     try {
       const payload = JSON.parse(text);
       migrateLegacyGroundKeys(payload);
@@ -293,7 +325,11 @@ export class SceneSettingsManager {
         return { success: false, message: 'Invalid scene settings - missing required fields' };
       }
 
+      previousState = deepClone(this.stateStore.getState());
+      previousExportSettings = this.uiHelper?.serializeExportSettings?.() ?? null;
+
       // Replace current settings so nothing leaks from the previous scene.
+      applyStarted = true;
       this.stateStore.reset();
       await this.restoreEmbeddedAssets(payload);
 
@@ -1607,7 +1643,25 @@ export class SceneSettingsManager {
       }
     } catch (error) {
       console.error('Error applying pasted scene settings:', error);
-      return { success: false, message: 'Invalid pasted scene settings — could not parse JSON' };
+      if (applyStarted && previousState) {
+        try {
+          await this._rollbackPastedSceneSettings(previousState, previousExportSettings);
+        } catch (rollbackError) {
+          console.error(
+            '[Orby] Failed to restore scene settings after paste error',
+            rollbackError,
+          );
+          return {
+            success: false,
+            message:
+              'Scene settings paste failed and could not be fully restored — try reloading the page.',
+          };
+        }
+      }
+      return {
+        success: false,
+        message: this._formatPasteSettingsError(error, applyStarted),
+      };
     }
   }
 }

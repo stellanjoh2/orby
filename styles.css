@@ -1057,6 +1057,135 @@ html.orby-sr-on .orby-sr,
   font-weight: 700;
 }
 
+/* Fatal boot error — shown before UIManager is ready */
+.orby-boot-error {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: color-mix(in srgb, var(--orby-black) 72%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.orby-boot-error__card {
+  width: min(28rem, 100%);
+  padding: 1.35rem 1.5rem 1.5rem;
+  border-radius: var(--radius-lg, 12px);
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+  background: var(--panel);
+  box-shadow: 0 18px 48px color-mix(in srgb, var(--orby-black) 55%, transparent);
+}
+
+.orby-boot-error__title {
+  margin: 0 0 0.65rem;
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--warning);
+}
+
+.orby-boot-error__message {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.orby-boot-error__detail {
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--text) 68%, transparent);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.orby-boot-error__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+
+html.orby-boot-failed .workspace,
+html.orby-boot-failed .dropzone {
+  visibility: hidden;
+}
+
+/* Tablet gate — desktop site, studio blocked */
+.orby-mobile-desktop-only-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(1.38rem, env(safe-area-inset-top, 0px)) 1.25rem
+    max(1.38rem, env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--orby-black) 72%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.orby-mobile-desktop-only-modal[hidden] {
+  display: none !important;
+}
+
+.orby-mobile-desktop-only-modal__panel {
+  box-sizing: border-box;
+  width: min(100%, 22rem);
+  padding: 1.65rem 1.35rem 1.49rem;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  text-align: center;
+  box-shadow: 0 20px 60px color-mix(in srgb, var(--orby-black) 55%, transparent);
+}
+
+.orby-mobile-desktop-only-modal__title {
+  margin: 0 0 0.83rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--warning);
+}
+
+.orby-mobile-desktop-only-modal__body {
+  margin: 0 0 1.27rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.orby-mobile-desktop-only-modal__dismiss {
+  margin: 0;
+  padding: 0.65rem 1.35rem;
+  border: 1.5px solid var(--brand-primary);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--brand-primary);
+  cursor: pointer;
+}
+
+.orby-mobile-desktop-only-modal__dismiss:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-primary) 55%, transparent);
+  outline-offset: 3px;
+}
+
+html.orby-mobile-modal-open {
+  overflow: hidden;
+}
+
+html.orby-mobile-modal-open body {
+  overflow: hidden;
+}
+
 /* Dismissible long-message dialog (same shell as paste-settings / bug report) */
 .message-alert-modal {
   /* Blur only — no dim scrim or animated darkening wipe */
@@ -1770,6 +1899,21 @@ html.orby-sr-on .orby-sr,
 
 .accent-action-btn:active {
   filter: brightness(0.95);
+}
+
+.accent-action-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: none;
+  box-shadow: none;
+}
+
+.accent-action-btn:disabled:hover {
+  background: var(--ui-control-surface);
+  color: var(--text);
+  box-shadow: none;
+  opacity: 0.35;
 }
 
 /* ColorChecker “Reference colors” — full-width toggle; On = filled accent like hover */
@@ -3532,6 +3676,48 @@ body.export-overlay-debug #dropzone {
   z-index: 2;
 }
 
+.dropzone-disclaimer {
+  /* Gallery gutter — matches footer logotype + scroll nav (--orby-hero-credit-inset on :root) */
+  position: absolute;
+  top: max(env(safe-area-inset-top, 0px), var(--orby-hero-credit-inset));
+  left: max(env(safe-area-inset-left, 0px), var(--orby-hero-credit-inset));
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--orby-dropzone-secondary-size, 16px);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  text-align: left;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.dropzone-disclaimer__icon {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  font-size: 1em;
+  line-height: 1;
+  color: var(--orby-pink);
+}
+
+body:not(.dropzone-visible) .dropzone-disclaimer {
+  display: none;
+}
+
+html:not(.mobile-landing) .dropzone-disclaimer {
+  opacity: 0;
+  animation: none !important;
+}
+
+html.mobile-landing .dropzone-disclaimer {
+  display: none !important;
+}
+
 /*
  * Desktop home — scaled corner deco (especially LL dragon) extends above the frame;
  * default .dropzone / .viewport overflow:hidden hard-crops horns. Frost stays on ::before.
@@ -5240,6 +5426,18 @@ a.about-highlight:focus-visible {
   margin-top: var(--shelf-section-gap);
 }
 
+.shelf .modifier-mesh-actions {
+  display: flex;
+  align-items: stretch;
+  gap: var(--shelf-pill-grid-gap);
+  margin-top: var(--shelf-section-gap);
+}
+
+.shelf .modifier-mesh-actions .accent-action-btn {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 /* Muted UI logic removed - will be reimplemented later */
 
 /*
@@ -5930,21 +6128,29 @@ a.about-highlight:focus-visible {
 }
 
 .advanced-import-details {
-  margin: 0 0 var(--shelf-section-gap);
+  margin: 0;
   font-size: var(--shelf-label-font-size);
 }
 
 .advanced-import-details summary {
   cursor: pointer;
   color: var(--text-dim);
-  margin-bottom: var(--shelf-section-gap);
+  margin-bottom: 0;
   list-style-position: outside;
   display: flex;
   align-items: center;
 }
 
+.advanced-import-details[open] summary {
+  margin-bottom: var(--shelf-section-gap);
+}
+
 .advanced-import-details .slider-line {
   margin-top: 0;
+}
+
+.advanced-import-details .slider-line:last-child {
+  margin-bottom: 0;
 }
 
 .advanced-glass-controls:not([hidden]) {

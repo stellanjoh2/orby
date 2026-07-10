@@ -8,7 +8,9 @@ import { dofNeedsLiveUpdate } from '../constants.js';
 import {
   buildRenderLoopFrameContext,
   needsContinuousFrames,
+  autoExposureNeedsIdleSampleWake,
 } from './renderLoopIdle.js';
+import { LUMINANCE_SAMPLE_INTERVAL_MS } from '../render/AutoExposureController.js';
 
 const HISTOGRAM_IDLE_WAKE_MS = 300;
 
@@ -24,6 +26,7 @@ export class RenderLoopController {
     this._pausedByVisibility = false;
     this._wakeSourcesAttached = false;
     this._histogramWakeTimer = 0;
+    this._luminanceSampleWakeTimer = 0;
     this._stateStoreUnsub = null;
     this._inTick = false;
     this._queuedWake = false;
@@ -265,6 +268,7 @@ export class RenderLoopController {
   stop() {
     this._active = false;
     this._clearHistogramWake();
+    this._clearLuminanceSampleWake();
     this._cancelFrame();
     this.detachWakeSources();
   }
@@ -277,6 +281,7 @@ export class RenderLoopController {
       return;
     }
     this._clearHistogramWake();
+    this._clearLuminanceSampleWake();
     this._scheduleFrameIfNeeded();
   }
 
@@ -356,10 +361,29 @@ export class RenderLoopController {
     }, HISTOGRAM_IDLE_WAKE_MS);
   }
 
+  _clearLuminanceSampleWake() {
+    if (!this._luminanceSampleWakeTimer) return;
+    clearTimeout(this._luminanceSampleWakeTimer);
+    this._luminanceSampleWakeTimer = 0;
+  }
+
+  _scheduleLuminanceSampleIdleWake() {
+    this._clearLuminanceSampleWake();
+    this._luminanceSampleWakeTimer = setTimeout(() => {
+      this._luminanceSampleWakeTimer = 0;
+      if (this._active && !this._frameId) {
+        this.requestFrame();
+      }
+    }, LUMINANCE_SAMPLE_INTERVAL_MS);
+  }
+
   _shouldContinue(ctx) {
     if (needsContinuousFrames(this.scene, ctx)) return true;
     if (ctx.histogramEnabled && !ctx.panelsShelfScrolling) {
       this._scheduleHistogramIdleWake();
+    }
+    if (autoExposureNeedsIdleSampleWake(this.scene)) {
+      this._scheduleLuminanceSampleIdleWake();
     }
     return false;
   }

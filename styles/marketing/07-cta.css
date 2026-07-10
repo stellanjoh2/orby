@@ -41,7 +41,7 @@
   --orby-cta-asset-max-h: min(88dvh, 1150px);
 }
 
-/* Right — intro-asset-right.png (hummingbird), vertically centered with copy block */
+/* Right — intro-asset-right-cta.png (hummingbird, mirrored for CTA), vertically centered with copy block */
 .orby-marketing__section--cta .orby-marketing__intro-asset--right {
   position: absolute;
   z-index: 3;

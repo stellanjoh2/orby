@@ -45,6 +45,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
+          ORBY_STRICT_PRODUCTION_ENV: '1'
           BUG_REPORT_API_URL: ${{ vars.BUG_REPORT_API_URL }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           ORBY_SR_PHRASE: ${{ secrets.ORBY_SR_PHRASE }}

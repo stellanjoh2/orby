@@ -36,17 +36,20 @@
               var q = new URLSearchParams(location.search);
               if (q.get('orbyMobile') === '1' || q.has('mobileLanding')) return;
             } catch (e) {}
-            var MOBILE_UA_RE =
-              /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
-            var isMobile = MOBILE_UA_RE.test(navigator.userAgent || '');
-            if (!isMobile) {
+            var isPhone = /iPhone|iPod|Windows Phone/i.test(navigator.userAgent || '');
+            if (!isPhone) {
+              isPhone =
+                /Android/i.test(navigator.userAgent || '') &&
+                /Mobile/i.test(navigator.userAgent || '');
+            }
+            if (!isPhone) {
               try {
-                isMobile =
+                isPhone =
                   window.matchMedia &&
                   window.matchMedia('(max-width: 768px)').matches;
               } catch (e) {}
             }
-            if (isMobile) {
+            if (isPhone) {
               location.replace('/mobile/' + location.search + location.hash);
             }
           }
@@ -65,11 +68,22 @@
         } catch (e) {}
       })();
     </script>
+    <meta name="theme-color" content="#080808" />
     <style>
       /* First-paint boot — external styles.css may load a frame later */
       html,
       body {
         background: #080808;
+      }
+      /* Homepage scroll shell — beat studio --orby-app-bg (#202020) until modules run */
+      html.orby-home-scroll,
+      html.orby-home-scroll body,
+      html.orby-home-scroll #app,
+      html.orby-home-scroll.orby-dropzone-shell-pending .workspace,
+      html.orby-home-scroll.orby-dropzone-shell-pending body.dropzone-visible .workspace,
+      html.orby-home-scroll body.dropzone-visible .dropzone {
+        background-color: #080808 !important;
+        background: #080808 !important;
       }
       .orby-sr {
         background: #080808;
@@ -107,6 +121,9 @@
         pointer-events: auto !important;
         transform: none !important;
       }
+      html.mobile-landing .dropzone-disclaimer {
+        display: none !important;
+      }
     </style>
 <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -133,6 +150,8 @@
       type="image/svg+xml"
       href="./assets/images/favicon.svg"
     />
+    <!-- Safari class before styles.css — blur/magic-button fallbacks at first paint -->
+    <script src="./scripts/orbySafariBrowserBoot.js"></script>
     <link rel="stylesheet" href="./styles/fontawesome/orby-icons.css" />
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./styles/background-gradient.css" />
@@ -164,6 +183,8 @@
     </script>
     <!-- Before first paint on mobile — avoid one-frame desktop dropzone flash until main.js runs -->
     <script src="./scripts/orbyMobileLandingBoot.js"></script>
+    <!-- Desktop homepage — orby-home-scroll before styles.css gray studio tokens paint -->
+    <script src="./scripts/orbyHomeScrollBoot.js"></script>
     <!-- Reduced marketing tier before first paint — disables dropzone frost blur on lower-spec home loads -->
     <script src="./scripts/orbyMarketingPerformanceBoot.js"></script>
     <!-- Empty in source; CI may set via BUG_REPORT_API_URL (see build.js). -->
@@ -173,32 +194,32 @@
     <!-- Cloudflare Turnstile site key; CI via TURNSTILE_SITE_KEY (see build.js). Pair with TURNSTILE_SECRET_KEY on Vercel. -->
     <meta name="orby-turnstile-site-key" content="" />
   </head>
-  <body data-theme="violet">
+  <body data-theme="violet" class="dropzone-visible">
     <!-- orby:homepage-site-nav -->
     <nav class="orby-marketing-scroll-nav orby-marketing-scroll-nav--mobile-fixed" data-orby-marketing-scroll-nav aria-label="Site">
-      <div class="orby-marketing-scroll-nav__bar">
-        <a class="orby-marketing-scroll-nav__brand" href="./index.html" data-orby-marketing-scroll-top aria-label="Back to top">
-          <span class="orby-marketing-scroll-nav__brand-mark" aria-hidden="true"></span>
-        </a>
-        <div class="orby-marketing-scroll-nav__links orby-marketing-scroll-nav__links--inline"><a class="orby-marketing-scroll-nav__link" href="./about/">About</a><a class="orby-marketing-scroll-nav__link" href="./support/">Support</a><a class="orby-marketing-scroll-nav__link" href="./legal/privacy-policy.html">Privacy Policy</a><a class="orby-marketing-scroll-nav__link" href="./credits/">Credits</a><a class="orby-marketing-scroll-nav__link" href="./brand/">Brand</a><a class="orby-marketing-scroll-nav__link" href="./stats/">Statistics</a></div>
-        <button type="button" class="orby-marketing-scroll-nav__menu-toggle" data-orby-marketing-nav-toggle aria-expanded="false" aria-controls="orby-site-nav-menu" aria-label="Open menu">
-          <span class="orby-marketing-scroll-nav__menu-bar" aria-hidden="true"></span>
-          <span class="orby-marketing-scroll-nav__menu-bar" aria-hidden="true"></span>
-          <span class="orby-marketing-scroll-nav__menu-bar" aria-hidden="true"></span>
-        </button>
-        <div class="orby-marketing-scroll-nav__cta"><span class="orby-magic-btn-host"><button type="button" class="orby-magic-btn orby-magic-btn--nav-outline orby-marketing-scroll-nav__browse" data-orby-marketing-browse>
-          <span class="orby-magic-btn__fill" aria-hidden="true"></span>
-          <span class="orby-magic-btn__inner">
-            <span class="orby-magic-btn__label">Browse files</span>
-            <span class="orby-magic-btn__arrow" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-          </span>
-        </button></span></div>
-      </div>
-      <div class="orby-marketing-scroll-nav__menu" id="orby-site-nav-menu" data-orby-marketing-nav-menu aria-hidden="true">
-        <div class="orby-marketing-scroll-nav__links orby-marketing-scroll-nav__links--overlay"><a class="orby-marketing-scroll-nav__link" href="./about/">About</a><a class="orby-marketing-scroll-nav__link" href="./support/">Support</a><a class="orby-marketing-scroll-nav__link" href="./legal/privacy-policy.html">Privacy Policy</a><a class="orby-marketing-scroll-nav__link" href="./credits/">Credits</a><a class="orby-marketing-scroll-nav__link" href="./brand/">Brand</a><a class="orby-marketing-scroll-nav__link" href="./stats/">Statistics</a></div>
-        <div class="orby-marketing-scroll-nav__menu-social"><a class="orby-marketing-scroll-nav__menu-social-link" href="https://www.instagram.com/dropittoorby" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><span class="orby-marketing-scroll-nav__menu-social-icon orby-marketing-scroll-nav__menu-social-icon--instagram" aria-hidden="true"></span></a><a class="orby-marketing-scroll-nav__menu-social-link" href="https://github.com/stellanjoh2/orby" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><span class="orby-marketing-scroll-nav__menu-social-icon orby-marketing-scroll-nav__menu-social-icon--github" aria-hidden="true"></span></a></div>
-      </div>
-    </nav>
+        <div class="orby-marketing-scroll-nav__bar">
+          <a class="orby-marketing-scroll-nav__brand" href="./index.html" data-orby-marketing-scroll-top aria-label="Back to top">
+            <span class="orby-marketing-scroll-nav__brand-mark" aria-hidden="true"></span>
+          </a>
+          <div class="orby-marketing-scroll-nav__links orby-marketing-scroll-nav__links--inline"><a class="orby-marketing-scroll-nav__link" href="./about/">About</a><a class="orby-marketing-scroll-nav__link" href="./support/">Support</a><a class="orby-marketing-scroll-nav__link" href="./stats/">Statistics</a></div>
+          <button type="button" class="orby-marketing-scroll-nav__menu-toggle" data-orby-marketing-nav-toggle aria-expanded="false" aria-controls="orby-site-nav-menu" aria-label="Open menu">
+            <span class="orby-marketing-scroll-nav__menu-bar" aria-hidden="true"></span>
+            <span class="orby-marketing-scroll-nav__menu-bar" aria-hidden="true"></span>
+            <span class="orby-marketing-scroll-nav__menu-bar" aria-hidden="true"></span>
+          </button>
+          <div class="orby-marketing-scroll-nav__cta"><span class="orby-magic-btn-host"><button type="button" class="orby-magic-btn orby-magic-btn--nav-outline orby-marketing-scroll-nav__browse" data-orby-marketing-browse>
+            <span class="orby-magic-btn__fill" aria-hidden="true"></span>
+            <span class="orby-magic-btn__inner">
+              <span class="orby-magic-btn__label">Browse files</span>
+              <span class="orby-magic-btn__arrow" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </span>
+          </button></span></div>
+        </div>
+        <div class="orby-marketing-scroll-nav__menu" id="orby-site-nav-menu" data-orby-marketing-nav-menu aria-hidden="true">
+          <div class="orby-marketing-scroll-nav__links orby-marketing-scroll-nav__links--overlay"><a class="orby-marketing-scroll-nav__link" href="./about/">About</a><a class="orby-marketing-scroll-nav__link" href="./support/">Support</a><a class="orby-marketing-scroll-nav__link" href="./stats/">Statistics</a></div>
+          <div class="orby-marketing-scroll-nav__menu-social"><a class="orby-marketing-scroll-nav__menu-social-link" href="https://www.instagram.com/dropittoorby" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><span class="orby-marketing-scroll-nav__menu-social-icon orby-marketing-scroll-nav__menu-social-icon--instagram" aria-hidden="true"></span></a><a class="orby-marketing-scroll-nav__menu-social-link" href="https://github.com/stellanjoh2/orby" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><span class="orby-marketing-scroll-nav__menu-social-icon orby-marketing-scroll-nav__menu-social-icon--github" aria-hidden="true"></span></a></div>
+        </div>
+      </nav>
     <div
       id="orby-sr-root"
       class="orby-sr"
@@ -463,6 +484,10 @@
             </div>
             </div>
           </div>
+          <p class="dropzone-disclaimer">
+            <i class="fa-solid fa-circle-exclamation dropzone-disclaimer__icon" aria-hidden="true"></i>
+            Early release. Currently works best in Chrome or Brave.
+          </p>
           <div class="dropzone" id="dropzone">
             <div class="dropzone-hero-deco" aria-hidden="true">
               <picture class="dropzone-hero-deco__slot dropzone-hero-deco__slot--ur">

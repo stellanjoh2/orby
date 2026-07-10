@@ -105,7 +105,15 @@ export const MARKETING_SECTIONS = [
     layout: 'media-left',
     imageSrc: './assets/marketing/present-cinema-look.png',
     videoSrc: './assets/marketing/orby-marketing-microreel.mp4',
+    videoPoster: true,
     imageAlt: 'Lighting and grading a model in Orby',
+    imageCredit: {
+      title: '(FREE) Porsche 911 Carrera 4S',
+      artist: 'Lionsharp Studios',
+      sourceLabel: 'Sketchfab',
+      sourceHref:
+        'https://sketchfab.com/3d-models/free-porsche-911-carrera-4s-d01b254483794de3819786d93e0e1ebf',
+    },
   },
   {
     type: 'split',
@@ -250,18 +258,19 @@ export const MARKETING_SECTIONS = [
   {
     type: 'split',
     id: 'orby-marketing-svg',
-    eyebrow: 'SVG Extrude',
-    title: 'Logos become geometry',
+    eyebrow: 'SVGs & type',
+    title: 'Type and logos become geometry',
     lede:
-      'Import vector fills, extrude per color, and export opaque GLB for AR, slides, or the rest of your toolchain.',
+      'Drop SVG fills or type live in the browser — extrude depth and bevel, layer per-color marks, and export opaque GLB for AR, slides, or the rest of your toolchain.',
     bullets: [
-      'Per-fill depth and position for layered marks',
+      'Per-fill depth and position for layered SVG logos',
+      'Custom fonts, tracking, and reveal animations on live 3D text',
       'Scene settings remember your extrude stack in .orby files',
     ],
     layout: 'media-right',
     imageSrc: './assets/images/creative-look-glass.png',
     videoSrc: './assets/marketing/orby-feature-3dlogo.mp4',
-    imageAlt: 'SVG extrude — logotype as layered 3D geometry in Orby',
+    imageAlt: 'SVG and type extrude — logos and live 3D text in Orby',
   },
   {
     type: 'split',
@@ -278,6 +287,11 @@ export const MARKETING_SECTIONS = [
     layout: 'media-left',
     imageSrc: './assets/marketing/orby-feature-sendit.jpg',
     imageAlt: 'Export stills, video, and sequences from Orby',
+    imageCredit: {
+      title: 'Goblin character',
+      sourceLabel: 'Meshy',
+      sourceHref: 'https://www.meshy.ai/',
+    },
   },
   {
     type: 'marquee',
@@ -315,7 +329,16 @@ export const MARKETING_SECTIONS = [
         body:
           'Drop your own 2:1 environment — HDR, EXR, JPG, or PNG — and light your model with your studio, location, or client asset. Same controls as the built-in library. Nothing leaves your machine.',
         videoSrc: './assets/marketing/orby-feature-custom-hdri.mp4',
+        videoPoster: true,
+        imageSrc: './assets/marketing/pro-feature3-custom-hdri.png',
         imageAlt: 'Custom HDRI upload lighting a product render in Orby',
+        imageCredit: {
+          title: 'Cyberpunk Car',
+          artist: 'SamTheCaribbean',
+          sourceLabel: 'Sketchfab',
+          sourceHref:
+            'https://sketchfab.com/3d-models/cyberpunk-car-040f40e20e9344f5bd368e4db3d3b2ac',
+        },
       },
       {
         title: 'Mesh Diagnostics',
@@ -354,7 +377,14 @@ export const MARKETING_SECTIONS = [
         body:
           'Key, fill, and rim — a full studio rig ready in seconds. Per-light intensity, height, and rotation, with orbit and shadow control built in.',
         videoSrc: './assets/marketing/orby-feature-lights.mp4',
+        videoPoster: true,
+        imageSrc: './assets/marketing/orby-feature-lights.jpg',
         imageAlt: 'Three-point lighting rig orbiting a product render in Orby',
+        imageCredit: {
+          title: 'Light control mask',
+          sourceLabel: 'Meshy',
+          sourceHref: 'https://www.meshy.ai/',
+        },
       },
       {
         title: 'Spotlight Gobos',
@@ -383,6 +413,11 @@ export const MARKETING_SECTIONS = [
         ],
         flipGalleryIntervalMs: 2000,
         flipGalleryFadeMs: 0.405,
+        imageCredit: {
+          title: 'Medieval cottage',
+          sourceLabel: 'Meshy',
+          sourceHref: 'https://www.meshy.ai/',
+        },
       },
       {
         title: 'Look Filters',

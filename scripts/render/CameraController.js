@@ -31,6 +31,11 @@ const HANDHELD_PRESETS = {
   high: { pos: 0.00065625, rot: 0.09, dutch: 0.39 },
 };
 
+/** Remaining wheel-zoom multiplier eases toward 1 (OrbitControls dolly has no damping). */
+const WHEEL_ZOOM_PENDING_EPS = 1e-5;
+const WHEEL_ZOOM_DAMPING_MULT = 3;
+const WHEEL_ZOOM_DAMPING_MAX = 0.22;
+
 export class CameraController {
   constructor(
     camera,
@@ -145,8 +150,13 @@ export class CameraController {
 
     this._suppressPoseEvents = false;
 
+    /** Wheel dolly intent — 1 = idle; >1 zoom in, <1 zoom out. Eased per frame in update(). */
+    this._wheelZoomPendingScale = 1;
+    this._wheelZoomInteractionActive = false;
+
     this._bindAltInteractions();
     this._bindOrbitPoseSync();
+    this._bindWheelZoomSmoothing();
   }
 
   isIsometricModeActive() {
@@ -175,11 +185,16 @@ export class CameraController {
   needsContinuousOrbitFrames() {
     if (!this.controls?.enabled) return false;
     if (this._exportCameraDriveActive || this._previewViewportLockActive) return false;
+    if (this.isWheelZoomSettling()) return true;
     if (this._orbitInteractionActive) return true;
     if (!this._orbitSolveLocked) return true;
     if (this.isFocusAnimating()) return true;
     if (this.hasViewportInteraction()) return true;
     return orbitControlsNeedFrame(this.controls);
+  }
+
+  isWheelZoomSettling() {
+    return Math.abs(this._wheelZoomPendingScale - 1) > WHEEL_ZOOM_PENDING_EPS;
   }
 
   _wakeRender() {
@@ -1144,12 +1159,36 @@ export class CameraController {
     // Only update controls if auto-orbit is off (to prevent interference)
     // When auto-orbit is on, updateAutoOrbit sets pose then _applyTilt() there.
     if (this.autoOrbitMode === 'off') {
-      if (!this._shouldRunOrbitSolve()) return;
+      const zoomSettling = this.isWheelZoomSettling();
+      if (zoomSettling) {
+        this._unlockOrbitSolve();
+      }
 
-      const changed = this._runOrbitSolveAndTilt();
+      const runOrbitSolve = this._shouldRunOrbitSolve();
+      if (!runOrbitSolve && !zoomSettling) {
+        if (this._wheelZoomInteractionActive) {
+          this._finalizeWheelZoomInteraction();
+        }
+        return;
+      }
+
+      let changed = false;
+      if (runOrbitSolve) {
+        changed = this._runOrbitSolveAndTilt();
+      }
+
+      if (zoomSettling) {
+        const zoomChanged = this._applyWheelZoomSmoothing();
+        if (zoomChanged) {
+          this._applyTilt();
+        }
+        changed = changed || zoomChanged;
+      }
 
       if (this._getIsGizmoDragging()) {
         // Mesh gizmo drag — keep the settled orbit pose frozen.
+      } else if (zoomSettling || this._wheelZoomInteractionActive) {
+        this._orbitSolveLocked = false;
       } else if (
         !this._orbitInteractionActive &&
         !this.isFocusAnimating() &&
@@ -1159,6 +1198,10 @@ export class CameraController {
         this._orbitSolveLocked = !changed;
       } else {
         this._orbitSolveLocked = false;
+      }
+
+      if (!this.isWheelZoomSettling() && this._wheelZoomInteractionActive) {
+        this._finalizeWheelZoomInteraction();
       }
     }
   }
@@ -1377,8 +1420,156 @@ export class CameraController {
     this._isometricModeActive = false;
     this._isometricPanUnlocked = false;
     this._isometricRestoreSnapshot = null;
+    this._unbindWheelZoomSmoothing();
     this.controls.dispose();
     this._unbindAltInteractions();
+  }
+
+  _bindWheelZoomSmoothing() {
+    this._wheelHandler = (event) => {
+      const controls = this.controls;
+      if (!controls?.enabled || !controls.enableZoom) return;
+      if (
+        this._isometricModeActive
+        || this._exportCameraDriveActive
+        || this._previewViewportLockActive
+        || this.autoOrbitMode !== 'off'
+      ) {
+        return;
+      }
+      if (this._getIsGizmoDragging()) return;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+
+      const deltaY = this._normalizeWheelDeltaY(event);
+      if (!deltaY) return;
+
+      const dollyScale = Math.pow(
+        0.95,
+        controls.zoomSpeed * Math.abs(deltaY * 0.01),
+      );
+      if (deltaY < 0) {
+        this._wheelZoomPendingScale *= dollyScale;
+      } else {
+        this._wheelZoomPendingScale /= dollyScale;
+      }
+
+      this._beginWheelZoomInteraction();
+      this._unlockOrbitSolve();
+      this._wakeRender();
+    };
+
+    this.canvas.addEventListener('wheel', this._wheelHandler, {
+      passive: false,
+      capture: true,
+    });
+  }
+
+  _unbindWheelZoomSmoothing() {
+    if (!this._wheelHandler) return;
+    this.canvas.removeEventListener('wheel', this._wheelHandler, { capture: true });
+    this._wheelHandler = null;
+  }
+
+  /**
+   * Match OrbitControls `customWheelEvent` so Chrome/Brave/Safari share the same zoom scale.
+   * @param {WheelEvent} event
+   */
+  _normalizeWheelDeltaY(event) {
+    let deltaY = event.deltaY;
+    switch (event.deltaMode) {
+      case 1:
+        deltaY *= 16;
+        break;
+      case 2:
+        deltaY *= 100;
+        break;
+      default:
+        break;
+    }
+
+    const controlActive =
+      this._orbitInteractionActive
+      || (typeof this.controls?.state === 'number' && this.controls.state !== -1);
+    if (event.ctrlKey && !controlActive) {
+      deltaY *= 10;
+    }
+
+    return deltaY;
+  }
+
+  _beginWheelZoomInteraction() {
+    if (this._wheelZoomInteractionActive) return;
+    this._wheelZoomInteractionActive = true;
+    this.controls.dispatchEvent({ type: 'start' });
+    queueMicrotask(() => {
+      if (this._getIsGizmoDragging()) {
+        this._wheelZoomInteractionActive = false;
+        this._wheelZoomPendingScale = 1;
+        return;
+      }
+      this._orbitInteractionActive = true;
+      this._unlockOrbitSolve();
+    });
+  }
+
+  _finalizeWheelZoomInteraction() {
+    if (!this._wheelZoomInteractionActive) return;
+    this._wheelZoomInteractionActive = false;
+    this._wheelZoomPendingScale = 1;
+    this._applyTilt();
+    this._lockOrbitSolve();
+    this.controls.dispatchEvent({ type: 'end' });
+    queueMicrotask(() => {
+      if (this._getIsGizmoDragging()) return;
+      this._orbitInteractionActive = false;
+      if (this._suppressPoseEvents || this._exportCameraDriveActive) return;
+      if (this.autoOrbitMode !== 'off') return;
+      this._emitPoseChanged({ persist: true });
+    });
+  }
+
+  /**
+   * Ease accumulated wheel zoom toward the camera each frame (rotation already damped).
+   * @returns {boolean}
+   */
+  _applyWheelZoomSmoothing() {
+    const pending = this._wheelZoomPendingScale;
+    if (Math.abs(pending - 1) <= WHEEL_ZOOM_PENDING_EPS) {
+      this._wheelZoomPendingScale = 1;
+      return false;
+    }
+
+    const damping = this.controls?.dampingFactor ?? 0.05;
+    const alpha = Math.min(WHEEL_ZOOM_DAMPING_MAX, damping * WHEEL_ZOOM_DAMPING_MULT);
+    const step = 1 + (pending - 1) * alpha;
+    this._wheelZoomPendingScale = 1 + (pending - 1) * (1 - alpha);
+
+    const target = this.controls?.target;
+    if (!target) return false;
+
+    this._orbitOffset.subVectors(this.camera.position, target);
+    this._orbitSpherical.setFromVector3(this._orbitOffset);
+
+    const minDist = this.controls.minDistance ?? 0;
+    const maxDist = this.controls.maxDistance ?? Infinity;
+    const prevRadius = this._orbitSpherical.radius;
+    this._orbitSpherical.radius = THREE.MathUtils.clamp(
+      this._orbitSpherical.radius * step,
+      minDist,
+      maxDist,
+    );
+
+    if (Math.abs(this._orbitSpherical.radius - prevRadius) < 1e-8) {
+      this._wheelZoomPendingScale = 1;
+      return false;
+    }
+
+    this._orbitOffset.setFromSpherical(this._orbitSpherical);
+    this.camera.position.copy(target).add(this._orbitOffset);
+    this._updateOrbitControls();
+    return true;
   }
 
   _bindAltInteractions() {

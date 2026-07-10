@@ -7,7 +7,21 @@
 /* Home marketing scroll — brand black behind transparent intro / section seams */
 html.orby-home-scroll,
 html.orby-home-scroll body {
+  background-color: var(--orby-black, #080808);
   background: var(--orby-black, #080808);
+}
+
+/* Desktop home — shell-pending uses studio gray .workspace until scroll class is early */
+html.orby-home-scroll:not(.mobile-landing),
+html.orby-home-scroll:not(.mobile-landing) body,
+html.orby-home-scroll:not(.mobile-landing) #app,
+html.orby-home-scroll:not(.mobile-landing).orby-dropzone-shell-pending .workspace,
+html.orby-home-scroll:not(.mobile-landing).orby-dropzone-shell-pending
+  body.dropzone-visible
+  .workspace,
+html.orby-home-scroll:not(.mobile-landing) body.dropzone-visible .dropzone {
+  background-color: var(--orby-black, #080808) !important;
+  background: var(--orby-black, #080808) !important;
 }
 
 html.mobile-landing {
@@ -94,7 +108,8 @@ html.mobile-landing .dropzone-hero-credits {
 html.mobile-landing .drop-logo,
 html.mobile-landing .drop-primary,
 html.mobile-landing .dropzone-actions,
-html.mobile-landing .drop-secondary {
+html.mobile-landing .drop-secondary,
+html.mobile-landing .dropzone-disclaimer {
   display: none !important;
 }
 

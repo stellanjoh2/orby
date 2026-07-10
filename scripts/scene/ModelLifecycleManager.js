@@ -15,26 +15,15 @@ import { easeOutExpo, SCALE_TOGGLE_IN_MS } from './toggleScaleAnimation.js';
 import {
   analyzeFbxMaterials,
   defaultFbxActiveMaterialKey,
-  formatFbxMaterialReportAppendix,
-  fbxMaterialReportModalTitle,
 } from '../import/fbxMaterialReport.js';
 import { isBoneOnlyArmature } from '../import/bvhArmatureBounds.js';
 import { deferSpinnerPaint } from '../utils/viewportLoadSpinner.js';
+import { blockTabletStudioAccess } from '../orbyTabletGate.js';
 import { isMaterialObjectSurfaceEnabled } from '../render/SvgExtrudeSurfaceShader.js';
-
-/** Modal copy after loading `.fbx` — FBX material/textures path is still WIP in Orby. */
-const FBX_IMPORT_WIP_ALERT_BODY =
-  'FBX import is still a work in progress. Phong/Lambert materials are converted to PBR so mesh sliders behave like GLB; ' +
-  'UV sets, packed maps, and external textures may still differ from your DCC. ' +
-  'When you drop a folder, Orby auto-assigns images named like MaterialName_BaseColor.png to matching materials. ' +
-  'For reliable shading, prefer GLB or glTF when you can. You can still tweak textures under Object → Map Slots.';
-
-function buildFbxImportAlert(object) {
-  const report = analyzeFbxMaterials(object);
-  const appendix = formatFbxMaterialReportAppendix(report);
-  const body = appendix ? `${FBX_IMPORT_WIP_ALERT_BODY}\n\n${appendix}` : FBX_IMPORT_WIP_ALERT_BODY;
-  return { report, body, title: fbxMaterialReportModalTitle(report) };
-}
+import {
+  disposeMaterialMapTextures,
+  disposeOwnedTexture,
+} from '../render/disposeMaterialTextures.js';
 
 /**
  * Model load, replace, clear, dispose, and first-load presentation (camera fade, scale-in).
@@ -49,9 +38,11 @@ export class ModelLifecycleManager {
   }
 
   disposeNode(object) {
+    const seenTextures = new Set();
     object.traverse?.((node) => {
       if (node.isMesh) {
         if (node.geometry) node.geometry.dispose();
+        disposeMaterialMapTextures(node.material, seenTextures);
         const material = node.material;
         if (Array.isArray(material)) {
           material.forEach((mat) => mat?.dispose?.());
@@ -60,7 +51,7 @@ export class ModelLifecycleManager {
         }
       }
       if (node.isTexture) {
-        node.dispose();
+        disposeOwnedTexture(node, seenTextures);
       }
     });
   }
@@ -526,21 +517,10 @@ export class ModelLifecycleManager {
     return isFbx;
   }
 
-  _presentFbxImportFeedback(object) {
-    const s = this.scene;
-    const { report, body, title } = buildFbxImportAlert(object);
-    if (report.shouldShowDetails) {
-      console.info('[Orby] FBX material report', report);
-    }
-    s.ui.showMessageAlert(body, title, {
-      okLabel: 'CONTINUE',
-      modalTone: report.hasUntexturedMaterials ? 'caution' : 'none',
-    });
-  }
-
   async loadFile(file, options = {}) {
     const s = this.scene;
     if (!file) return;
+    if (blockTabletStudioAccess()) return;
 
     const previousFile = s.currentFile;
     const hadExistingModel = !!s.currentModel;
@@ -587,8 +567,6 @@ export class ModelLifecycleManager {
       s.ui.updateTopBarDetail(`${file.name} — Idle`);
       if (options.silent) {
         s.ui.showToast('Model reloaded', 3200, { notification: false });
-      } else if (isFbx) {
-        this._presentFbxImportFeedback(asset.object);
       } else {
         s.ui.showToast('Model loaded', 3200, { notification: false });
       }
@@ -625,6 +603,7 @@ export class ModelLifecycleManager {
   async loadFileBundle(files) {
     const s = this.scene;
     if (!files?.length) return;
+    if (blockTabletStudioAccess()) return;
 
     s.ui.setDropzoneVisible(false);
     s.ui.setLoadSpinnerStatusPrefix?.('Loading');
@@ -654,15 +633,12 @@ export class ModelLifecycleManager {
         autoAssigned = result.applied;
       }
       s.updateStatsUI(sourceFile, asset.object, asset.gltfMetadata);
-      if (isFbx) {
-        this._presentFbxImportFeedback(asset.object);
-        if (autoAssigned > 0) {
-          const label =
-            autoAssigned === 1 ? '1 texture' : `${autoAssigned} textures`;
-          s.ui.showToast(`Auto-assigned ${label} from folder`, 3600, {
-            notification: false,
-          });
-        }
+      if (isFbx && autoAssigned > 0) {
+        const label =
+          autoAssigned === 1 ? '1 texture' : `${autoAssigned} textures`;
+        s.ui.showToast(`Auto-assigned ${label} from folder`, 3600, {
+          notification: false,
+        });
       } else {
         s.ui.showToast('Folder loaded', 3200, { notification: false });
       }

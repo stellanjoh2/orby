@@ -8,11 +8,14 @@ import {
   waitForMobileModelHandoff,
 } from '../../../scripts/orbyMobileHandoff.js';
 import { orbyMobileLandingUrl } from '../../../scripts/orbyMobileAppRoute.js';
+import { ORBY_DEV_BUILD } from '../../../scripts/orbyDevBuild.js';
 import { installMobileDebugLogCapture, markMobileDebugLog } from './mobileDebugLog.js';
 import { urlHasHandoffFlag } from './mobileHandoffUtils.js';
 
-installMobileDebugLogCapture();
-markMobileDebugLog('main:module-loaded');
+if (ORBY_DEV_BUILD) {
+  installMobileDebugLogCapture();
+  markMobileDebugLog('main:module-loaded');
+}
 
 /** @param {HTMLElement} root */
 function showBootError(root) {

@@ -13,6 +13,10 @@ import {
 } from './orbyMobileLanding.js';
 import { ensureShelfPanelsStitched } from './stitchIndexHtmlClient.js';
 import { UndoStateController } from './state/UndoStateController.js';
+import { showOrbyBootError } from './orbyBootError.js';
+import { ORBY_DEV_BUILD } from './orbyDevBuild.js';
+import { isTabletDevice } from './orbyMobileLanding.js';
+import { blockTabletStudioAccess } from './orbyTabletGate.js';
 
 /**
  * Safari has heavier repaint/compositing cost for large animated blur layers.
@@ -65,12 +69,14 @@ if (ensureMobileLandingClass()) {
   }
 }
 
+// Idempotent; orbySafariBrowserBoot.js runs in <head> before styles.css.
 if (isSafariBrowser()) {
   document.documentElement.classList.add('safari-browser');
 }
 
 /** Dev preview: ?uiCrop=1 — keep screenshot UI on the right (see html.orby-marketing-ui-crop). */
 function syncMarketingUiCropPreview() {
+  if (!ORBY_DEV_BUILD) return;
   try {
     const q = new URLSearchParams(window.location.search);
     document.documentElement.classList.toggle(
@@ -92,12 +98,26 @@ async function boot() {
     await ensureShelfPanelsStitched();
   } catch (err) {
     console.error('[Orby] Shelf panel stitch failed', err);
+    showOrbyBootError({
+      title: 'Studio could not load',
+      message:
+        'Orby could not load the shelf panels needed for the studio. Try refreshing the page. ' +
+        'If you are running locally, use npm run dev or the built site from npm run build.',
+      detail: err?.message,
+    });
+    throw err;
   }
 
   const eventBus = new EventBus();
   const stateStore = new StateStore();
   const ui = new UIManager(eventBus, stateStore);
   ui.initShell();
+
+  if (isTabletDevice()) {
+    document.documentElement.classList.add('orby-tablet-blocked');
+    blockTabletStudioAccess();
+  }
+
   const tooltips = new TooltipController();
   const scene = new SceneManager(eventBus, stateStore, ui);
   scene.setTooltipController(tooltips);
@@ -135,13 +155,14 @@ async function boot() {
     undoState,
     undo: () => undoState.undo(),
     ensureGamepad,
-    dev: {},
     get gamepad() {
       return gamepad;
     },
   };
 
-  if (!isMobileLanding()) {
+  if (ORBY_DEV_BUILD && !isMobileLanding()) {
+    window.orby.dev = {};
+
     void import('./dev/bakeCreativeLookThumbnails.js')
       .then(({ bakeCreativeLookThumbnails }) => {
         window.orby.dev.bakeCreativeLookThumbnails = bakeCreativeLookThumbnails;
@@ -204,7 +225,7 @@ async function boot() {
   /** Dev: ?exportOverlayDebug=1 — open PNG export overlay on the dropzone for layout QA */
   try {
     const q = new URLSearchParams(window.location.search);
-    if (q.get('exportOverlayDebug') === '1' && !isMobileLanding()) {
+    if (ORBY_DEV_BUILD && q.get('exportOverlayDebug') === '1' && !isMobileLanding()) {
       requestAnimationFrame(async () => {
         await ui.ensureStudioUiReady();
         ui.toggleOfflineExportOverlayPreview?.();
@@ -239,5 +260,11 @@ async function boot() {
 
 boot().catch((err) => {
   console.error('[Orby] Boot failed', err);
+  showOrbyBootError({
+    title: 'Orby could not start',
+    message:
+      'Orby failed to start. Try refreshing the page. If this keeps happening, try another browser or check your connection.',
+    detail: err?.message,
+  });
 });
 

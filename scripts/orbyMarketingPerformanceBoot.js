@@ -2,7 +2,8 @@
  * Marketing performance tier — sync head bootstrap (index.html).
  * Applies html.orby-marketing-reduced before first paint on lower-spec home loads.
  *
- * Keep scoring in sync with getMarketingPerformanceTier() in marketingPerformanceTier.js.
+ * Keep scoring in sync with getMarketingPerformanceTier() in marketingPerformanceTier.js
+ * (reduced tier when score >= 3).
  */
 (function () {
   function marketingPerformanceScore() {
@@ -35,7 +36,7 @@
     return score;
   }
 
-  if (marketingPerformanceScore() >= 2) {
+  if (marketingPerformanceScore() >= 3) {
     document.documentElement.classList.add('orby-marketing-reduced');
   }
 })();

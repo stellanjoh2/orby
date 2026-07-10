@@ -1330,6 +1330,24 @@
                     <input id="modifierFfdAmount" type="range" min="-100" max="100" value="0" step="1" />
                     <span class="value" data-output="modifierFfdAmount">0</span>
                   </label>
+                  <div class="modifier-mesh-actions">
+                    <button
+                      type="button"
+                      id="modifierSubdivideMesh"
+                      class="accent-action-btn"
+                      data-tooltip="Add one subdivision pass for smoother modifier deformation (max 3). Shape library only."
+                    >
+                      Subdivide Mesh
+                    </button>
+                    <button
+                      type="button"
+                      id="modifierRestoreOriginalMesh"
+                      class="accent-action-btn"
+                      data-tooltip="Remove subdivision and restore the imported shape library mesh."
+                    >
+                      Remove SubD
+                    </button>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection">

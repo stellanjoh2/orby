@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { resetRendererFullViewport } from '../render/resetRendererFullViewport.js';
 
+/** Throttle luminance readback — full scene render + readPixels is costly every frame. */
+export const LUMINANCE_SAMPLE_INTERVAL_MS = 100;
+
+const EXPOSURE_CONVERGED_EPS = 0.003;
+
 /**
  * Manages auto-exposure system that dynamically adjusts scene exposure
  * based on average screen luminance. Samples the scene, calculates target
@@ -45,6 +50,8 @@ export class AutoExposureController {
       this.sampleSize * this.sampleSize * 4,
     );
     this.averageLuminance = 0.5;
+    /** @type {number} */
+    this._lastSampleMs = 0;
   }
 
   /**
@@ -78,6 +85,7 @@ export class AutoExposureController {
     if (this.enabled) {
       // When enabling, start from current exposure
       this.autoExposureValue = this.currentExposure ?? this.manualExposure ?? 1;
+      this._lastSampleMs = 0;
     } else {
       // When disabling, revert to manual exposure
       this.setExposure(this.manualExposure ?? 1);
@@ -157,44 +165,69 @@ export class AutoExposureController {
   }
 
   /**
-   * Apply auto-exposure calculation and update exposure uniform
-   * Should be called every frame when auto-exposure is enabled
+   * @param {{ burstSample?: boolean, forceSample?: boolean }} [options]
    */
-  applyAutoExposure() {
-    if (!this.enabled) return;
+  _shouldSampleLuminance(options = {}) {
+    if (options.forceSample || options.burstSample) return true;
+    const now = performance.now();
+    if (!this._lastSampleMs) return true;
+    return now - this._lastSampleMs >= LUMINANCE_SAMPLE_INTERVAL_MS;
+  }
 
-    // Clamp luminance to reasonable range
+  /**
+   * Target exposure from the latest smoothed luminance sample.
+   * @returns {number}
+   */
+  _computeTargetExposure() {
     const luminance = THREE.MathUtils.clamp(
       this.averageLuminance ?? this.target,
       0.05,
       1.2,
     );
 
-    // Calculate target exposure: inverse relationship with luminance
-    // Brighter scenes need lower exposure, darker scenes need higher exposure
-    // Use more aggressive curve for very bright scenes (looking at sky) to reach 0.50 at max brightness
     let targetExposure;
     if (luminance > this.brightThreshold) {
-      // For very bright scenes, map luminance to exposure range
-      // At brightThreshold (0.65), use normal calculation
-      // At max brightness (1.2), exposure should be 0.50 (min)
       const thresholdExposure = this.target / this.brightThreshold;
       const normalizedBrightness = (luminance - this.brightThreshold) / (1.2 - this.brightThreshold);
-      // Interpolate from threshold exposure down to 0.50 as brightness increases
-      // Use exponential curve for more aggressive drop
-      const curve = Math.pow(normalizedBrightness, 1.8); // Exponential curve
+      const curve = Math.pow(normalizedBrightness, 1.8);
       targetExposure = THREE.MathUtils.lerp(thresholdExposure, this.min, curve);
     } else {
-      // Normal response for typical scenes
       targetExposure = this.target / luminance;
     }
 
-    // Stronger response when aimed at bright vs dark areas: scale how far we move from 1.0
     const neutralExposure = 1.0;
     targetExposure =
       neutralExposure + (targetExposure - neutralExposure) * this.responseGain;
 
-    targetExposure = THREE.MathUtils.clamp(targetExposure, this.min, this.max);
+    return THREE.MathUtils.clamp(targetExposure, this.min, this.max);
+  }
+
+  /** Whether auto-exposure has settled near its luminance-driven target. */
+  isExposureConverged() {
+    if (!this.enabled) return true;
+    const target = this._computeTargetExposure();
+    return Math.abs((this.autoExposureValue ?? target) - target) < EXPOSURE_CONVERGED_EPS;
+  }
+
+  /**
+   * Keep the idle rAF loop alive while exposure is still easing toward target.
+   * Luminance sampling itself is timer- or interaction-driven once converged.
+   */
+  needsContinuousFrames() {
+    const lensDirt = this.stateStore?.getState()?.lensDirt?.enabled === true;
+    if (!this.enabled && !lensDirt) return false;
+    if (this.enabled && !this.isExposureConverged()) return true;
+    return false;
+  }
+
+  /**
+   * Apply auto-exposure calculation and update exposure uniform
+   * Should be called every frame when auto-exposure is enabled
+   */
+  applyAutoExposure() {
+    if (!this.enabled) return;
+
+    const targetExposure = this._computeTargetExposure();
 
     // Smoothly interpolate to target exposure
     this.autoExposureValue = THREE.MathUtils.lerp(
@@ -211,18 +244,23 @@ export class AutoExposureController {
    * Update method to be called every frame
    * Samples luminance and applies auto-exposure if enabled
    * @param {boolean} unlitMode - Whether we're in unlit mode (skip sampling if true)
+   * @param {{ burstSample?: boolean, forceSample?: boolean }} [options]
    */
-  update(unlitMode = false) {
+  update(unlitMode = false, options = {}) {
     if (unlitMode) return;
 
-    // Sampling runs a full extra scene render + readPixels sync every time. Skip when neither
+    // Sampling runs a full extra scene render + readPixels sync. Skip when neither
     // auto-exposure nor lens dirt needs live luminance (lens dirt uses getAverageLuminance).
     const lensDirtRequested = this.stateStore?.getState()?.lensDirt?.enabled === true;
     if (!this.enabled && !lensDirtRequested) {
       return;
     }
 
-    this.sampleSceneLuminance();
+    if (this._shouldSampleLuminance(options)) {
+      this.sampleSceneLuminance();
+      this._lastSampleMs = performance.now();
+    }
+
     this.applyAutoExposure();
   }
 
@@ -251,6 +289,7 @@ export class AutoExposureController {
     this.averageLuminance = this.target;
     // Also reset auto-exposure value to current exposure to avoid sudden jumps
     this.autoExposureValue = this.currentExposure ?? this.manualExposure ?? 1;
+    this._lastSampleMs = 0;
   }
 
   /**

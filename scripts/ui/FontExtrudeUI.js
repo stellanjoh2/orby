@@ -205,10 +205,19 @@ export class FontExtrudeUI {
               id="fontExtrudeAllowSystemFonts"
               class="accent-action-btn font-extrude-allow-system-fonts-btn"
               data-tooltip="Your browser will ask to access fonts installed on this device"
+              data-tooltip-safari="Choose your Fonts folder (Library → Fonts) to browse installed typefaces"
             >
               <i class="fa-solid fa-font" aria-hidden="true"></i>
               <span>Allow system fonts…</span>
             </button>
+            <input
+              type="file"
+              id="fontExtrudeDirectoryFonts"
+              class="sr-only"
+              webkitdirectory
+              multiple
+              accept=".ttf,.otf,.ttc,font/*"
+            />
           </div>
           <label class="select-line font-extrude-family-line font-extrude-typo-family-line">
             <span data-tooltip="Click Allow system fonts, or open this list after permission is granted">Typeface</span>
@@ -351,6 +360,7 @@ export class FontExtrudeUI {
       text: block.querySelector('#fontExtrudeText'),
       systemFontsPrompt: block.querySelector('#fontExtrudeSystemFontsPrompt'),
       allowSystemFonts: block.querySelector('#fontExtrudeAllowSystemFonts'),
+      directoryFontsInput: block.querySelector('#fontExtrudeDirectoryFonts'),
       familyPicker: block.querySelector('#fontExtrudeFamilyPicker'),
       variant: block.querySelector('#fontExtrudeVariant'),
       fileFallback: block.querySelector('#fontExtrudeFileFallback'),
@@ -445,12 +455,16 @@ export class FontExtrudeUI {
       this.ui.setEffectFoldoutOpen('font-extrude', open);
       this.ui.syncFontExtrudeAnimationPreviewDock?.();
       if (open) {
-        this._primeLocalFontAccess();
-        void this.ensureFontsReady({ fromUserGesture: true }).then(() => {
-          this._syncPreviewCanvasSize();
-          this.schedulePreview();
-          this._syncLiveEditorPreviewMode();
-        });
+        if (this.controller.supportsLocalFonts) {
+          this._primeLocalFontAccess();
+          void this.ensureFontsReady({ fromUserGesture: true }).then(() => {
+            this._syncPreviewCanvasSize();
+            this.schedulePreview();
+            this._syncLiveEditorPreviewMode();
+          });
+        } else {
+          this._syncSystemFontsPromptVisibility();
+        }
       } else {
         this._syncSystemFontsPromptVisibility();
       }
@@ -467,11 +481,18 @@ export class FontExtrudeUI {
     });
     els.allowSystemFonts?.addEventListener('click', () => {
       this.ui.uiSounds?.playSelect();
+      if (this.controller.usesSafariDirectoryFonts) {
+        els.directoryFontsInput?.click();
+        return;
+      }
       this.controller.resetLocalFontAccessQuery();
       this._fontsInitialized = false;
       this._fontsLoadPromise = null;
       this._primeLocalFontAccess();
       void this.ensureFontsReady({ fromUserGesture: true });
+    });
+    els.directoryFontsInput?.addEventListener('change', () => {
+      void this.onDirectoryFontsSelected();
     });
     els.text?.addEventListener('scroll', () => {
       this.schedulePreview();
@@ -1746,10 +1767,17 @@ export class FontExtrudeUI {
     const prompt = this.els.systemFontsPrompt;
     if (!prompt) return;
     const show =
-      this.controller.supportsLocalFonts &&
+      this.controller.supportsSystemFonts &&
       !this._fontsInitialized &&
       !this.controller.font;
     prompt.hidden = !show;
+    const allowBtn = this.els.allowSystemFonts;
+    if (allowBtn) {
+      const safariTip = allowBtn.getAttribute('data-tooltip-safari');
+      if (this.controller.usesSafariDirectoryFonts && safariTip) {
+        allowBtn.setAttribute('data-tooltip', safariTip);
+      }
+    }
   }
 
   /**
@@ -1758,7 +1786,14 @@ export class FontExtrudeUI {
    */
   async ensureFontsReady({ fromUserGesture = false } = {}) {
     if (this._fontsInitialized) return;
-    if (!fromUserGesture && this.controller.supportsLocalFonts) {
+    if (
+      !fromUserGesture &&
+      (this.controller.supportsLocalFonts || this.controller.usesSafariDirectoryFonts)
+    ) {
+      this._syncSystemFontsPromptVisibility();
+      return;
+    }
+    if (this.controller.usesSafariDirectoryFonts && !this.controller.hasDirectoryFontCatalog()) {
       this._syncSystemFontsPromptVisibility();
       return;
     }
@@ -1784,6 +1819,10 @@ export class FontExtrudeUI {
       this._syncSystemFontsPromptVisibility();
       return false;
     }
+    if (this.controller.usesSafariDirectoryFonts && !this.controller.hasDirectoryFontCatalog()) {
+      this._syncSystemFontsPromptVisibility();
+      return false;
+    }
 
     this._fontFamilies = await this.controller.getAvailableFonts();
     this._fontFamilyByPostscript.clear();
@@ -1802,6 +1841,12 @@ export class FontExtrudeUI {
             ? 'System font access was blocked — reset the site permission in browser settings, or load a .ttf / .otf file.'
             : 'Could not load system fonts — click Allow system fonts, or load a .ttf / .otf file.';
         this.ui.showToast(msg, 5600, { notification: false });
+      } else if (this.controller.usesSafariDirectoryFonts) {
+        this.ui.showToast(
+          'No fonts found in that folder — choose Library → Fonts, or load a .ttf / .otf file.',
+          5200,
+          { notification: false },
+        );
       } else {
         this.ui.showToast(
           'Load a .ttf or .otf file to preview and generate text (system fonts unavailable in this browser).',
@@ -1939,6 +1984,22 @@ export class FontExtrudeUI {
     this.updateGenerateState();
     this.schedulePreview();
     this._syncLiveEditorPreviewMode();
+  }
+
+  async onDirectoryFontsSelected() {
+    const files = this.els.directoryFontsInput?.files;
+    if (!files?.length) return;
+
+    this.ui.beginLoadSpinner?.();
+    try {
+      await this.controller.buildFontCatalogFromDirectoryFiles(files);
+      this._fontsInitialized = false;
+      this._fontsLoadPromise = null;
+      await this.ensureFontsReady({ fromUserGesture: true });
+    } finally {
+      this.ui.endLoadSpinner?.();
+      if (this.els.directoryFontsInput) this.els.directoryFontsInput.value = '';
+    }
   }
 
   async onFontFileSelected() {
@@ -2351,7 +2412,7 @@ export class FontExtrudeUI {
     if (!text.trim()) return;
     if (!this.controller.font) {
       this.ui.showToast(
-        this.controller.supportsLocalFonts
+        this.controller.supportsSystemFonts
           ? 'Select a typeface or load a .ttf / .otf file first'
           : 'Load a .ttf or .otf file first — system fonts are unavailable in this browser',
         4200,

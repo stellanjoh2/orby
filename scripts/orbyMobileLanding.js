@@ -1,13 +1,13 @@
 /**
  * Mobile landing detection — ES module facade over orbyMobileLandingBoot.js (index.html head).
  * Subpages without the boot script use the inline fallbacks below (always desktop chrome).
+ *
+ * Phones → /mobile/ gate. Tablets → desktop site with a “use a desktop computer” modal.
  */
 
 /** @typedef {typeof window.__ORBY_MOBILE_LANDING__} OrbyMobileLandingApi */
 
 export const MOBILE_LANDING_MAX_WIDTH_PX = 768;
-
-const MOBILE_UA_RE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
 
 /** @returns {OrbyMobileLandingApi | null} */
 function mobileLandingApi() {
@@ -29,13 +29,48 @@ function isForcedMobileLandingDebugImpl() {
   return false;
 }
 
-function isMobileDeviceImpl() {
-  if (MOBILE_UA_RE.test(navigator.userAgent || '')) return true;
+function isTabletDeviceImpl() {
+  if (isForcedMobileLandingDebugImpl()) return false;
+
+  const ua = navigator.userAgent || '';
+  if (/iPad/i.test(ua)) return true;
+  if (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1) return true;
+  if (/Android/i.test(ua) && !/Mobile/i.test(ua)) return true;
+  if (/Tablet/i.test(ua)) return true;
+
+  try {
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    const wide = window.matchMedia(`(min-width: ${MOBILE_LANDING_MAX_WIDTH_PX + 1}px)`).matches;
+    if (coarse && wide && navigator.maxTouchPoints > 0) {
+      if (/iPhone|iPod/i.test(ua)) return false;
+      if (/Android/i.test(ua) && /Mobile/i.test(ua)) return false;
+      return true;
+    }
+  } catch {
+    /* matchMedia blocked */
+  }
+
+  return false;
+}
+
+/** Phones — redirect to /mobile/, not the tablet desktop-only gate. */
+function isPhoneDeviceImpl() {
+  if (isTabletDeviceImpl()) return false;
+
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPod|Windows Phone/i.test(ua)) return true;
+  if (/Android/i.test(ua) && /Mobile/i.test(ua)) return true;
+
   try {
     return window.matchMedia(`(max-width: ${MOBILE_LANDING_MAX_WIDTH_PX}px)`).matches;
   } catch {
     return false;
   }
+}
+
+/** @deprecated Prefer {@link isPhoneDevice} — kept for handoff + legacy call sites. */
+function isMobileDeviceImpl() {
+  return isPhoneDeviceImpl();
 }
 
 function isOrbyMobileLearnRouteImpl() {
@@ -54,8 +89,8 @@ function isOrbyMobileLandingRouteImpl() {
 function shouldShowMobileLandingImpl() {
   return (
     isForcedMobileLandingDebugImpl()
-    || isMobileDeviceImpl()
-    || isOrbyMobileLandingRouteImpl()
+    || isPhoneDeviceImpl()
+    || isOrbyMobileLearnRouteImpl()
   );
 }
 
@@ -69,6 +104,7 @@ function isLegalSubpageImpl() {
 
 function isLegalSubpageMobileViewportImpl() {
   if (!isLegalSubpageImpl()) return false;
+  if (isTabletDeviceImpl()) return false;
   try {
     return window.matchMedia(`(max-width: ${MOBILE_LANDING_MAX_WIDTH_PX}px)`).matches;
   } catch {
@@ -80,7 +116,7 @@ function shouldApplyMobileLandingClassesImpl() {
   return (
     shouldShowMobileLandingImpl()
     || isLegalSubpageMobileViewportImpl()
-    || isOrbyMobileLandingRouteImpl()
+    || isOrbyMobileLearnRouteImpl()
   );
 }
 
@@ -106,6 +142,10 @@ function callApi(method) {
   switch (method) {
     case 'isForcedMobileLandingDebug':
       return isForcedMobileLandingDebugImpl();
+    case 'isPhoneDevice':
+      return isPhoneDeviceImpl();
+    case 'isTabletDevice':
+      return isTabletDeviceImpl();
     case 'isMobileDevice':
       return isMobileDeviceImpl();
     case 'shouldShowMobileLanding':
@@ -125,6 +165,15 @@ export function isForcedMobileLandingDebug() {
   return callApi('isForcedMobileLandingDebug');
 }
 
+export function isPhoneDevice() {
+  return callApi('isPhoneDevice');
+}
+
+export function isTabletDevice() {
+  return callApi('isTabletDevice');
+}
+
+/** @deprecated Prefer {@link isPhoneDevice}. */
 export function isMobileDevice() {
   return callApi('isMobileDevice');
 }

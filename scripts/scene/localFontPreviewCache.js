@@ -1,3 +1,5 @@
+import { hasQueryLocalFonts } from './systemFontAccess.js';
+
 /** @param {string} postscriptName */
 function previewFamilyId(postscriptName) {
   const safe = String(postscriptName).replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -183,8 +185,7 @@ export class LocalFontPreviewCache {
     /** Installed faces — preview via CSS family name (no FontFace blob / OTS). */
     /** @type {Map<string, string>} */
     this._systemFamilies = new Map();
-    this._localFontsSupported =
-      typeof window !== 'undefined' && typeof window.queryLocalFonts === 'function';
+    this._localFontsSupported = hasQueryLocalFonts();
   }
 
   /**

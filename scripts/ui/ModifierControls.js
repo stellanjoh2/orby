@@ -21,6 +21,8 @@ export class ModifierControls {
     this.ui = ui;
     this.helpers = helpers;
     this.subsection = document.querySelector('[data-subsection="modifiers"]');
+    this.subdivideButton = document.getElementById('modifierSubdivideMesh');
+    this.restoreOriginalButton = document.getElementById('modifierRestoreOriginalMesh');
     this.amountInputs = {};
     for (const id of MODIFIER_IDS) {
       this.amountInputs[id] = document.getElementById(`modifier${capitalize(id)}Amount`);
@@ -47,6 +49,16 @@ export class ModifierControls {
       this.helpers.enableSliderKeyboardStepping(input);
     }
 
+    this.subdivideButton?.addEventListener('click', () => {
+      if (!this._isEligible()) return;
+      this.eventBus.emit('mesh:modifier-subdivide');
+    });
+
+    this.restoreOriginalButton?.addEventListener('click', () => {
+      if (!this._isEligible()) return;
+      this.eventBus.emit('mesh:modifier-restore-original');
+    });
+
     this.sync(this.stateStore.getState());
   }
 
@@ -61,6 +73,16 @@ export class ModifierControls {
   sync(state) {
     const eligible = this._isEligible();
     if (this.subsection) this.subsection.hidden = !eligible;
+    if (this.subdivideButton) {
+      const canSubdivide = eligible && !!window.orby?.scene?.modifierController?.canSubdivide?.();
+      this.subdivideButton.hidden = !eligible;
+      this.subdivideButton.disabled = !canSubdivide;
+    }
+    if (this.restoreOriginalButton) {
+      const canRestore = eligible && !!window.orby?.scene?.modifierController?.canRestoreOriginal?.();
+      this.restoreOriginalButton.hidden = !eligible;
+      this.restoreOriginalButton.disabled = !canRestore;
+    }
     if (!eligible) return;
 
     const modifiers = normalizeModifiersState(state?.modifiers);

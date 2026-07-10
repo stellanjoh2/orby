@@ -1,3 +1,5 @@
+import { hasQueryLocalFonts } from './systemFontAccess.js';
+
 /** PostScript names tried before scanning the full system list. */
 export const DEFAULT_FONT_POSTSCRIPT_CANDIDATES = [
   'ArialMT',
@@ -53,7 +55,7 @@ export function pickDefaultPostscriptFromFamilies(families) {
  * @returns {Promise<string | null>}
  */
 export async function resolveDefaultFontPostscript() {
-  if (typeof window === 'undefined' || typeof window.queryLocalFonts !== 'function') {
+  if (typeof window === 'undefined' || !hasQueryLocalFonts()) {
     return null;
   }
 

@@ -10,6 +10,7 @@
     "import:shape-library-thumbs": "node scripts/dev/importShapeLibraryThumbnails.mjs",
     "dev:python": "python3 -m http.server 8000 --bind 0.0.0.0",
     "build": "node build.js",
+    "verify:production-env": "node scripts/verifyProductionEnv.mjs",
     "bundle:marketing-css": "node scripts/marketing/bundleMarketingCss.mjs",
     "subset:fontawesome": "node scripts/buildFontAwesomeSubset.mjs",
     "inject:subpage-nav": "node scripts/marketing/injectSubpageSiteNav.mjs",

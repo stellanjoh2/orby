@@ -136,6 +136,11 @@ import {
 } from '../import/fbxMapSlotsSettings.js';
 import { syncFbxOrmPackingOnMaterial } from './fbxOrmPackingShader.js';
 import { isTextureImageReady } from '../utils/textureReady.js';
+import {
+  disposeMaterialMapTextures,
+  disposeOwnedTexture,
+  MATERIAL_MAP_TEXTURE_PROPS,
+} from './disposeMaterialTextures.js';
 import { effectiveRoughnessWithHdriBlur } from './hdriBlur.js';
 import {
   SHAPE_LIBRARY_DEFAULT_METALNESS,
@@ -6191,34 +6196,38 @@ export class MaterialController {
     const root = object ?? this.currentModel;
     if (!root) return;
     const seenUuids = new Set();
-    const disposeTex = (t) => {
-      if (!t?.isTexture || !t.userData?.orbyFbxUserTexture) return;
-      if (seenUuids.has(t.uuid)) return;
-      seenUuids.add(t.uuid);
-      const url = t.userData.orbyFbxBlobUrl;
-      t.dispose();
-      if (typeof url === 'string') URL.revokeObjectURL(url);
-    };
     root.traverse((child) => {
       if (!child.isMesh) return;
-      const walk = (m) => {
-        if (!m) return;
-        disposeTex(m.map);
-        disposeTex(m.normalMap);
-        disposeTex(m.roughnessMap);
-        disposeTex(m.metalnessMap);
-        disposeTex(m.aoMap);
-        disposeTex(m.displacementMap);
-        disposeTex(m.emissiveMap);
-        disposeTex(m.alphaMap);
-      };
       const stored = this.originalMaterials.get(child);
       const mats = stored
         ? Array.isArray(stored)
           ? stored
           : [stored]
         : [];
-      mats.forEach(walk);
+      for (const mat of mats) {
+        if (!mat) continue;
+        for (const prop of MATERIAL_MAP_TEXTURE_PROPS) {
+          const tex = mat[prop];
+          if (!tex?.isTexture || !tex.userData?.orbyFbxUserTexture) continue;
+          disposeOwnedTexture(tex, seenUuids);
+        }
+      }
+    });
+  }
+
+  /**
+   * Import / map-slot baselines kept in originalMaterials while live meshes use shader replacements.
+   * @param {THREE.Object3D | null | undefined} object
+   */
+  _disposeStoredOriginalMaterialTextures(object) {
+    if (!object) return;
+    const seenUuids = new Set();
+    object.traverse((child) => {
+      if (!child.isMesh) return;
+      const stored = this.originalMaterials.get(child);
+      if (stored && stored !== child.material) {
+        disposeMaterialMapTextures(stored, seenUuids);
+      }
     });
   }
 
@@ -6881,7 +6890,7 @@ export class MaterialController {
     this._restoreVoxelGeometry();
     this._restoreWirePulseGeometry();
     this.mapInspectPreview?.clear();
-    this.disposeFbxUserTextures(this.currentModel);
+    this._disposeStoredOriginalMaterialTextures(this.currentModel);
     this.clearWireframeOverlay();
     this.uvCheckerOverlay.setModel(null);
     this.normalViewOverlay.setModel(null);

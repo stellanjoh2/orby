@@ -17,11 +17,17 @@ import {
   textureToPreviewUrl,
   watchPendingMapTextures,
 } from '../render/mapInspectTypes.js';
+import gsap from 'gsap';
 import { ORBY_BLACK } from '../constants.js';
 import {
   bindFloatingPanelHeaderDrag,
   setFloatingPanelDragging,
 } from './floatingPanelHeaderDrag.js';
+import {
+  animateModalClose,
+  animateModalOpen,
+  prefersReducedMotion,
+} from './modalReveal.js';
 
 export class MapInspectControls {
   /**
@@ -68,6 +74,7 @@ export class MapInspectControls {
     this._block = document.getElementById('mapInspectBlock');
     this._grid = document.getElementById('mapInspectGrid');
     this._panel = document.getElementById('mapPreviewPanel');
+    this._panelChrome = this._panel?.querySelector('.map-preview-panel__chrome') ?? null;
     this._panelBody = this._panel?.querySelector('.map-preview-panel__body') ?? null;
     this._panelTabs = document.getElementById('mapPreviewPanelTabs');
     this._panelImage = document.getElementById('mapPreviewPanelImage');
@@ -190,7 +197,7 @@ export class MapInspectControls {
 
     if (!hasMaps) {
       this._grid.replaceChildren();
-      this.closePanel();
+      this.closePanel({ animate: false });
       this._unpinPreview();
       return;
     }
@@ -221,7 +228,7 @@ export class MapInspectControls {
     if (this._block) this._block.hidden = true;
     if (this._grid) this._grid.replaceChildren();
     this.closeFullsize();
-    this.closePanel();
+    this.closePanel({ animate: false });
     this._unpinPreview();
   }
 
@@ -455,8 +462,12 @@ export class MapInspectControls {
   openPanel(initialSlotId) {
     if (!this._panel || this._textureMaps.length === 0) return;
 
-    this._panelOpen = true;
-    this._panel.hidden = false;
+    const alreadyVisible =
+      this._panelOpen &&
+      !this._panel.hidden &&
+      this._panel.style.display !== 'none' &&
+      !gsap.isTweening(this._panelChrome);
+
     const resolved =
       initialSlotId && mapInspectFindEntryForSlot(this._textureMaps, initialSlotId)
         ? initialSlotId
@@ -465,22 +476,101 @@ export class MapInspectControls {
     this._renderPanelTabs();
     this._syncPanelImage();
     this._positionPanelDefault();
+    this._showPanel({ animate: !alreadyVisible });
     requestAnimationFrame(() => {
       if (this._panelOpen) this._fitPanelToImage();
     });
     if (this._modalSlot) {
       this._pinSlot(this._modalSlot);
     }
-
-    this.ui.uiSounds?.playShelfShow?.();
   }
 
-  closePanel() {
+  /**
+   * @param {{ animate?: boolean }} [options]
+   */
+  closePanel({ animate = true } = {}) {
     if (!this._panel) return;
     this.closeFullsize();
-    this._panelOpen = false;
-    this._panel.hidden = true;
+    this._hidePanel({ animate });
     this._modalSlot = null;
+  }
+
+  /**
+   * @param {{ animate?: boolean }} [options]
+   */
+  _showPanel({ animate = true } = {}) {
+    if (!this._panel || !this._panelChrome) return;
+    if (
+      this._panelOpen &&
+      !this._panel.hidden &&
+      this._panel.style.display !== 'none' &&
+      !gsap.isTweening(this._panelChrome)
+    ) {
+      return;
+    }
+
+    this._panelOpen = true;
+    this._panel.removeAttribute('hidden');
+    this._panel.style.display = '';
+
+    if (animate) this.ui.uiSounds?.playShelfShow?.();
+
+    if (!animate || prefersReducedMotion()) {
+      this._snapPanelVisible();
+      return;
+    }
+
+    void animateModalOpen(this._panel, this._panelChrome, { revealBackdrop: false }).then(() => {
+      this._panel.style.display = '';
+    });
+  }
+
+  /**
+   * @param {{ animate?: boolean }} [options]
+   */
+  _hidePanel({ animate = true } = {}) {
+    if (!this._panel || !this._panelChrome) return;
+    const isVisible = !this._panel.hidden && this._panel.style.display !== 'none';
+    if (!isVisible) {
+      this._panelOpen = false;
+      return;
+    }
+
+    if (animate) this.ui.uiSounds?.playShelfHide?.();
+
+    if (!animate || prefersReducedMotion()) {
+      this._snapPanelHidden();
+      return;
+    }
+
+    animateModalClose(
+      this._panel,
+      this._panelChrome,
+      () => {
+        this._panelOpen = false;
+        this._panel.setAttribute('hidden', '');
+        this._panel.style.display = '';
+      },
+      false,
+      { revealBackdrop: false },
+    );
+  }
+
+  _snapPanelVisible() {
+    if (!this._panel || !this._panelChrome) return;
+    gsap.killTweensOf([this._panel, this._panelChrome]);
+    gsap.set(this._panelChrome, { clearProps: 'clipPath,transform,--popup-chrome-shadow-alpha' });
+    gsap.set(this._panel, { clearProps: 'clipPath,transform,--modal-backdrop-blur' });
+  }
+
+  _snapPanelHidden() {
+    if (!this._panel || !this._panelChrome) return;
+    gsap.killTweensOf([this._panel, this._panelChrome]);
+    this._panelOpen = false;
+    this._panel.setAttribute('hidden', '');
+    this._panel.style.display = '';
+    gsap.set(this._panelChrome, { clearProps: 'clipPath,transform,--popup-chrome-shadow-alpha' });
+    gsap.set(this._panel, { clearProps: 'clipPath,transform,--modal-backdrop-blur' });
   }
 
   openFullsize() {
@@ -492,7 +582,7 @@ export class MapInspectControls {
     this._fullsizeView.hidden = false;
     this.ui.beginShelfOverlaySuppression?.();
     if (this._panelOpen && this._panel) {
-      this._panel.hidden = true;
+      this._stashPanelForFullsize();
       this._panelHiddenForFullsize = true;
     }
     if (this._modalSlot !== slotId) {
@@ -519,7 +609,7 @@ export class MapInspectControls {
     this._fullsizeBounds = null;
     this.ui.endShelfOverlaySuppression?.();
     if (this._panelHiddenForFullsize && this._panel && this._panelOpen) {
-      this._panel.hidden = false;
+      this._restorePanelFromFullsize();
     }
     this._panelHiddenForFullsize = false;
     if (this._fullsizeImage) {
@@ -826,6 +916,20 @@ export class MapInspectControls {
 
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
+  }
+
+  _stashPanelForFullsize() {
+    if (!this._panel) return;
+    gsap.killTweensOf([this._panel, this._panelChrome]);
+    this._panel.setAttribute('hidden', '');
+    this._panel.style.display = '';
+  }
+
+  _restorePanelFromFullsize() {
+    if (!this._panel) return;
+    this._panel.removeAttribute('hidden');
+    this._panel.style.display = '';
+    this._snapPanelVisible();
   }
 
   _positionPanelDefault() {

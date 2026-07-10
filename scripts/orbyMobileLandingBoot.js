@@ -10,8 +10,6 @@
  */
 (function (global) {
   var MOBILE_LANDING_MAX_WIDTH_PX = 768;
-  var MOBILE_UA_RE =
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
 
   function isForcedMobileLandingDebug() {
     try {
@@ -32,10 +30,37 @@
     return false;
   }
 
-  function isMobileDevice() {
+  function isTabletDevice() {
+    if (isForcedMobileLandingDebug()) return false;
     try {
       var ua = typeof global.navigator !== 'undefined' ? global.navigator.userAgent || '' : '';
-      if (MOBILE_UA_RE.test(ua)) return true;
+      if (/iPad/i.test(ua)) return true;
+      if (/Macintosh/i.test(ua) && global.navigator && global.navigator.maxTouchPoints > 1) {
+        return true;
+      }
+      if (/Android/i.test(ua) && !/Mobile/i.test(ua)) return true;
+      if (/Tablet/i.test(ua)) return true;
+      if (
+        global.matchMedia &&
+        global.matchMedia('(pointer: coarse)').matches &&
+        global.matchMedia('(min-width: ' + (MOBILE_LANDING_MAX_WIDTH_PX + 1) + 'px)').matches &&
+        global.navigator &&
+        global.navigator.maxTouchPoints > 0
+      ) {
+        if (/iPhone|iPod/i.test(ua)) return false;
+        if (/Android/i.test(ua) && /Mobile/i.test(ua)) return false;
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
+  function isPhoneDevice() {
+    if (isTabletDevice()) return false;
+    try {
+      var ua = typeof global.navigator !== 'undefined' ? global.navigator.userAgent || '' : '';
+      if (/iPhone|iPod|Windows Phone/i.test(ua)) return true;
+      if (/Android/i.test(ua) && /Mobile/i.test(ua)) return true;
     } catch (e) {}
     try {
       if (
@@ -46,6 +71,10 @@
       }
     } catch (e) {}
     return false;
+  }
+
+  function isMobileDevice() {
+    return isPhoneDevice();
   }
 
   function isOrbyMobileLearnRoute() {
@@ -89,7 +118,7 @@
   }
 
   function shouldShowMobileLanding() {
-    return isForcedMobileLandingDebug() || isMobileDevice() || isOrbyMobileLearnRoute();
+    return isForcedMobileLandingDebug() || isPhoneDevice() || isOrbyMobileLearnRoute();
   }
 
   function isMobileLanding() {
@@ -112,6 +141,7 @@
 
   function isLegalSubpageMobileViewport() {
     if (!isLegalSubpage()) return false;
+    if (isTabletDevice()) return false;
     try {
       return (
         window.matchMedia &&
@@ -155,6 +185,8 @@
   global.__ORBY_MOBILE_LANDING__ = {
     MOBILE_LANDING_MAX_WIDTH_PX: MOBILE_LANDING_MAX_WIDTH_PX,
     isForcedMobileLandingDebug: isForcedMobileLandingDebug,
+    isPhoneDevice: isPhoneDevice,
+    isTabletDevice: isTabletDevice,
     isMobileDevice: isMobileDevice,
     isOrbyMobileLearnRoute: isOrbyMobileLearnRoute,
     isOrbyMobileLandingRoute: isOrbyMobileLandingRoute,

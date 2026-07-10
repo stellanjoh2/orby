@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFExporter } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/exporters/GLTFExporter.js';
 import { isVoxelCreativeLookPreset } from '../render/CreativeLookMaterials.js';
+import { downloadBlob } from '../utils/downloadBlob.js';
 
 const sanitizeBaseName = (name) => {
   const raw = String(name || 'model')
@@ -227,15 +228,7 @@ const cloneShaderLabExportNode = (object3d, exportKind, getOriginalMaterial) => 
 };
 
 const downloadBinary = (arrayBuffer, fileName) => {
-  const blob = new Blob([arrayBuffer], { type: 'model/gltf-binary' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  downloadBlob(new Blob([arrayBuffer], { type: 'model/gltf-binary' }), fileName);
 };
 
 const disposeExportNode = (exportNode) => {

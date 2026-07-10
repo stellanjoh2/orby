@@ -21,6 +21,8 @@ import {
 import { buildMarketingMarkup } from './orbyMarketingTemplates.js';
 import { ensureSiteNavStyles } from './orbySiteNavStyles.js';
 import { subscribeMarketingScroll } from './orbyMarketingScrollDispatcher.js';
+import { blockTabletStudioAccess } from '../orbyTabletGate.js';
+import { teardownTabletDesktopOnlyModalUi } from '../ui/orbyTabletDesktopOnlyModal.js';
 
 /** Mega sections (intro + CTA) — fire when the block is actually on screen */
 const MEGA_REVEAL_IO = { root: null, rootMargin: '0px 0px -22% 0px', threshold: 0.32 };
@@ -94,66 +96,6 @@ function scrollToTop() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/** @type {(() => void) | null} */
-let teardownMobileDesktopOnlyModal = null;
-
-function ensureMobileDesktopOnlyModal() {
-  let modal = document.getElementById('orby-mobile-desktop-only-modal');
-  if (modal instanceof HTMLElement) return modal;
-
-  modal = document.createElement('div');
-  modal.id = 'orby-mobile-desktop-only-modal';
-  modal.className = 'orby-mobile-desktop-only-modal';
-  modal.hidden = true;
-  modal.setAttribute('aria-hidden', 'true');
-  modal.innerHTML = `<div class="orby-mobile-desktop-only-modal__panel" role="dialog" aria-modal="true" aria-labelledby="orby-mobile-desktop-only-title">
-      <h2 id="orby-mobile-desktop-only-title" class="orby-mobile-desktop-only-modal__title">Desktop only</h2>
-      <p class="orby-mobile-desktop-only-modal__body">Orby is built for desktop browsers — a proper screen, a mouse, and some GPU headroom. Open this page on a computer to load models and use the studio.</p>
-      <button type="button" class="orby-mobile-desktop-only-modal__dismiss">OK</button>
-    </div>`;
-  document.body.appendChild(modal);
-
-  const dismiss = () => {
-    modal.hidden = true;
-    modal.setAttribute('aria-hidden', 'true');
-    document.documentElement.classList.remove('orby-mobile-modal-open');
-  };
-
-  const onDismissClick = () => dismiss();
-  const onBackdropClick = (event) => {
-    if (event.target === modal) dismiss();
-  };
-  const onKeyDown = (event) => {
-    if (event.key === 'Escape' && !modal.hidden) dismiss();
-  };
-
-  modal.querySelector('.orby-mobile-desktop-only-modal__dismiss')?.addEventListener('click', onDismissClick);
-  modal.addEventListener('click', onBackdropClick);
-  document.addEventListener('keydown', onKeyDown);
-
-  teardownMobileDesktopOnlyModal = () => {
-    dismiss();
-    modal.querySelector('.orby-mobile-desktop-only-modal__dismiss')?.removeEventListener(
-      'click',
-      onDismissClick,
-    );
-    modal.removeEventListener('click', onBackdropClick);
-    document.removeEventListener('keydown', onKeyDown);
-    modal.remove();
-    teardownMobileDesktopOnlyModal = null;
-  };
-
-  return modal;
-}
-
-function showMobileDesktopOnlyModal() {
-  const modal = ensureMobileDesktopOnlyModal();
-  modal.hidden = false;
-  modal.removeAttribute('aria-hidden');
-  document.documentElement.classList.add('orby-mobile-modal-open');
-  modal.querySelector('.orby-mobile-desktop-only-modal__dismiss')?.focus();
-}
-
 function navigateMobileLearnBrowse() {
   window.location.assign(`${orbyMobileGateUrl()}/`);
 }
@@ -167,12 +109,14 @@ function bindMarketingInteractions(root) {
         navigateMobileLearnBrowse();
         return;
       }
+      if (blockTabletStudioAccess()) return;
       document.getElementById('browseButton')?.click();
       return;
     }
     const sampleBtn = event.target.closest('[data-orby-marketing-load-sample]');
     if (sampleBtn) {
       event.preventDefault();
+      if (blockTabletStudioAccess()) return;
       document.getElementById('loadTestLink')?.click();
       return;
     }
@@ -265,6 +209,13 @@ export function initOrbyMarketingPage(options = {}) {
     teardownPngMarqueePerf = null;
     teardownInProgressCurtain?.();
     teardownInProgressCurtain = null;
+    if (!isMobileLanding()) {
+      void import('./orbyMarketingIntroTurntable.js')
+        .then((mod) => {
+          mod.clearIntroTurntablePreload();
+        })
+        .catch(() => {});
+    }
   }
 
   function releaseEnhancements() {
@@ -603,7 +554,7 @@ export function initOrbyMarketingPage(options = {}) {
     destroy() {
       destroyed = true;
       unbindMarketingCopyEmail();
-      teardownMobileDesktopOnlyModal?.();
+      teardownTabletDesktopOnlyModalUi();
       if (!isMobileLanding()) {
         void import('./orbyMarketingIntroTurntable.js').then((mod) => {
           mod.clearIntroTurntablePreload();

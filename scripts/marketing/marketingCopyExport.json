@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-07-01T17:42:14.441Z",
+    "generatedAt": "2026-07-10T08:55:00.713Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -31,7 +31,7 @@
       "label": "Browse files",
       "tooltip": "Open a 3D file (GLB, SVG, …) or a saved .orby scene"
     },
-    "secondaryBody": "Orby is built for glTF/GLB and SVG extrusion. Files stay on your machine — nothing is uploaded. Read more on the privacy policy. For the best experience, go full screen. · Blank canvasLoad test objectPreview export overlayDebug 404",
+    "secondaryBody": "Orby is built for glTF/GLB and SVG extrusion. Files stay on your machine — nothing is uploaded. Read more on the privacy policy. For the best experience, go full screen. · Blank canvas · Load test objectPreview export overlayDebug 404",
     "secondaryLinks": [
       {
         "label": "privacy policy",
@@ -190,14 +190,15 @@
       "order": 7,
       "type": "split",
       "id": "orby-marketing-svg",
-      "eyebrow": "SVG Extrude",
-      "title": "Logos become geometry",
+      "eyebrow": "SVGs & type",
+      "title": "Type and logos become geometry",
       "titleLines": [
-        "Logos become geometry"
+        "Type and logos become geometry"
       ],
-      "lede": "Import vector fills, extrude per color, and export opaque GLB for AR, slides, or the rest of your toolchain.",
+      "lede": "Drop SVG fills or type live in the browser — extrude depth and bevel, layer per-color marks, and export opaque GLB for AR, slides, or the rest of your toolchain.",
       "bullets": [
-        "Per-fill depth and position for layered marks",
+        "Per-fill depth and position for layered SVG logos",
+        "Custom fonts, tracking, and reveal animations on live 3D text",
         "Scene settings remember your extrude stack in .orby files"
       ],
       "cta": null

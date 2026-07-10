@@ -4,7 +4,7 @@
  * IndexedDB bridges the navigation — files never leave the device.
  */
 import { isOrbySceneFile } from './import/dispatchImportFile.js';
-import { isMobileLanding, isMobileDevice } from './orbyMobileLanding.js';
+import { isMobileLanding, isPhoneDevice } from './orbyMobileLanding.js';
 import { goToOrbyMobile, isOrbyMobileLandingRoute, orbyMobileAppUrl } from './orbyMobileAppRoute.js';
 import {
   clearOrbyMobileHandoffSize,
@@ -379,7 +379,7 @@ function isMobileModelFile(file) {
 }
 
 function shouldHandoffFileFromLanding() {
-  return isMobileLanding() || isOrbyMobileLandingRoute() || isMobileDevice();
+  return isMobileLanding() || isOrbyMobileLandingRoute() || isPhoneDevice();
 }
 
 function showLandingToast(message) {

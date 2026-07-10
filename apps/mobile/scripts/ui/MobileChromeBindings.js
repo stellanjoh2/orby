@@ -1,4 +1,5 @@
 import { copyMobileDebugSettings, loadMobileDebugSample } from '../mobileDebugExport.js';
+import { ORBY_DEV_BUILD } from '../../../../scripts/orbyDevBuild.js';
 import { mobileHaptic } from '../mobileHaptics.js';
 import { bindMobileSheetDrag } from '../mobileSheetDrag.js';
 import { bindMobileRangeTouch } from '../mobileRangeTouch.js';
@@ -239,31 +240,35 @@ export class MobileChromeBindings {
       }
     });
 
-    root.querySelector('[data-action="toggle-debug"]')?.addEventListener('click', () => {
-      const menu = root.querySelector('.orby-mobile-debug-menu');
-      if (!(menu instanceof HTMLElement)) return;
-      this.setDebugMenuOpen(menu.dataset.debugMenu !== 'open');
-    });
-
-    root.querySelector('[data-action="copy-settings"]')?.addEventListener('click', () => {
-      void copyMobileDebugSettings(scene, selection).then((result) => {
-        if (result === 'copied') {
-          showToast('Settings copied');
-        } else {
-          showToast('Copy failed');
-        }
+    if (ORBY_DEV_BUILD) {
+      root.querySelector('[data-action="toggle-debug"]')?.addEventListener('click', () => {
+        const menu = root.querySelector('.orby-mobile-debug-menu');
+        if (!(menu instanceof HTMLElement)) return;
+        this.setDebugMenuOpen(menu.dataset.debugMenu !== 'open');
       });
-    });
 
-    root.querySelector('[data-action="load-sample"]')?.addEventListener('click', () => {
-      void loadMobileDebugSample(scene).then((result) => {
-        if (result === 'loaded') {
-          showToast('Loaded sample');
-        } else {
-          showToast('Sample load failed');
-        }
+      root.querySelector('[data-action="copy-settings"]')?.addEventListener('click', () => {
+        void copyMobileDebugSettings(scene, selection).then((result) => {
+          if (result === 'copied') {
+            showToast('Settings copied');
+          } else {
+            showToast('Copy failed');
+          }
+        });
       });
-    });
+
+      root.querySelector('[data-action="load-sample"]')?.addEventListener('click', () => {
+        void loadMobileDebugSample(scene).then((result) => {
+          if (result === 'loaded') {
+            showToast('Loaded sample');
+          } else {
+            showToast('Sample load failed');
+          }
+        });
+      });
+    }
+
+    const exportFailedMessage = ORBY_DEV_BUILD ? 'Export failed — copy debug log' : 'Export failed';
 
     root.querySelector('[data-action="export"]')?.addEventListener('click', () => {
       this._sliderFocus?.release();
@@ -286,13 +291,13 @@ export class MobileChromeBindings {
           } else if (result === 'busy') {
             /* same export already running — spinner stays on the first tap */
           } else {
-            showToast('Export failed — copy debug log');
+            showToast(exportFailedMessage);
           }
         },
         (err) => {
           if (err?.name === 'AbortError') return;
           console.error('[Orby Mobile] Export rejected', err);
-          showToast('Export failed — copy debug log');
+          showToast(exportFailedMessage);
         },
       ).finally(() => {
         if (this._exportBtn instanceof HTMLElement) {

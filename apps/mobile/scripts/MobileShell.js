@@ -15,6 +15,7 @@ import { MobileSheetController } from './ui/MobileSheetController.js';
 import { MobileChromeBindings } from './ui/MobileChromeBindings.js';
 import { markMobileAppSessionActive } from '../../../scripts/orbyMobileHandoff.js';
 import { buildMobileDebugSceneExtra, markMobileDebugLog } from './mobileDebugLog.js';
+import { ORBY_DEV_BUILD } from '../../../scripts/orbyDevBuild.js';
 
 /** @import { MobileUiContext } from './mobileUiContext.js' */
 
@@ -47,7 +48,7 @@ export class MobileShell {
       this.showToast('3D viewer unavailable');
       return;
     }
-    if (window.__orbyMobileDebugLog) {
+    if (ORBY_DEV_BUILD && window.__orbyMobileDebugLog) {
       window.__orbyMobileDebugLog.getExtra = () => buildMobileDebugSceneExtra(this.scene);
     }
     markMobileDebugLog('shell:scene-constructed');

@@ -49,7 +49,7 @@ export function getMarketingPerformanceTier() {
     else if (cores <= 6) score += 1;
   }
 
-  tierCache = score >= 3 ? 'reduced' : 'full';
+  tierCache = score >= 3 ? 'reduced' : 'full'; // keep in sync with orbyMarketingPerformanceBoot.js
   return tierCache;
 }
 
@@ -65,6 +65,13 @@ export function shouldUseHeadlineWordStagger() {
 }
 
 export function shouldUseMediaBlurReveal() {
+  // Safari stalls or sticks filter:blur() on large marketing images during scroll reveals.
+  if (
+    typeof document !== 'undefined' &&
+    document.documentElement.classList.contains('safari-browser')
+  ) {
+    return false;
+  }
   return getMarketingPerformanceTier() === 'full';
 }
 

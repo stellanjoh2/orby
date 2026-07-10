@@ -7,7 +7,7 @@ import {
   HDRI_CUSTOM_ID,
   getCustomHdriUploadType,
 } from './config/hdri.js';
-import { arrayBufferToBase64, fileFromEmbeddedAsset } from './utils/binaryAsset.js';
+import { blockTabletStudioAccess } from './orbyTabletGate.js';
 import { withViewportLoadSpinner } from './utils/viewportLoadSpinner.js';
 import {
   WIREFRAME_OFFSET,
@@ -222,6 +222,9 @@ export class SceneManager {
   }
 
   async ensureStudioReady() {
+    if (blockTabletStudioAccess()) {
+      throw new Error('Orby studio is not available on tablets — please use a desktop computer.');
+    }
     return ensureStudioActive(this);
   }
 
@@ -3655,6 +3658,33 @@ export class SceneManager {
       this.updateUvCheckerOverlayTransforms?.();
       this.updateNormalViewOverlayTransforms?.();
     }
+    this.ui?.modifierControls?.sync(this.stateStore.getState());
+  }
+
+  subdivideModifierMesh() {
+    if (!isShapeLibraryModel(this.currentModel)) return;
+    const changed = this.modifierController?.subdivideMeshes?.();
+    if (!changed) return;
+    this._finalizeModifierMeshTopologyChange();
+  }
+
+  restoreModifierOriginalMesh() {
+    if (!isShapeLibraryModel(this.currentModel)) return;
+    const changed = this.modifierController?.restoreOriginalMeshes?.();
+    if (!changed) return;
+    this._finalizeModifierMeshTopologyChange();
+  }
+
+  _finalizeModifierMeshTopologyChange() {
+    this.applyModifiersFromState();
+    this.syncModifiersSceneAfterScrub();
+    const wireframeOn =
+      this.stateStore.getState()?.shading === 'wireframe'
+      || !!this.stateStore.getState()?.wireframe?.alwaysOn;
+    if (wireframeOn) {
+      this.updateWireframeOverlay();
+    }
+    this._refreshViewportAfterOverlayChange?.();
   }
 
   setShading(mode) {
@@ -4031,7 +4061,10 @@ export class SceneManager {
       }
       return;
     }
-    this.autoExposureController?.update(this.unlitMode);
+    this.autoExposureController?.update(this.unlitMode, {
+      burstSample: this.cameraController?.needsContinuousOrbitFrames?.() === true,
+      forceSample: !!(this._capturePreviewInFlight || this._suppressResizeForExport),
+    });
     // Update lens dirt exposure factor from auto-exposure luminance
     this.lensDirtController?.updateExposureFactor();
 

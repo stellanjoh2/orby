@@ -8,7 +8,15 @@ import {
   normalizeFontKerningMode,
 } from './fontKerning.js';
 import { LocalFontPreviewCache } from './localFontPreviewCache.js';
-import { resolveDefaultFontPostscript } from './fontExtrudeDefaultFont.js';
+import {
+  hasQueryLocalFonts,
+  supportsSafariDirectoryFontPick,
+  supportsSystemFontAccess,
+} from './systemFontAccess.js';
+import {
+  pickDefaultPostscriptFromFamilies,
+  resolveDefaultFontPostscript,
+} from './fontExtrudeDefaultFont.js';
 import {
   DEFAULT_EXTRUDE_BEVEL_AMOUNT,
   DEFAULT_EXTRUDE_DEPTH,
@@ -248,15 +256,37 @@ export class FontExtrudeController {
     this._activeFontKey = '';
     /** @type {THREE.Group | null} */
     this.lastGeneratedGroup = null;
-    this._localFontsSupported =
-      typeof window !== 'undefined' && typeof window.queryLocalFonts === 'function';
+    this._localFontsSupported = hasQueryLocalFonts();
+    this._safariDirectoryFontsSupported = supportsSafariDirectoryFontPick();
     /** @type {Promise<FontData[]> | null} */
     this._localFontsQueryPromise = null;
+    /** @type {Map<string, File>} */
+    this._directoryFontFiles = new Map();
+    /** @type {Array<{ family: string, defaultPostscriptName: string, variants: Array<{ postscriptName: string, fullName?: string, styleLabel: string, weight: number | null, styleRaw: string }> }>} */
+    this._directoryFontCatalog = [];
     this.previewCache = new LocalFontPreviewCache();
   }
 
   get supportsLocalFonts() {
     return this._localFontsSupported;
+  }
+
+  get supportsSystemFonts() {
+    return supportsSystemFontAccess();
+  }
+
+  /** Safari desktop — folder picker instead of `queryLocalFonts()`. */
+  get usesSafariDirectoryFonts() {
+    return this._safariDirectoryFontsSupported && !this._localFontsSupported;
+  }
+
+  hasDirectoryFontCatalog() {
+    return this._directoryFontCatalog.length > 0;
+  }
+
+  clearDirectoryFontCatalog() {
+    this._directoryFontFiles.clear();
+    this._directoryFontCatalog = [];
   }
 
   /** Clear a failed/denied query so the user can retry from a button click. */
@@ -359,27 +389,94 @@ export class FontExtrudeController {
       this._activeFontKey = `__active__:file:${fontData.name}:${fontData.size}:${fontData.lastModified}`;
       return this.font;
     }
-    if (typeof fontData === 'string' && this._localFontsSupported) {
-      const fonts = await window.queryLocalFonts({ postscriptNames: [fontData] });
-      const match = fonts?.[0];
-      if (!match) {
-        throw new Error('Font not found on this device');
+    if (typeof fontData === 'string') {
+      const directoryFile = this._directoryFontFiles.get(fontData);
+      if (directoryFile) {
+        return this.loadFont(directoryFile);
       }
-      const blob = await match.blob();
-      const buffer = await blob.arrayBuffer();
-      this.font = opentype.parse(buffer);
-      this.fontLabel = match.fullName || match.family || fontData;
-      this._activeFontBlob = blob;
-      this._activeFontKey = `__active__:ps:${fontData}`;
-      return this.font;
+      if (this._localFontsSupported) {
+        const fonts = await window.queryLocalFonts({ postscriptNames: [fontData] });
+        const match = fonts?.[0];
+        if (!match) {
+          throw new Error('Font not found on this device');
+        }
+        const blob = await match.blob();
+        const buffer = await blob.arrayBuffer();
+        this.font = opentype.parse(buffer);
+        this.fontLabel = match.fullName || match.family || fontData;
+        this._activeFontBlob = blob;
+        this._activeFontKey = `__active__:ps:${fontData}`;
+        return this.font;
+      }
     }
     throw new Error('Invalid font source');
+  }
+
+  /**
+   * Build a grouped family catalog from a Safari directory font pick.
+   * @param {File[] | FileList} files
+   * @returns {Promise<Array<{ family: string, defaultPostscriptName: string, variants: Array<{ postscriptName: string, fullName?: string, styleLabel: string, weight: number | null, styleRaw: string }> }>>}
+   */
+  async buildFontCatalogFromDirectoryFiles(files) {
+    const list = [...files];
+    this.clearDirectoryFontCatalog();
+    /** @type {Array<{ family?: string, fullName?: string, postscriptName?: string, style?: string, weight?: number | string }>} */
+    const entries = [];
+    const usedPostscript = new Set();
+
+    for (const file of list) {
+      if (!/\.(ttf|otf|ttc)$/i.test(file.name)) continue;
+      try {
+        const buffer = await file.arrayBuffer();
+        const parsed = opentype.parse(buffer);
+        let postscriptName =
+          parsed?.names?.postScriptName?.en ||
+          parsed?.names?.postScriptName ||
+          file.name.replace(/\.[^/.]+$/, '');
+        postscriptName = String(postscriptName || '').trim();
+        if (!postscriptName) continue;
+        if (usedPostscript.has(postscriptName)) {
+          const suffix = file.webkitRelativePath || file.name;
+          postscriptName = `${postscriptName}__${suffix.replace(/[^a-zA-Z0-9]+/g, '_')}`;
+        }
+        usedPostscript.add(postscriptName);
+
+        const family =
+          parsed?.names?.fontFamily?.en ||
+          parsed?.names?.preferredFamily?.en ||
+          parsed?.names?.fontFamily ||
+          postscriptName;
+        const fullName =
+          parsed?.names?.fullName?.en || parsed?.names?.fullName || String(family);
+        const style =
+          parsed?.names?.fontSubfamily?.en ||
+          parsed?.names?.fontSubfamily ||
+          'Regular';
+
+        this._directoryFontFiles.set(postscriptName, file);
+        entries.push({
+          family: String(family),
+          fullName: String(fullName),
+          postscriptName,
+          style: String(style),
+        });
+        void this.previewCache.registerFile(postscriptName, file);
+      } catch (err) {
+        console.warn('[Orby] Skipped font file in directory pick', file.name, err);
+      }
+    }
+
+    this._directoryFontCatalog = groupLocalFontsByFamily(entries);
+    return this._directoryFontCatalog;
   }
 
   /**
    * @returns {Promise<Array<{ family: string, defaultPostscriptName: string, variants: Array<{ postscriptName: string, fullName?: string, styleLabel: string, weight: number | null, styleRaw: string }> }>>}
    */
   async getAvailableFonts() {
+    if (this.usesSafariDirectoryFonts) {
+      return this._directoryFontCatalog;
+    }
     if (!this._localFontsSupported || !this._localFontsQueryPromise) return [];
     try {
       const fonts = await this._localFontsQueryPromise;
@@ -392,6 +489,9 @@ export class FontExtrudeController {
 
   /** Arial / Helvetica / Liberation Sans — first match on this device. */
   async resolveDefaultPostscriptName() {
+    if (this._directoryFontCatalog.length) {
+      return pickDefaultPostscriptFromFamilies(this._directoryFontCatalog);
+    }
     return resolveDefaultFontPostscript();
   }
 

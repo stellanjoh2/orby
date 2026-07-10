@@ -23,6 +23,7 @@ import {
 } from './exportMovementEasing.js';
 import { lightsRotationForExportFrame } from '../config/lightsAutoRotate.js';
 import { buildOfflineExportOverlaySummary } from './offlineExportOverlaySummary.js';
+import { downloadBlob } from '../utils/downloadBlob.js';
 import { forceExportCaptureFramebuffer } from './capture/forceExportCaptureFramebuffer.js';
 import { runOfflineCaptureSession } from './capture/OfflineCaptureSession.js';
 import { resolvePngExportCaptureSize } from './capture/CaptureSizePolicy.js';
@@ -176,17 +177,7 @@ export class VideoExporter {
   }
 
   _downloadBlob(blob, fileName) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    // Safari can produce truncated/corrupt downloads when blob URLs are revoked too early.
-    window.setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 60_000);
+    downloadBlob(blob, fileName);
   }
 
   _frameNameForSequence(baseName, mode, durationSec, frameIndex) {

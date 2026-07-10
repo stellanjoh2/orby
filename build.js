@@ -8,9 +8,13 @@ import { buildFontAwesomeSubset } from './scripts/buildFontAwesomeSubset.mjs';
 import { injectAllSubpageSiteNav } from './scripts/marketing/injectSubpageSiteNav.mjs';
 import { readStitchedIndexHtml } from './scripts/stitchIndexHtml.mjs';
 import { stampStitchedHtmlBanner } from './scripts/stitchIndexInclude.js';
+import { verifyProductionBuild } from './scripts/verifyProductionEnv.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+/** Production bundles replace ORBY_DEV_BUILD with false — dev imports are tree-shaken. */
+const ORBY_PROD_DEFINE = { ORBY_DEV_BUILD: 'false' };
 
 /** Match scripts/update-version.js display format (CI may build before index.html is re-synced). */
 function formatVersionBanner(versionLine) {
@@ -30,6 +34,13 @@ function injectMobileAssetCacheBust(html, version) {
     )
     .replace('href="styles/mobile.css"', `href="styles/mobile.css?v=${v}"`)
     .replace('src="scripts/main.js"', `src="scripts/main.js?v=${v}"`);
+}
+
+/** Remove dev-only inline capture + Debug menu from production mobile app HTML. */
+function stripOrbyMobileProductionDebug(html) {
+  return html
+    .replace(/<!-- @orby-mobile-debug-inline -->[\s\S]*?<!-- \/@orby-mobile-debug-inline -->\s*/g, '')
+    .replace(/<!-- @orby-mobile-debug-menu -->[\s\S]*?<!-- \/@orby-mobile-debug-menu -->\s*/g, '');
 }
 
 function injectVersionIntoHtml(html) {
@@ -175,6 +186,7 @@ await esbuild.build({
   outfile: 'dist/scripts/entry.js',
   external: ['three', 'opentype'], // Loaded via import map (vendor copy; not bundled — has Node fs paths)
   treeShaking: true,
+  define: ORBY_PROD_DEFINE,
   legalComments: 'none',
   banner: {
     js: '/* Orby - 3D Model Viewer - https://orby.studio */'
@@ -200,10 +212,18 @@ cpSync(
   join(__dirname, 'scripts', 'orbyMobileLandingBoot.js'),
   join(distDir, 'scripts', 'orbyMobileLandingBoot.js'),
 );
+cpSync(
+  join(__dirname, 'scripts', 'orbyHomeScrollBoot.js'),
+  join(distDir, 'scripts', 'orbyHomeScrollBoot.js'),
+);
 cpSync(join(__dirname, 'scripts', 'orbyStatsBeacon.js'), join(distDir, 'scripts', 'orbyStatsBeacon.js'));
 cpSync(
   join(__dirname, 'scripts', 'orbyMarketingPerformanceBoot.js'),
   join(distDir, 'scripts', 'orbyMarketingPerformanceBoot.js'),
+);
+cpSync(
+  join(__dirname, 'scripts', 'orbySafariBrowserBoot.js'),
+  join(distDir, 'scripts', 'orbySafariBrowserBoot.js'),
 );
 
 await esbuild.build({
@@ -435,6 +455,7 @@ if (existsSync(mobileSrcDir)) {
     entryNames: '[name]',
     chunkNames: 'chunks/[name]-[hash]',
     treeShaking: true,
+    define: ORBY_PROD_DEFINE,
     legalComments: 'none',
     external: ['three'],
     plugins: [
@@ -460,16 +481,15 @@ if (existsSync(mobileSrcDir)) {
     },
   });
   cpSync(join(mobileSrcDir, 'index.html'), join(mobileDistDir, 'index.html'));
-  cpSync(join(mobileSrcDir, 'styles', 'mobile.css'), join(mobileDistDir, 'styles', 'mobile.css'));
+  let mobileIndexHtml = readFileSync(join(mobileDistDir, 'index.html'), 'utf-8');
+  mobileIndexHtml = stripOrbyMobileProductionDebug(mobileIndexHtml);
   const mobileVersionPath = join(__dirname, 'VERSION');
   if (existsSync(mobileVersionPath)) {
     const mobileVersion = readFileSync(mobileVersionPath, 'utf-8').trim();
-    const mobileIndexRaw = readFileSync(join(mobileDistDir, 'index.html'), 'utf-8');
-    writeFileSync(
-      join(mobileDistDir, 'index.html'),
-      injectMobileAssetCacheBust(mobileIndexRaw, mobileVersion),
-    );
+    mobileIndexHtml = injectMobileAssetCacheBust(mobileIndexHtml, mobileVersion);
   }
+  writeFileSync(join(mobileDistDir, 'index.html'), mobileIndexHtml);
+  cpSync(join(mobileSrcDir, 'styles', 'mobile.css'), join(mobileDistDir, 'styles', 'mobile.css'));
   console.log('📱 Orby Mobile viewer → dist/mobile/app/');
 }
 
@@ -481,3 +501,15 @@ if (existsSync('CNAME')) {
 console.log('✅ Build complete! Output in dist/ folder');
 console.log('📦 Minified bundle created');
 console.log('🚀 Ready to deploy');
+
+if (
+  !verifyProductionBuild({
+    strict:
+      process.env.ORBY_STRICT_PRODUCTION_ENV === '1'
+      || process.env.CI === 'true'
+      || process.env.GITHUB_ACTIONS === 'true',
+    distDir,
+  })
+) {
+  process.exit(1);
+}

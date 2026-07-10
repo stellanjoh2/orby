@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { encodeCanvasToBlob } from './encodeImageBlob.js';
+import { downloadBlob as triggerBlobDownload } from '../utils/downloadBlob.js';
 import {
   getImageExportFormat,
   imageExportDownloadSuffix,
@@ -2133,30 +2134,15 @@ export class ImageExporter {
   }
 
   _downloadBlob(blob, currentFile, suffix) {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
     const name = currentFile?.name ?? 'orby';
-    link.href = url;
-    link.download = `${name.replace(/\.[a-z0-9]+$/i, '')}-${suffix}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    triggerBlobDownload(blob, `${name.replace(/\.[a-z0-9]+$/i, '')}-${suffix}`);
   }
 
   _downloadText(text, currentFile, suffix, mime = 'text/plain') {
     if (!text) return;
     const name = currentFile?.name ?? 'orby';
     const filename = `${name.replace(/\.[a-z0-9]+$/i, '')}-${suffix}`;
-    const blob = new Blob([text], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    triggerBlobDownload(new Blob([text], { type: mime }), filename);
   }
 
   /**

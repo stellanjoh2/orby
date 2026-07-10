@@ -8,8 +8,8 @@ import { ensureSiteNavStyles } from './orbySiteNavStyles.js';
 import { renderSiteNav } from './orbyMarketingTemplates.js';
 import { subscribeMarketingScroll } from './orbyMarketingScrollDispatcher.js';
 
-/** Hero strip — nav stays hidden while the dropzone headline is in view. */
-const HIDE_NEAR_TOP_Y = 48;
+/** Hero strip — nav stays hidden on first paint; pin visible once revealed until scroll down. */
+const PAGE_TOP_Y = 48;
 const SCROLL_DELTA = 0.5;
 const SHOW_DELAY_MS = 60;
 
@@ -357,8 +357,9 @@ function initSiteNavNow(options) {
     const delta = y - lastY;
     lastY = y;
 
-    if (y <= HIDE_NEAR_TOP_Y) {
-      hide();
+    // Pin at top once revealed — only scroll-down dismisses (standard auto-hide nav).
+    if (y <= PAGE_TOP_Y) {
+      if (delta > SCROLL_DELTA) hide();
       return;
     }
 
@@ -396,7 +397,6 @@ function initSiteNavNow(options) {
       if (active) {
         nav.removeAttribute('hidden');
         lastY = readScrollY();
-        if (lastY <= HIDE_NEAR_TOP_Y && !isMobileHome) hide();
       } else {
         hide();
         nav.setAttribute('hidden', '');

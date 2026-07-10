@@ -10,6 +10,10 @@ import {
   applyModifierStack,
   modifierBoundsFromBox,
 } from '../deform/meshModifierMath.js';
+import { countGeometryTriangles, subdivideBufferGeometry } from '../deform/meshSubdivide.js';
+
+const MAX_MODIFIER_SUBDIVISIONS = 3;
+const MAX_MODIFIER_TRIANGLES = 500_000;
 
 const _vertex = new THREE.Vector3();
 const _modelSpace = new THREE.Vector3();
@@ -32,8 +36,13 @@ export class MeshModifierController {
     this._model = null;
     /** @type {Array<{
      *   mesh: THREE.Mesh,
+     *   sourceGeo: THREE.BufferGeometry,
+     *   derivedGeo: THREE.BufferGeometry | null,
      *   base: Float32Array,
      *   baseNormal: Float32Array | null,
+     *   authoredBase: Float32Array,
+     *   authoredNormal: Float32Array | null,
+     *   subdivisions: number,
      *   matrixWorld: THREE.Matrix4
      * }>} */
     this._meshes = [];
@@ -78,8 +87,13 @@ export class MeshModifierController {
       const baseNormal = normalAttr ? new Float32Array(normalAttr.array) : null;
       this._meshes.push({
         mesh,
+        sourceGeo: geo,
+        derivedGeo: null,
         base,
         baseNormal,
+        authoredBase: new Float32Array(base),
+        authoredNormal: baseNormal ? new Float32Array(baseNormal) : null,
+        subdivisions: 0,
         matrixWorld: mesh.matrixWorld.clone(),
       });
 
@@ -109,13 +123,129 @@ export class MeshModifierController {
   release() {
     if (this._model && this._meshes.length) {
       for (const entry of this._meshes) {
-        this._restoreMesh(entry);
+        this._restoreAuthoredMesh(entry);
       }
     }
     this._model = null;
     this._meshes = [];
     this._bounds = null;
     this._supported = true;
+  }
+
+  /** @returns {boolean} */
+  canSubdivide() {
+    if (!this._supported || !this._meshes.length) return false;
+    return this._meshes.some((entry) => this._entryCanSubdivide(entry));
+  }
+
+  /** @returns {boolean} */
+  canRestoreOriginal() {
+    if (!this._supported || !this._meshes.length) return false;
+    return this._meshes.some((entry) => entry.subdivisions > 0 || !!entry.derivedGeo);
+  }
+
+  /**
+   * @returns {boolean} false when already at authored geometry
+   */
+  restoreOriginalMeshes() {
+    if (!this._supported || !this._meshes.length) return false;
+    if (!this.canRestoreOriginal()) return false;
+
+    for (const entry of this._meshes) {
+      this._restoreAuthoredMesh(entry);
+    }
+    this._recomputeBounds();
+    return true;
+  }
+
+  /**
+   * @returns {boolean} false when capped or unsupported
+   */
+  subdivideMeshes() {
+    if (!this._supported || !this._meshes.length) return false;
+    if (!this.canSubdivide()) return false;
+
+    let changed = false;
+    for (const entry of this._meshes) {
+      if (!this._entryCanSubdivide(entry)) continue;
+      if (!this._subdivideEntry(entry)) continue;
+      changed = true;
+    }
+    if (!changed) return false;
+
+    this._recomputeBounds();
+    return true;
+  }
+
+  /** @param {typeof this._meshes[number]} entry */
+  _entryCanSubdivide(entry) {
+    if (entry.subdivisions >= MAX_MODIFIER_SUBDIVISIONS) return false;
+    const geo = entry.derivedGeo ?? entry.sourceGeo;
+    const triangles = countGeometryTriangles(geo);
+    return triangles > 0 && triangles * 4 <= MAX_MODIFIER_TRIANGLES;
+  }
+
+  /** @param {typeof this._meshes[number]} entry */
+  _subdivideEntry(entry) {
+    const working = this._geometryFromSnapshot(entry);
+    const subdivided = subdivideBufferGeometry(working, MAX_MODIFIER_TRIANGLES);
+    working.dispose();
+    if (!subdivided) return false;
+
+    entry.derivedGeo?.dispose();
+    entry.derivedGeo = subdivided;
+    entry.mesh.geometry = subdivided;
+    entry.subdivisions += 1;
+    this._snapshotEntryBase(entry, subdivided);
+    return true;
+  }
+
+  /** @param {typeof this._meshes[number]} entry */
+  _geometryFromSnapshot(entry) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(entry.base.slice(), 3));
+    if (entry.baseNormal) {
+      geo.setAttribute('normal', new THREE.BufferAttribute(entry.baseNormal.slice(), 3));
+    }
+    const src = entry.derivedGeo ?? entry.sourceGeo;
+    const uv = src.getAttribute('uv');
+    if (uv) {
+      geo.setAttribute('uv', new THREE.BufferAttribute(uv.array.slice(), uv.itemSize));
+    }
+    const index = src.getIndex();
+    if (index) {
+      geo.setIndex(new THREE.BufferAttribute(index.array.slice(), 1));
+    }
+    return geo;
+  }
+
+  /** @param {typeof this._meshes[number]} entry @param {THREE.BufferGeometry} geo */
+  _snapshotEntryBase(entry, geo) {
+    const pos = geo.getAttribute('position');
+    const normalAttr = geo.getAttribute('normal');
+    entry.base = new Float32Array(pos.array);
+    entry.baseNormal = normalAttr ? new Float32Array(normalAttr.array) : null;
+  }
+
+  _recomputeBounds() {
+    if (!this._model) return;
+    const baseBox = new THREE.Box3();
+    this._model.updateMatrixWorld(true);
+    for (const entry of this._meshes) {
+      const geo = entry.mesh.geometry;
+      geo.computeBoundingBox();
+      if (!geo.boundingBox) continue;
+      entry.mesh.updateMatrixWorld(true);
+      baseBox.union(geo.boundingBox.clone().applyMatrix4(entry.mesh.matrixWorld));
+    }
+    if (baseBox.isEmpty()) {
+      this._bounds = null;
+      return;
+    }
+    this._modelWorld.copy(this._model.matrixWorld);
+    this._invModelWorld.copy(this._modelWorld).invert();
+    const modelBox = baseBox.applyMatrix4(this._invModelWorld);
+    this._bounds = modifierBoundsFromBox(modelBox);
   }
 
   /** @returns {boolean} */
@@ -190,6 +320,35 @@ export class MeshModifierController {
     }
 
     this._model.updateMatrixWorld(true);
+  }
+
+  /** @param {{ mesh: THREE.Mesh, sourceGeo: THREE.BufferGeometry, derivedGeo: THREE.BufferGeometry | null, authoredBase: Float32Array, authoredNormal: Float32Array | null }} entry */
+  _restoreAuthoredMesh(entry) {
+    entry.derivedGeo?.dispose();
+    entry.derivedGeo = null;
+    entry.subdivisions = 0;
+    entry.mesh.geometry = entry.sourceGeo;
+    const geo = entry.sourceGeo;
+    const pos = geo.getAttribute('position');
+    if (pos) {
+      pos.array.set(entry.authoredBase);
+      pos.needsUpdate = true;
+    }
+    if (entry.authoredNormal) {
+      const normalAttr = geo.getAttribute('normal');
+      if (normalAttr?.array.length === entry.authoredNormal.length) {
+        normalAttr.array.set(entry.authoredNormal);
+        normalAttr.needsUpdate = true;
+      } else {
+        geo.setAttribute('normal', new THREE.BufferAttribute(entry.authoredNormal.slice(), 3));
+      }
+    }
+    entry.base = new Float32Array(entry.authoredBase);
+    entry.baseNormal = entry.authoredNormal
+      ? new Float32Array(entry.authoredNormal)
+      : null;
+    geo.computeBoundingBox();
+    geo.computeBoundingSphere();
   }
 
   /** @param {{ mesh: THREE.Mesh, base: Float32Array, baseNormal: Float32Array | null }} entry */

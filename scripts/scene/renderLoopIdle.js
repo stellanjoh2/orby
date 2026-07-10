@@ -71,7 +71,7 @@ export function needsContinuousFrames(scene, ctx) {
   if (scene.fontTextRevealController?.shouldRunLiveUpdate?.(scene)) return true;
   if (scene.fontTextConstantController?.shouldRunLiveUpdate?.(scene)) return true;
 
-  if (state.autoExposure || state.lensDirt?.enabled) return true;
+  if (scene.autoExposureController?.needsContinuousFrames?.()) return true;
 
   if (scene._gizmoDragActive) return true;
 
@@ -123,4 +123,16 @@ export function buildRenderLoopFrameContext(scene) {
       !!scene.backgroundController?.backgroundSphere &&
       !!scene.postPipeline?.bokehPass?.enabled,
   };
+}
+
+/**
+ * When auto-exposure or lens dirt is on but exposure has settled, wake the loop on a
+ * timer for throttled luminance samples instead of running continuous rAF.
+ * @param {import('../SceneManager.js').SceneManager} scene
+ */
+export function autoExposureNeedsIdleSampleWake(scene) {
+  const state = scene.stateStore.peekState();
+  if (!state.autoExposure && !state.lensDirt?.enabled) return false;
+  if (scene.autoExposureController?.needsContinuousFrames?.()) return false;
+  return true;
 }
