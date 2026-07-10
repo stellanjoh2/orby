@@ -5,6 +5,12 @@
 import gsap from 'gsap';
 import { handoffFileToMobileAppIfLanding } from '../orbyMobileHandoff.js';
 import { blockTabletStudioAccess } from '../orbyTabletGate.js';
+import {
+  noteDropzoneHideEnded,
+  noteDropzoneHideStarted,
+  noteDropzoneRevealEnded,
+  noteDropzoneRevealStarted,
+} from './orbyPageTransition.js';
 import { TEXT_REVEAL_PACE } from './bigMessageHeadlineReveal.js';
 import { ensureLottie } from './lottieLoader.js';
 
@@ -338,6 +344,17 @@ export class StartMenuController {
     window.addEventListener('drop', (event) => {
       this.handleDropEvent(event, emitFile);
     }, { passive: false });
+
+    this.dropzone.addEventListener('animationend', (event) => {
+      if (event.target !== this.dropzone) return;
+      if (event.animationName === 'dropzoneHide') {
+        this.dropzone.classList.remove('hiding');
+        noteDropzoneHideEnded();
+      }
+      if (event.animationName === 'dropzoneReveal') {
+        noteDropzoneRevealEnded();
+      }
+    });
   }
 
   /**
@@ -548,6 +565,7 @@ export class StartMenuController {
       // When showing, remove hiding class and let reveal animation handle it
       this.dropzone.classList.remove('hiding');
       if (canRevealChrome) {
+        noteDropzoneRevealStarted();
         this.dropzone.style.pointerEvents = 'auto';
         this.dropzone.style.opacity = '';
         this.dropzone.style.animation =
@@ -578,6 +596,7 @@ export class StartMenuController {
       requestAnimationFrame(() => {
         this.dropzone.style.pointerEvents = 'none';
         this.dropzone.classList.add('hiding');
+        noteDropzoneHideStarted();
       });
     }
     

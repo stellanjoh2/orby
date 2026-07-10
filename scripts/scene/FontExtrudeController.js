@@ -583,57 +583,64 @@ export class FontExtrudeController {
     }
 
     this.stateStore.set('svgExtrude.flipDirection', FONT_EXTRUDE_FLIP_DIRECTION);
-    await scene.ui.ensureStudioUiReady();
-    await scene.ensureStudioReady();
-    scene.ui.setDropzoneVisible(false);
-    await scene.syncViewportSize();
-    scene.startRenderLoop();
+    scene.ui.setLoadSpinnerStatusPrefix?.('Loading');
+    scene.ui.beginLoadSpinner();
+    scene.ui.beginLoadSpinnerElapsed?.();
+    try {
+      await scene.ui.ensureStudioUiReady();
+      await scene.ensureStudioReady();
+      scene.ui.setDropzoneVisible(false);
+      await scene.syncViewportSize();
+      scene.startRenderLoop();
 
-    const assetName = this.fontLabel || 'Generated Text';
-    scene.currentFile = null;
-    scene.ui.updateTitle(assetName);
-    scene.ui.updateTopBarDetail(`${assetName} — Idle`);
+      const assetName = this.fontLabel || 'Generated Text';
+      scene.currentFile = null;
+      scene.ui.updateTitle(assetName);
+      scene.ui.updateTopBarDetail(`${assetName} — Idle`);
 
-    const fillColor = normalizeGlyphFillHex(
-      this.stateStore.getState()?.fontExtrude?.fillColor ?? DEFAULT_PREVIEW_FILL,
-    );
-    const extrudeColor = normalizeGlyphFillHex(
-      this.stateStore.getState()?.fontExtrude?.extrudeColor ?? fillColor,
-    );
-    this.stateStore.set('svgExtrude.availableColors', [fillColor]);
-    normalizeImportScale(group);
-    scene.modelLifecycle.setModel(group, []);
-    scene.modelLifecycle.applyAssetMetadata({
-      gltfMetadata: {
-        assetName,
-        generator: 'FontExtrude',
-        version: null,
-        copyright: null,
-      },
-      svgExtrude: {
-        enabled: true,
-        depth: this.fontExtrudeImporter.getDepth(),
-        normalAngle: this.fontExtrudeImporter.getNormalAngleDeg(),
-        hardEdgeAngle: this.fontExtrudeImporter.getHardEdgeAngleDeg(),
-        colorDepths: this.fontExtrudeImporter.getColorDepths(),
-        colorOffsets: this.fontExtrudeImporter.getColorOffsets(),
-        colors: this.fontExtrudeImporter.getAvailableColors(),
-        flipDirection: this.fontExtrudeImporter.getFlipDirection(),
-        bevelAmount: this.fontExtrudeImporter.getBevelAmount(),
-        bevelType: this.fontExtrudeImporter.getBevelType(),
-        detail: this.fontExtrudeImporter.getDetail(),
-        importer: this.fontExtrudeImporter,
-      },
-    });
-    scene.svgExtrudeImporter = this.fontExtrudeImporter;
-    scene.isSvgExtrudeModel = true;
-    scene.applyFontExtrudeColors?.(fillColor, extrudeColor);
-    scene.updateStatsUI(null, group, scene.currentAssetMetadata);
+      const fillColor = normalizeGlyphFillHex(
+        this.stateStore.getState()?.fontExtrude?.fillColor ?? DEFAULT_PREVIEW_FILL,
+      );
+      const extrudeColor = normalizeGlyphFillHex(
+        this.stateStore.getState()?.fontExtrude?.extrudeColor ?? fillColor,
+      );
+      this.stateStore.set('svgExtrude.availableColors', [fillColor]);
+      normalizeImportScale(group);
+      scene.modelLifecycle.setModel(group, []);
+      scene.modelLifecycle.applyAssetMetadata({
+        gltfMetadata: {
+          assetName,
+          generator: 'FontExtrude',
+          version: null,
+          copyright: null,
+        },
+        svgExtrude: {
+          enabled: true,
+          depth: this.fontExtrudeImporter.getDepth(),
+          normalAngle: this.fontExtrudeImporter.getNormalAngleDeg(),
+          hardEdgeAngle: this.fontExtrudeImporter.getHardEdgeAngleDeg(),
+          colorDepths: this.fontExtrudeImporter.getColorDepths(),
+          colorOffsets: this.fontExtrudeImporter.getColorOffsets(),
+          colors: this.fontExtrudeImporter.getAvailableColors(),
+          flipDirection: this.fontExtrudeImporter.getFlipDirection(),
+          bevelAmount: this.fontExtrudeImporter.getBevelAmount(),
+          bevelType: this.fontExtrudeImporter.getBevelType(),
+          detail: this.fontExtrudeImporter.getDetail(),
+          importer: this.fontExtrudeImporter,
+        },
+      });
+      scene.svgExtrudeImporter = this.fontExtrudeImporter;
+      scene.isSvgExtrudeModel = true;
+      scene.applyFontExtrudeColors?.(fillColor, extrudeColor);
+      scene.updateStatsUI(null, group, scene.currentAssetMetadata);
 
-    this.eventBus.emit('font:generated', { group });
-    scene.eventBus.emit('scene:model-load-complete', { success: true, source: 'font' });
-    scene.ui.showToast('Text generated', 3200, { notification: false });
-    return group;
+      this.eventBus.emit('font:generated', { group });
+      scene.eventBus.emit('scene:model-load-complete', { success: true, source: 'font' });
+      scene.ui.showToast('Text generated', 3200, { notification: false });
+      return group;
+    } finally {
+      scene.ui.endLoadSpinner();
+    }
   }
 
   /**

@@ -296,6 +296,7 @@ export function teardownStudioGpu(scene) {
 
     scene._studioReady = false;
     document.documentElement.classList.remove('orby-studio-active');
+    document.documentElement.style.removeProperty('--orby-studio-bg');
 }
 
 export function attachViewportResizeObserver(scene) {

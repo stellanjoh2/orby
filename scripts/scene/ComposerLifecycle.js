@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import { APP_BACKGROUND } from '../constants.js';
+import {
+  isStudioBackdropTransitionLocked,
+  TRANSITION_BACKDROP,
+} from '../ui/orbyPageTransition.js';
 import { ensureExportCapturePixelRatio } from '../render/capture/forceExportCaptureFramebuffer.js';
 import { resetRendererFullViewport } from '../render/resetRendererFullViewport.js';
 import { isSketchColourCreativeLookPreset } from '../render/CreativeLookMaterials.js';
@@ -137,9 +141,12 @@ export class ComposerLifecycle {
     const bg = this.scene.background;
     if (bg == null) {
       const gradient = this.backgroundController?.gradientController;
-      const hex = gradient?.isActive?.()
+      let hex = gradient?.isActive?.()
         ? gradient.getFallbackColor()
         : this.backgroundController?.getColor() ?? APP_BACKGROUND;
+      if (isStudioBackdropTransitionLocked()) {
+        hex = TRANSITION_BACKDROP;
+      }
       r.setClearColor(new THREE.Color(hex), 1);
       r.setClearAlpha(1);
       return;

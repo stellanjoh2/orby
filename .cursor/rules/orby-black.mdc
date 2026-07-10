@@ -5,14 +5,16 @@ alwaysApply: true
 
 # Orby black (`#080808`)
 
-When the user asks for **black** (backgrounds, buttons, text on lime, scene clear color, marketing surfaces, tooltips, etc.), use the project black token — **not** `#000`, `#000000`, `rgb(0,0,0)`, or `#02030a`.
+When the user asks for **black** (UI backgrounds, buttons on lime, marketing surfaces, tooltips, etc.), use the project black token — **not** `#000`, `#000000`, `rgb(0,0,0)`, or `#02030a`. For **studio viewport** background, use `--orby-studio-bg` / `STUDIO_BACKGROUND` (see `studio-bg-isolated.mdc`) — not `--orby-app-bg`.
 
 ## Tokens (prefer these)
 
 | Layer | Use |
 |-------|-----|
-| CSS | `var(--orby-black)` or `var(--orby-app-bg)` (alias) |
-| JS | `ORBY_BLACK` from `scripts/constants.js` (`'#080808'`) |
+| CSS (UI) | `var(--orby-black)` or `var(--orby-app-bg)` (alias) |
+| CSS (studio viewport) | `var(--orby-studio-bg)` — **not** `--orby-app-bg` |
+| JS (UI) | `ORBY_BLACK` from `scripts/constants.js` (`'#080808'`) |
+| JS (studio backdrop) | `STUDIO_BACKGROUND` — **not** `ORBY_BLACK` unless values must match |
 | Themes | `--brand-text` is aliased to `--orby-black` (lime CTAs, dark UI chrome) |
 
 Defined in `styles.css`:
@@ -20,13 +22,15 @@ Defined in `styles.css`:
 ```css
 --orby-black: #080808;
 --orby-app-bg: var(--orby-black);
+--orby-studio-bg: #080808; /* viewport only — see studio-bg-isolated.mdc */
 ```
 
 ## Do
 
 - New surfaces, defaults, fallbacks, and color-picker defaults → `#080808` / tokens above
 - `color-mix(..., var(--orby-black))` instead of mixing with `#000`
-- Scene `background`, `theme-color`, histogram/tone-curve fills → `ORBY_BLACK` or CSS token
+- `theme-color`, histogram/tone-curve fills → `ORBY_BLACK` or UI CSS token
+- Studio viewport canvas (`.viewport`, `#webgl`) → `--orby-studio-bg` only
 - **21∶9 cinematic letterbox** mattes → pure `#000` / `--cinematic-letterbox-black` / `CINEMATIC_LETTERBOX_BLACK` (not brand black)
 
 ## Don't (unless user explicitly asks for pure black)

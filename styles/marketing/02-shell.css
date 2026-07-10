@@ -55,7 +55,7 @@ html.orby-home-scroll body.dropzone-visible .viewport {
 
 html.orby-home-scroll body.dropzone-visible .dropzone {
   overflow: visible;
-  /* Match page + marketing sections (--orby-black); dropzone default uses --orby-app-bg (#000) */
+  /* Match page + marketing sections (--orby-black); dropzone uses --orby-app-bg (UI, not studio viewport) */
   background-color: var(--orby-black, #080808);
   --dropzone-frost-fill: color-mix(in srgb, var(--orby-black, #080808) 50%, transparent);
 }

@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { APP_BACKGROUND } from '../constants.js';
 import { HdriShadowReceiver } from './HdriShadowReceiver.js';
+import {
+  isStudioBackdropTransitionLocked,
+  TRANSITION_BACKDROP,
+} from '../ui/orbyPageTransition.js';
 
 /**
  * BackgroundController
@@ -110,7 +114,33 @@ export class BackgroundController {
 
   /** Re-apply flat color or delegate to the gradient controller. */
   refreshAppearance() {
+    if (isStudioBackdropTransitionLocked()) {
+      this._applyTransitionClearColor();
+      return;
+    }
     this._applyClearColor();
+  }
+
+  /** Orby black while marketing ↔ studio transitions are in flight. */
+  _applyTransitionClearColor() {
+    if (!this.usesFallbackBackdrop()) {
+      if (this.backgroundSphere) {
+        this.backgroundSphere.visible = false;
+      }
+      return;
+    }
+
+    this.scene.background = null;
+    this.renderer.setClearAlpha(1);
+    this.renderer.autoClear = true;
+    try {
+      this.renderer.setClearColor(new THREE.Color(TRANSITION_BACKDROP), 1);
+    } catch (error) {
+      console.error('Failed to set transition backdrop color:', error);
+    }
+    if (this.backgroundSphere) {
+      this.backgroundSphere.visible = false;
+    }
   }
   
   /**

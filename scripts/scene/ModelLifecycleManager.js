@@ -529,15 +529,15 @@ export class ModelLifecycleManager {
     const previousFile = s.currentFile;
     const hadExistingModel = !!s.currentModel;
 
-    s.currentFile = file;
-    s.ui.updateTitle(file.name);
-    s.ui.updateTopBarDetail(`${file.name} — Loading…`);
-    s.ui.setDropzoneVisible(false);
-
     s.ui.setLoadSpinnerStatusPrefix?.('Loading');
     s.ui.beginLoadSpinner();
     s.ui.beginLoadSpinnerElapsed?.();
     await deferSpinnerPaint();
+
+    s.currentFile = file;
+    s.ui.updateTitle(file.name);
+    s.ui.updateTopBarDetail(`${file.name} — Loading…`);
+    s.ui.setDropzoneVisible(false);
 
     try {
       await s.ui.ensureStudioUiReady();
@@ -609,11 +609,12 @@ export class ModelLifecycleManager {
     if (!files?.length) return;
     if (blockTabletStudioAccess()) return;
 
-    s.ui.setDropzoneVisible(false);
     s.ui.setLoadSpinnerStatusPrefix?.('Loading');
     s.ui.beginLoadSpinner();
     s.ui.beginLoadSpinnerElapsed?.();
     await deferSpinnerPaint();
+
+    s.ui.setDropzoneVisible(false);
 
     try {
       await s.ui.ensureStudioUiReady();

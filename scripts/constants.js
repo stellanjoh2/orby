@@ -10,8 +10,11 @@ export const ORBY_BLACK = '#080808';
 /** 21∶9 cinematic letterbox mattes — pure black, decoupled from studio backdrop. */
 export const CINEMATIC_LETTERBOX_BLACK = '#000000';
 
-/** Scene / viewport clear color — default blank canvas (Shader Lab, exports, backdrop). */
-export const APP_BACKGROUND = ORBY_BLACK;
+/** Studio viewport / 3D backdrop — clear color, gradients, exports. Not UI chrome. */
+export const STUDIO_BACKGROUND = '#252525';
+
+/** @deprecated Prefer {@link STUDIO_BACKGROUND} — kept for existing imports. */
+export const APP_BACKGROUND = STUDIO_BACKGROUND;
 
 /** Orby Lime — logotype, CTAs, wireframe default, UI accents. Mirror: --orby-lime */
 export const ORBY_LIME = '#c4ff00';

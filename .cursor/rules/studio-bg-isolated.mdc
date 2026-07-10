@@ -1,0 +1,65 @@
+---
+description: Studio viewport background is isolated from UI chrome — change only --orby-studio-bg / STUDIO_BACKGROUND
+alwaysApply: true
+---
+
+# Studio background isolation
+
+**Official policy.** The studio viewport canvas backing is a separate layer from UI chrome (export overlay, dropzone, shelf scrims, html boot, etc.). When the user asks to change the **studio background**, touch studio tokens only — never `--orby-app-bg`, `--orby-black`, or `ORBY_BLACK` unless they explicitly ask for UI-wide black.
+
+## Tokens
+
+| Layer | CSS | JS |
+|-------|-----|-----|
+| **Studio viewport** | `--orby-studio-bg` | `STUDIO_BACKGROUND` (`scripts/constants.js`) |
+| **UI chrome** | `--orby-app-bg` / `--orby-black` | `ORBY_BLACK` |
+| **3D clear / backdrop panel** | — (runtime via `BackgroundController`) | `STUDIO_BACKGROUND` / `APP_BACKGROUND` |
+| **21∶9 letterbox** | `--cinematic-letterbox-black` | `CINEMATIC_LETTERBOX_BLACK` |
+
+Defined in `styles.css`:
+
+```css
+--orby-black: #080808;
+--orby-app-bg: var(--orby-black);
+--orby-studio-bg: var(--orby-black); /* JS overrides when backdrop applies; default = transition black */
+```
+
+## CSS selectors (studio only)
+
+- `.viewport` → `var(--orby-studio-bg)`
+- `#webgl` → `var(--orby-studio-bg)`
+
+## CSS selectors (UI — do not retarget when changing studio bg)
+
+- `.viewport-offline-export` (rendering overlay)
+- `.dropzone`
+- `html`, `body`, `.workspace` (shell pending)
+- `.orby-sr` (screen-reader / boot shell)
+- Frosted panels, modals, toasts → `--ui-frosted-bg`, `--orby-app-bg`, `--orby-black`
+
+## Do
+
+- User says “change studio bg” → update `STUDIO_BACKGROUND` and rely on `syncStudioBackgroundColor` for `--orby-studio-bg`
+- Default `--orby-studio-bg` in CSS stays `var(--orby-black)` — transitions / load spinner never flash studio gray
+- Scene backdrop color from the Background panel stays in JS state / `BackgroundController` — not `--orby-app-bg`
+
+## Transitions (always Orby black)
+
+Page transitions lock the viewport to `#080808` via `scripts/ui/orbyPageTransition.js`:
+
+- `html.orby-page-transition` (load spinner + dropzone hide)
+- CSS `:has(.dropzone.hiding)` / `:has(.viewport-load-spinner.is-visible)`
+- WebGL clear color forced to `TRANSITION_BACKDROP` until unlock
+
+After the spinner ends **and** the dropzone hide animation completes, `flushStudioViewportBackdrop()` applies `STUDIO_BACKGROUND` (`#252525`).
+
+## Don't
+
+- Change `--orby-app-bg` or `--orby-black` when the user only asked for studio background
+- Point `.viewport-offline-export`, `.dropzone`, or overlay scrims at `--orby-studio-bg`
+- Alias `--orby-studio-bg` to `--orby-app-bg` — that re-couples the layers
+
+## Manual verify
+
+1. Change `--orby-studio-bg` to a distinct color (e.g. `#1a1a2e`) — viewport letterboxing around WebGL updates; export overlay and dropzone stay `#080808`
+2. Studio → Background color picker — 3D backdrop updates; rendering overlay unchanged

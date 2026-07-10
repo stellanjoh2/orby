@@ -307,9 +307,11 @@ html:not(.mobile-landing) body.orby-not-found-active #orbyFullscreenPrompt .bug-
 :root,
 body[data-theme='violet'],
 body[data-theme='aqua'] {
-  /* Default near-black — surfaces, buttons on lime, scene background */
+  /* Default near-black — UI chrome, buttons on lime, overlays (not the viewport canvas) */
   --orby-black: #080808;
   --orby-app-bg: var(--orby-black);
+  /* Studio viewport canvas backing — JS overrides via syncStudioBackgroundColor; defaults to Orby black for transitions */
+  --orby-studio-bg: var(--orby-black);
   /* 21∶9 cinematic letterbox — always pure black, not studio backdrop */
   --cinematic-letterbox-black: #000;
   /* FAQ panels, tooltips — softer than app black so hints don’t read as errors */
@@ -2768,7 +2770,7 @@ html.orby-dropzone-shell-pending .workspace {
 .viewport {
   position: relative;
   flex: 1;
-  background: var(--orby-app-bg);
+  background: var(--orby-studio-bg);
   min-height: 0;
   min-width: 0;
   /* Clip dropzone paints (blur / shadows); inset(0) reinforces overflow in WebKit. */
@@ -2776,6 +2778,20 @@ html.orby-dropzone-shell-pending .workspace {
   clip-path: inset(0);
   container-type: size;
   container-name: orby-viewport;
+}
+
+/* Marketing → studio transitions — Orby black until load + dropzone hide complete */
+html.orby-page-transition .workspace,
+html.orby-page-transition .viewport,
+html.orby-page-transition #webgl,
+html:not(.orby-studio-active) .viewport,
+html.orby-dropzone-shell-pending .viewport,
+html:has(.dropzone.hiding) .workspace,
+html:has(.dropzone.hiding) .viewport,
+html:has(.dropzone.hiding) #webgl,
+html:has(.viewport-load-spinner.is-visible) .viewport,
+html:has(.viewport-load-spinner.is-visible) #webgl {
+  background: var(--orby-app-bg) !important;
 }
 
 /* 21∶9 “cinema” mattes — fits largest 21∶9 rect in viewport (letterbox on 16∶9). */
@@ -2864,7 +2880,7 @@ html.orby-dropzone-shell-pending .workspace {
   height: 100%;
   display: block;
   /* Match .viewport; backs transparent WebGL clears (renderer alpha: true) */
-  background: var(--orby-app-bg);
+  background: var(--orby-studio-bg);
   outline: none;
 }
 

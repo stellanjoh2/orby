@@ -30,6 +30,10 @@ import {
   sanitizeAmbientOcclusion,
   APP_BACKGROUND,
 } from './constants.js';
+import {
+  isStudioBackdropTransitionLocked,
+  TRANSITION_BACKDROP,
+} from './ui/orbyPageTransition.js';
 import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
 import { GroundController } from './render/GroundController.js';
@@ -244,12 +248,11 @@ export class SceneManager {
    * @param {{ skipSound?: boolean }} [options]
    */
   async enterBlankStudio(options = {}) {
-    // Match model load — hide the dropzone before bootstrap/spinner so the indicator
-    // lands in studio chrome (bottom-left), not over the marketing hero.
-    this.ui.setDropzoneVisible(false);
+    // Lock backdrop to Orby black before dropzone hide / WebGL boot (no gray flash).
     this.ui.setLoadSpinnerStatusPrefix?.('Loading');
     this.ui.beginLoadSpinner();
     this.ui.beginLoadSpinnerElapsed?.();
+    this.ui.setDropzoneVisible(false);
     await deferSpinnerPaint();
 
     try {
@@ -2347,7 +2350,7 @@ export class SceneManager {
     this.hdriMood?.apply(style);
   }
 
-  /** Studio flat backdrop — keep GPU clear color, env fallback, and Shader Lab in sync. */
+  /** Studio flat backdrop — keep GPU clear color, env fallback, Shader Lab, and CSS viewport backing in sync. */
   syncStudioBackgroundColor(color) {
     if (!color) return;
     const hex = String(color).trim();
@@ -2355,6 +2358,28 @@ export class SceneManager {
     this.environmentController?.setFallbackColor(hex);
     this.hdriMood?.setFallbackBackgroundColor(hex);
     this.creativeLookSceneSync?.noteStudioBackgroundColor(hex);
+    this._applyStudioViewportBackdropPresentation();
+  }
+
+  /** Force Orby black on viewport canvas + WebGL clear during page transitions. */
+  presentStudioBackdropDuringTransition() {
+    this._applyStudioViewportBackdropPresentation();
+  }
+
+  /** Re-apply studio backdrop after transitions complete. */
+  flushStudioViewportBackdrop() {
+    this._applyStudioViewportBackdropPresentation();
+  }
+
+  _applyStudioViewportBackdropPresentation() {
+    const hex =
+      this.backgroundController?.getColor?.()
+      ?? this.stateStore.getState().background
+      ?? APP_BACKGROUND;
+    const effective = isStudioBackdropTransitionLocked() ? TRANSITION_BACKDROP : hex;
+    document.documentElement.style.setProperty('--orby-studio-bg', effective);
+    this.backgroundController?.refreshAppearance();
+    this.composerLifecycle?.syncRendererClearForSceneBackground?.();
   }
 
   applyFresnelToModel(root) {

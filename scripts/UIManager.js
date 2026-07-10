@@ -70,6 +70,11 @@ import { BackgroundImageControls } from './ui/BackgroundImageControls.js';
 import { BackgroundSolidControls } from './ui/BackgroundSolidControls.js';
 import { StartMenuController } from './ui/StartMenuController.js';
 import {
+  noteOrbyLoadSpinnerBegun,
+  noteOrbyLoadSpinnerEnded,
+  noteDropzoneRevealStarted,
+} from './ui/orbyPageTransition.js';
+import {
   buildOfflineExportOverlaySummary,
   OFFLINE_EXPORT_OVERLAY_PREVIEW_JOB,
 } from './render/offlineExportOverlaySummary.js';
@@ -1556,6 +1561,7 @@ export class UIManager {
    * Full session reset: tear down WebGL, restore defaults, return to the marketing home.
    */
   async returnToHome() {
+    noteDropzoneRevealStarted();
     const scene = window.orby?.scene;
     if (scene?.isStudioReady) {
       await scene.shutdownStudio();
@@ -2212,6 +2218,7 @@ export class UIManager {
 
   beginLoadSpinner() {
     this._loadSpinnerDepth += 1;
+    noteOrbyLoadSpinnerBegun();
     this._syncLoadSpinner();
   }
 
@@ -2221,12 +2228,16 @@ export class UIManager {
       this.endLoadSpinnerElapsed();
       this._loadSpinnerStatusPrefix = 'Rendering';
     }
+    noteOrbyLoadSpinnerEnded();
     this._syncLoadSpinner();
   }
 
   /** Recover when capture/export leaves the viewport spinner or deferred UI stuck. */
   forceClearLoadSpinner() {
-    this._loadSpinnerDepth = 0;
+    while (this._loadSpinnerDepth > 0) {
+      this._loadSpinnerDepth -= 1;
+      noteOrbyLoadSpinnerEnded();
+    }
     this.endLoadSpinnerElapsed();
     this._loadSpinnerStatusPrefix = 'Rendering';
     this._syncLoadSpinner();
