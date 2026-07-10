@@ -163,62 +163,66 @@ async function boot() {
   if (ORBY_DEV_BUILD && !isMobileLanding()) {
     window.orby.dev = {};
 
-    void import('./dev/bakeCreativeLookThumbnails.js')
-      .then(({ bakeCreativeLookThumbnails }) => {
-        window.orby.dev.bakeCreativeLookThumbnails = bakeCreativeLookThumbnails;
+    void import('./dev/DevToolsModal.js')
+      .then(({ DevToolsModal, wireDevBakeButton }) => {
+        const devToolsModal = new DevToolsModal(ui);
+        devToolsModal.mount();
+        window.orby.dev.toolsModal = devToolsModal;
 
-        /**
-         * @param {HTMLButtonElement | null} btn
-         * @param {() => object} resolveOptions
-         */
-        const wireBakeButton = (btn, resolveOptions) => {
-          if (!btn) return;
-          btn.hidden = false;
-          btn.addEventListener('click', async () => {
-            if (btn.disabled) return;
-            btn.disabled = true;
-            const prevLabel = btn.textContent;
-            btn.textContent = 'baking…';
-            try {
-              await bakeCreativeLookThumbnails(resolveOptions());
-            } catch (err) {
-              console.error('[Orby dev] Thumbnail bake failed', err);
-              ui?.showToast?.(err?.message || 'Thumbnail bake failed', 3600, {
-                notification: false,
-              });
-            } finally {
-              btn.disabled = false;
-              btn.textContent = prevLabel;
-            }
-          });
+        const wireBakeButtons = () => {
+          wireDevBakeButton(
+            document.getElementById('creativeLookBakeThumbsBtn'),
+            window.orby.dev.bakeCreativeLookThumbnails,
+            () => ({}),
+            ui,
+          );
+          wireDevBakeButton(
+            document.getElementById('creativeLookBakeCurrentThumbBtn'),
+            window.orby.dev.bakeCreativeLookThumbnails,
+            () => {
+              const preset = window.orby?.stateStore?.getState?.()?.creativeLook?.preset;
+              if (!preset) {
+                throw new Error('No Shader Lab preset selected — pick a look first.');
+              }
+              return { presets: [preset] };
+            },
+            ui,
+          );
+          wireDevBakeButton(
+            document.getElementById('lookFilterBakeThumbsBtn'),
+            window.orby.dev.bakeLookFilterThumbnails,
+            () => ({}),
+            ui,
+          );
+          wireDevBakeButton(
+            document.getElementById('lookFilterBakeCurrentThumbBtn'),
+            window.orby.dev.bakeLookFilterThumbnails,
+            () => {
+              const preset = window.orby?.stateStore?.getState?.()?.lookFilterPreset;
+              if (!preset || preset === 'custom') {
+                throw new Error('No Look Filter preset selected — pick None, Studio, Noir, etc.');
+              }
+              return { presets: [preset] };
+            },
+            ui,
+          );
         };
 
-        wireBakeButton(
-          document.getElementById('creativeLookBakeThumbsBtn'),
-          () => ({}),
-        );
-
-        wireBakeButton(document.getElementById('creativeLookBakeCurrentThumbBtn'), () => {
-          const preset = window.orby?.stateStore?.getState?.()?.creativeLook?.preset;
-          if (!preset) {
-            throw new Error('No Shader Lab preset selected — pick a look first.');
-          }
-          return { presets: [preset] };
+        return Promise.all([
+          import('./dev/bakeCreativeLookThumbnails.js'),
+          import('./dev/bakeLookFilterThumbnails.js'),
+          import('./dev/exportDimensionSpotChecks.js'),
+        ]).then(([creativeLookMod, lookFilterMod, spotChecksMod]) => {
+          window.orby.dev.bakeCreativeLookThumbnails = creativeLookMod.bakeCreativeLookThumbnails;
+          window.orby.dev.bakeLookFilterThumbnails = lookFilterMod.bakeLookFilterThumbnails;
+          window.orby.dev.runExportDimensionSpotChecks = (opts) =>
+            spotChecksMod.runExportDimensionSpotChecks(scene, opts);
+          window.orby.dev.logCaptureSizeMatrix = () => spotChecksMod.logCaptureSizeMatrix(scene);
+          wireBakeButtons();
         });
-
       })
       .catch((err) => {
-        console.warn('[Orby dev] Thumbnail bake module failed to load', err);
-      });
-
-    void import('./dev/exportDimensionSpotChecks.js')
-      .then(({ runExportDimensionSpotChecks, logCaptureSizeMatrix }) => {
-        window.orby.dev.runExportDimensionSpotChecks = (opts) =>
-          runExportDimensionSpotChecks(scene, opts);
-        window.orby.dev.logCaptureSizeMatrix = () => logCaptureSizeMatrix(scene);
-      })
-      .catch((err) => {
-        console.warn('[Orby dev] Export dimension spot checks failed to load', err);
+        console.warn('[Orby dev] Dev tools modal failed to load', err);
       });
   }
 

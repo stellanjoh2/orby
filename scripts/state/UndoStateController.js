@@ -194,7 +194,7 @@ export class UndoStateController {
     if (el.closest('.copy-scene-settings, .load-scene-settings, .save-orby-scene, .load-orby-scene, .reset-scene')) {
       return true;
     }
-    if (el.closest('.load-settings-modal, .bug-report-overlay, #start-menu, .start-menu')) return true;
+    if (el.closest('.load-settings-modal, .bug-report-overlay, .dev-tools-modal, #start-menu, .start-menu')) return true;
     return false;
   }
 }

@@ -13,6 +13,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { injectAllSubpageSiteNav } from './marketing/injectSubpageSiteNav.mjs';
 import { processCreativeLookThumbnail } from './dev/processCreativeLookThumbnail.mjs';
+import { processLookFilterThumbnail } from './dev/processLookFilterThumbnail.mjs';
 import { stitchIndexHtml } from './stitchIndexHtml.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -105,7 +106,9 @@ function resolveFilePath(urlPath) {
 }
 
 const DEV_THUMB_PATH = '/__dev__/creative-look-thumbnail';
+const DEV_LOOK_FILTER_THUMB_PATH = '/__dev__/look-filter-thumbnail';
 const DEV_THUMB_OUT_DIR = path.join(root, 'assets', 'images');
+const DEV_LOOK_FILTER_THUMB_OUT_DIR = path.join(root, 'assets', 'images', 'look-filters');
 
 /** @param {import('node:http').IncomingMessage} req @param {number} [limitBytes] */
 function readRequestBody(req, limitBytes = 24 * 1024 * 1024) {
@@ -130,6 +133,50 @@ function readRequestBody(req, limitBytes = 24 * 1024 * 1024) {
 function isLocalDevRequest(req) {
   const remote = req.socket?.remoteAddress ?? '';
   return remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1';
+}
+
+/** @param {import('node:http').IncomingMessage} req @param {import('node:http').ServerResponse} res */
+async function handleLookFilterThumbnailUpload(req, res) {
+  if (!isLocalDevRequest(req)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Dev thumbnail endpoint is localhost-only.');
+    return;
+  }
+
+  const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+  const preset = url.searchParams.get('preset') ?? '';
+  const size = Number(url.searchParams.get('size') || 192);
+
+  try {
+    const pngBuffer = await readRequestBody(req);
+    if (!pngBuffer.length) {
+      res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Empty PNG body.');
+      return;
+    }
+
+    const saved = await processLookFilterThumbnail({
+      pngBuffer,
+      preset,
+      size,
+      outDir: DEV_LOOK_FILTER_THUMB_OUT_DIR,
+    });
+
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(
+      JSON.stringify({
+        ok: true,
+        filename: saved.filename,
+        bytes: saved.bytes,
+        thumbSize: saved.thumbSize,
+        relativePath: saved.relativePath,
+        thumbBase64: saved.thumbBase64,
+      }),
+    );
+  } catch (err) {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end(err?.message || 'Thumbnail processing failed.');
+  }
 }
 
 /** @param {import('node:http').IncomingMessage} req @param {import('node:http').ServerResponse} res */
@@ -180,6 +227,11 @@ const server = http.createServer(async (req, res) => {
 
   if (urlPath === DEV_THUMB_PATH && req.method === 'POST') {
     await handleCreativeLookThumbnailUpload(req, res);
+    return;
+  }
+
+  if (urlPath === DEV_LOOK_FILTER_THUMB_PATH && req.method === 'POST') {
+    await handleLookFilterThumbnailUpload(req, res);
     return;
   }
 
@@ -275,8 +327,15 @@ server.listen(port, '0.0.0.0', () => {
   console.log(`Orby mobile learn   → http://127.0.0.1:${port}/mobile/learn`);
   console.log(`Orby mobile viewer   → http://127.0.0.1:${port}/mobile/app/  (Ctrl+C to stop)`);
   console.log(
-    'Creative look thumbs → load a mesh, frame the shot, then in the browser console:\n' +
-      '  await orby.dev.bakeCreativeLookThumbnails()',
+    'Dev tools modal     → press D in the studio, or:\n' +
+      '  orby.dev.toolsModal.open()',
+  );
+  console.log(
+    'Creative look thumbs → await orby.dev.bakeCreativeLookThumbnails()',
+  );
+  console.log(
+    'Look filter thumbs → load a mesh, frame the shot, then in the browser console:\n' +
+      '  await orby.dev.bakeLookFilterThumbnails()',
   );
   console.log(
     'Shape library thumbs → drop PNGs in assets/images/shape-library-sources/, then:\n' +

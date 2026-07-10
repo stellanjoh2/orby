@@ -277,6 +277,11 @@ export class GlobalControls {
         target.isContentEditable
       ) {
         if (event.key === 'Escape') {
+          if (window.orby?.dev?.toolsModal?.isOpen?.()) {
+            event.preventDefault();
+            window.orby.dev.toolsModal.close();
+            return;
+          }
           if (window.orby?.scene?.exportMovementPreview?.isActive?.()) {
             event.preventDefault();
             this.eventBus.emit('export:movement-preview-stop', { silent: false });
@@ -300,6 +305,11 @@ export class GlobalControls {
       // were treated as animation scrub + preventDefault — blocking normal arrow stepping.
       if (target.tagName === 'INPUT' && target.type === 'range') {
         if (event.key === 'Escape') {
+          if (window.orby?.dev?.toolsModal?.isOpen?.()) {
+            event.preventDefault();
+            window.orby.dev.toolsModal.close();
+            return;
+          }
           if (window.orby?.scene?.exportMovementPreview?.isActive?.()) {
             event.preventDefault();
             this.eventBus.emit('export:movement-preview-stop', { silent: false });
@@ -512,6 +522,11 @@ export class GlobalControls {
 
       // Esc - Close modals/overlays
       if (key === 'escape') {
+        if (window.orby?.dev?.toolsModal?.isOpen?.()) {
+          event.preventDefault();
+          window.orby.dev.toolsModal.close();
+          return;
+        }
         if (this.ui.bugReport?.isOpen?.()) {
           event.preventDefault();
           this.ui.bugReport.close();

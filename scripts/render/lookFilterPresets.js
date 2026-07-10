@@ -74,6 +74,9 @@ export const LOOK_FILTER_CATALOG = [
   },
 ];
 
+/** Preset ids with bundled thumbs — used by the dev thumbnail bake loop. */
+export const LOOK_FILTER_BAKE_PRESET_IDS = LOOK_FILTER_CATALOG.map((entry) => entry.id);
+
 /**
  * Per-preset overrides (merged on top of app defaults, except "none" which restores defaults for these keys).
  * Only include fields that differ from defaults; nested objects are shallow-merged with defaults for that key.

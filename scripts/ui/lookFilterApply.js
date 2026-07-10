@@ -8,17 +8,41 @@ import {
 } from '../constants.js';
 import { LOOK_FILTER_CATALOG, mergeLookFilterState } from '../render/lookFilterPresets.js';
 
+const LOOK_FILTER_BUNDLE_KEYS = [
+  'lookFilterPreset',
+  'camera',
+  'bloom',
+  'grain',
+  'aberration',
+  'dof',
+  'exposure',
+  'autoExposure',
+  'toneCurve',
+  'toneMapping',
+  'lensDirt',
+];
+
+/** @param {import('../state/StateStore.js').StateStore} stateStore */
+export function captureLookFilterSnapshot(stateStore) {
+  const state = stateStore.getState();
+  return Object.fromEntries(
+    LOOK_FILTER_BUNDLE_KEYS.map((key) => [key, structuredClone(state[key])]),
+  );
+}
+
 /**
- * Applies a look filter preset: updates state, syncs UI, drives the post stack via the same
- * events as manual controls and reset.
+ * @param {{
+ *   eventBus: import('../EventBus.js').EventBus,
+ *   stateStore: import('../state/StateStore.js').StateStore,
+ *   ui?: object,
+ *   bundle: object,
+ *   silent?: boolean,
+ * }} opts
  */
-export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
+function applyLookFilterBundle({ eventBus, stateStore, ui, bundle, silent = false }) {
   const defaults = stateStore.getDefaults();
-  const current = stateStore.getState();
-  const merged = mergeLookFilterState(presetId, defaults, current);
-  const dof = merged.dof ? sanitizeDof(merged.dof) : merged.dof;
-  const b =
-    merged.dof && dof !== merged.dof ? { ...merged, dof } : merged;
+  const dof = bundle.dof ? sanitizeDof(bundle.dof) : bundle.dof;
+  const b = bundle.dof && dof !== bundle.dof ? { ...bundle, dof } : bundle;
 
   stateStore.setTopLevelBundle({
     lookFilterPreset: b.lookFilterPreset,
@@ -98,12 +122,50 @@ export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
   }
 
   eventBus.emit('render:apply-performance');
-  // State already updated via one notify(); subscribers ran syncControls — no second full sync
 
+  if (silent) return;
+
+  const presetId = b.lookFilterPreset;
   const label = LOOK_FILTER_CATALOG.find((entry) => entry.id === presetId)?.label ?? presetId;
   ui?.showToast?.(
     presetId === 'none' ? 'Look cleared' : `Look applied — ${label}`,
     3200,
     { notification: false },
   );
+}
+
+/**
+ * @param {{
+ *   eventBus: import('../EventBus.js').EventBus,
+ *   stateStore: import('../state/StateStore.js').StateStore,
+ *   ui?: object,
+ *   snapshot: object,
+ *   silent?: boolean,
+ * }} opts
+ */
+export function restoreLookFilterSnapshot({ eventBus, stateStore, ui, snapshot, silent = true }) {
+  applyLookFilterBundle({
+    eventBus,
+    stateStore,
+    ui,
+    bundle: snapshot,
+    silent,
+  });
+}
+
+/**
+ * Applies a look filter preset: updates state, syncs UI, drives the post stack via the same
+ * events as manual controls and reset.
+ */
+export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId, silent = false }) {
+  const defaults = stateStore.getDefaults();
+  const current = stateStore.getState();
+  const merged = mergeLookFilterState(presetId, defaults, current);
+  applyLookFilterBundle({
+    eventBus,
+    stateStore,
+    ui,
+    bundle: merged,
+    silent,
+  });
 }

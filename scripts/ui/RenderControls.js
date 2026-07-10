@@ -1368,5 +1368,31 @@ export class RenderControls {
       img.src = url;
     });
   }
+
+  /**
+   * Force-reload look filter thumbs after a dev bake (cache-bust + bypass lazy hydrate guard).
+   * @param {string[]} [presets]
+   * @param {number} [cacheKey]
+   */
+  refreshLookFilterThumbs(presets, cacheKey = Date.now()) {
+    const container = document.querySelector('#lookFilterPresetsContainer');
+    if (!container) return;
+    const ids = Array.isArray(presets) && presets.length
+      ? presets
+      : [...container.querySelectorAll('[data-look-filter]')]
+          .map((el) => el.getAttribute('data-look-filter'))
+          .filter(Boolean);
+
+    for (const preset of ids) {
+      const url = `./assets/images/look-filters/${preset}.png?v=${cacheKey}`;
+      container.querySelectorAll(`[data-look-filter="${preset}"] img.look-filter-tile__thumb`).forEach((img) => {
+        if (!(img instanceof HTMLImageElement)) return;
+        img.dataset.src = `./assets/images/look-filters/${preset}.png`;
+        img.removeAttribute('loading');
+        img.src = '';
+        img.src = url;
+      });
+    }
+  }
 }
 
