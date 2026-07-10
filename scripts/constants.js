@@ -47,6 +47,12 @@ export const STUDIO_IMPORT_TARGET_MAX_DIMENSION = 2.0;
  */
 export const STUDIO_IMPORT_SCALE_TOLERANCE = 0.06;
 
+/**
+ * Max viewport fill when framing camera on model load / focus (0–1).
+ * Default radius-based focus distance targets ~86% fill; this pulls back to 60%.
+ */
+export const STUDIO_FOCUS_VIEWPORT_FILL_MAX = 0.6;
+
 /** ColorChecker Classic card width (~356 mm) in normalized studio units. */
 export const COLOR_CHECKER_PHYSICAL_WIDTH = 0.356;
 

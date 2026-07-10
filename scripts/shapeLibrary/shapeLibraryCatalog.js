@@ -14,10 +14,11 @@ export const SHAPE_LIBRARY_TARGET_MAX_DIMENSION =
 
 /** Object → Material defaults when inserting a shape-library GLB (absolute sliders, not import multipliers). */
 export const SHAPE_LIBRARY_DEFAULT_METALNESS = 1;
-/** Near-mirror chrome — matches color-checker reference probe base roughness. */
-export const SHAPE_LIBRARY_DEFAULT_ROUGHNESS = 0.035;
-/** Neutral chrome albedo for bundled primitives. */
+export const SHAPE_LIBRARY_DEFAULT_ROUGHNESS = 0.2;
+/** Bundled GLB base color — used when colour override is enabled. */
 export const SHAPE_LIBRARY_DEFAULT_COLOR = '#ffffff';
+/** Shape-library inserts use baked GLB albedo until the user enables colour override. */
+export const SHAPE_LIBRARY_DEFAULT_COLOR_OVERRIDE = false;
 
 /** @typedef {{ id: string, glbUrl: string, sourceId: string, label: string, empty?: boolean }} ShapeLibraryEntry */
 

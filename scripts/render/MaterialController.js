@@ -146,6 +146,7 @@ import {
   SHAPE_LIBRARY_DEFAULT_METALNESS,
   SHAPE_LIBRARY_DEFAULT_ROUGHNESS,
   SHAPE_LIBRARY_DEFAULT_COLOR,
+  SHAPE_LIBRARY_DEFAULT_COLOR_OVERRIDE,
 } from '../shapeLibrary/shapeLibraryCatalog.js';
 import { NormalViewOverlay } from './NormalViewOverlay.js';
 import { UvCheckerOverlay } from './UvCheckerOverlay.js';
@@ -491,12 +492,10 @@ export class MaterialController {
     this.originalMaterials = new WeakMap();
     this._appliedCreativeLookPreset = null;
     this.prepareMesh(model);
-    this._syncImportPbrFromModel(model, {
-      preserveSession: initialState.preserveSessionMaterialMr === true,
-    });
-    this._syncMaterialColorFromModel(model, {
-      preserveSession: initialState.preserveSessionMaterialMr === true,
-    });
+    const preserveSession =
+      initialState.preserveSessionMaterialMr === true && !model.userData?.orbyShapeLibrary;
+    this._syncImportPbrFromModel(model, { preserveSession });
+    this._syncMaterialColorFromModel(model, { preserveSession });
     this.stateStore?.set(
       'material.importHasMrMaps',
       this._modelHasImportMrMaps(model),
@@ -1279,6 +1278,22 @@ export class MaterialController {
     return hex ? normalizeGlyphFillHex(hex) : null;
   }
 
+  _applyShapeLibraryMaterialDefaults() {
+    const brightness = DEFAULT_MATERIAL_BRIGHTNESS;
+    this.materialSettings.brightness = brightness;
+    this.materialSettings.metalness = SHAPE_LIBRARY_DEFAULT_METALNESS;
+    this.materialSettings.roughness = SHAPE_LIBRARY_DEFAULT_ROUGHNESS;
+    this.materialSettings.emissive = 0;
+    this.materialSettings.colorOverride = SHAPE_LIBRARY_DEFAULT_COLOR_OVERRIDE;
+    this.materialSettings.overrideColor = SHAPE_LIBRARY_DEFAULT_COLOR;
+    this.stateStore?.set('material.brightness', brightness);
+    this.stateStore?.set('material.metalness', SHAPE_LIBRARY_DEFAULT_METALNESS);
+    this.stateStore?.set('material.roughness', SHAPE_LIBRARY_DEFAULT_ROUGHNESS);
+    this.stateStore?.set('material.emissive', 0);
+    this.stateStore?.set('material.colorOverride', SHAPE_LIBRARY_DEFAULT_COLOR_OVERRIDE);
+    this.stateStore?.set('material.overrideColor', SHAPE_LIBRARY_DEFAULT_COLOR);
+  }
+
   /**
    * Seed Object → Material colour from the import. Shape library / untextured meshes use
    * direct colour; textured imports keep override off until the user enables it.
@@ -1294,11 +1309,7 @@ export class MaterialController {
     const importHex = this._readModelImportColorHex(model) ?? '#ffffff';
 
     if (model.userData?.orbyShapeLibrary) {
-      const color = SHAPE_LIBRARY_DEFAULT_COLOR;
-      this.materialSettings.overrideColor = color;
-      this.materialSettings.colorOverride = true;
-      this.stateStore?.set('material.overrideColor', color);
-      this.stateStore?.set('material.colorOverride', true);
+      this._applyShapeLibraryMaterialDefaults();
       return;
     }
 
@@ -1321,13 +1332,7 @@ export class MaterialController {
   _syncImportPbrFromModel(model, options = {}) {
     if (!this._modelHasAuthoredPbrMaterials(model)) return;
     if (options.preserveSession) return;
-    if (model.userData?.orbyShapeLibrary) {
-      this.materialSettings.metalness = SHAPE_LIBRARY_DEFAULT_METALNESS;
-      this.materialSettings.roughness = SHAPE_LIBRARY_DEFAULT_ROUGHNESS;
-      this.stateStore?.set('material.metalness', SHAPE_LIBRARY_DEFAULT_METALNESS);
-      this.stateStore?.set('material.roughness', SHAPE_LIBRARY_DEFAULT_ROUGHNESS);
-      return;
-    }
+    if (model.userData?.orbyShapeLibrary) return;
     const neutral = IMPORT_MATERIAL_MR_MULTIPLIER;
     this.materialSettings.metalness = neutral;
     this.materialSettings.roughness = neutral;
@@ -4708,7 +4713,9 @@ export class MaterialController {
 
   _shouldUseMaterialColorOverride(importMat) {
     if (!this.currentModel || !importMat) return false;
-    if (this.currentModel.userData?.orbyShapeLibrary) return true;
+    if (this.currentModel.userData?.orbyShapeLibrary) {
+      return this.materialSettings.colorOverride === true;
+    }
     if (this.materialSettings.colorOverride) return true;
     if (
       !importMat.map?.isTexture &&

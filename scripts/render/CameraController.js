@@ -9,6 +9,7 @@ import {
   DEFAULT_CAMERA_TARGET,
 } from '../camera/cameraDefaults.js';
 import { clampFovDeg } from '../camera/lensPresets.js';
+import { STUDIO_FOCUS_VIEWPORT_FILL_MAX } from '../constants.js';
 function defaultModelViewDirection() {
   return new THREE.Vector3(1.5, 0.7, 1.5).normalize();
 }
@@ -19,6 +20,25 @@ function computeObjectBounds(object) {
     expandBox3FromArmature(object, box);
   }
   return box;
+}
+
+/** Approximate max viewport fill from the default radius-based focus distance. */
+const DEFAULT_FOCUS_VIEWPORT_FILL = 0.864;
+
+/**
+ * @param {number} radius
+ * @param {number} [viewportFillMax] — cap projected bounds (0–1)
+ */
+function resolveFocusDistance(radius, viewportFillMax = STUDIO_FOCUS_VIEWPORT_FILL_MAX) {
+  const base = (radius * 2.2 || 5) * 0.85;
+  if (
+    !Number.isFinite(viewportFillMax) ||
+    viewportFillMax <= 0 ||
+    viewportFillMax >= DEFAULT_FOCUS_VIEWPORT_FILL
+  ) {
+    return base;
+  }
+  return base * (DEFAULT_FOCUS_VIEWPORT_FILL / viewportFillMax);
 }
 
 /**
@@ -1234,7 +1254,7 @@ export class CameraController {
    * Fit camera to an object, calculating bounds and positioning camera
    * @param {THREE.Object3D} object - The object to fit the camera to
    */
-  fitCameraToObject(object) {
+  fitCameraToObject(object, options = {}) {
     const box = computeObjectBounds(object);
     if (!box.isEmpty()) {
       const size = box.getSize(new THREE.Vector3());
@@ -1250,7 +1270,7 @@ export class CameraController {
       adjustedCenter.y -= size.y * 0.05; // Negative Y = down, which makes mesh appear higher
       
       this.controls.target.copy(adjustedCenter);
-      const distance = (this.modelBounds.radius * 2.2 || 5) * 0.85;
+      const distance = resolveFocusDistance(this.modelBounds.radius, options.viewportFillMax);
       const direction = defaultModelViewDirection();
       this.camera.position.copy(adjustedCenter.clone().add(direction.multiplyScalar(distance)));
       this._unlockOrbitSolve();
@@ -1288,8 +1308,9 @@ export class CameraController {
    * Smoothly animate camera to focus on an object
    * @param {THREE.Object3D} object - The object to focus on
    * @param {number} duration - Animation duration in seconds (default: 1.0)
+   * @param {{ viewportFillMax?: number }} [options]
    */
-  focusOnObjectAnimated(object, duration = 1.0) {
+  focusOnObjectAnimated(object, duration = 1.0, options = {}) {
     const box = computeObjectBounds(object);
     if (box.isEmpty()) return;
 
@@ -1306,7 +1327,7 @@ export class CameraController {
     const adjustedCenter = center.clone();
     adjustedCenter.y -= size.y * 0.05;
 
-    const distance = (this.modelBounds.radius * 2.2 || 5) * 0.85;
+    const distance = resolveFocusDistance(this.modelBounds.radius, options.viewportFillMax);
     const direction = defaultModelViewDirection();
     const targetPosition = adjustedCenter.clone().add(direction.multiplyScalar(distance));
     const targetPoint = adjustedCenter.clone();

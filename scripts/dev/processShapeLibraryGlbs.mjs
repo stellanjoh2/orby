@@ -2,7 +2,7 @@
  * Apply bundled shape-library chrome PBR to raw GLB exports.
  *
  * Matches SHAPE_LIBRARY_DEFAULT_* in shapeLibraryCatalog.js:
- *   baseColor #ffffff, metalness 1, roughness 0.035
+ *   baseColor #ffffff, metalness 1, roughness 0.2
  *
  * Usage:
  *   node scripts/dev/processShapeLibraryGlbs.mjs /path/to/cube.glb /path/to/cone.glb ...
@@ -22,7 +22,7 @@ const outDir = path.join(root, 'assets', '3D-assets', 'shape-library');
 const SHAPE_LIBRARY_BAKED_PBR = Object.freeze({
   baseColorFactor: [1, 1, 1, 1],
   metallicFactor: 1,
-  roughnessFactor: 0.035,
+  roughnessFactor: 0.2,
 });
 
 /**
