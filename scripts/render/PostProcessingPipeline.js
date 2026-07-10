@@ -95,6 +95,10 @@ export class PostProcessingPipeline {
       typeof opts.getBackgroundGradientController === 'function'
         ? opts.getBackgroundGradientController
         : () => null;
+    this.renderPass.resolveBackgroundController =
+      typeof opts.getBackgroundController === 'function'
+        ? opts.getBackgroundController
+        : () => null;
     // clearAlpha = 1 ensures the background color shows when scene.background is null
     this.renderPass.clearAlpha = 1;
 
@@ -105,6 +109,11 @@ export class PostProcessingPipeline {
         typeof opts.getBackgroundGradientController === 'function'
           ? opts.getBackgroundGradientController
           : null,
+      resolveBackgroundController:
+        typeof opts.getBackgroundController === 'function'
+          ? opts.getBackgroundController
+          : null,
+      resolveRenderPassColorBuffer: () => this.renderPass.lastComposerColorBuffer,
     });
     this.n8aoPass.enabled = false;
     /** Last N8AO preset applied via `setQualityMode` (shader recompile if changed). */
@@ -1733,8 +1742,8 @@ export class PostProcessingPipeline {
   }
 
   /**
-   * Screen-space ambient occlusion (N8AO / WebGL). When active, replaces RenderPass:
-   * N8AOPass renders the scene and composites AO in one pass.
+   * Screen-space ambient occlusion (N8AO / WebGL). RenderPass stays enabled for the backdrop
+   * plate; MeshglN8AOPass restores HDRI / solid / gradient after AO using a geometry mask.
    * @param {object} settings
    * @param {boolean} forceOffTier - Render-quality tier disables AO (e.g. Low)
    */
@@ -1742,7 +1751,7 @@ export class PostProcessingPipeline {
     if (!this.n8aoPass || !this.renderPass) return;
     const wants = Boolean(settings?.enabled);
     const active = wants && !forceOffTier;
-    this.renderPass.enabled = !active;
+    this.renderPass.enabled = true;
     this.n8aoPass.enabled = active;
     if (!active) return;
 

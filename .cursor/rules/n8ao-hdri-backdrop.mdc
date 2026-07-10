@@ -1,0 +1,38 @@
+---
+description: N8AO + HDRI backdrop — AO on geometry only; sky plate never darkened
+globs: scripts/render/MeshglN8AOPass.js,scripts/render/n8aoBackdropRestoreShader.js,scripts/render/meshglN8aoBackdrop.js,scripts/render/PostProcessingPipeline.js,scripts/render/MeshglRenderPass.js,scripts/render/renderSceneBeautyToTarget.js
+alwaysApply: false
+---
+
+# N8AO + HDRI backdrop (official)
+
+Screen-space AO must darken **mesh / base / podium** only. **HDRI, solid `#202020`, and gradient** sky pixels stay exactly as `MeshglRenderPass` painted them.
+
+Regression tests: `scripts/render/meshglN8aoBackdrop.test.mjs` (`npm test`).
+
+## Pipeline (do not simplify away)
+
+1. **`MeshglRenderPass` stays enabled** when AO is on — paints full backdrop to composer `readBuffer`; records `lastComposerColorBuffer`.
+2. **`MeshglN8AOPass`** (order matters):
+   - Copy RenderPass plate → `_backdropHoldRT` **before** N8AO clobber.
+   - Seed N8AO beauty via `renderSceneBeautyToTarget` (strip `scene.background`; geometry-only depth).
+   - `_enforceBeautyDepth` — `MeshDepthMaterial` + `colorWrite: false` for imports with `depthWrite: false`.
+   - Run N8AO with `autoRenderBeauty: false`, `transparencyAware: false`, `autoDetectTransparency: false`.
+   - Composite to `readBuffer`: `mix(backdrop, ao, geometry)` using **beauty `depthTexture`** (`tSceneDepth`), not a colour prepass.
+3. **`needsSwap = false`** on `MeshglN8AOPass` — final plate stays in `readBuffer` for bloom/grading.
+
+## Never do
+
+- `renderPass.enabled = !active` when AO is on (black sky; breaks Render Backdrop toggle).
+- Disable RenderPass and rely on N8AO alone for the backdrop plate.
+- Restore backdrop by sampling composer buffer **after** copying AO into it (plate becomes AO image).
+- White/colour geometry prepass as the sole sky mask (failed on imports / GPU paths).
+- `ShaderPass.render(renderer, source, dest)` — Three.js API is **`render(renderer, writeBuffer, readBuffer)`** (dest, source).
+- Re-enable N8AO `autoDetectTransparency` on import scenes (corrupts output with `autoRenderBeauty: false`).
+- Copy full composer colour into beauty **without** geometry-only depth first (AO runs on HDRI sky).
+
+## Manual verify (any AO change)
+
+1. AO on + HDRI backdrop → beach/sky visible; contact shadow on mesh + podium at strength ~5.
+2. Toggle **Render Backdrop** off with AO on → solid `#202020`, AO still on geometry.
+3. Textured/skinned import (e.g. teddy) + shape-library primitive.

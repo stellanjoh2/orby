@@ -14,7 +14,7 @@ import {
  * }} sources
  * @returns {{ usesFallbackBackdrop: boolean, useGpuGradientBlit: boolean, clearColor: string | null }}
  */
-function resolveStudioBackdropForBeauty(sources = {}) {
+export function resolveStudioBackdropForBeauty(sources = {}) {
   const gradientCtrl = sources.backgroundGradientController ?? null;
   const bgCtrl = sources.backgroundController ?? gradientCtrl?.backgroundController ?? null;
   if (bgCtrl?.usesFallbackBackdrop?.() !== true) {
@@ -38,9 +38,9 @@ function resolveStudioBackdropForBeauty(sources = {}) {
 }
 
 /**
- * Scene beauty draw with Meshgl background handling (opaque clear alpha, gradient blit).
- * N8AOPass calls `renderer.render` directly and skips MeshglRenderPass — sky pixels stay black
- * unless we clear/blit the same way before AO samples the beauty buffer.
+ * Geometry-only scene draw for N8AO's beauty depth buffer (MeshglN8AOPass).
+ * Always strips `scene.background` so HDRI / clear plates do not write depth — AO must not
+ * run on the backdrop. Backdrop colour is copied from MeshglRenderPass after this pass.
  *
  * @param {import('three').WebGLRenderer} renderer
  * @param {import('three').Scene} scene
@@ -108,10 +108,9 @@ export function renderSceneBeautyToTarget(renderer, scene, camera, renderTarget,
       }
     };
 
-    if (backdrop.usesFallbackBackdrop) {
-      savedSceneBackground = scene.background;
-      scene.background = null;
-    }
+    // Geometry-only — HDRI / gradient / clear must not write depth into N8AO's beauty plate.
+    savedSceneBackground = scene.background;
+    scene.background = null;
 
     resetViewport();
     renderer.setRenderTarget(renderTarget);
@@ -131,12 +130,8 @@ export function renderSceneBeautyToTarget(renderer, scene, camera, renderTarget,
         renderer.setClearColor(new THREE.Color(backdrop.clearColor), clearAlpha);
         renderer.clear(true, true, true);
       } else {
-        // Match MeshglRenderPass — BackgroundController already set renderer clear color.
-        renderer.clear(
-          renderer.autoClearColor,
-          renderer.autoClearDepth,
-          renderer.autoClearStencil,
-        );
+        // Match MeshglRenderPass — always clear colour (autoClearColor can be false after bloom).
+        renderer.clear(true, true, true);
       }
     } else if (backdrop.useGpuGradientBlit) {
       blitGradient();

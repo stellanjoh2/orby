@@ -1,10 +1,12 @@
 import { RenderPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/RenderPass.js';
+import * as THREE from 'three';
 import { getDrawingBufferPixels } from './drawingBufferSize.js';
 import { ensureExportCapturePixelRatio } from './capture/forceExportCaptureFramebuffer.js';
 import {
   pinRenderTargetPhysicalViewport,
   resetRendererFullViewport,
 } from './resetRendererFullViewport.js';
+import { resolveStudioBackdropForBeauty } from './renderSceneBeautyToTarget.js';
 
 /**
  * RenderPass with full-canvas viewport restore around the scene draw (including after
@@ -12,6 +14,9 @@ import {
  * from bloom/reflector passes becomes a screen-fixed black band on the next frame.
  */
 export class MeshglRenderPass extends RenderPass {
+  /** @type {import('three').WebGLRenderTarget | null} */
+  lastComposerColorBuffer = null;
+
   _resolveBackgroundGradientController() {
     const resolver = this.resolveBackgroundGradientController;
     if (typeof resolver === 'function') {
@@ -22,6 +27,14 @@ export class MeshglRenderPass extends RenderPass {
       return legacy() ?? null;
     }
     return legacy ?? null;
+  }
+
+  _resolveBackgroundController() {
+    const resolver = this.resolveBackgroundController;
+    if (typeof resolver === 'function') {
+      return resolver() ?? null;
+    }
+    return null;
   }
 
   render(renderer, writeBuffer, readBuffer, deltaTime, maskActive) {
@@ -60,7 +73,13 @@ export class MeshglRenderPass extends RenderPass {
 
     let savedSceneBackground = null;
     const gradientCtrl = this._resolveBackgroundGradientController();
-    const useGpuGradientBlit = gradientCtrl?.shouldGpuBlitGradient?.() === true;
+    const backgroundController = this._resolveBackgroundController();
+    const backdrop = resolveStudioBackdropForBeauty({
+      backgroundGradientController: gradientCtrl,
+      backgroundController:
+        backgroundController ?? gradientCtrl?.backgroundController ?? null,
+    });
+    const useGpuGradientBlit = backdrop.useGpuGradientBlit;
     const captureBlit = gradientCtrl?.shouldBlitForCapture?.() === true;
     try {
       if (captureBlit) {
@@ -83,7 +102,7 @@ export class MeshglRenderPass extends RenderPass {
           resetRendererFullViewport(renderer);
         }
       };
-      if (gradientCtrl?.isActive?.() === true) {
+      if (backdrop.usesFallbackBackdrop) {
         savedSceneBackground = this.scene.background;
         this.scene.background = null;
       }
@@ -107,6 +126,10 @@ export class MeshglRenderPass extends RenderPass {
           );
           blitGradient();
         } else {
+          if (backdrop.clearColor) {
+            const clearAlpha = this.clearAlpha !== null ? this.clearAlpha : renderer.getClearAlpha();
+            renderer.setClearColor(new THREE.Color(backdrop.clearColor), clearAlpha);
+          }
           // Always clear color on the active RT — bloom passes can leave autoClearColor false.
           renderer.clear(true, renderer.autoClearDepth, renderer.autoClearStencil);
         }
@@ -116,6 +139,9 @@ export class MeshglRenderPass extends RenderPass {
 
       resetViewport();
       renderer.render(this.scene, this.camera);
+      if (!this.renderToScreen) {
+        this.lastComposerColorBuffer = readBuffer;
+      }
     } finally {
       if (savedSceneBackground !== null) {
         this.scene.background = savedSceneBackground;

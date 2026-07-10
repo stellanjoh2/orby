@@ -27,6 +27,7 @@ export function setupStudioComposer(scene) {
     scene.postPipeline = new PostProcessingPipeline(scene.renderer, scene.scene, scene.camera, {
       getDofDepthProxy: () => scene.backgroundController?.getBackgroundSphere?.() ?? null,
       getBackgroundGradientController: () => scene.backgroundGradientController,
+      getBackgroundController: () => scene.backgroundController,
     });
     scene.composer = scene.postPipeline.composer;
     scene.lensDirtPass = scene.postPipeline.lensDirtPass;
