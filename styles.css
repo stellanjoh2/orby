@@ -2789,8 +2789,10 @@ html.orby-dropzone-shell-pending .viewport,
 html:has(.dropzone.hiding) .workspace,
 html:has(.dropzone.hiding) .viewport,
 html:has(.dropzone.hiding) #webgl,
-html:has(.viewport-load-spinner.is-visible) .viewport,
-html:has(.viewport-load-spinner.is-visible) #webgl {
+html.orby-studio-reveal-active:has(.viewport-load-spinner.is-visible) .viewport,
+html.orby-studio-reveal-active:has(.viewport-load-spinner.is-visible) #webgl,
+html.orby-page-transition:has(.viewport-load-spinner.is-visible) .viewport,
+html.orby-page-transition:has(.viewport-load-spinner.is-visible) #webgl {
   background: var(--orby-app-bg) !important;
 }
 

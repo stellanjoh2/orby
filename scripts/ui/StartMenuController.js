@@ -594,6 +594,7 @@ export class StartMenuController {
       }
     } else {
       this._animateDropzoneDisclaimerOut();
+      const wasDropzoneShowing = document.body.classList.contains('dropzone-visible');
       // When hiding, first remove any existing animation and inline styles
       this.dropzone.style.animation = '';
       this.dropzone.style.opacity = '';
@@ -604,11 +605,15 @@ export class StartMenuController {
       // Wait for next frame before adding hiding class to ensure animation triggers
       requestAnimationFrame(() => {
         this.dropzone.style.pointerEvents = 'none';
-        this.dropzone.classList.add('hiding');
-        noteDropzoneHideStarted();
-        if (prefersReducedMotion()) {
+        if (wasDropzoneShowing) {
+          this.dropzone.classList.add('hiding');
+          noteDropzoneHideStarted();
+          if (prefersReducedMotion()) {
+            this._finalizeDropzoneHidden();
+            noteDropzoneHideEnded();
+          }
+        } else {
           this._finalizeDropzoneHidden();
-          noteDropzoneHideEnded();
         }
       });
     }

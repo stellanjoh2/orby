@@ -14,6 +14,7 @@ const STUDIO_VIEWPORT_FADE_MS = 500;
 const DROPZONE_HIDE_MS = 650;
 
 let loadSpinnerDepth = 0;
+let marketingEntranceLoadSpinner = false;
 let dropzoneHideInFlight = false;
 let studioEntranceContentReady = false;
 let pendingStudioEntranceContentReady = false;
@@ -63,7 +64,7 @@ function prefersReducedMotion() {
 
 export function isStudioBackdropTransitionLocked() {
   return (
-    loadSpinnerDepth > 0
+    studioRevealArmed
     || isDropzoneHiding()
     || document.documentElement.classList.contains(CLASS)
   );
@@ -123,6 +124,7 @@ function clearStudioRevealState() {
   studioRevealArmed = false;
   studioEntranceContentReady = false;
   pendingStudioEntranceContentReady = false;
+  marketingEntranceLoadSpinner = false;
   viewportRevealStarted = false;
   entranceStartedAt = 0;
   dropzoneHideInFlight = false;
@@ -280,6 +282,12 @@ function syncTransitionClass() {
 }
 
 export function noteOrbyLoadSpinnerBegun() {
+  if (
+    loadSpinnerDepth === 0
+    && !document.documentElement.classList.contains('orby-studio-active')
+  ) {
+    marketingEntranceLoadSpinner = true;
+  }
   loadSpinnerDepth += 1;
   syncTransitionClass();
 }
@@ -291,9 +299,12 @@ export function noteOrbyLoadSpinnerEnded() {
 
 /** Mesh / blank canvas ready — hide spinner; viewport fade once dropzone hide completes. */
 export function noteStudioEntranceContentReady() {
+  if (!marketingEntranceLoadSpinner && !studioRevealArmed) return;
+  marketingEntranceLoadSpinner = false;
   pendingStudioEntranceContentReady = true;
   if (!studioRevealArmed) return;
   studioEntranceContentReady = true;
+  pendingStudioEntranceContentReady = false;
   syncTransitionClass();
 }
 
