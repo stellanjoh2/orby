@@ -353,11 +353,22 @@ body.legal-doc--support {
   animation: support-bug-report-progress 1.08s ease-in-out infinite;
 }
 
-.legal-support-bug-report .bug-report-turnstile:empty {
-  display: none;
+.orby-turnstile-host {
+  position: fixed;
+  top: max(env(safe-area-inset-top, 0px), 1rem);
+  right: max(env(safe-area-inset-right, 0px), 1rem);
+  left: auto;
+  z-index: 10050;
+  margin: 0;
+  pointer-events: auto;
 }
 
-.legal-support-bug-report .bug-report-turnstile:not(:empty) {
+.orby-turnstile-host[hidden] {
+  display: none !important;
+}
+
+.orby-turnstile-host:not(:empty):not([hidden]) {
+  display: block;
   min-height: 4rem;
 }
 

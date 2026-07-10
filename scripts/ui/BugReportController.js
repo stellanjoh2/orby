@@ -74,7 +74,7 @@ export class BugReportController {
     this.wordMeter = this.form.querySelector('#bugReportWordMeter');
     this.wordMeterFill = this.form.querySelector('#bugReportWordMeterFill');
     this.submitSendWrap = this.form.querySelector('#bugReportSubmitWrap');
-    this.turnstileHost = this.form.querySelector('#bug-report-turnstile');
+    this.turnstileHost = document.getElementById('orby-turnstile-host');
     this.thankYouLayer = document.querySelector('#bugReportThankYouLayer');
     this.thankYouMessageEl = document.querySelector('#bugReportThankYouMessage');
     this.thankYouOkBtn = document.querySelector('#bugReportThankYouOk');
@@ -211,6 +211,18 @@ export class BugReportController {
     return this._turnstileScriptPromise;
   }
 
+  _showTurnstileHost() {
+    if (!this.turnstileHost) return;
+    this.turnstileHost.removeAttribute('hidden');
+    this.turnstileHost.setAttribute('aria-hidden', 'false');
+  }
+
+  _hideTurnstileHost() {
+    if (!this.turnstileHost) return;
+    this.turnstileHost.setAttribute('hidden', '');
+    this.turnstileHost.setAttribute('aria-hidden', 'true');
+  }
+
   _removeTurnstileWidget() {
     if (this._turnstileWidgetId != null && typeof window.turnstile !== 'undefined') {
       try {
@@ -220,6 +232,7 @@ export class BugReportController {
       }
     }
     this._turnstileWidgetId = null;
+    this._hideTurnstileHost();
   }
 
   _resetTurnstile() {
@@ -234,6 +247,7 @@ export class BugReportController {
 
   async _prepareTurnstileForOpen() {
     if (!this._turnstileSiteKey || !this.turnstileHost) return;
+    this._showTurnstileHost();
     try {
       await this._ensureTurnstileScript();
     } catch {
@@ -565,7 +579,7 @@ export class BugReportController {
       }
       turnstileToken = window.turnstile.getResponse(this._turnstileWidgetId) || '';
       if (!turnstileToken) {
-        this.setStatus('Complete the security check below the form.', true);
+        this.setStatus('Complete the security check in the top-right corner.', true);
         return;
       }
     }

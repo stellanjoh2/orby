@@ -1726,16 +1726,23 @@ html.orby-mobile-modal-open body {
   background: #16a34a;
 }
 
-.bug-report-turnstile {
-  margin-top: 0;
+/* Cloudflare Turnstile — fixed top-right; not embedded in bug-report modal */
+.orby-turnstile-host {
+  position: fixed;
+  top: max(env(safe-area-inset-top, 0px), var(--orby-hero-credit-inset, 1rem));
+  right: max(env(safe-area-inset-right, 0px), var(--orby-hero-credit-inset, 1rem));
+  left: auto;
+  z-index: 10050;
+  margin: 0;
+  pointer-events: auto;
 }
 
-/* No extra gap when Turnstile is not configured (host stays empty) */
-.bug-report-turnstile:empty {
-  display: none;
+.orby-turnstile-host[hidden] {
+  display: none !important;
 }
 
-.bug-report-turnstile:not(:empty) {
+.orby-turnstile-host:not(:empty):not([hidden]) {
+  display: block;
   min-height: 4rem;
 }
 

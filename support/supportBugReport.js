@@ -34,7 +34,7 @@ function initSupportBugReport() {
   const wordMeter = form.querySelector('#supportBugReportWordMeter');
   const wordMeterFill = form.querySelector('#supportBugReportWordMeterFill');
   const submitWrap = form.querySelector('#supportBugReportSubmitWrap');
-  const turnstileHost = form.querySelector('#support-bug-report-turnstile');
+  const turnstileHost = document.getElementById('orby-turnstile-host');
   const thankYouEl = document.querySelector('#supportBugReportThankYou');
   const formPanel = document.querySelector('#supportBugReportPanel');
 
@@ -156,7 +156,7 @@ function initSupportBugReport() {
     severityListboxApi.sync();
   }
 
-  async function submit() {
+  async function ensureTurnstileScript() {
     if (typeof window.turnstile !== 'undefined') return Promise.resolve();
     if (turnstileScriptPromise) return turnstileScriptPromise;
     turnstileScriptPromise = new Promise((resolve, reject) => {
@@ -241,7 +241,7 @@ function initSupportBugReport() {
       }
       turnstileToken = window.turnstile.getResponse(turnstileWidgetId) || '';
       if (!turnstileToken) {
-        setStatus('Complete the security check below the form.', true);
+        setStatus('Complete the security check in the top-right corner.', true);
         return;
       }
     }
