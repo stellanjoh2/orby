@@ -185,7 +185,7 @@ function initSupportBugReport() {
     if (!turnstileHost) return;
     window.setTimeout(
       () => turnstileHost?.classList.add('orby-turnstile-host--faded'),
-      450,
+      2450,
     );
   }
 
