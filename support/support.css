@@ -367,7 +367,7 @@ body.legal-doc--support {
   display: none !important;
 }
 
-.orby-turnstile-host:not(:empty):not([hidden]) {
+.orby-turnstile-host:not([hidden]) {
   display: block;
   min-height: 4rem;
 }

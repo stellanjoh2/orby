@@ -223,7 +223,7 @@ export class BugReportController {
     this.turnstileHost.setAttribute('aria-hidden', 'true');
   }
 
-  _removeTurnstileWidget() {
+  _clearTurnstileWidget() {
     if (this._turnstileWidgetId != null && typeof window.turnstile !== 'undefined') {
       try {
         window.turnstile.remove(this._turnstileWidgetId);
@@ -232,6 +232,10 @@ export class BugReportController {
       }
     }
     this._turnstileWidgetId = null;
+  }
+
+  _removeTurnstileWidget() {
+    this._clearTurnstileWidget();
     this._hideTurnstileHost();
   }
 
@@ -254,7 +258,7 @@ export class BugReportController {
       this.setStatus('Could not load security check. Try again or refresh.', true);
       return;
     }
-    this._removeTurnstileWidget();
+    this._clearTurnstileWidget();
     try {
       this._turnstileWidgetId = window.turnstile.render(this.turnstileHost, {
         sitekey: this._turnstileSiteKey,
