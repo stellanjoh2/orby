@@ -469,7 +469,7 @@ export function createBlankCanvasPreset() {
       enabled: false,
       distance: 2,
       rotate: 333,
-      height: -0.5,
+      height: 0.05,
       scale: 0.0552366175329713,
       rawColors: false,
     },

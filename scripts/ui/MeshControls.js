@@ -36,6 +36,7 @@ import {
 } from '../render/creativeLookPhysicalTransmission.js';
 import { isVoxelCreativeLookPreset } from '../render/creativeLookVoxelArt.js';
 import { isFontExtrudeRevealModel } from '../scene/FontTextRevealController.js';
+import { isSvgFileExtrudeModel } from '../scene/SvgExtrudeSceneOps.js';
 import {
   CREATIVE_LOOK_ALL_PRESET_SLIDER_IDS,
   creativeLookPresetHidesPatternScale,
@@ -621,7 +622,7 @@ export class MeshControls {
       const enabled = event.target.checked;
       this.stateStore.set('creativeLook.viewportBloom', enabled);
       // Viewport bloom is read from state each frame — do not emit mesh:creative-look here;
-      // that re-runs syncCreativeLookTransmissionBackdrop and turns HDRI Render Backdrop back on.
+      // that re-runs material rebuild paths we do not need for a bloom toggle.
       const mc = window.orby?.scene?.materialController;
       if (mc?.creativeLookSettings) {
         mc.creativeLookSettings.viewportBloom = enabled;
@@ -942,10 +943,6 @@ export class MeshControls {
       const video = this.ui.exportSettings.video;
       const zoomActive = !!(video?.zoomIn || video?.zoomOut);
       const tiltActive = !!(video?.tiltLeft || video?.tiltRight);
-      const wrap = this.ui.inputs.exportMovementSliders;
-      if (wrap) {
-        wrap.classList.toggle('is-muted', !zoomActive && !tiltActive);
-      }
       if (this.ui.inputs.exportZoomDistanceSettings) {
         this.ui.inputs.exportZoomDistanceSettings.classList.toggle('is-muted', !zoomActive);
       }
@@ -1552,8 +1549,9 @@ export class MeshControls {
     }
 
     const shapeLib = !!model?.userData?.orbyShapeLibrary;
+    const svgFileExtrude = isSvgFileExtrudeModel(model);
     const hasAlbedo = !!material.hasImportAlbedoMaps;
-    const eligible = !!model && (shapeLib || material.colorOverrideEligible || hasAlbedo);
+    const eligible = !!model && !svgFileExtrude && (shapeLib || material.colorOverrideEligible || hasAlbedo);
     section.hidden = !eligible;
     if (!eligible) return;
 

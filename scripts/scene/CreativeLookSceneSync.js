@@ -32,8 +32,8 @@ import { ensureAscii2FontAtlasLoaded } from '../render/creativeLookAscii2Art.js'
 import { ensureAscii3FontAtlasLoaded } from '../render/creativeLookAscii3Art.js';
 import { ensureAscii4FontAtlasLoaded } from '../render/creativeLookAscii4Art.js';
 import {
+  applyTransmissionSceneBackground,
   isSolidStudioBackdropActive,
-  needsTransmissionBackdrop,
   resolveSolidStudioBackdropColor,
 } from '../render/backgroundFallback.js';
 import { confirmVoxelHdHighPolyAlert } from '../render/voxelHdHighPolyAlert.js';
@@ -81,21 +81,11 @@ export class CreativeLookSceneSync {
 
   /**
    * MeshPhysicalMaterial transmission refracts `scene.background`, not the clear color.
-   * Glass / Chrome auto-enable Render Backdrop when HDRI lighting is on.
+   * When Render Backdrop is off, use the user's backdrop color on `scene.background` instead
+   * of forcing the HDRI image back on.
    */
   syncTransmissionBackdrop() {
-    const scene = this.scene;
-    if (!scene.stateStore) return false;
-    const state = scene.stateStore.getState();
-    if (!needsTransmissionBackdrop(state)) return false;
-    if (!state.hdriBackground) {
-      scene.stateStore.set('hdriBackground', true);
-    }
-    // Always push to the GPU — state may already be true while scene.background was released
-    // (e.g. Shader Lab entry, font regen, or creative-look pass toggling the environment).
-    scene.setHdriBackground(true);
-    scene.ui?.syncHdriBackgroundCheckboxes?.(true);
-    return true;
+    return applyTransmissionSceneBackground(this.scene);
   }
 
   /** Enable / tune flat-post passes (ASCII, C64, Game Boy). */

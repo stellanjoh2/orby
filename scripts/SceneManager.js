@@ -163,7 +163,10 @@ import {
   initStudioShell,
 } from './scene/StudioBootstrap.js';
 import { setupStudioComposer } from './scene/StudioComposerSetup.js';
-import { createColorCheckerMeshGroup } from './scene/ColorCheckerMesh.js';
+import {
+  COLOR_CHECKER_GROUP_HALF_HEIGHT_AT_UNIT_SCALE,
+  createColorCheckerMeshGroup,
+} from './scene/ColorCheckerMesh.js';
 import {
   createToggleScaleContext,
   easeOutExpo,
@@ -808,15 +811,17 @@ export class SceneManager {
 
     const d = Math.max(0.05, cc.distance ?? defaults.distance);
     const h = cc.height ?? defaults.height;
+    const sc = Math.max(0.01, Math.min(20, cc.scale ?? defaults.scale));
 
-    // Keep the chart at the mesh’s vertical level when we have bounds — orbit-target Y (pans) won’t yank it as much.
-    const bounds = this.cameraController?.getModelBounds();
-    const baseY =
-      bounds?.center && bounds?.box && !bounds.box.isEmpty() ? bounds.center.y : anchor.y;
+    const st = this.stateStore.getState();
+    const floorY =
+      this.groundController?.getGroundY?.() ??
+      (Number.isFinite(st.groundY) ? st.groundY : 0);
+    const halfH = COLOR_CHECKER_GROUP_HALF_HEIGHT_AT_UNIT_SCALE * sc * animMul;
 
     this.colorCheckerRoot.position.set(
       anchor.x + orbitDir.x * d,
-      baseY + h,
+      floorY + halfH + h,
       anchor.z + orbitDir.z * d,
     );
 
@@ -830,7 +835,6 @@ export class SceneManager {
     }
     this.colorCheckerRoot.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), flat);
 
-    const sc = Math.max(0.01, Math.min(20, cc.scale ?? defaults.scale));
     this.colorCheckerRoot.scale.setScalar(sc * animMul);
   }
 

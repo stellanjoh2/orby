@@ -23,8 +23,8 @@ export function createAnimationDefaults() {
       distance: 2,
       /** Orbit azimuth in degrees (added to global Lights → Rotate). */
       rotate: 333,
-      /** Vertical offset from orbit target (scene units), like Key → Height. */
-      height: -0.5,
+      /** Lift above ground/grid once the chart base rests on the floor (scene units). */
+      height: 0.05,
       /** Uniform scale of the chart group (1× ≈ built-in mesh width; default ≈ physical card on normalized imports). */
       scale: COLOR_CHECKER_DEFAULT_SCALE,
       /** Shortcut to Object → Display → Unlit (textures); restores prior display mode when turned off. */

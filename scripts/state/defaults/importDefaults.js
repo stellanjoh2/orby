@@ -91,6 +91,7 @@ export function createImportDefaults() {
     svgExtrude: { ...DEFAULT_SVG_EXTRUDE_STATE },
     shapeLibrary: {
       panelOpen: false,
+      meshModifiers: {},
     },
   };
 }

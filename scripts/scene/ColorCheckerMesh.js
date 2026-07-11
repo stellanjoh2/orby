@@ -123,6 +123,14 @@ const CC_FRAME_W = 0.11;
 export const COLOR_CHECKER_MESH_WIDTH =
   CC_COLS * CC_PATCH + (CC_COLS - 1) * CC_GUTTER + 2 * CC_FRAME_W;
 
+const CC_MESH_HEIGHT =
+  CC_ROWS * CC_PATCH + (CC_ROWS - 1) * CC_GUTTER + 2 * CC_FRAME_W;
+const CC_TARGET_WIDTH = 0.42;
+
+/** Group origin is XY-centered; half-height at root scale 1 (before `colorChecker.scale`). */
+export const COLOR_CHECKER_GROUP_HALF_HEIGHT_AT_UNIT_SCALE =
+  (CC_MESH_HEIGHT / 2) * (CC_TARGET_WIDTH / COLOR_CHECKER_MESH_WIDTH);
+
 /**
  * @returns {THREE.Group} Centered in XY, front face toward +Z (~{COLOR_CHECKER_MESH_WIDTH} units wide at scale 1).
  */
@@ -235,8 +243,7 @@ export function createColorCheckerMeshGroup() {
   const referenceProbeMaterials = createReferenceSphereMeshes(group, totalW, totalH);
   group.userData.referenceProbeMaterials = referenceProbeMaterials;
 
-  const targetWidth = 0.42;
-  group.scale.setScalar(targetWidth / totalW);
+  group.scale.setScalar(CC_TARGET_WIDTH / totalW);
 
   return group;
 }

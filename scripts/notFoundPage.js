@@ -294,7 +294,7 @@ const NOT_FOUND_PRESET = {
     enabled: false,
     distance: 2,
     rotate: 333,
-    height: -0.5,
+    height: 0.05,
     scale: 0.055,
     rawColors: false,
   },

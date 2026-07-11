@@ -11,6 +11,22 @@ export function isFontExtrudeImporter(importer) {
 }
 
 /**
+ * Imported SVG file extrude — not Type Creator / font extrude.
+ * @param {import('three').Object3D | null | undefined} root
+ */
+export function isSvgFileExtrudeModel(root) {
+  if (!root) return false;
+  if (root.userData?.orbyFontGenerated || root.userData?.orbyFontExtrude) return false;
+  if (root.userData?.orbySvgExtrude) return true;
+  let found = false;
+  root.traverse((child) => {
+    if (found || !child.isMesh) return;
+    if (child.userData?.orbySvgExtrude && !child.userData?.orbyFontExtrude) found = true;
+  });
+  return found;
+}
+
+/**
  * True when generating text should wipe SVG file-import state (override, surfaces, per-color maps).
  * @param {import('../SceneManager.js').SceneManager | null | undefined} scene
  */

@@ -29,6 +29,8 @@ export class BackgroundController {
     this.creativeLookBackdropActive = false;
     /** Flat color mode on (see backgroundSolidEnabled in state). */
     this.solidEnabled = true;
+    /** Transmission materials need `scene.background` even when Render Backdrop is off. */
+    this.transmissionSceneBackgroundNeeded = false;
     
     // Create background sphere for DOF depth handling
     this.backgroundSphere = this._createBackgroundSphere(this.color);
@@ -173,6 +175,14 @@ export class BackgroundController {
     this.refreshAppearance();
   }
 
+  /** @param {boolean} needed — glass/chrome refraction without forcing Render Backdrop on */
+  setTransmissionSceneBackgroundNeeded(needed) {
+    const next = !!needed;
+    if (this.transmissionSceneBackgroundNeeded === next) return;
+    this.transmissionSceneBackgroundNeeded = next;
+    this.refreshAppearance();
+  }
+
   usesFallbackBackdrop() {
     // Respect Render Backdrop even during Shader Lab (creative look defaults it off on entry).
     return !(this.hdriBackgroundEnabled && this.hdriEnabled);
@@ -235,16 +245,17 @@ export class BackgroundController {
     }
 
     // HDRI background is off - show solid color
-    // CRITICAL: scene.background MUST be null for clear color to show
-    this.scene.background = null;
-    
-    // Ensure renderer is set up for opaque clear color
-    this.renderer.setClearAlpha(1);
-    this.renderer.autoClear = true;
-    
-    // Set clear color
     try {
       const background = new THREE.Color(this.color);
+      // Transmission (glass/chrome) samples scene.background — bind color without Render Backdrop.
+      if (this.transmissionSceneBackgroundNeeded) {
+        this.scene.background = background;
+      } else {
+        // CRITICAL: scene.background MUST be null for clear color to show
+        this.scene.background = null;
+      }
+      this.renderer.setClearAlpha(1);
+      this.renderer.autoClear = true;
       this.renderer.setClearColor(background, 1);
     } catch (error) {
       console.error('Failed to set background color:', this.color, error);

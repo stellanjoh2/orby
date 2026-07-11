@@ -24,6 +24,10 @@ import {
   disposeMaterialMapTextures,
   disposeOwnedTexture,
 } from '../render/disposeMaterialTextures.js';
+import {
+  loadShapeLibraryMeshModifiers,
+  saveShapeLibraryMeshModifiers,
+} from '../shapeLibrary/shapeLibraryModifierState.js';
 
 /**
  * Model load, replace, clear, dispose, and first-load presentation (camera fade, scale-in).
@@ -205,6 +209,10 @@ export class ModelLifecycleManager {
   setModel(object, animations, options = {}) {
     const s = this.scene;
     const resetTransform = options.resetTransform === true;
+    const prevModel = s.currentModel;
+    if (prevModel?.userData?.orbyShapeLibrary && prevModel.userData.orbyShapeLibraryId) {
+      saveShapeLibraryMeshModifiers(s.stateStore, prevModel.userData.orbyShapeLibraryId);
+    }
     this.clearModel();
     s.currentModel = object;
 
@@ -235,6 +243,9 @@ export class ModelLifecycleManager {
         s.stateStore.set('rotationY', 0);
         s.stateStore.set('rotationZ', 0);
       });
+    }
+    if (object.userData?.orbyShapeLibrary && object.userData.orbyShapeLibraryId) {
+      loadShapeLibraryMeshModifiers(s.stateStore, object.userData.orbyShapeLibraryId);
     }
     const state = s.stateStore.getState();
 

@@ -65,24 +65,40 @@ export function needsTransmissionBackdrop(state) {
 }
 
 /**
- * Glass / Chrome use MeshPhysicalMaterial.transmission — Three.js refracts `scene.background`,
- * not the renderer clear color. When HDRI lighting is on, force Render Backdrop on.
+ * MeshPhysicalMaterial transmission refracts `scene.background`, not the renderer clear color.
+ * When Render Backdrop is off, bind the user's flat/image backdrop to `scene.background` for
+ * refraction — without mutating `hdriBackground` (user controls that toggle).
  *
- * @param {{ getState: () => object, set?: (path: string, value: unknown) => void }} stateStore
- * @returns {boolean} true when state was updated from off → on
+ * @param {import('../SceneManager.js').SceneManager | null | undefined} scene
+ * @returns {boolean} true when a non-HDRI `scene.background` was applied
  */
-export function syncTransmissionBackdropForCreativeLook(stateStore) {
-  return syncTransmissionBackdrop(stateStore);
+export function applyTransmissionSceneBackground(scene) {
+  if (!scene?.stateStore) return false;
+  const state = scene.stateStore.getState();
+  const needs = needsTransmissionBackdrop(state);
+  const hdriBackdrop = isHdriBackdropActive(state);
+  const bg = scene.backgroundController;
+
+  bg?.setTransmissionSceneBackgroundNeeded?.(needs && !hdriBackdrop);
+
+  if (!needs) return false;
+
+  if (hdriBackdrop) {
+    // State already on — push GPU without touching UI/state.
+    scene.setHdriBackground?.(!!state.hdriBackground);
+    return false;
+  }
+
+  bg?.refreshAppearance?.();
+  return true;
 }
 
-/**
- * @param {{ getState: () => object, set?: (path: string, value: unknown) => void }} stateStore
- * @returns {boolean} true when state was updated from off → on
- */
+/** @deprecated Use {@link applyTransmissionSceneBackground} — kept for import stability. */
+export function syncTransmissionBackdropForCreativeLook(stateStore) {
+  return applyTransmissionSceneBackground(stateStore?.scene ?? window.orby?.scene);
+}
+
+/** @deprecated Use {@link applyTransmissionSceneBackground} — kept for import stability. */
 export function syncTransmissionBackdrop(stateStore) {
-  if (!stateStore || typeof stateStore.getState !== 'function') return false;
-  if (!needsTransmissionBackdrop(stateStore.getState())) return false;
-  if (stateStore.getState().hdriBackground) return false;
-  stateStore.set?.('hdriBackground', true);
-  return true;
+  return applyTransmissionSceneBackground(stateStore?.scene ?? window.orby?.scene);
 }

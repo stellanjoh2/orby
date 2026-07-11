@@ -108,6 +108,7 @@ import {
 } from './creativeLookSketchArt.js';
 import { normalizeCreativeLookPresetParams } from './creativeLookPresetSliders.js';
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
+import { isSvgFileExtrudeModel } from '../scene/SvgExtrudeSceneOps.js';
 import {
   applyFontExtrudeTwoToneToMesh,
   fontExtrudeTwoToneActive,
@@ -327,7 +328,7 @@ export class MaterialController {
     afterCreativeLookMaterialRebuild = null,
     /** Wake viewport + optional compile after Object → Material surface preset swaps. */
     onObjectSurfacePresentationRefresh = null,
-    /** Glass / Chrome — ensure HDRI Render Backdrop is on `scene.background` before materials build. */
+    /** Glass / Chrome — bind `scene.background` for transmission without toggling Render Backdrop. */
     onNeedsTransmissionBackdrop = null,
     /** Called when ASCII Art live uniforms change — sync screen-space glyph pass. */
     onCreativeLookAsciiSync = null,
@@ -1261,6 +1262,7 @@ export class MaterialController {
   /** Shape library primitives and untextured imports get a direct Material colour control. */
   _modelColorOverrideEligible(object) {
     if (!object) return false;
+    if (isSvgFileExtrudeModel(object)) return false;
     if (object.userData?.orbyShapeLibrary) return true;
     return !this._modelHasImportAlbedoMaps(object);
   }
@@ -1310,6 +1312,13 @@ export class MaterialController {
 
     if (model.userData?.orbyShapeLibrary) {
       this._applyShapeLibraryMaterialDefaults();
+      return;
+    }
+
+    if (isSvgFileExtrudeModel(model)) {
+      this.materialSettings.colorOverride = false;
+      this.stateStore?.set('material.colorOverride', false);
+      this.stateStore?.set('material.colorOverrideEligible', false);
       return;
     }
 
@@ -2677,6 +2686,10 @@ export class MaterialController {
       this.onPostShaderMaterialSync?.();
     }
 
+    if (typeof this.onNeedsTransmissionBackdrop === 'function') {
+      this.onNeedsTransmissionBackdrop();
+    }
+
     if (this.onShadingChanged) {
       this.onShadingChanged(mode);
     }
@@ -2832,12 +2845,6 @@ export class MaterialController {
       preset,
       this.creativeLookSettings.patternScale,
     );
-    if (
-      creativeLookPresetNeedsHdriBackdrop(preset) &&
-      typeof this.onNeedsTransmissionBackdrop === 'function'
-    ) {
-      this.onNeedsTransmissionBackdrop();
-    }
     const sketchParams = isSketchFamilyCreativeLookPreset(preset)
       ? this._resolveSketchParams()
       : null;
@@ -4713,6 +4720,7 @@ export class MaterialController {
 
   _shouldUseMaterialColorOverride(importMat) {
     if (!this.currentModel || !importMat) return false;
+    if (isSvgFileExtrudeModel(this.currentModel)) return false;
     if (this.currentModel.userData?.orbyShapeLibrary) {
       return this.materialSettings.colorOverride === true;
     }

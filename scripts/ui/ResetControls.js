@@ -34,6 +34,8 @@ import {
   FONT_EXTRUDE_RESET_TOASTS,
   isFontExtrudeSubsectionDirty,
 } from './fontExtrudeSectionResets.js';
+import { isShapeLibraryModel } from '../shapeLibrary/shapeLibraryCatalog.js';
+import { clearShapeLibraryMeshModifiers } from '../shapeLibrary/shapeLibraryModifierState.js';
 
 /**
  * For each `data-reset` value in the markup, the set of state paths whose
@@ -982,6 +984,12 @@ export class ResetControls {
 
           case 'modifiers':
             this.stateStore.resetSlice(RESET_DIRTY_PATHS.modifiers);
+            {
+              const model = window.orby?.scene?.currentModel;
+              if (isShapeLibraryModel(model) && model.userData?.orbyShapeLibraryId) {
+                clearShapeLibraryMeshModifiers(this.stateStore, model.userData.orbyShapeLibraryId);
+              }
+            }
             this.eventBus.emit('mesh:modifiers');
             this.ui.syncUIFromState();
             break;
