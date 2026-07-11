@@ -379,6 +379,8 @@ export class CameraController {
     if (this._orbitInteractionActive) return true;
     if (this.isFocusAnimating()) return true;
     if (this.hasViewportInteraction()) return true;
+    // Keep solving while OrbitControls damping deltas remain (lock can engage early).
+    if (orbitControlsNeedFrame(this.controls)) return true;
     return false;
   }
 
@@ -1214,8 +1216,14 @@ export class CameraController {
         !this.isFocusAnimating() &&
         !this.hasViewportInteraction()
       ) {
-        // OrbitControls.update() returns false once damping / inertia has settled.
-        this._orbitSolveLocked = !changed;
+        // Lock only when per-frame motion and damping deltas have both settled.
+        const dampingSettled = !orbitControlsNeedFrame(this.controls);
+        if (!changed && dampingSettled) {
+          this._clearOrbitControlDeltas();
+          this._orbitSolveLocked = true;
+        } else {
+          this._orbitSolveLocked = false;
+        }
       } else {
         this._orbitSolveLocked = false;
       }
