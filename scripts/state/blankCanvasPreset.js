@@ -32,7 +32,7 @@ export function createBlankCanvasPreset() {
     scaleWidgetEnabled: false,
     modifiers: createModifierEntryDefaults(),
     material: {
-      brightness: 1.75,
+      brightness: 1.0,
       metalness: 0,
       roughness: 0.5,
       emissive: 0,

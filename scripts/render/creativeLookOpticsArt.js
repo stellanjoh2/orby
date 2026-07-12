@@ -136,7 +136,7 @@ void main() {
 
   gain -= pow(1.0 - ndv, edgePow) * mix(0.28, 0.10, metal);
 
-  float bright = clamp(uBrightness, 0.0, 2.5);
+  float bright = clamp(uBrightness, 0.0, 5.0);
   gain *= mix(0.64, 1.36, bright * 0.5);
   gain *= max(uLuminanceGain, 0.0);
 

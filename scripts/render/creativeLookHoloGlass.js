@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { ORBY_SEAMLESS_FIELD_GLSL } from './creativeLookSeamlessField.js';
 
 /**
- * Holo Glass reads too hot at default Object → Material brightness (~1.75).
- * Bias tuned to match the look of mesh brightness ~0.75 without dialing the slider.
+ * Holo Glass reads too hot at default Object → Material brightness (UI 1.0, effective ×2).
+ * Bias tuned to match the look of mesh brightness UI ~0.375 without dialing the slider.
  */
 export const CREATIVE_HOLO_GLASS_EXPOSURE_BIAS = 0.5;
 

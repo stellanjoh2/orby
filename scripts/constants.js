@@ -171,8 +171,27 @@ export const DEFAULT_MATERIAL_METALNESS = 0.08;
 /** Studio cyclorama defaults — matte paper-like out of the box. */
 export const DEFAULT_BACKDROP_METALNESS = 0.02;
 export const DEFAULT_BACKDROP_ROUGHNESS = 0.9;
-/** Albedo multiplier default — slightly above 1 so imports read less underexposed vs HDRI backplates. */
-export const DEFAULT_MATERIAL_BRIGHTNESS = 1.75;
+/** Object → Material brightness UI default — 1.0 maps to effective ×2 (former ~2.0 look). */
+export const DEFAULT_MATERIAL_BRIGHTNESS = 1.0;
+/** UI slider max — effective range stays 0–5 via {@link materialBrightnessEffectiveScale}. */
+export const MATERIAL_BRIGHTNESS_UI_MAX = 2.5;
+/** UI value → albedo / shader multiplier (v3 scene JSON stores UI, not effective). */
+export const MATERIAL_BRIGHTNESS_EFFECTIVE_MULTIPLIER = 2;
+/** Scene settings / .orby payload version — v3+ uses UI brightness scale. */
+export const SCENE_SETTINGS_SCHEMA_VERSION = 3;
+
+/**
+ * Effective albedo multiplier from Object → Material brightness UI value.
+ * @param {number} [uiBrightness]
+ */
+export function materialBrightnessEffectiveScale(uiBrightness) {
+  const ui = Number(uiBrightness);
+  if (!Number.isFinite(ui)) {
+    return DEFAULT_MATERIAL_BRIGHTNESS * MATERIAL_BRIGHTNESS_EFFECTIVE_MULTIPLIER;
+  }
+  return Math.max(0, ui * MATERIAL_BRIGHTNESS_EFFECTIVE_MULTIPLIER);
+}
+
 /**
  * Peak linear RGB after brightness scale on albedo-mapped imports — keeps map × tint in HDR headroom
  * for tonemap without hard clipping that reads as “burnt” texture (desktop + mobile share MaterialController).
@@ -184,12 +203,12 @@ export const MATERIAL_BRIGHTNESS_LIT_ENV_MAX_BOOST = 2.5;
 
 /**
  * Lit-mode IBL scale tied to brightness — shaded imports stay closer to Textures perceived level.
- * @param {number} [brightness]
+ * @param {number} [uiBrightness]
  */
-export function materialBrightnessLitEnvMultiplier(brightness) {
-  const b = Number(brightness);
-  const scale = Number.isFinite(b) ? b : DEFAULT_MATERIAL_BRIGHTNESS;
-  const ratio = scale / DEFAULT_MATERIAL_BRIGHTNESS;
+export function materialBrightnessLitEnvMultiplier(uiBrightness) {
+  const effective = materialBrightnessEffectiveScale(uiBrightness);
+  const defaultEffective = materialBrightnessEffectiveScale(DEFAULT_MATERIAL_BRIGHTNESS);
+  const ratio = effective / defaultEffective;
   return Math.min(
     MATERIAL_BRIGHTNESS_LIT_ENV_MAX_BOOST,
     Math.max(0.5, ratio),

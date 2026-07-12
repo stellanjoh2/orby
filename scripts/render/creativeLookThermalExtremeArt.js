@@ -81,7 +81,7 @@ void main() {
   float edgeCool = pow(1.0 - ndv, edgePow);
   heat -= edgeCool * mix(0.22, 0.08, metal);
 
-  float bright = clamp(uBrightness, 0.0, 2.5);
+  float bright = clamp(uBrightness, 0.0, 5.0);
   heat *= mix(0.68, 1.32, bright * 0.5);
 
   heat = clamp((heat - 0.5) * (1.35 + up * 1.15 - down * 0.45) + 0.5, 0.0, 1.0);

@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import {
+  resolveSpecGlossMaterialParams,
+  tagSpecGlossMaterialsFromParser,
+} from './gltfSpecGlossConversion.js';
 
 const EXTENSION = 'KHR_materials_pbrSpecularGlossiness';
 
@@ -6,8 +10,10 @@ const EXTENSION = 'KHR_materials_pbrSpecularGlossiness';
  * Three.js removed built-in support for KHR_materials_pbrSpecularGlossiness (spec/gloss workflow).
  * Many older Sketchfab / exporter assets still use diffuseTexture + extension instead of baseColorTexture.
  *
- * This registers a GLTFLoader plugin that maps diffuse → map and scalar glossiness → roughness.
- * Packed specularGlossinessTexture does not match metal/rough channel layout; we skip it to avoid wrong shading.
+ * Maps diffuse → map, glossiness → roughness, and specular → Physical specularColor/intensity.
+ * Zero scalar specular (no spec/gloss texture) = diffuse-only — glossiness is ignored.
+ * Packed specularGlossinessTexture RGB drives specularColorMap; per-texel glossiness (alpha) is
+ * not remapped to roughnessMap without an offline metal/rough bake.
  */
 export function registerKHRMaterialsPbrSpecularGlossiness(loader) {
   loader.register((parser) => new GLTFKHRMaterialsPbrSpecularGlossiness(parser));
@@ -17,6 +23,12 @@ class GLTFKHRMaterialsPbrSpecularGlossiness {
   constructor(parser) {
     this.parser = parser;
     this.name = EXTENSION;
+  }
+
+  getMaterialType(materialIndex) {
+    const materials = this.parser.json.materials;
+    if (!materials?.[materialIndex]?.extensions?.[EXTENSION]) return null;
+    return THREE.MeshPhysicalMaterial;
   }
 
   extendMaterialParams(materialIndex, materialParams) {
@@ -42,10 +54,29 @@ class GLTFKHRMaterialsPbrSpecularGlossiness {
       );
     }
 
-    const gloss = ext.glossinessFactor !== undefined ? ext.glossinessFactor : 1;
-    materialParams.metalness = 0;
-    materialParams.roughness = THREE.MathUtils.clamp(1 - gloss, 0.04, 1);
+    const hasSpecGlossTexture = ext.specularGlossinessTexture !== undefined;
+    const resolved = resolveSpecGlossMaterialParams(ext, { hasSpecGlossTexture });
+
+    materialParams.metalness = resolved.metalness;
+    materialParams.roughness = resolved.roughness;
+    materialParams.specularIntensity = resolved.specularIntensity;
+    materialParams.specularColor = resolved.specularColor;
+
+    if (hasSpecGlossTexture) {
+      pending.push(
+        parser.assignTexture(
+          materialParams,
+          'specularColorMap',
+          ext.specularGlossinessTexture,
+          THREE.SRGBColorSpace,
+        ),
+      );
+    }
 
     return Promise.all(pending);
+  }
+
+  afterRoot() {
+    tagSpecGlossMaterialsFromParser(this.parser);
   }
 }

@@ -3,6 +3,7 @@ import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
+  materialBrightnessEffectiveScale,
 } from '../constants.js';
 import { isTextureImageReady } from '../utils/textureReady.js';
 import { DUST_FIELD_DEFAULT_INTENSITY, DUST_FIELD_DEFAULT_PATTERN_SCALE } from './creativeLookDustField.js';
@@ -3400,9 +3401,10 @@ export function createCreativeLookMaterial(preset, opts = {}) {
   const hueUniform = { uMasterHue: { value: masterHueRad } };
   const liftCrush = normalizeCreativeLookLiftCrush(opts.liftCrush ?? CREATIVE_LOOK_LIFT_CRUSH_DEFAULT);
   const liftCrushUniform = { uLiftCrush: { value: liftCrush } };
-  const materialBrightness = Number.isFinite(Number(opts.materialBrightness))
+  const materialBrightnessUi = Number.isFinite(Number(opts.materialBrightness))
     ? Number(opts.materialBrightness)
     : DEFAULT_MATERIAL_BRIGHTNESS;
+  const materialBrightness = materialBrightnessEffectiveScale(materialBrightnessUi);
   const materialMetalness = Number.isFinite(Number(opts.materialMetalness))
     ? THREE.MathUtils.clamp(Number(opts.materialMetalness), 0, 1)
     : DEFAULT_MATERIAL_METALNESS;

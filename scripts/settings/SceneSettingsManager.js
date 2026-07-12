@@ -7,9 +7,11 @@ import {
   isBloomTuningActive,
   isVignetteUiEnabled,
   cameraShadowsUiToShader,
+  SCENE_SETTINGS_SCHEMA_VERSION,
 } from '../constants.js';
 import { HDRI_CUSTOM_ID, HDRI_MOODS } from '../config/hdri.js';
 import { migrateLegacyGroundKeys } from '../state/migrateLegacyGroundKeys.js';
+import { migrateLegacyMaterialBrightness } from '../state/migrateLegacyMaterialBrightness.js';
 import { mergeAberrationSettings } from '../render/chromaticAberration.js';
 import { resolveCreativeLookPresetChoice } from '../render/CreativeLookMaterials.js';
 import { normalizeStoredGoboScale } from '../render/GoboProjection.js';
@@ -77,6 +79,7 @@ export class SceneSettingsManager {
     if (exportSettings) {
       payload.exportSettings = exportSettings;
     }
+    payload.schemaVersion = SCENE_SETTINGS_SCHEMA_VERSION;
     return payload;
   }
 
@@ -211,7 +214,7 @@ export class SceneSettingsManager {
       const fileBuffer = await sourceFile.arrayBuffer();
       const orbyPayload = {
         type: 'orby-scene',
-        schemaVersion: 2,
+        schemaVersion: SCENE_SETTINGS_SCHEMA_VERSION,
         createdAt: new Date().toISOString(),
         sceneSettings,
         asset: {
@@ -283,7 +286,11 @@ export class SceneSettingsManager {
 
       // Apply saved scene settings after mesh load to ensure all controls (including
       // podium/ground colors and model-dependent settings) overwrite defaults cleanly.
-      const sceneLoadResult = await this.loadFromText(JSON.stringify(payload.sceneSettings));
+      const sceneSettings = {
+        ...payload.sceneSettings,
+        schemaVersion: payload.sceneSettings?.schemaVersion ?? payload.schemaVersion,
+      };
+      const sceneLoadResult = await this.loadFromText(JSON.stringify(sceneSettings));
       if (!sceneLoadResult.success) {
         return sceneLoadResult;
       }
@@ -306,6 +313,7 @@ export class SceneSettingsManager {
     try {
       const payload = JSON.parse(text);
       migrateLegacyGroundKeys(payload);
+      migrateLegacyMaterialBrightness(payload, payload.schemaVersion);
       delete payload.ui;
 
       // Validate that it looks like scene settings

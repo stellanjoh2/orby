@@ -144,6 +144,19 @@ import {
 } from './disposeMaterialTextures.js';
 import { effectiveRoughnessWithHdriBlur } from './hdriBlur.js';
 import {
+  applySpecGlossDiffuseOnlyRoughnessSlider,
+  readSpecGlossImportMetadata,
+} from './gltfSpecGlossConversion.js';
+import { resolveMaterialBrightnessMetalnessClamp } from './materialBrightnessMetalnessClamp.js';
+import {
+  applyBlendMapAlphaCutout,
+  clearBlendMapAlphaProfileCache,
+  isBlendMapAlphaCutoutRetryCandidate,
+  resolveBlendMapAlphaProfile,
+  scheduleBlendMapAlphaCutoutRetry,
+  shouldPromoteBlendMapToAlphaCutout,
+} from './gltfBlendMapAlphaCutout.js';
+import {
   SHAPE_LIBRARY_DEFAULT_METALNESS,
   SHAPE_LIBRARY_DEFAULT_ROUGHNESS,
   SHAPE_LIBRARY_DEFAULT_COLOR,
@@ -169,6 +182,7 @@ import {
   DEFAULT_MATERIAL_ROUGHNESS,
   IMPORT_MATERIAL_MR_MULTIPLIER,
   MATERIAL_TEXTURED_BRIGHTNESS_HDR_PEAK,
+  materialBrightnessEffectiveScale,
   materialBrightnessLitEnvMultiplier,
   ORBY_BLACK,
   ORBY_LIME,
@@ -962,6 +976,14 @@ export class MaterialController {
           target.opacity = 1;
           target.depthWrite = true;
           if ('alphaHash' in target) target.alphaHash = false;
+        } else if (mitigation === 'alphaTest') {
+          target.transparent = false;
+          target.opacity = 1;
+          target.depthWrite = true;
+          target.alphaTest = Number.isFinite(importMat.alphaTest) && importMat.alphaTest > 0
+            ? importMat.alphaTest
+            : 0.02;
+          if ('alphaHash' in target) target.alphaHash = false;
         } else if (mitigation === 'alphaHash') {
           target.transparent = b.transparent;
           target.opacity = b.opacity;
@@ -1377,6 +1399,35 @@ export class MaterialController {
 
     const authored = this._resolveAuthoredMetalRoughness(importMat);
     if (authored) {
+      const baseline = importMat?.userData?.orbyGltfImportBaseline;
+      const specGlossDiffuseOnly =
+        baseline?.orbySpecGlossDiffuseOnly === true ||
+        importMat?.userData?.orbySpecGlossDiffuseOnly === true;
+      if (specGlossDiffuseOnly) {
+        const authoredGlossiness =
+          baseline?.orbySpecGlossAuthoredGlossiness ??
+          importMat?.userData?.orbySpecGlossAuthoredGlossiness ??
+          0;
+        const specGloss = applySpecGlossDiffuseOnlyRoughnessSlider(
+          globalR,
+          authoredGlossiness,
+        );
+        target.metalness = THREE.MathUtils.clamp(authored.metalness * globalM, 0, 1);
+        target.roughness = effectiveRoughnessWithHdriBlur(
+          specGloss.roughness,
+          this._lastHdriBlurriness,
+        );
+        if ('specularIntensity' in target) {
+          target.specularIntensity = specGloss.specularIntensity;
+        }
+        if (target.specularColor && specGloss.specularColor) {
+          target.specularColor.copy(specGloss.specularColor);
+        }
+        if ('metalnessMap' in target) target.metalnessMap = null;
+        if ('roughnessMap' in target) target.roughnessMap = null;
+        return;
+      }
+
       const mapPlaceholderScalars =
         authored.hasMrMaps &&
         authored.metalness < 1e-6 &&
@@ -1424,12 +1475,24 @@ export class MaterialController {
     if ('roughnessMap' in target) target.roughnessMap = null;
   }
 
+  _backfillSpecGlossBaselineFromUserData(m) {
+    if (!m.userData?.orbySpecGlossDiffuseOnly) return;
+    const baseline = m.userData.orbyGltfImportBaseline;
+    if (!baseline || baseline.orbySpecGlossDiffuseOnly) return;
+    baseline.orbySpecGlossDiffuseOnly = true;
+    baseline.orbySpecGlossAuthoredGlossiness =
+      m.userData.orbySpecGlossAuthoredGlossiness ?? 1;
+  }
+
   /**
    * Capture loader output once per material so Advanced → Alpha modes can restore and re-apply.
    */
   _snapshotImportMaterialBaselinesIfNeeded(object) {
     this._forEachUniqueMaterial(object, (m) => {
-      if (m.userData?.orbyGltfImportBaseline) return;
+      if (m.userData?.orbyGltfImportBaseline) {
+        this._backfillSpecGlossBaselineFromUserData(m);
+        return;
+      }
       if (!('transparent' in m)) return;
       m.userData.alphaMode = this._inferGltfAlphaMode(m);
       const baseline = {
@@ -1437,6 +1500,7 @@ export class MaterialController {
         opacity: Number.isFinite(m.opacity) ? m.opacity : 1,
         side: m.side,
         depthWrite: m.depthWrite !== false,
+        alphaTest: Number.isFinite(m.alphaTest) ? m.alphaTest : 0,
         alphaHash: 'alphaHash' in m ? !!m.alphaHash : false,
         alphaMode: m.userData.alphaMode,
       };
@@ -1461,6 +1525,26 @@ export class MaterialController {
           : DEFAULT_MATERIAL_ROUGHNESS;
         baseline.hasMrMaps = this._importMaterialHasMrMaps(m);
       }
+      if (m.isMeshPhysicalMaterial) {
+        if (Number.isFinite(m.specularIntensity)) {
+          baseline.specularIntensity = THREE.MathUtils.clamp(m.specularIntensity, 0, 1);
+        }
+        if (m.specularColor?.isColor) {
+          baseline.specularColor = m.specularColor.clone();
+        }
+      }
+      const specGlossMeta = m.userData?.orbySpecGlossDiffuseOnly
+        ? {
+            orbySpecGlossDiffuseOnly: true,
+            orbySpecGlossAuthoredGlossiness:
+              m.userData.orbySpecGlossAuthoredGlossiness ?? 1,
+          }
+        : readSpecGlossImportMetadata(m.userData?.gltfExtensions);
+      if (specGlossMeta) {
+        baseline.orbySpecGlossDiffuseOnly = specGlossMeta.orbySpecGlossDiffuseOnly;
+        baseline.orbySpecGlossAuthoredGlossiness =
+          specGlossMeta.orbySpecGlossAuthoredGlossiness;
+      }
       if (
         (m.emissiveMap || this._importMaterialHasEmissiveBaseline(m)) &&
         baseline.alphaMode === 'BLEND'
@@ -1479,6 +1563,7 @@ export class MaterialController {
       m.opacity = b.opacity;
       m.side = b.side;
       m.depthWrite = b.depthWrite;
+      if (b.alphaTest !== undefined) m.alphaTest = b.alphaTest;
       if ('alphaHash' in m) m.alphaHash = b.alphaHash;
       if (b.alphaMode) m.userData.alphaMode = b.alphaMode;
       if (m.isMeshPhysicalMaterial && b.transmission !== undefined) {
@@ -1503,6 +1588,14 @@ export class MaterialController {
           m.transmission = b.transmission;
           if (b.thickness !== undefined) m.thickness = b.thickness;
           if (b.color && m.color) m.color.copy(b.color);
+        }
+      }
+      if (m.isMeshPhysicalMaterial) {
+        if (b.specularIntensity !== undefined) {
+          m.specularIntensity = b.specularIntensity;
+        }
+        if (b.specularColor?.isColor && m.specularColor) {
+          m.specularColor.copy(b.specularColor);
         }
       }
       delete m.userData.orbyGlassPresentation;
@@ -1533,6 +1626,7 @@ export class MaterialController {
       this._applyUserForceFrontFace(object);
     } else {
       this.applyNamedGlassPresentation(object);
+      this.applyGltfBlendMapAlphaCutout(object);
       this.applyGltfBlendSortingMitigation(object);
     }
     this.applyEmissiveBlendPresentation(object);
@@ -1775,7 +1869,8 @@ export class MaterialController {
   /**
    * Near-opaque BLEND + DoubleSide without cutout maps is a common exporter mistake (opacity 1, no alpha
    * texture). Alpha-hash dithers the whole surface; prefer forcing an opaque draw instead.
-   * BLEND + baseColorTexture keeps alpha in the albedo map (Sketchfab ground shadows, decals) — never opaque.
+   * BLEND + baseColorTexture with hard cutout alpha uses {@link applyGltfBlendMapAlphaCutout}; soft
+   * gradients (hair) stay true BLEND.
    */
   _materialIsFalseBlendShell(m) {
     if (!m || (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial)) return false;
@@ -1820,6 +1915,67 @@ export class MaterialController {
     if ('alphaHash' in m) m.alphaHash = false;
     m.userData.orbyBlendMitigation = 'opaque';
     m.needsUpdate = true;
+  }
+
+  _resolveBlendMapAlphaProfile(m) {
+    const cached = m?.userData?.orbyBlendMapAlphaProfile;
+    if (cached === 'cutout' || cached === 'soft' || cached === 'unknown') return cached;
+    const profile = resolveBlendMapAlphaProfile(m?.map);
+    if (m?.userData) m.userData.orbyBlendMapAlphaProfile = profile;
+    return profile;
+  }
+
+  _shouldPromoteBlendMapAlphaCutout(m) {
+    if (!m || (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial)) return false;
+    if (this._materialHasImportTransmission(m)) return false;
+    if (this._materialIsEmissiveDisplay(m)) return false;
+    const alphaMode = m.userData?.alphaMode ?? this._inferGltfAlphaMode(m);
+    return shouldPromoteBlendMapToAlphaCutout(m, this._resolveBlendMapAlphaProfile(m), {
+      fullOpacityThreshold: GLTF_FULL_OPACITY_BLEND_THRESHOLD,
+      alphaMode,
+    });
+  }
+
+  _applyBlendMapAlphaCutout(m) {
+    applyBlendMapAlphaCutout(m);
+  }
+
+  _applyBlendMapAlphaCutoutFallback(m) {
+    if (!m || (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial)) return false;
+    if (this._materialHasImportTransmission(m)) return false;
+    if (this._materialIsEmissiveDisplay(m)) return false;
+    if (!m.transparent || !m.map?.isTexture) return false;
+    const alphaMode = m.userData?.alphaMode ?? this._inferGltfAlphaMode(m);
+    if (alphaMode !== 'BLEND') return false;
+    const opacity = Number.isFinite(m.opacity) ? m.opacity : 1;
+    if (opacity < GLTF_FULL_OPACITY_BLEND_THRESHOLD) return false;
+    this._applyBlendMapAlphaCutout(m);
+    return true;
+  }
+
+  /**
+   * BLEND + baseColor map with hard cutout alpha (atlas padding, interiors) → alphaTest + depthWrite
+   * so nested shells (car cabins) draw correctly. Soft map alpha (hair) is left as true BLEND.
+   */
+  applyGltfBlendMapAlphaCutout(object) {
+    this._forEachImportMaterial(object, (m) => {
+      if (this._shouldPromoteBlendMapAlphaCutout(m)) {
+        this._applyBlendMapAlphaCutout(m);
+        return;
+      }
+      if (!isBlendMapAlphaCutoutRetryCandidate(m)) return;
+      scheduleBlendMapAlphaCutoutRetry(m, () => {
+        if (!this.currentModel) return;
+        clearBlendMapAlphaProfileCache(m);
+        const applied =
+          this._shouldPromoteBlendMapAlphaCutout(m) || this._applyBlendMapAlphaCutoutFallback(m);
+        if (!applied) return;
+        const shading = this.currentShading ?? this.stateStore?.getState()?.shading ?? 'shaded';
+        if (shading === 'shaded' || shading === 'clay' || shading === 'textures') {
+          this.setShading(shading);
+        }
+      });
+    });
   }
 
   /**
@@ -2024,12 +2180,18 @@ export class MaterialController {
       const baseOp = b ? b.opacity : (Number.isFinite(m.opacity) ? m.opacity : 1);
       const baseTr = b ? b.transparent : m.transparent;
 
-      if (baseTr && baseOp >= GLTF_FULL_OPACITY_BLEND_THRESHOLD && !m.map?.isTexture) {
-        m.transparent = false;
-        m.opacity = 1;
-        m.depthWrite = true;
-        if ('alphaHash' in m) m.alphaHash = false;
-        m.needsUpdate = true;
+      if (baseTr && baseOp >= GLTF_FULL_OPACITY_BLEND_THRESHOLD) {
+        if (!m.map?.isTexture) {
+          m.transparent = false;
+          m.opacity = 1;
+          m.depthWrite = true;
+          if ('alphaHash' in m) m.alphaHash = false;
+          m.needsUpdate = true;
+        } else if (this._shouldPromoteBlendMapAlphaCutout(m)) {
+          this._applyBlendMapAlphaCutout(m);
+        } else {
+          this._applyBlendMapAlphaCutoutFallback(m);
+        }
       }
     });
   }
@@ -2523,6 +2685,8 @@ export class MaterialController {
             color: brightColor,
             transparent: mat?.transparent ?? false,
             opacity: mat?.opacity ?? 1,
+            alphaTest: Number.isFinite(mat?.alphaTest) ? mat.alphaTest : 0,
+            depthWrite: mat?.depthWrite !== false,
             side: mat?.side ?? THREE.FrontSide,
           });
           
@@ -4378,8 +4542,9 @@ export class MaterialController {
     const hueRad = creativeLookMasterHueRadians(masterHue);
     const intensity = normalizeCreativeLookIntensity(source?.intensity);
     const liftCrush = normalizeCreativeLookLiftCrush(source?.liftCrush);
-    const brightness =
+    const brightnessUi =
       this.materialSettings.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS;
+    const brightnessEffective = materialBrightnessEffectiveScale(brightnessUi);
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
       const mats = Array.isArray(child.material) ? child.material : [child.material];
@@ -4404,7 +4569,7 @@ export class MaterialController {
           m.uniforms.uLiftCrush.value = liftCrush;
         }
         if (m.uniforms?.uBrightness) {
-          m.uniforms.uBrightness.value = brightness;
+          m.uniforms.uBrightness.value = brightnessEffective;
         }
         if (m.uniforms?.uMetalness) {
           m.uniforms.uMetalness.value =
@@ -4470,7 +4635,7 @@ export class MaterialController {
             hdriBlurriness: hdriBlur,
             mesh: child,
             intensity: this._lastEnvIntensity ?? 1,
-            litEnvMul: materialBrightnessLitEnvMultiplier(brightness),
+            litEnvMul: materialBrightnessLitEnvMultiplier(brightnessUi),
             liftCrush,
             envTexture: this._lastEnvTexture ?? null,
           });
@@ -4522,7 +4687,7 @@ export class MaterialController {
           this._applyCreativeLookTransmissionTuningFromState(m);
         }
         if (m.isMeshPhysicalMaterial) {
-          applyCreativeLookPhysicalMasterHue(m, masterHue, brightness);
+          applyCreativeLookPhysicalMasterHue(m, masterHue, brightnessEffective);
         }
       }
     });
@@ -4541,7 +4706,7 @@ export class MaterialController {
           dustMat.uniforms.uLiftCrush.value = liftCrush;
         }
         if (dustMat.uniforms?.uBrightness) {
-          dustMat.uniforms.uBrightness.value = brightness;
+          dustMat.uniforms.uBrightness.value = brightnessEffective;
         }
         if (dustMat.uniforms?.uIntensity) {
           dustMat.uniforms.uIntensity.value = intensity;
@@ -4597,14 +4762,18 @@ export class MaterialController {
     }
   }
 
-  /** @param {THREE.Color} color @param {THREE.Material} [importMat] @param {number} [brightness] */
-  _softCapTexturedBrightnessAlbedo(color, importMat, brightness) {
+  /** @param {THREE.Color} color @param {THREE.Material} [importMat] @param {number} [effectiveScale] — already effective when passed from {@link #_diffuseColorWithBrightness} */
+  _softCapTexturedBrightnessAlbedo(color, importMat, effectiveScale) {
     if (!color?.isColor || !importMat) return;
     const hasAlbedo =
       !!importMat.map?.isTexture || !!importMat.userData?.orbyFbxSlotMaps;
     if (!hasAlbedo) return;
-    const b = Number(brightness ?? this.materialSettings.brightness);
-    const scale = Number.isFinite(b) ? b : DEFAULT_MATERIAL_BRIGHTNESS;
+    const passed = Number(effectiveScale);
+    const scale = Number.isFinite(passed)
+      ? passed
+      : materialBrightnessEffectiveScale(
+          this.materialSettings.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS,
+        );
     const peak = Math.max(color.r, color.g, color.b);
     const maxPeak = Math.max(MATERIAL_TEXTURED_BRIGHTNESS_HDR_PEAK, scale);
     if (peak > maxPeak) {
@@ -4623,9 +4792,14 @@ export class MaterialController {
    * @param {THREE.Material} [importMat]
    */
   _metalnessForBrightnessClamp(metalnessForClamp, importMat) {
-    if (metalnessForClamp !== undefined) return metalnessForClamp;
-    if (importMat && this._importMaterialHasMrMaps(importMat)) return 0;
-    return this.materialSettings.metalness ?? 0;
+    const authored = importMat ? this._resolveAuthoredMetalRoughness(importMat) : null;
+    return resolveMaterialBrightnessMetalnessClamp({
+      explicitMetalness: metalnessForClamp,
+      hasMrMaps: !!(importMat && this._importMaterialHasMrMaps(importMat)),
+      isShapeLibrary: !!this.currentModel?.userData?.orbyShapeLibrary,
+      sliderMetalness: this.materialSettings.metalness,
+      authored,
+    });
   }
 
   _isNearBlackDiffuseColor(color) {
@@ -4753,7 +4927,9 @@ export class MaterialController {
         ? sourceColor.clone()
         : new THREE.Color(sourceColor ?? '#ffffff');
     const b = Number(brightness);
-    const scale = Number.isFinite(b) ? b : DEFAULT_MATERIAL_BRIGHTNESS;
+    const scale = Number.isFinite(b)
+      ? materialBrightnessEffectiveScale(b)
+      : materialBrightnessEffectiveScale(DEFAULT_MATERIAL_BRIGHTNESS);
     color.multiplyScalar(scale);
 
     const metalRaw = this._metalnessForBrightnessClamp(metalnessForClamp, importMat);

@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 3,
   "shading": "shaded",
   "scale": 1,
   "xOffset": 0,
@@ -14,7 +15,7 @@
   "scaleWidgetEnabled": false,
   "objectHidden": false,
   "material": {
-    "brightness": 2.28,
+    "brightness": 1.14,
     "metalness": 1,
     "roughness": 1,
     "emissive": 0,

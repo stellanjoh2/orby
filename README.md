@@ -27,7 +27,7 @@ Orby is a free browser-based 3D viewer and virtual studio that runs in your brow
 - 🎬 **Full cinematic post-processing**: selective bloom, depth of field, film grain, chromatic aberration, professional tonemapping
 - 🌍 **HDR environments** with blur, rotation, intensity controls, and custom `.hdr` / `.exr` upload
 - 💡 **Custom 3-point studio lighting** that blends with image-based lighting
-- 🎨 **Real-time material controls**: brightness (up to 3.0), metalness, roughness, emissive glow
+- 🎨 **Real-time material controls**: brightness (0–2.5 UI, 1.0 = default look), metalness, roughness, emissive glow
 - 📊 **Exposure histogram** with overexposure warnings
 - 🎥 **Auto-orbit camera** and **turntable export** (MP4 or PNG sequence)
 - 🔄 **Scene settings import/export** and **`.orby` scene files** (settings + embedded model)
@@ -308,7 +308,7 @@ Additional controls:
 
 #### Material Controls
 Real-time material adjustments:
-- **Brightness** - Makes your model lighter or darker (0–3 range)
+- **Brightness** - Makes your model lighter or darker (0–2.5 range; 1.0 is the default look)
 - **Metalness** - Controls how metallic the surface looks (0 = plastic, 1 = chrome)
 - **Roughness** - Adjusts surface smoothness (0 = mirror-like, 1 = matte)
 - **Emissive** - Adds glowing light to materials (0-2 range), perfect for sci-fi effects, neon signs, or any glowing elements

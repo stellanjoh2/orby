@@ -2,7 +2,7 @@
  * UI-side control manifest — mesh transform + material sliders.
  * Each entry links DOM input → StateStore path → EventBus event (see sceneControlManifest).
  */
-import { DEFAULT_MATERIAL_BRIGHTNESS, MATERIAL_EMISSIVE_SLIDER_MAX } from '../constants.js';
+import { DEFAULT_MATERIAL_BRIGHTNESS, MATERIAL_BRIGHTNESS_UI_MAX, MATERIAL_EMISSIVE_SLIDER_MAX } from '../constants.js';
 
 /** @typedef {'range' | 'color' | 'checkbox'} UiControlInputType */
 
@@ -100,7 +100,7 @@ export const MESH_UI_CONTROL_MANIFEST = [
     labelKey: 'materialBrightness',
     labelType: 'decimal',
     clampMin: 0,
-    clampMax: 5,
+    clampMax: MATERIAL_BRIGHTNESS_UI_MAX,
     fallback: DEFAULT_MATERIAL_BRIGHTNESS,
   },
   {

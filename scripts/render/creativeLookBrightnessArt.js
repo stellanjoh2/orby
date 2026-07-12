@@ -1,4 +1,7 @@
-import { DEFAULT_MATERIAL_BRIGHTNESS } from '../constants.js';
+import {
+  DEFAULT_MATERIAL_BRIGHTNESS,
+  materialBrightnessEffectiveScale,
+} from '../constants.js';
 
 /**
  * Shader Lab brightness caps — stricter than Lit mode (`MaterialController._diffuseColorWithBrightness`).
@@ -21,7 +24,7 @@ export const CREATIVE_LOOK_BRIGHTNESS_ROLLOFF = 0.62;
  */
 export function creativeLookBrightnessEffectiveScale(brightness, options = {}) {
   const b = Number(brightness);
-  const scale = Number.isFinite(b) ? Math.max(0, b) : DEFAULT_MATERIAL_BRIGHTNESS;
+  const scale = Number.isFinite(b) ? Math.max(0, b) : materialBrightnessEffectiveScale(DEFAULT_MATERIAL_BRIGHTNESS);
   const metal = Math.min(1, Math.max(0, Number(options.metalness ?? 0)));
   const peak = metal > 0.5
     ? CREATIVE_LOOK_BRIGHTNESS_METAL_PEAK

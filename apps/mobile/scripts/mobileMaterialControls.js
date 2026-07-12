@@ -1,5 +1,6 @@
 import {
   DEFAULT_MATERIAL_BRIGHTNESS,
+  MATERIAL_BRIGHTNESS_UI_MAX,
   MATERIAL_EMISSIVE_SLIDER_MAX,
 } from '../../../scripts/constants.js';
 import { MOBILE_MATERIAL_DEFAULTS } from './mobileParityDefaults.js';
@@ -12,7 +13,7 @@ export const MOBILE_MATERIAL_SLIDERS = /** @type {MaterialSliderDef[]} */ ([
     path: 'brightness',
     label: 'Brightness',
     min: 0,
-    max: 5,
+    max: MATERIAL_BRIGHTNESS_UI_MAX,
     step: 0.01,
     format: (v) => v.toFixed(2),
     defaultValue: DEFAULT_MATERIAL_BRIGHTNESS,
