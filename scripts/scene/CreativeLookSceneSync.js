@@ -18,7 +18,6 @@ import {
   normalizeCreativeLookMasterHue,
   normalizeCreativeLookPatternScale,
   normalizeCreativeLookPreset,
-  resolveCreativeLookPresetChoice,
 } from '../render/CreativeLookMaterials.js';
 import { creativeLookWatercolourRadius } from '../render/creativeLookWatercolourArt.js';
 import {
@@ -36,8 +35,6 @@ import {
   isSolidStudioBackdropActive,
   resolveSolidStudioBackdropColor,
 } from '../render/backgroundFallback.js';
-import { confirmVoxelHdHighPolyAlert } from '../render/voxelHdHighPolyAlert.js';
-import { willApplyVoxelHdGeometry } from '../mesh/voxelizationMeshAdvice.js';
 
 /**
  * Scene-side Shader Lab sync — post passes, artistic backdrop, transmission backdrop,
@@ -402,7 +399,7 @@ export class CreativeLookSceneSync {
   /**
    * Apply Shader Lab state with viewport spinner + toast when materials rebuild.
    * @param {object} creativeLookState
-   * @param {{ skipStateStore?: boolean, skipVoxelPolyWarning?: boolean }} [options]
+   * @param {{ skipStateStore?: boolean }} [options]
    */
   applyFromState(creativeLookState, options = {}) {
     this._applyChain = (this._applyChain ?? Promise.resolve())
@@ -413,23 +410,12 @@ export class CreativeLookSceneSync {
 
   /**
    * @param {object} creativeLookState
-   * @param {{ skipStateStore?: boolean, skipVoxelPolyWarning?: boolean }} [options]
+   * @param {{ skipStateStore?: boolean }} [options]
    */
   async applyFromStateOnce(creativeLookState, options = {}) {
     const scene = this.scene;
     const mc = scene.materialController;
     if (!mc) return;
-
-    if (
-      !options.skipVoxelPolyWarning &&
-      willApplyVoxelHdGeometry(mc, creativeLookState)
-    ) {
-      const proceed = await confirmVoxelHdHighPolyAlert(scene.ui, scene.currentModel);
-      if (!proceed) {
-        this.revertPendingSelection();
-        return;
-      }
-    }
 
     const heavy = mc.willRebuildCreativeLookMaterials(creativeLookState);
     if (heavy) {
@@ -470,23 +456,5 @@ export class CreativeLookSceneSync {
       // preset click can paint and stop the idle loop while shaders are still stale.
       scene.requestRender();
     }
-  }
-
-  /** Undo a Voxel HD selection when the high-poly confirm dialog is cancelled. */
-  revertPendingSelection() {
-    const scene = this.scene;
-    const mc = scene.materialController;
-    if (!mc) return;
-
-    const applied = mc.creativeLookSettings;
-    const preset = resolveCreativeLookPresetChoice(applied.preset);
-    scene.stateStore?.batch?.(() => {
-      scene.stateStore.set('creativeLook.preset', preset);
-      scene.stateStore.set('creativeLook.enabled', !!applied.enabled);
-    });
-    if (scene.ui?.inputs?.creativeLookEnabled) {
-      scene.ui.inputs.creativeLookEnabled.checked = !!applied.enabled;
-    }
-    scene.ui?.setCreativeLookActive?.(applied.enabled ? preset : null);
   }
 }

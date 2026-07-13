@@ -617,6 +617,7 @@ export class ImageExporter {
         renderer: this.renderer,
         composer,
         camera: this.camera,
+        scene: this.scene,
         getGroundGrid: () => this.composerLifecycle?.getGroundGrid?.(),
         getCreativeLookAsciiActive: () =>
           this.composerLifecycle?.getCreativeLookAsciiActive?.(),
@@ -624,8 +625,15 @@ export class ImageExporter {
           const w = this.getRenderState?.()?.gridLineWidth;
           return Number.isFinite(w) ? w : 1;
         },
+        getGroundWireColor: () => this.getRenderState?.()?.groundWireColor,
+        getGroundWireOpacity: () => this.getRenderState?.()?.groundWireOpacity,
         getStudioPixelRatio: () =>
           resolveRenderQualityTier(this.getRenderState?.()?.renderQuality).maxPixelRatio,
+        getPreviewPixelRatio: () => {
+          const tier = resolveRenderQualityTier(this.getRenderState?.()?.renderQuality);
+          return Math.min(window.devicePixelRatio || 1, tier.maxPixelRatio);
+        },
+        getDisplayPixelRatio: () => window.devicePixelRatio || 1,
         exportScale: opts.exportScale ?? 1,
         ensureComposerMatchesDrawingBuffer: (o) =>
           this._ensureComposerMatchesDrawingBuffer(o),

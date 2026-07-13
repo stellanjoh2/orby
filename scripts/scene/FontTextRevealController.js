@@ -1496,18 +1496,6 @@ export class FontTextRevealController {
     this._boundModel?.updateMatrixWorld?.(true);
   }
 
-  /** Settle glyph groups before voxel SAT sampling (reveal offsets distort the grid). */
-  snapGlyphsForVoxelization() {
-    if (!this._boundModel || !this._glyphStates.length) return;
-    if (this.isEnabled() || this.isTrackingAnimatorActive()) {
-      this._syncIdleCompositeClocks();
-      this.applyAtTime(this._elapsed, { skipConstant: true });
-    } else {
-      this._resetGlyphs();
-    }
-    this._boundModel.updateMatrixWorld(true);
-  }
-
   _showIdlePose() {
     if (
       this.isEnabled()

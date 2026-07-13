@@ -145,7 +145,6 @@ export class UIManager {
     /** @type {Promise<void> | null} */
     this._studioUiPromise = null;
     this._creativeLookGridEnabled = false;
-    this._creativeLookVoxelHdBlocked = false;
   }
 
   /** Full init (dropzone + studio). Prefer initShell() on marketing home boot. */
@@ -1385,12 +1384,6 @@ export class UIManager {
     });
   }
 
-  /** Mute Voxel HD for generated text (voxelization is unsupported on font extrude). */
-  setCreativeLookVoxelHdBlocked(blocked) {
-    this._creativeLookVoxelHdBlocked = !!blocked;
-    this._syncCreativeLookButtonDisabledState();
-  }
-
   toggleCreativeLookGrid(enabled) {
     this._creativeLookGridEnabled = !!enabled;
     this._syncCreativeLookButtonDisabledState();
@@ -1400,21 +1393,9 @@ export class UIManager {
     if (!this.inputs.creativeLookButtons?.forEach) return;
     const gridEnabled = this._creativeLookGridEnabled === true;
     this.inputs.creativeLookButtons.forEach((button) => {
-      const isVoxelHd = button.dataset.creativeLook === 'voxel-hd';
-      const disabled = !gridEnabled || (isVoxelHd && !!this._creativeLookVoxelHdBlocked);
+      const disabled = !gridEnabled;
       button.disabled = disabled;
       button.classList.toggle('is-disabled', disabled);
-      if (isVoxelHd) {
-        if (!button.dataset.tooltipDefault) {
-          button.dataset.tooltipDefault = button.getAttribute('data-tooltip') ?? '';
-        }
-        button.setAttribute(
-          'data-tooltip',
-          this._creativeLookVoxelHdBlocked
-            ? 'Voxel HD is not available for generated text'
-            : button.dataset.tooltipDefault,
-        );
-      }
     });
   }
 

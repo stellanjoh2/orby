@@ -112,9 +112,6 @@ const SVG_EXTRUDE_GEOMETRY_SNAPSHOT_KEYS = [
   'orbyPs2OriginalGeometry',
   'orbyWirePulseOriginalGeometry',
   'orbyWirePulsePreparedGeometry',
-  'orbyVoxelOriginalGeometry',
-  'orbyVoxelPreparedGeometry',
-  'orbyVoxelBakedStaticGeometry',
   'orbyScanlineOriginalGeometry',
   'orbyScanlinePreparedGeometry',
 ];

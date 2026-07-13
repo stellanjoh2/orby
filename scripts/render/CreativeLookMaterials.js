@@ -125,10 +125,6 @@ import {
   creativeGouacheWobbleScale,
 } from './creativeLookGouacheArt.js';
 import {
-  creativeLookVoxelFixedScale,
-  isVoxelCreativeLookPreset,
-} from './creativeLookVoxelArt.js';
-import {
   ORBY_CREATIVE_SURFACE_FRAG_HELPERS,
   createOrbySurfaceUniformRefs,
   creativeLookPresetSupportsSurfaceDetail,
@@ -168,8 +164,6 @@ export { isOpticsCreativeLookPreset };
 
 export { creativeLookPresetSupportsSurfaceDetail } from './SvgExtrudeSurfaceShader.js';
 
-export { creativeLookUsesVoxelGeometry, isVoxelCreativeLookPreset } from './creativeLookVoxelArt.js';
-
 /**
  * Animated presets read `uTime` as one shared timeline: MaterialController sets
  * `uTime = elapsedSeconds * creativeLook.shaderAnimationSpeed` (after pause freeze).
@@ -182,7 +176,7 @@ export { creativeLookUsesVoxelGeometry, isVoxelCreativeLookPreset } from './crea
  * in the transmission prepass — not other transmissive/transparent meshes (Three.js renderer design).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'fractal-storm' | 'holo-topo' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome-plasma' | 'chrome' | 'glass' | 'holo-glass' | 'crystal-gem' | 'thermal' | 'thermal-extreme' | 'thermal-acid'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'fractal-storm' | 'holo-topo' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome-plasma' | 'chrome' | 'glass' | 'holo-glass' | 'crystal-gem' | 'thermal' | 'thermal-extreme' | 'thermal-acid'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
@@ -216,7 +210,6 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'psx',
   'vga-dos-3d',
   'vectrex',
-  'voxel-hd',
   'watercolour',
   'sketch',
   'sketch-colour',
@@ -581,7 +574,7 @@ export function isFlatPostCreativeLookPreset(preset) {
 }
 
 /**
- * Default Shader Lab stack (neon-edge, glass, voxel-hd, …) — N8AO stays in the composer,
+ * Default Shader Lab stack (neon-edge, glass, …) — N8AO stays in the composer,
  * including the viewport-bloom slim stack. Artistic / flat-post presets replace the stack.
  * @param {CreativeLookPreset | string | undefined} preset
  */
@@ -1127,8 +1120,6 @@ export function creativeLookFixedPatternScale(preset) {
   if (id === 'intellivision-pixel') return creativeLookIntellivisionFixedScale();
   if (id === 'gba-pixel') return creativeLookGbaFixedScale();
   if (id === 'apple2-pixel') return creativeLookApple2FixedScale();
-  const voxelScale = creativeLookVoxelFixedScale(preset);
-  if (voxelScale != null) return voxelScale;
   return creativeLookRetroConsoleFixedScale(preset);
 }
 
@@ -1252,7 +1243,6 @@ export function formatCreativeLookPresetLabel(preset) {
     psx: 'PSX',
     'vga-dos-3d': 'VGA/DOS 3D',
     vectrex: 'Vectrex',
-    'voxel-hd': 'Voxel HD',
     watercolour: 'Watercolour',
     sketch: 'Sketch',
     'sketch-colour': 'Sketch Colour',
@@ -1838,28 +1828,6 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorldPosition);
   float rim = pow(1.0 - max(dot(N, V), 0.0), 3.2);
   col += rim * vec3(0.12, 0.18, 0.48);
-  gl_FragColor = vec4(col, uOpacity);
-}
-`;
-
-/** Voxel looks — baked vertex colours; flat albedo (no extra shading). */
-const VOXEL_VERTEX = /* glsl */ `
-#include <common>
-#include <color_pars_vertex>
-void main() {
-  #include <color_vertex>
-  vec3 transformed = position;
-  vec3 objectNormal = normal;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
-}
-`;
-
-const VOXEL_FRAGMENT = /* glsl */ `
-#include <color_pars_fragment>
-uniform float uOpacity;
-
-void main() {
-  vec3 col = clamp(vColor, vec3(0.0), vec3(1.0));
   gl_FragColor = vec4(col, uOpacity);
 }
 `;
@@ -3931,21 +3899,6 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       },
       vertexShader: PIXEL_ART_VERTEX,
       fragmentShader: withCreativeLookPrepPbrModulation(prepass, { mode: 'form' }),
-      ...commonMatOpts,
-    });
-    mat.userData.orbyCreativeLook = id;
-    return finish(mat, { shadows: false });
-  }
-
-  if (isVoxelCreativeLookPreset(id)) {
-    const mat = new THREE.ShaderMaterial({
-      uniforms: {
-        uOpacity: { value: shaderAlpha },
-        ...gradeUniforms,
-      },
-      vertexShader: VOXEL_VERTEX,
-      fragmentShader: lookFragNoShadow(VOXEL_FRAGMENT),
-      vertexColors: true,
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = id;

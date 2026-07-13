@@ -1,5 +1,4 @@
 import {
-  isVoxelCreativeLookPreset,
   normalizeCreativeLookPreset,
 } from '../render/CreativeLookMaterials.js';
 
@@ -12,23 +11,9 @@ export const SHADER_LAB_RETRO_GLB_PRESETS = /** @type {const} */ ([
 
 /**
  * @typedef {{ mode: 'svg' }} SvgGlbExportKind
- * @typedef {{ mode: 'shader-lab', preset: string, family: 'voxel' | 'retro' }} ShaderLabGlbExportKind
+ * @typedef {{ mode: 'shader-lab', preset: string, family: 'retro' }} ShaderLabGlbExportKind
  * @typedef {SvgGlbExportKind | ShaderLabGlbExportKind} GlbExportKind
  */
-
-/**
- * @param {THREE.Object3D | null | undefined} root
- */
-export function modelHasVoxelExportGeometry(root) {
-  if (!root) return false;
-  let found = false;
-  root.traverse((child) => {
-    if (found || !child.isMesh || child.visible === false) return;
-    if (!child.userData?.orbyVoxelPreparedGeometry) return;
-    if ((child.geometry?.attributes?.color?.count ?? 0) > 0) found = true;
-  });
-  return found;
-}
 
 /**
  * @param {THREE.Object3D | null | undefined} root
@@ -64,11 +49,6 @@ export function resolveGlbExportKind({
   if (!creativeLook?.enabled) return null;
 
   const preset = normalizeCreativeLookPreset(creativeLook.preset);
-
-  if (isVoxelCreativeLookPreset(preset)) {
-    if (!modelHasVoxelExportGeometry(modelRoot)) return null;
-    return { mode: 'shader-lab', preset, family: 'voxel' };
-  }
 
   if (SHADER_LAB_RETRO_GLB_PRESETS.includes(preset)) {
     if (!modelHasRetroDecimationGeometry(modelRoot)) return null;

@@ -26,7 +26,7 @@ export class AnimationController {
     this._exportDriveSnapshot = null;
     this._exportAction = null;
     this._exportClipIndex = 0;
-    this._voxelPoseSnapshot = null;
+    this._staticPoseSnapshot = null;
     this.playbackSpeed = 1;
     this.playbackReverse = false;
     this.clipPlaybackMode = 'loop';
@@ -335,13 +335,13 @@ export class AnimationController {
   }
 
   /**
-   * Sample the first animation clip at t = 0 for static mesh baking (voxel / decimation).
+   * Sample the first animation clip at t = 0 for static mesh baking (decimation).
    * Restores the prior clip, time, and pause state via {@link endStaticPoseHold}.
    */
   applyStaticPoseAtFrameZero() {
     if (!this.mixer || !this.animations.length) return;
 
-    this._voxelPoseSnapshot = {
+    this._staticPoseSnapshot = {
       time: this.currentAction?.time ?? 0,
       paused: this.currentAction?.paused ?? true,
       clipIndex: this.currentClipIndex,
@@ -365,8 +365,8 @@ export class AnimationController {
 
   /** Restore playback pose after {@link applyStaticPoseAtFrameZero}. */
   endStaticPoseHold() {
-    const snap = this._voxelPoseSnapshot;
-    this._voxelPoseSnapshot = null;
+    const snap = this._staticPoseSnapshot;
+    this._staticPoseSnapshot = null;
     if (!snap || !this.mixer || !this.animations.length) return;
 
     const clip = this.animations[snap.clipIndex] ?? this.animations[0];
@@ -399,7 +399,7 @@ export class AnimationController {
   }
 
   dispose() {
-    this._voxelPoseSnapshot = null;
+    this._staticPoseSnapshot = null;
     if (this.mixer) {
       this.mixer.removeEventListener('finished', this._handleClipFinished);
       this.mixer.stopAllAction();

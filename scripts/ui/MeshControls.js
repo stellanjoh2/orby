@@ -34,8 +34,6 @@ import {
   normalizeCreativeLookTransmissionDispersion,
   creativeLookTransmissionControlsVisible,
 } from '../render/creativeLookPhysicalTransmission.js';
-import { isVoxelCreativeLookPreset } from '../render/creativeLookVoxelArt.js';
-import { isFontExtrudeRevealModel } from '../scene/FontTextRevealController.js';
 import { isSvgFileExtrudeModel } from '../scene/SvgExtrudeSceneOps.js';
 import {
   CREATIVE_LOOK_ALL_PRESET_SLIDER_IDS,
@@ -641,12 +639,6 @@ export class MeshControls {
         const preset = button.dataset.creativeLook;
         if (!CREATIVE_LOOK_PRESETS.includes(preset)) return;
         if (button.disabled) return;
-        if (
-          preset === 'voxel-hd' &&
-          isFontExtrudeRevealModel(window.orby?.scene?.currentModel)
-        ) {
-          return;
-        }
         const state = this.stateStore.getState().creativeLook || {};
         const prev = resolveCreativeLookPresetChoice(state.preset);
         if (preset !== prev) this.ui.uiSounds?.playSelect();
@@ -744,13 +736,6 @@ export class MeshControls {
         }
         this.eventBus.emit('mesh:creative-look');
       });
-    });
-
-    this.eventBus.on('font:generated', () => {
-      this._syncCreativeLookVoxelHdAvailability();
-    });
-    this.eventBus.on('scene:model-load-complete', () => {
-      this._syncCreativeLookVoxelHdAvailability();
     });
 
     // Fresnel (moved from bindRenderControls since it's now in Object tab)
@@ -1948,7 +1933,6 @@ export class MeshControls {
     this.ui.toggleCreativeLookGrid?.(
       !!state.creativeLookSectionOpen || !!state.creativeLook?.enabled,
     );
-    this._syncCreativeLookVoxelHdAvailability(state);
 
     // Radio buttons
     this.ui.inputs.autoRotate.forEach((input) => {
@@ -1966,22 +1950,6 @@ export class MeshControls {
 
     // Wireframe mode now uses the overlay system, so overlay controls are always enabled
     // Users can adjust "Always on" and "Only visible faces" even when in Wireframe mode
-  }
-
-  /** Block Voxel HD on generated text; exit the preset if it was active. */
-  _syncCreativeLookVoxelHdAvailability(state = this.stateStore.getState()) {
-    const model = window.orby?.scene?.currentModel ?? null;
-    const blocked = isFontExtrudeRevealModel(model);
-    this.ui.setCreativeLookVoxelHdBlocked?.(blocked);
-    if (
-      blocked &&
-      state.creativeLook?.enabled &&
-      isVoxelCreativeLookPreset(normalizeCreativeLookPreset(state.creativeLook.preset))
-    ) {
-      this.stateStore.set('creativeLook.enabled', false);
-      this.ui.setCreativeLookActive?.(null);
-      this.eventBus.emit('mesh:creative-look');
-    }
   }
 
   _syncCreativeLookTransmissionControls(state, clPreset) {

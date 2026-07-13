@@ -112,6 +112,7 @@ export function resampleRgba(src, srcW, srcH, dstW, dstH) {
  *   renderer: import('three').WebGLRenderer,
  *   composer: import('three/examples/jsm/postprocessing/EffectComposer.js').EffectComposer,
  *   camera?: import('three').Camera,
+ *   scene?: import('three').Scene | null,
  *   getGroundGrid?: () => import('three').Object3D | null | undefined,
  *   getCreativeLookAsciiActive?: () => boolean,
  *   getGridLineWidth?: () => number,
@@ -129,22 +130,24 @@ function readComposerPixelsOnce(deps, requestedW, requestedH) {
   const outputRT = getComposerOutputRenderTarget(composer);
   const readW = Math.max(1, outputRT?.width ?? requestedW);
   const readH = Math.max(1, outputRT?.height ?? requestedH);
+  const compositeGrid =
+    deps.camera
+    && deps.scene
+    && shouldCompositeGroundGridForCapture(deps);
 
   const byteRT = new THREE.WebGLRenderTarget(readW, readH, {
     type: THREE.UnsignedByteType,
     format: THREE.RGBAFormat,
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
-    depthBuffer: false,
+    // Depth needed so grid overlay can depth-test against scene meshes (live viewport parity).
+    depthBuffer: compositeGrid,
     stencilBuffer: false,
   });
 
   try {
     composer.copyPass.render(renderer, byteRT, outputRT, 0, false);
-    if (
-      deps.camera
-      && shouldCompositeGroundGridForCapture(deps)
-    ) {
+    if (compositeGrid) {
       compositeAsciiGroundGridOnByteTarget(deps, byteRT);
     }
     const pixels = new Uint8Array(readW * readH * 4);
@@ -198,6 +201,7 @@ export function captureDrawingBufferReadback(deps, opts) {
  *   renderer: import('three').WebGLRenderer,
  *   composer: import('three/examples/jsm/postprocessing/EffectComposer.js').EffectComposer,
  *   camera?: import('three').Camera,
+ *   scene?: import('three').Scene | null,
  *   getGroundGrid?: () => import('three').Object3D | null | undefined,
  *   getCreativeLookAsciiActive?: () => boolean,
  *   getGridLineWidth?: () => number,

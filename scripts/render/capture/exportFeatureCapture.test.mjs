@@ -58,6 +58,12 @@ describe('ground grid capture composite', () => {
     assert.equal(resolveCaptureGridLineWidthPx(0.25, 1), 0.5);
   });
 
+  it('resolveCaptureGridLineWidthPx matches viewport DPR rules', () => {
+    assert.equal(resolveCaptureGridLineWidthPx(1, 1, 2, 2, 2), 2);
+    assert.equal(resolveCaptureGridLineWidthPx(1, 1, 1, 1, 2), 2);
+    assert.equal(resolveCaptureGridLineWidthPx(1, 2, 2, 2, 2), 4);
+  });
+
   it('requires visible grid regardless of post preset', () => {
     assert.equal(
       shouldCompositeGroundGridForCapture({

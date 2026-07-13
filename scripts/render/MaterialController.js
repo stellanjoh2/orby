@@ -27,7 +27,6 @@ import {
   creativePsxMergeFactor,
   creativeVgaDos3dMergeFactor,
   creativeLookUsesRetroDecimation,
-  creativeLookUsesVoxelGeometry,
   creativeLookFixedPatternScale,
   creativeLookDefaultIntensity,
   creativeLookDefaultLiftCrush,
@@ -46,7 +45,6 @@ import {
   isSketchColourCreativeLookPreset,
   isSketchFamilyCreativeLookPreset,
   isVectrexCreativeLookPreset,
-  isVoxelCreativeLookPreset,
   normalizeCreativeLookIntensity,
   normalizeCreativeLookLiftCrush,
   normalizeCreativeLookMasterHue,
@@ -84,16 +82,6 @@ import {
   creativeGouacheVertexDrift,
   creativeGouacheWobbleScale,
 } from './creativeLookGouacheArt.js';
-import { voxelizeModelMeshes } from './Voxelizer.js';
-import {
-  bakeSkinnedMeshToStaticGeometry,
-  meshUsesSkinning,
-} from './bakeStaticSkinnedGeometry.js';
-import {
-  creativeVoxelMaxAxis,
-  creativeVoxelMaxVoxels,
-  resolveVoxelLookConfig,
-} from './creativeLookVoxelArt.js';
 import {
   creativeWatercolourMergeFactor,
   creativeWatercolourVertexDrift,
@@ -346,10 +334,6 @@ export class MaterialController {
     onNeedsTransmissionBackdrop = null,
     /** Called when ASCII Art live uniforms change — sync screen-space glyph pass. */
     onCreativeLookAsciiSync = null,
-    /** Pause animations at clip 0 / frame 0 before skinned voxel baking. */
-    prepareStaticVoxelPose = null,
-    /** Restore animation pose after skinned voxel baking. */
-    restoreStaticVoxelPose = null,
   }) {
     this.stateStore = stateStore;
     this.modelRoot = modelRoot;
@@ -362,8 +346,6 @@ export class MaterialController {
     this.onObjectSurfacePresentationRefresh = onObjectSurfacePresentationRefresh;
     this.onNeedsTransmissionBackdrop = onNeedsTransmissionBackdrop;
     this.onCreativeLookAsciiSync = onCreativeLookAsciiSync;
-    this.prepareStaticVoxelPose = prepareStaticVoxelPose;
-    this.restoreStaticVoxelPose = restoreStaticVoxelPose;
 
     this.currentModel = null;
     this.currentShading = null;
@@ -2340,10 +2322,10 @@ export class MaterialController {
   }
 
   /**
-   * Import material reads as glass or see-through — excluded from voxel triangle soup.
-   * Keeps opaque BLEND shells and MASK cutouts (hair, foliage) in the voxel mesh.
+   * Import material reads as glass or see-through — excluded from geometry FX baking.
+   * Keeps opaque BLEND shells and MASK cutouts (hair, foliage) in the baked mesh.
    */
-  _materialLooksGlassOrTransparentForVoxel(m) {
+  _materialLooksGlassOrTransparentForGeometryFx(m) {
     if (!m) return false;
     if (this._materialHasImportTransmission(m)) return true;
     if (this._isEmissiveBlendDisplayImport(m)) return true;
@@ -2384,8 +2366,8 @@ export class MaterialController {
     return false;
   }
 
-  /** Skip glass / transparent import meshes when building the voxel cube mesh. */
-  _shouldSkipMeshForVoxelization(mesh) {
+  /** Skip glass / transparent import meshes when building geometry FX meshes. */
+  _shouldSkipMeshForGeometryFx(mesh) {
     if (!mesh?.isMesh) return true;
     if (this.isWindowMesh(mesh)) return true;
 
@@ -2398,7 +2380,7 @@ export class MaterialController {
       if (!m) continue;
       hasMaterial = true;
       if (this._materialHasImportTransmission(m)) return true;
-      if (!this._materialLooksGlassOrTransparentForVoxel(m)) return false;
+      if (!this._materialLooksGlassOrTransparentForGeometryFx(m)) return false;
     }
     return hasMaterial;
   }
@@ -2438,7 +2420,6 @@ export class MaterialController {
   _restoreCreativeLookBaseMaterials() {
     this._appliedCreativeLookPreset = null;
     this._restorePs2CrushGeometry();
-    this._restoreVoxelGeometry();
     this._restoreWirePulseGeometry();
     this._restoreScanlineGeometry();
     this._restoreDustFieldGeometry();
@@ -2971,30 +2952,21 @@ export class MaterialController {
       this._restoreDustFieldGeometry();
     }
 
-    if (creativeLookUsesVoxelGeometry(preset)) {
-      this._restorePs2CrushGeometry();
-      this._restoreWirePulseGeometry();
-      this._restoreScanlineGeometry();
-      this._applyVoxelGeometry(preset);
-    } else if (creativeLookUsesRetroDecimation(preset)) {
-      this._restoreVoxelGeometry();
+    if (creativeLookUsesRetroDecimation(preset)) {
       this._applyRetroConsoleGeometry(preset, patternScale);
       this._restoreWirePulseGeometry();
       this._restoreScanlineGeometry();
     } else if (creativeLookUsesWirePulseGeometry(preset)) {
       this._restorePs2CrushGeometry();
-      this._restoreVoxelGeometry();
       this._restoreScanlineGeometry();
       this._applyWirePulseGeometry();
     } else if (creativeLookUsesDustFieldGeometry(preset)) {
       this._restorePs2CrushGeometry();
-      this._restoreVoxelGeometry();
       this._restoreWirePulseGeometry();
       this._restoreScanlineGeometry();
       this._applyDustFieldGeometry();
     } else {
       this._restorePs2CrushGeometry();
-      this._restoreVoxelGeometry();
       this._restoreWirePulseGeometry();
       this._restoreScanlineGeometry();
     }
@@ -3079,13 +3051,12 @@ export class MaterialController {
         const state = this.stateStore?.getState();
         const hdriBlur = Number(state?.hdriBlurriness ?? 0);
         const geom = child.geometry;
-        const voxelLook = isVoxelCreativeLookPreset(preset);
-        const skinning = !voxelLook && (
+        const skinning = (
           child.isSkinnedMesh ||
           !!geom?.attributes?.skinIndex ||
           !!geom?.attributes?.skinWeight
         );
-        const morphTargets = !voxelLook && !!child.morphTargetInfluences?.length;
+        const morphTargets = !!child.morphTargetInfluences?.length;
         const { diffuseMap, diffuseTint } = this._resolveCreativeLookDiffuseSources(
           child,
           origMat,
@@ -3613,259 +3584,12 @@ export class MaterialController {
     this._syncCreativeLookFieldsFromStore(cl);
     if (!this.currentModel || !this.creativeLookSettings.enabled) return;
     const preset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
-    if (isVoxelCreativeLookPreset(preset) && this._voxelMaterialsNeedGradeRebuild()) {
-      this._applyCreativeLookOverride();
-      return;
-    }
-    if (isVoxelCreativeLookPreset(preset) && this._meshesNeedVoxelGeometry(preset)) {
-      this._syncRetroConsoleGeometryForPreset(preset, this.creativeLookSettings.patternScale);
-    }
     if (isDustFieldCreativeLookPreset(preset) && !this._getDustFieldPoints()) {
       this._syncRetroConsoleGeometryForPreset(preset, this.creativeLookSettings.patternScale);
       this._applyDustFieldMaterial(preset, this.creativeLookSettings.patternScale);
     }
     this._syncCreativeLookLiveUniforms(cl);
     this._syncCreativeLookTransmissionMaterials();
-  }
-
-  /** Rebuild when voxel shaders predate flat albedo or grade post-process. */
-  _voxelMaterialsNeedGradeRebuild() {
-    if (!this.currentModel) return false;
-    let needs = false;
-    this.currentModel.traverse((child) => {
-      if (needs || !child.isMesh) return;
-      const mats = Array.isArray(child.material) ? child.material : [child.material];
-      for (const m of mats) {
-        if (!isVoxelCreativeLookPreset(m?.userData?.orbyCreativeLook)) continue;
-        const frag = m?.fragmentShader ?? '';
-        const vert = m?.vertexShader ?? '';
-        if (
-          !frag.includes('applyCreativeLiftCrush')
-          || frag.includes('uLightScale')
-          || frag.includes('baseCol * shade')
-          || vert.includes('skinning_vertex')
-          || m?.skinning
-        ) {
-          needs = true;
-          break;
-        }
-      }
-    });
-    return needs;
-  }
-
-  /** True when Voxel HD is active but meshes still carry smooth source geometry. */
-  _meshesNeedVoxelGeometry(preset = this.creativeLookSettings?.preset) {
-    if (!this.currentModel || !isVoxelCreativeLookPreset(normalizeCreativeLookPreset(preset))) {
-      return false;
-    }
-    let needs = false;
-    this.currentModel.traverse((child) => {
-      if (needs || !child.isMesh) return;
-      if (this._shouldSkipMeshForVoxelization(child)) return;
-      if (
-        !this.originalMaterials.get(child) &&
-        !child.userData?.orbyFontExtrude &&
-        !child.userData?.orbySvgExtrude
-      ) {
-        return;
-      }
-      if (!child.userData.orbyVoxelPreparedGeometry) {
-        needs = true;
-        return;
-      }
-      if ((child.geometry?.attributes?.color?.count ?? 0) <= 0) {
-        needs = true;
-      }
-    });
-    return needs;
-  }
-
-  /** Replace mesh geometry with merged voxel cubes (Shader Lab Voxel section). */
-  _applyVoxelGeometry(preset) {
-    if (!this.currentModel) return;
-    const cfg = resolveVoxelLookConfig(preset);
-
-    /** @type {Array<{
-     *   mesh: THREE.Mesh,
-     *   source: THREE.BufferGeometry,
-     *   current: THREE.BufferGeometry,
-     * }>} */
-    const bakeFailed = [];
-
-    /** @type {Array<{
-     *   mesh: THREE.Mesh,
-     *   geometry: THREE.BufferGeometry,
-     *   matrixWorld: THREE.Matrix4,
-     *   inverseWorldMatrix: THREE.Matrix4,
-     *   diffuseMap: THREE.Texture | null,
-     *   diffuseTint: THREE.Color | null,
-     * }>} */
-    const voxelEntries = [];
-
-    try {
-      this.prepareStaticVoxelPose?.();
-      this.currentModel.updateWorldMatrix(true, true);
-
-      this.currentModel.traverse((child) => {
-        if (!child.isMesh) return;
-        if (this._shouldSkipMeshForVoxelization(child)) {
-          if (!('orbyVoxelSkipRestoreVisible' in child.userData)) {
-            child.userData.orbyVoxelSkipRestoreVisible = child.visible;
-          }
-          child.visible = false;
-          return;
-        }
-        if (!this.originalMaterials.get(child)) {
-          if (!child.userData?.orbyFontExtrude && !child.userData?.orbySvgExtrude) return;
-        }
-        const geom = child.geometry;
-        if (!geom?.attributes?.position) return;
-
-        const hasLiveVoxelColors =
-          !!child.userData.orbyVoxelPreparedGeometry &&
-          (geom?.attributes?.color?.count ?? 0) > 0;
-        if (!hasLiveVoxelColors) {
-          const storedOrig = child.userData.orbyVoxelOriginalGeometry;
-          if (!storedOrig || storedOrig !== geom) {
-            child.userData.orbyVoxelOriginalGeometry = geom;
-          }
-          delete child.userData.orbyVoxelPreparedGeometry;
-        }
-
-        const source = child.userData.orbyVoxelOriginalGeometry;
-        const current = child.geometry;
-        if (current !== source && child.userData.orbyVoxelPreparedGeometry) {
-          current.dispose?.();
-        }
-
-        let voxelSource = source;
-        if (meshUsesSkinning(child)) {
-          const baked = child.isSkinnedMesh
-            ? bakeSkinnedMeshToStaticGeometry(child)
-            : null;
-          if (!baked) {
-            bakeFailed.push({ mesh: child, source, current: child.geometry });
-            return;
-          }
-          const prevBaked = child.userData.orbyVoxelBakedStaticGeometry;
-          if (prevBaked && prevBaked !== baked) {
-            prevBaked.dispose?.();
-          }
-          child.userData.orbyVoxelBakedStaticGeometry = baked;
-          voxelSource = baked;
-        }
-
-        const origMat = this.originalMaterials.get(child);
-        const liveMats = Array.isArray(child.material) ? child.material : [child.material];
-        const sourceMat = Array.isArray(origMat) ? origMat[0] : origMat;
-        const { diffuseMap, diffuseTint } = this._resolveCreativeLookDiffuseSources(
-          child,
-          sourceMat,
-          liveMats,
-          0,
-        );
-
-        const matrixWorld = child.matrixWorld.clone();
-        const inverseWorldMatrix = matrixWorld.clone().invert();
-
-        voxelEntries.push({
-          mesh: child,
-          geometry: voxelSource,
-          matrixWorld,
-          inverseWorldMatrix,
-          diffuseMap,
-          diffuseTint,
-        });
-      });
-
-      /** @type {Map<THREE.Mesh, THREE.BufferGeometry | null>} */
-      let voxelizedByMesh = new Map();
-      let voxelMaxAxis = creativeVoxelMaxAxis(preset);
-      for (let attempt = 0; attempt < 5; attempt += 1) {
-        try {
-          voxelizedByMesh = voxelizeModelMeshes(voxelEntries, {
-            preset,
-            maxAxis: voxelMaxAxis,
-            fillInterior: cfg.fillInterior,
-            maxVoxels: creativeVoxelMaxVoxels(preset, voxelMaxAxis),
-            preserveThinFeatures: this._isFontExtrudeModel() || !!this.currentModel?.userData?.orbySvgExtrude,
-            cullComponentMinVoxels: cfg.cullComponentMinVoxels,
-            smallMeshSurfaceRatio: cfg.smallMeshSurfaceRatio,
-            smallMeshBboxRatio: cfg.smallMeshBboxRatio,
-            spikeErodePasses: cfg.spikeErodePasses,
-            spikeMaxNeighbors: cfg.spikeMaxNeighbors,
-            satelliteMinGridGapVoxels: cfg.satelliteMinGridGapVoxels,
-            needleMaxAspectRatio: cfg.needleMaxAspectRatio,
-            needleMaxVoxels: cfg.needleMaxVoxels,
-          });
-        } catch (_) {
-          voxelizedByMesh = new Map();
-        }
-
-        const hasColoredVoxels = [...voxelizedByMesh.values()].some(
-          (geom) => geom?.attributes?.color?.count > 0,
-        );
-        if (hasColoredVoxels) break;
-        voxelMaxAxis = Math.max(64, Math.floor(voxelMaxAxis * 0.82));
-      }
-
-      if (![...voxelizedByMesh.values()].some((geom) => geom?.attributes?.color?.count > 0)) {
-        console.warn('[Orby] Voxel HD geometry preparation failed — smooth mesh kept.');
-      }
-
-      for (const entry of voxelEntries) {
-        const voxelized = voxelizedByMesh.get(entry.mesh);
-        if (!voxelized?.attributes?.color?.count) {
-          continue;
-        }
-        const prev = entry.mesh.geometry;
-        if (prev !== voxelized && prev !== entry.geometry) {
-          prev.dispose?.();
-        }
-        entry.mesh.geometry = voxelized;
-        entry.mesh.userData.orbyVoxelPreparedGeometry = true;
-      }
-
-      for (const { mesh, source } of bakeFailed) {
-        mesh.geometry = source;
-        mesh.userData.orbyVoxelPreparedGeometry = true;
-      }
-    } finally {
-      this.restoreStaticVoxelPose?.();
-    }
-  }
-
-  /** Restore mesh geometry after voxelization. */
-  _restoreVoxelGeometry() {
-    if (!this.currentModel) return;
-
-    this.currentModel.traverse((child) => {
-      if (!child.isMesh) return;
-      if ('orbyVoxelSkipRestoreVisible' in child.userData) {
-        child.visible = child.userData.orbyVoxelSkipRestoreVisible;
-        delete child.userData.orbyVoxelSkipRestoreVisible;
-      }
-      const orig = child.userData.orbyVoxelOriginalGeometry;
-      const current = child.geometry;
-      if (!orig) {
-        if (current && !current.attributes?.normal) {
-          current.computeVertexNormals();
-        }
-        return;
-      }
-      if (current !== orig) {
-        current?.dispose?.();
-      }
-      child.geometry = orig;
-      delete child.userData.orbyVoxelOriginalGeometry;
-      delete child.userData.orbyVoxelPreparedGeometry;
-      const baked = child.userData.orbyVoxelBakedStaticGeometry;
-      if (baked) {
-        baked.dispose?.();
-        delete child.userData.orbyVoxelBakedStaticGeometry;
-      }
-    });
   }
 
   /** Restore mesh geometry after Wire Pulse barycentric prep. */
@@ -3953,7 +3677,7 @@ export class MaterialController {
       particleCount: DUST_FIELD_PARTICLE_COUNT,
       shouldIncludeMesh: (child) => {
         if (this.isWindowMesh(child)) return false;
-        if (this._shouldSkipMeshForVoxelization(child)) return false;
+        if (this._shouldSkipMeshForGeometryFx(child)) return false;
         if (
           !this.originalMaterials.get(child) &&
           !child.userData?.orbyFontExtrude &&
@@ -3990,7 +3714,7 @@ export class MaterialController {
 
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
-      if (!this._shouldSkipMeshForVoxelization(child)) return;
+      if (!this._shouldSkipMeshForGeometryFx(child)) return;
       if (!('orbyDustFieldHiddenVisible' in child.userData)) {
         child.userData.orbyDustFieldHiddenVisible = child.visible;
       }
@@ -4237,12 +3961,6 @@ export class MaterialController {
     if (redundant) {
       this._syncCreativeLookLiveUniforms(this.creativeLookSettings);
       this.reapplyCreativeLookSurfaceShaders();
-      if (isVoxelCreativeLookPreset(nextPreset) && this._meshesNeedVoxelGeometry(nextPreset)) {
-        this._syncRetroConsoleGeometryForPreset(
-          nextPreset,
-          this.creativeLookSettings.patternScale,
-        );
-      }
       if (isDustFieldCreativeLookPreset(nextPreset) && !this._getDustFieldPoints()) {
         this._syncRetroConsoleGeometryForPreset(
           nextPreset,
@@ -4498,7 +4216,6 @@ export class MaterialController {
               tag === 'ps2-crush' ||
               tag === 'psx' ||
               tag === 'vga-dos-3d' ||
-              isVoxelCreativeLookPreset(tag) ||
               tag === 'watercolour' ||
               tag === 'gouache' ||
               tag === 'sketch' ||
@@ -4517,10 +4234,6 @@ export class MaterialController {
         const mats = Array.isArray(child.material) ? child.material : [child.material];
         for (const m of mats) {
           const tag = m?.userData?.orbyCreativeLook;
-          if (isVoxelCreativeLookPreset(tag)) {
-            if (m.uniforms?.uLightScale) m.uniforms.uLightScale.value = 1;
-            continue;
-          }
           if (
             tag !== 'toon' &&
             tag !== 'ps2-crush' &&
@@ -7078,7 +6791,6 @@ export class MaterialController {
 
   clear() {
     this._restorePs2CrushGeometry();
-    this._restoreVoxelGeometry();
     this._restoreWirePulseGeometry();
     this.mapInspectPreview?.clear();
     this._disposeStoredOriginalMaterialTextures(this.currentModel);

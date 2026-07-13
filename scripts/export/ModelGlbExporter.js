@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { GLTFExporter } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/exporters/GLTFExporter.js';
-import { isVoxelCreativeLookPreset } from '../render/CreativeLookMaterials.js';
 import { downloadBlob } from '../utils/downloadBlob.js';
 
 const sanitizeBaseName = (name) => {
@@ -68,22 +67,10 @@ const resolveDiffuseFromImportMaterial = (origMat) => {
 
 /**
  * @param {THREE.Material | THREE.Material[] | null | undefined} origMat
- * @param {'voxel' | 'retro'} family
  */
-const createShaderLabExportMaterial = (origMat, family) => {
+const createShaderLabExportMaterial = (origMat) => {
   const source = Array.isArray(origMat) ? origMat[0] : origMat;
   const side = source?.side ?? THREE.FrontSide;
-
-  if (family === 'voxel') {
-    return new THREE.MeshStandardMaterial({
-      name: source?.name ? `${source.name}-voxel` : 'voxel',
-      vertexColors: true,
-      metalness: 0,
-      roughness: 0.85,
-      side,
-    });
-  }
-
   const { map, color } = resolveDiffuseFromImportMaterial(origMat);
   return new THREE.MeshStandardMaterial({
     name: source?.name ? `${source.name}-decimated` : 'decimated',
@@ -96,13 +83,9 @@ const createShaderLabExportMaterial = (origMat, family) => {
   });
 };
 
-const prepareShaderLabExportGeometry = (geometry, family) => {
+const prepareShaderLabExportGeometry = (geometry) => {
   const geo = geometry?.clone?.();
   if (!geo) return null;
-
-  if (family === 'voxel') {
-    if (!geo.attributes?.color?.count) return null;
-  }
 
   if (!geo.attributes?.normal) {
     geo.computeVertexNormals();
@@ -173,7 +156,6 @@ const cloneSvgExportNode = (object3d) => {
  */
 const cloneShaderLabExportNode = (object3d, exportKind, getOriginalMaterial) => {
   const clone = object3d.clone(true);
-  const isVoxel = isVoxelCreativeLookPreset(exportKind.preset);
 
   const sourceMeshes = [];
   const clonedMeshes = [];
@@ -194,21 +176,12 @@ const cloneShaderLabExportNode = (object3d, exportKind, getOriginalMaterial) => 
       continue;
     }
 
-    if (isVoxel) {
-      if (
-        !sourceMesh.visible
-        || !sourceMesh.userData?.orbyVoxelPreparedGeometry
-        || !sourceMesh.geometry?.attributes?.color?.count
-      ) {
-        clonedMesh.visible = false;
-        continue;
-      }
-    } else if (!getOriginalMaterial?.(sourceMesh)) {
+    if (!getOriginalMaterial?.(sourceMesh)) {
       clonedMesh.visible = false;
       continue;
     }
 
-    const prepared = prepareShaderLabExportGeometry(sourceMesh.geometry, exportKind.family);
+    const prepared = prepareShaderLabExportGeometry(sourceMesh.geometry);
     if (!prepared) {
       clonedMesh.visible = false;
       continue;
@@ -217,7 +190,6 @@ const cloneShaderLabExportNode = (object3d, exportKind, getOriginalMaterial) => 
     clonedMesh.geometry = prepared;
     clonedMesh.material = createShaderLabExportMaterial(
       getOriginalMaterial?.(sourceMesh),
-      exportKind.family,
     );
     forceOpaqueMaterialForExport(
       Array.isArray(clonedMesh.material) ? clonedMesh.material[0] : clonedMesh.material,

@@ -20,7 +20,6 @@ import { LightIndicatorHudController } from '../render/LightIndicatorHudControll
 import { LightViewportHudActions } from './LightViewportHudActions.js';
 import { LightViewportSelectionController } from './LightViewportSelectionController.js';
 import { MaterialController } from '../render/MaterialController.js';
-import { applyStaticAnimationFrameZero } from '../render/bakeStaticSkinnedGeometry.js';
 import {
   creativeLookPresetNeedsHdriBackdrop,
   normalizeCreativeLookPreset,
@@ -600,14 +599,6 @@ export async function bootstrapStudio(scene) {
         scene._presentObjectSurfaceChange();
       },
       onCreativeLookAsciiSync: () => scene.creativeLookSceneSync?.syncAsciiPass(),
-      prepareStaticVoxelPose: () => {
-        if (!scene.currentModel) return;
-        applyStaticAnimationFrameZero(scene.currentModel, scene.animationController);
-        scene.fontTextRevealController?.snapGlyphsForVoxelization?.();
-      },
-      restoreStaticVoxelPose: () => {
-        scene.animationController?.endStaticPoseHold?.();
-      },
       onShadingChanged: (mode) => {
         scene.currentShading = mode;
         scene.diagnosticsController.setModel(scene.currentModel, mode);

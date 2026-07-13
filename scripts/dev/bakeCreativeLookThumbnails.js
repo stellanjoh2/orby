@@ -154,7 +154,6 @@ export async function bakeCreativeLookThumbnails(options = {}) {
 
       await scene.applyCreativeLookFromState(nextCreativeLook, {
         skipStateStore: true,
-        skipVoxelPolyWarning: true,
       });
       scene.materialController?.updateCreativeLookTime?.(animationSeconds);
 
