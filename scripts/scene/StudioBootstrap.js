@@ -34,6 +34,7 @@ import { BackgroundGradientController } from '../render/backgroundGradient/Backg
 import { BackgroundImageController } from '../render/backgroundImage/BackgroundImageController.js';
 import { getBackgroundMode } from '../render/backgroundMode.js';
 import { LensFlareController } from '../render/LensFlareController.js';
+import { enableN8aoScreenSpaceOverlayLayerOnCamera } from '../render/meshglN8aoBackdrop.js';
 import { GodRaysController } from '../render/GodRaysController.js';
 import { DofAutofocusController } from '../render/DofAutofocusController.js';
 import { DofFocusPlaneHelper } from '../render/DofFocusPlaneHelper.js';
@@ -414,6 +415,7 @@ export async function bootstrapStudio(scene) {
     scene.controls.target.set(0, 1, 0);
     scene.controls.update();
     scene.cameraController.emitPoseChanged();
+    enableN8aoScreenSpaceOverlayLayerOnCamera(scene.camera);
 
     scene.modelRoot = new THREE.Group();
     scene.scene.add(scene.modelRoot);

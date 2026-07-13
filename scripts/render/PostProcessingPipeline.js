@@ -101,6 +101,7 @@ export class PostProcessingPipeline {
         : () => null;
     // clearAlpha = 1 ensures the background color shows when scene.background is null
     this.renderPass.clearAlpha = 1;
+    this.renderPass.resolveAmbientOcclusionActive = () => this.n8aoPass?.enabled === true;
 
     const rw = Math.max(1, Math.floor(size.x));
     const rh = Math.max(1, Math.floor(size.y));
@@ -1777,6 +1778,16 @@ export class PostProcessingPipeline {
       AMBIENT_OCCLUSION_INTENSITY_MIN,
       AMBIENT_OCCLUSION_INTENSITY_MAX,
     );
+
+    const intensityT = THREE.MathUtils.clamp(
+      (this.n8aoPass.configuration.intensity - AMBIENT_OCCLUSION_INTENSITY_MIN) /
+        (AMBIENT_OCCLUSION_INTENSITY_MAX - AMBIENT_OCCLUSION_INTENSITY_MIN),
+      0,
+      1,
+    );
+    const glassFloor = THREE.MathUtils.lerp(0.35, 0.08, intensityT);
+    this.n8aoPass.setGlassAoFloor?.(glassFloor);
+
     this.n8aoPass.configuration.aoRadius = THREE.MathUtils.clamp(radius, 0.1, 25);
     const hex =
       typeof settings.color === 'string' && settings.color.trim().length > 0

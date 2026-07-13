@@ -6,7 +6,11 @@ import { renderSceneBeautyToTarget } from './renderSceneBeautyToTarget.js';
 import { N8aoBackdropRestoreShader } from './n8aoBackdropRestoreShader.js';
 import {
   N8AO_SKY_DEPTH_THRESHOLD,
+  getN8aoSceneLayerMaskWithoutOverlays,
+  getN8aoScreenSpaceOverlayLayerMask,
+  sceneHasN8aoDepthIgnoredMesh,
   sceneHasN8aoExcludedMesh,
+  withCameraLayerMask,
   withN8aoExcludedMeshRenderHooksPaused,
   withOnlyN8aoExcludedMeshesVisible,
 } from './meshglN8aoBackdrop.js';
@@ -121,12 +125,25 @@ export class MeshglN8AOPass extends N8AOPass {
 
   /** Geometry beauty plate for N8AO — glass stays visible so AO samples real contact depth. */
   _seedBeautyForAo(renderer) {
-    renderSceneBeautyToTarget(renderer, this.scene, this.camera, this.beautyRenderTarget, {
-      resolveBackgroundGradientController: this.resolveBackgroundGradientController,
-      resolveBackgroundController: this.resolveBackgroundController,
-      clearAlpha: 1,
-    });
-    this._enforceBeautyDepth(renderer);
+    const camera = this.camera;
+    withCameraLayerMask(
+      camera,
+      getN8aoSceneLayerMaskWithoutOverlays(camera.layers.mask),
+      () => {
+        renderSceneBeautyToTarget(renderer, this.scene, camera, this.beautyRenderTarget, {
+          resolveBackgroundGradientController: this.resolveBackgroundGradientController,
+          resolveBackgroundController: this.resolveBackgroundController,
+          clearAlpha: 1,
+        });
+        this._enforceBeautyDepth(renderer);
+      },
+    );
+  }
+
+  /** @param {number} value */
+  setGlassAoFloor(value) {
+    const u = this._restoreBackdropPass.uniforms.glassAoFloor;
+    if (u) u.value = THREE.MathUtils.clamp(value, 0, 1);
   }
 
   /**
@@ -295,6 +312,49 @@ export class MeshglN8AOPass extends N8AOPass {
     this._restoreBackdropPass.render(renderer, readBuffer, writeBuffer);
   }
 
+  /**
+   * Lens flare and other screen-space overlays are omitted from RenderPass while AO is on
+   * so the glass composite stays reflection-only. Re-draw them additively after composite.
+   *
+   * @param {import('three').WebGLRenderer} renderer
+   * @param {import('three').WebGLRenderTarget} readBuffer
+   */
+  _restoreScreenSpaceOverlays(renderer, readBuffer) {
+    if (!readBuffer || !sceneHasN8aoDepthIgnoredMesh(this.scene)) return;
+
+    const camera = this.camera;
+    const savedCameraViewport = camera?.viewport;
+    if (camera && savedCameraViewport !== undefined) {
+      camera.viewport = undefined;
+    }
+
+    const oldTarget = renderer.getRenderTarget();
+    const oldAutoClear = renderer.autoClear;
+    let savedSceneBackground = null;
+
+    try {
+      // Never redraw scene.background here — it replaces the AO composite (mesh vanishes).
+      savedSceneBackground = this.scene.background;
+      this.scene.background = null;
+      renderer.autoClear = false;
+      renderer.setRenderTarget(readBuffer);
+      resetRendererFullViewport(renderer);
+      withCameraLayerMask(camera, getN8aoScreenSpaceOverlayLayerMask(), () => {
+        renderer.render(this.scene, camera);
+      });
+    } finally {
+      if (savedSceneBackground !== null) {
+        this.scene.background = savedSceneBackground;
+      }
+      renderer.autoClear = oldAutoClear;
+      renderer.setRenderTarget(oldTarget);
+      if (camera && savedCameraViewport !== undefined) {
+        camera.viewport = savedCameraViewport;
+      }
+      resetRendererFullViewport(renderer);
+    }
+  }
+
   render(renderer, writeBuffer, readBuffer, deltaTime, maskActive) {
     if (!this.enabled) {
       return this._meshglN8aoRender.call(
@@ -329,6 +389,7 @@ export class MeshglN8AOPass extends N8AOPass {
       );
       if (backdropHold) {
         this._compositeBackdropOverAo(renderer, readBuffer, writeBuffer, backdropHold);
+        this._restoreScreenSpaceOverlays(renderer, readBuffer);
       }
     } finally {
       this.configuration.autoRenderBeauty = prevAutoRenderBeauty;

@@ -7,6 +7,7 @@ import {
   resetRendererFullViewport,
 } from './resetRendererFullViewport.js';
 import { resolveStudioBackdropForBeauty } from './renderSceneBeautyToTarget.js';
+import { getN8aoSceneLayerMaskWithoutOverlays } from './meshglN8aoBackdrop.js';
 
 /**
  * RenderPass with full-canvas viewport restore around the scene draw (including after
@@ -138,7 +139,20 @@ export class MeshglRenderPass extends RenderPass {
       }
 
       resetViewport();
-      renderer.render(this.scene, this.camera);
+      const hideScreenSpaceOverlays =
+        typeof this.resolveAmbientOcclusionActive === 'function'
+        && this.resolveAmbientOcclusionActive();
+      if (hideScreenSpaceOverlays) {
+        const savedLayerMask = camera.layers.mask;
+        camera.layers.mask = getN8aoSceneLayerMaskWithoutOverlays(savedLayerMask);
+        try {
+          renderer.render(this.scene, camera);
+        } finally {
+          camera.layers.mask = savedLayerMask;
+        }
+      } else {
+        renderer.render(this.scene, camera);
+      }
       if (!this.renderToScreen) {
         this.lastComposerColorBuffer = readBuffer;
       }

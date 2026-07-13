@@ -686,7 +686,7 @@ export class LensFlareEffect extends THREE.Mesh {
   }
 
   prepareFrame(renderer, scene, camera) {
-    if (!this.visible) return;
+    if (!this.visible || !camera) return;
     const elapsed = this.timeClock.getElapsedTime();
     const delta = this.deltaClock.getDelta();
     renderer.getCurrentViewport(this.viewport);
@@ -732,6 +732,7 @@ export class LensFlareEffect extends THREE.Mesh {
   }
 
   updateProjectedPosition(camera, scene) {
+    if (!camera) return;
     this.worldTarget.copy(this.anchorWorld);
     const distance = camera.position.distanceTo(this.worldTarget);
     this.projected.copy(this.worldTarget).project(camera);
@@ -770,6 +771,7 @@ export class LensFlareEffect extends THREE.Mesh {
     this.lastOcclusionCheck = now;
 
     this.direction.copy(this.worldTarget).sub(camera.position).normalize();
+    this.raycaster.camera = camera;
     this.raycaster.set(camera.position, this.direction);
     this.raycaster.far = distance;
     this.intersections.length = 0;
@@ -789,6 +791,7 @@ export class LensFlareEffect extends THREE.Mesh {
     const occluder = this.intersections.find(
       (hit) =>
         hit.object !== this &&
+        hit.object.isMesh === true &&
         hit.object.visible !== false &&
         hit.object.userData?.lensflare !== 'no-occlusion',
     );

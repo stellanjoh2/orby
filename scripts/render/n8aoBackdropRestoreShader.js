@@ -14,6 +14,8 @@ export const N8aoBackdropRestoreShader = {
     tGlassMask: { value: null },
     /** Raw depth below this is treated as geometry (not cleared sky). */
     skyDepthThreshold: { value: 0.9995 },
+    /** Min glass darkening factor — scales with AO intensity; never crushes to literal black. */
+    glassAoFloor: { value: 0.2 },
   },
   vertexShader: CopyShader.vertexShader,
   fragmentShader: /* glsl */ `
@@ -23,6 +25,7 @@ export const N8aoBackdropRestoreShader = {
     uniform highp sampler2D tSceneDepth;
     uniform sampler2D tGlassMask;
     uniform float skyDepthThreshold;
+    uniform float glassAoFloor;
     varying vec2 vUv;
 
     void main() {
@@ -36,10 +39,13 @@ export const N8aoBackdropRestoreShader = {
       // Mesh / podium: full N8AO plate. Sky: untouched RenderPass backdrop.
       vec3 geomMix = mix(backdrop, ao, geometry);
 
-      // Glass disc only: RenderPass reflections with N8AO darkening applied on top.
-      vec3 beautySafe = max(beauty, vec3(0.001));
-      vec3 aoFactor = clamp(ao / beautySafe, 0.0, 1.0);
-      vec3 glassColor = backdrop * aoFactor;
+      // Glass disc: darken the reflection base (beauty) but keep screen-space overlays
+      // (lens flare — in backdrop but excluded from beauty seed) at full strength.
+      float beautyLum = max(dot(beauty, vec3(0.299, 0.587, 0.114)), 0.05);
+      float aoLum = dot(ao, vec3(0.299, 0.587, 0.114));
+      float aoFactor = clamp(aoLum / beautyLum, glassAoFloor, 1.0);
+      vec3 overlay = max(backdrop - beauty, vec3(0.0));
+      vec3 glassColor = beauty * aoFactor + overlay;
 
       gl_FragColor = vec4(mix(geomMix, glassColor, glass), 1.0);
     }

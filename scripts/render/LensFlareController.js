@@ -1,5 +1,6 @@
 import { normalizeLensFlareQualityId } from '../constants.js';
 import { LensFlareEffect } from '../LensFlareEffect.js';
+import { applyN8aoScreenSpaceOverlayLayer } from './meshglN8aoBackdrop.js';
 
 export function resolveDiscGlowFromState(state = {}, defaults = {}) {
   const legacyScale = state.discGlowScale;
@@ -91,6 +92,7 @@ export class LensFlareController {
     this.scene.add(this.lensFlare);
     this.lensFlare.matrixAutoUpdate = false;
     this.lensFlare.userData.lensflare = 'no-occlusion';
+    applyN8aoScreenSpaceOverlayLayer(this.lensFlare);
     this._syncProceduralSpin();
   }
 
