@@ -98,6 +98,7 @@ export class CameraController {
 
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.enableDamping = true;
+    this.controls.dampingFactor = 0.08;
     this.controls.enablePan = true;
     this.controls.mouseButtons = {
       LEFT: THREE.MOUSE.ROTATE,
@@ -129,6 +130,12 @@ export class CameraController {
     /** When true, update() skips OrbitControls+tilt until orbit/damping moves again. */
     this._orbitSolveLocked = true;
     this._orbitInteractionActive = false;
+    /** Post-release orbit/pan damping — CameraController drives update() until deltas settle. */
+    this._orbitDampingSettling = false;
+    /** Last damped spherical/pan remainder from OrbitControls `change` (survives delta clears). */
+    this._orbitInertiaSnapshot = new THREE.Spherical();
+    this._orbitInertiaPanSnapshot = new THREE.Vector3();
+    this._orbitInertiaSnapValid = false;
 
     // Auto-orbit state
     this.autoOrbitMode = 'off'; // 'off', 'slow', 'fast'
@@ -207,6 +214,7 @@ export class CameraController {
     if (this._exportCameraDriveActive || this._previewViewportLockActive) return false;
     if (this.isWheelZoomSettling()) return true;
     if (this._orbitInteractionActive) return true;
+    if (this._orbitDampingSettling) return true;
     if (!this._orbitSolveLocked) return true;
     if (this.isFocusAnimating()) return true;
     if (this.hasViewportInteraction()) return true;
@@ -311,7 +319,12 @@ export class CameraController {
 
   _bindOrbitPoseSync() {
     if (!this.controls) return;
-    this.controls.addEventListener('start', () => {
+
+    this._onOrbitControlsStart = () => {
+      if (this._wheelZoomInteractionActive || this.isWheelZoomSettling()) {
+        this._forceCompleteWheelZoom();
+      }
+      this._orbitInertiaSnapValid = false;
       // TransformControls pointerdown runs after OrbitControls on the same canvas.
       // Defer so a gizmo grab is not treated as orbit (avoids one-frame camera drift).
       queueMicrotask(() => {
@@ -324,16 +337,108 @@ export class CameraController {
         this._orbitInteractionActive = true;
         this._unlockOrbitSolve();
       });
-    });
-    this.controls.addEventListener('end', () => {
+    };
+
+    this._onOrbitControlsEnd = () => {
+      if (this._wheelZoomInteractionActive || this.isWheelZoomSettling()) {
+        this._forceCompleteWheelZoom();
+      }
+
+      this._beginOrbitDampingSettleFromSnapshot();
+      const shouldSettle = this._orbitDampingSettling;
+
       queueMicrotask(() => {
         if (this._getIsGizmoDragging()) return;
         this._orbitInteractionActive = false;
+        if (shouldSettle) {
+          this._unlockOrbitSolve();
+          this._wakeRender();
+        }
         if (this._suppressPoseEvents || this._exportCameraDriveActive) return;
         if (this.autoOrbitMode !== 'off') return;
         this._emitPoseChanged({ persist: true });
       });
-    });
+    };
+
+    this._onOrbitControlsChange = () => {
+      if (this._exportCameraDriveActive || this._wheelZoomInteractionActive) return;
+
+      const state = this.controls.state;
+      const pointerActive = typeof state === 'number' && state !== -1;
+      if (
+        !pointerActive
+        && !this._orbitDampingSettling
+        && !this._orbitInteractionActive
+      ) {
+        return;
+      }
+
+      this._snapshotOrbitInertiaFromControls();
+    };
+
+    this.controls.addEventListener('start', this._onOrbitControlsStart);
+    this.controls.addEventListener('end', this._onOrbitControlsEnd);
+    this.controls.addEventListener('change', this._onOrbitControlsChange);
+  }
+
+  _unbindOrbitPoseSync() {
+    if (!this.controls || !this._onOrbitControlsStart) return;
+    this.controls.removeEventListener('start', this._onOrbitControlsStart);
+    this.controls.removeEventListener('end', this._onOrbitControlsEnd);
+    this.controls.removeEventListener('change', this._onOrbitControlsChange);
+    this._onOrbitControlsStart = null;
+    this._onOrbitControlsEnd = null;
+    this._onOrbitControlsChange = null;
+  }
+
+  _snapshotOrbitInertiaFromControls() {
+    const sd = this.controls?.sphericalDelta;
+    if (sd) {
+      this._orbitInertiaSnapshot.set(sd.theta, sd.phi, sd.radius);
+    }
+    const po = this.controls?.panOffset;
+    if (po) {
+      this._orbitInertiaPanSnapshot.copy(po);
+    }
+    this._orbitInertiaSnapValid = true;
+  }
+
+  _hasOrbitInertiaSnapshot() {
+    if (!this._orbitInertiaSnapValid) return false;
+    const s = this._orbitInertiaSnapshot;
+    return (
+      Math.abs(s.theta) > 1e-6
+      || Math.abs(s.phi) > 1e-6
+      || Math.abs(s.radius) > 1e-6
+      || this._orbitInertiaPanSnapshot.lengthSq() > 1e-12
+    );
+  }
+
+  _restoreOrbitInertiaFromSnapshot() {
+    if (!this._hasOrbitInertiaSnapshot()) return false;
+    if (this.controls.sphericalDelta) {
+      this.controls.sphericalDelta.set(
+        this._orbitInertiaSnapshot.theta,
+        this._orbitInertiaSnapshot.phi,
+        this._orbitInertiaSnapshot.radius,
+      );
+    }
+    if (this.controls.panOffset) {
+      this.controls.panOffset.copy(this._orbitInertiaPanSnapshot);
+    }
+    return true;
+  }
+
+  /** Sync on pointer end — restore damped remainder if OrbitControls already cleared it. */
+  _beginOrbitDampingSettleFromSnapshot() {
+    if (!orbitControlsNeedFrame(this.controls)) {
+      this._restoreOrbitInertiaFromSnapshot();
+    }
+    if (!orbitControlsNeedFrame(this.controls)) return;
+
+    this._orbitDampingSettling = true;
+    this._unlockOrbitSolve();
+    this._wakeRender();
   }
 
   _getIsGizmoDragging() {
@@ -347,13 +452,54 @@ export class CameraController {
     this._lockOrbitSolve();
   }
 
-  _clearOrbitControlDeltas() {
+  _zeroOrbitControlDeltas() {
     if (this.controls?.sphericalDelta) {
       this.controls.sphericalDelta.set(0, 0, 0);
     }
     if (this.controls?.panOffset) {
       this.controls.panOffset.set(0, 0, 0);
     }
+  }
+
+  _clearOrbitControlDeltas() {
+    this._zeroOrbitControlDeltas();
+    this._orbitInertiaSnapValid = false;
+    this._orbitDampingSettling = false;
+  }
+
+  /** Reconcile OrbitControls with the current camera pose after manual wheel dolly. */
+  _syncOrbitControlsFromCamera() {
+    this._zeroOrbitControlDeltas();
+    this._updateOrbitControls();
+    if (!this._isometricModeActive) {
+      this._applyTilt();
+    }
+  }
+
+  /** Finish wheel zoom immediately so the next pointer orbit starts from a synced state. */
+  _forceCompleteWheelZoom() {
+    const pending = this._wheelZoomPendingScale;
+    const target = this.controls?.target;
+    if (
+      target
+      && Math.abs(pending - 1) > WHEEL_ZOOM_PENDING_EPS
+    ) {
+      this._orbitOffset.subVectors(this.camera.position, target);
+      this._orbitSpherical.setFromVector3(this._orbitOffset);
+      const minDist = this.controls.minDistance ?? 0;
+      const maxDist = this.controls.maxDistance ?? Infinity;
+      this._orbitSpherical.radius = THREE.MathUtils.clamp(
+        this._orbitSpherical.radius * pending,
+        minDist,
+        maxDist,
+      );
+      this._orbitOffset.setFromSpherical(this._orbitSpherical);
+      this.camera.position.copy(target).add(this._orbitOffset);
+    }
+
+    this._wheelZoomPendingScale = 1;
+    this._wheelZoomInteractionActive = false;
+    this._syncOrbitControlsFromCamera();
   }
 
   _unlockOrbitSolve() {
@@ -366,7 +512,17 @@ export class CameraController {
 
   /** Run OrbitControls.update + optional tilt; returns whether controls reported motion. */
   _runOrbitSolveAndTilt() {
+    if (
+      this._orbitDampingSettling
+      && this._orbitInertiaSnapValid
+      && !orbitControlsNeedFrame(this.controls)
+    ) {
+      this._restoreOrbitInertiaFromSnapshot();
+    }
     const changed = this._updateOrbitControls();
+    if (this._orbitDampingSettling) {
+      this._snapshotOrbitInertiaFromControls();
+    }
     if (!this._isometricModeActive) {
       this._applyTilt();
     }
@@ -375,6 +531,7 @@ export class CameraController {
 
   _shouldRunOrbitSolve() {
     if (this._getIsGizmoDragging()) return false;
+    if (this._orbitDampingSettling) return true;
     if (!this._orbitSolveLocked) return true;
     if (this._orbitInteractionActive) return true;
     if (this.isFocusAnimating()) return true;
@@ -1186,7 +1343,8 @@ export class CameraController {
         this._unlockOrbitSolve();
       }
 
-      const runOrbitSolve = this._shouldRunOrbitSolve();
+      // Wheel dolly moves radius directly — do not run OrbitControls rotation damping in parallel.
+      const runOrbitSolve = zoomSettling ? false : this._shouldRunOrbitSolve();
       if (!runOrbitSolve && !zoomSettling) {
         if (this._wheelZoomInteractionActive) {
           this._finalizeWheelZoomInteraction();
@@ -1196,7 +1354,16 @@ export class CameraController {
 
       let changed = false;
       if (runOrbitSolve) {
-        changed = this._runOrbitSolveAndTilt();
+        if (this._orbitInteractionActive && !this._orbitDampingSettling) {
+          // OrbitControls.update() runs on each pointermove — only re-apply tilt here so
+          // rAF does not reset camera.up and double-consume damping (especially after zoom).
+          if (!this._isometricModeActive) {
+            this._applyTilt();
+          }
+          changed = true;
+        } else {
+          changed = this._runOrbitSolveAndTilt();
+        }
       }
 
       if (zoomSettling) {
@@ -1216,8 +1383,12 @@ export class CameraController {
         !this.isFocusAnimating() &&
         !this.hasViewportInteraction()
       ) {
+        if (this._orbitDampingSettling && !orbitControlsNeedFrame(this.controls)) {
+          this._orbitDampingSettling = false;
+        }
         // Lock only when per-frame motion and damping deltas have both settled.
-        const dampingSettled = !orbitControlsNeedFrame(this.controls);
+        const dampingSettled =
+          !this._orbitDampingSettling && !orbitControlsNeedFrame(this.controls);
         if (!changed && dampingSettled) {
           this._clearOrbitControlDeltas();
           this._orbitSolveLocked = true;
@@ -1450,6 +1621,7 @@ export class CameraController {
     this._isometricPanUnlocked = false;
     this._isometricRestoreSnapshot = null;
     this._unbindWheelZoomSmoothing();
+    this._unbindOrbitPoseSync();
     this.controls.dispose();
     this._unbindAltInteractions();
   }
@@ -1467,6 +1639,10 @@ export class CameraController {
         return;
       }
       if (this._getIsGizmoDragging()) return;
+
+      const orbitPointerActive =
+        typeof controls.state === 'number' && controls.state !== -1;
+      if (orbitPointerActive || this._orbitDampingSettling) return;
 
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -1531,14 +1707,13 @@ export class CameraController {
   _beginWheelZoomInteraction() {
     if (this._wheelZoomInteractionActive) return;
     this._wheelZoomInteractionActive = true;
-    this.controls.dispatchEvent({ type: 'start' });
+    this._clearOrbitControlDeltas();
     queueMicrotask(() => {
       if (this._getIsGizmoDragging()) {
         this._wheelZoomInteractionActive = false;
         this._wheelZoomPendingScale = 1;
         return;
       }
-      this._orbitInteractionActive = true;
       this._unlockOrbitSolve();
     });
   }
@@ -1547,12 +1722,10 @@ export class CameraController {
     if (!this._wheelZoomInteractionActive) return;
     this._wheelZoomInteractionActive = false;
     this._wheelZoomPendingScale = 1;
-    this._applyTilt();
+    this._syncOrbitControlsFromCamera();
     this._lockOrbitSolve();
-    this.controls.dispatchEvent({ type: 'end' });
     queueMicrotask(() => {
       if (this._getIsGizmoDragging()) return;
-      this._orbitInteractionActive = false;
       if (this._suppressPoseEvents || this._exportCameraDriveActive) return;
       if (this.autoOrbitMode !== 'off') return;
       this._emitPoseChanged({ persist: true });
@@ -1597,7 +1770,6 @@ export class CameraController {
 
     this._orbitOffset.setFromSpherical(this._orbitSpherical);
     this.camera.position.copy(target).add(this._orbitOffset);
-    this._updateOrbitControls();
     return true;
   }
 

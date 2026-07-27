@@ -1,5 +1,10 @@
-import { resolveViewportGridLineWidthPx } from '../../constants.js';
+import { resolveViewportGridLineWidthPx, resolveViewportWireframeLineWidthPx, DEFAULT_WIREFRAME_LINE_WIDTH } from '../../constants.js';
 import { renderGroundGridOverlay } from '../transformGizmoLayers.js';
+import {
+  renderWireframeOverlay,
+  shouldOverlayWireframeMeshes,
+  wireframeMeshesWantDepthTest,
+} from '../wireframeOverlayPass.js';
 
 /**
  * Screen-space grid linewidth for capture readback. Matches GroundController._syncGridLineMaterial
@@ -45,6 +50,52 @@ export function shouldCompositeGroundGridForCapture(deps) {
 /** @deprecated Use {@link shouldCompositeGroundGridForCapture} */
 export function shouldCompositeAsciiGroundGridForCapture(deps) {
   return shouldCompositeGroundGridForCapture(deps);
+}
+
+/**
+ * Export readback composites wireframe after the post stack (same as the live viewport overlay).
+ * @param {{
+ *   getWireframeOverlayMeshes?: () => import('three').Mesh[] | null | undefined,
+ * }} deps
+ */
+export function shouldCompositeWireframeForCapture(deps) {
+  return shouldOverlayWireframeMeshes(deps.getWireframeOverlayMeshes?.());
+}
+
+/**
+ * Byte readback RT needs a depth buffer when grid or visible-faces wireframe will depth-test.
+ * @param {{
+ *   getGroundGrid?: () => import('three').Object3D | null | undefined,
+ *   getWireframeOverlayMeshes?: () => import('three').Mesh[] | null | undefined,
+ * }} deps
+ */
+export function captureByteTargetNeedsDepthBuffer(deps) {
+  if (shouldCompositeGroundGridForCapture(deps)) return true;
+  return wireframeMeshesWantDepthTest(deps.getWireframeOverlayMeshes?.());
+}
+
+/**
+ * Screen-space wireframe linewidth for capture readback — matches grid DPR + export scaling.
+ * @param {number} thickness — studio slider (0.5–2.5)
+ * @param {number} [exportScale=1] — export UI size multiplier (1 or 2)
+ * @param {number} [studioPixelRatio=1] — render quality tier DPR (Ultra = 2)
+ * @param {number} [previewPixelRatio=1] — interactive viewport DPR before export resize
+ * @param {number} [displayPixelRatio=previewPixelRatio] — window.devicePixelRatio
+ */
+export function resolveCaptureWireframeLineWidthPx(
+  thickness,
+  exportScale = 1,
+  studioPixelRatio = 1,
+  previewPixelRatio = 1,
+  displayPixelRatio = previewPixelRatio,
+) {
+  return resolveCaptureGridLineWidthPx(
+    thickness,
+    exportScale,
+    studioPixelRatio,
+    previewPixelRatio,
+    displayPixelRatio,
+  );
 }
 
 /**
@@ -130,6 +181,98 @@ export function compositeAsciiGroundGridOnByteTarget(deps, byteTarget) {
       if (prev.opacity !== undefined) mat.opacity = prev.opacity;
       if (prev.transparent !== undefined) mat.transparent = prev.transparent;
       if (prev.depthWrite !== undefined) mat.depthWrite = prev.depthWrite;
+      mat.needsUpdate = true;
+    }
+  }
+}
+
+/**
+ * Draw wireframe overlays on the byte readback RT (after composer copyPass).
+ *
+ * @param {{
+ *   renderer: import('three').WebGLRenderer,
+ *   camera: import('three').Camera,
+ *   scene?: import('three').Scene | null,
+ *   getWireframeOverlayMeshes?: () => import('three').Mesh[] | null | undefined,
+ *   getWireframeThickness?: () => number,
+ *   getExportViewportReference?: () => {
+ *     logicalWidth: number,
+ *     logicalHeight: number,
+ *     backingWidth: number,
+ *     backingHeight: number,
+ *     previewDensity: number,
+ *   } | null,
+ *   getStudioPixelRatio?: () => number,
+ *   getPreviewPixelRatio?: () => number,
+ *   getDisplayPixelRatio?: () => number,
+ *   exportScale?: number,
+ * }} deps
+ * @param {import('three').WebGLRenderTarget} byteTarget
+ */
+export function compositeWireframeOnByteTarget(deps, byteTarget) {
+  const wireframeMeshes = deps.getWireframeOverlayMeshes?.() ?? [];
+  if (!shouldOverlayWireframeMeshes(wireframeMeshes) || !byteTarget) return;
+
+  const previewDpr = deps.getPreviewPixelRatio?.() ?? 1;
+  const displayDpr = deps.getDisplayPixelRatio?.() ?? previewDpr;
+  const studioDpr = deps.getStudioPixelRatio?.() ?? previewDpr;
+  const exportRef = deps.getExportViewportReference?.() ?? null;
+  const refPreviewDpr = exportRef?.previewDensity ?? previewDpr;
+  const studioLinePx = resolveViewportWireframeLineWidthPx(
+    deps.getWireframeThickness?.() ?? DEFAULT_WIREFRAME_LINE_WIDTH,
+    refPreviewDpr,
+    displayDpr,
+    studioDpr,
+  );
+  const studioBackingW = exportRef?.backingWidth ?? byteTarget.width;
+  const lineWidthPx = Math.min(
+    5,
+    Math.max(0.5, studioLinePx * (byteTarget.width / Math.max(1, studioBackingW))),
+  );
+
+  /** @type {import('three').Material[]} */
+  const uniqueMaterials = [];
+  const seenMaterials = new Set();
+  for (const mesh of wireframeMeshes) {
+    if (!mesh?.visible) continue;
+    const meshMats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const mat of meshMats) {
+      if (!mat || seenMaterials.has(mat)) continue;
+      seenMaterials.add(mat);
+      uniqueMaterials.push(mat);
+    }
+  }
+
+  const prevState = uniqueMaterials.map((mat) => ({
+    linewidth: mat.linewidth,
+    resolution: mat.resolution?.clone?.(),
+  }));
+
+  for (const mat of uniqueMaterials) {
+    if (mat.resolution) {
+      mat.resolution.set(byteTarget.width, byteTarget.height);
+    }
+    if (mat.linewidth !== undefined) {
+      mat.linewidth = lineWidthPx;
+    }
+    mat.needsUpdate = true;
+  }
+
+  try {
+    renderWireframeOverlay({
+      renderer: deps.renderer,
+      camera: deps.camera,
+      scene: deps.scene ?? null,
+      wireframeMeshes,
+      renderTarget: byteTarget,
+    });
+  } finally {
+    for (let i = 0; i < uniqueMaterials.length; i += 1) {
+      const mat = uniqueMaterials[i];
+      const prev = prevState[i];
+      if (!mat || !prev) continue;
+      if (prev.linewidth !== undefined) mat.linewidth = prev.linewidth;
+      if (prev.resolution && mat.resolution) mat.resolution.copy(prev.resolution);
       mat.needsUpdate = true;
     }
   }

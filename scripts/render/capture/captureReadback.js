@@ -6,8 +6,11 @@ import { LOG_CAPTURE_DEBUG } from '../../constants.js';
 import { ensureExportCapturePixelRatio } from './forceExportCaptureFramebuffer.js';
 import { pinRenderTargetPhysicalViewport } from '../resetRendererFullViewport.js';
 import {
+  captureByteTargetNeedsDepthBuffer,
   compositeAsciiGroundGridOnByteTarget,
+  compositeWireframeOnByteTarget,
   shouldCompositeGroundGridForCapture,
+  shouldCompositeWireframeForCapture,
 } from './capturePostStackOverlays.js';
 
 /**
@@ -114,6 +117,8 @@ export function resampleRgba(src, srcW, srcH, dstW, dstH) {
  *   camera?: import('three').Camera,
  *   scene?: import('three').Scene | null,
  *   getGroundGrid?: () => import('three').Object3D | null | undefined,
+ *   getWireframeOverlayMeshes?: () => import('three').Mesh[] | null | undefined,
+ *   getWireframeThickness?: () => number,
  *   getCreativeLookAsciiActive?: () => boolean,
  *   getGridLineWidth?: () => number,
  *   exportScale?: number,
@@ -134,14 +139,19 @@ function readComposerPixelsOnce(deps, requestedW, requestedH) {
     deps.camera
     && deps.scene
     && shouldCompositeGroundGridForCapture(deps);
+  const compositeWireframe =
+    deps.camera
+    && deps.scene
+    && shouldCompositeWireframeForCapture(deps);
+  const needsDepthBuffer = captureByteTargetNeedsDepthBuffer(deps);
 
   const byteRT = new THREE.WebGLRenderTarget(readW, readH, {
     type: THREE.UnsignedByteType,
     format: THREE.RGBAFormat,
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
-    // Depth needed so grid overlay can depth-test against scene meshes (live viewport parity).
-    depthBuffer: compositeGrid,
+    // Depth needed so grid / visible-faces wireframe can depth-test against scene meshes.
+    depthBuffer: needsDepthBuffer,
     stencilBuffer: false,
   });
 
@@ -149,6 +159,9 @@ function readComposerPixelsOnce(deps, requestedW, requestedH) {
     composer.copyPass.render(renderer, byteRT, outputRT, 0, false);
     if (compositeGrid) {
       compositeAsciiGroundGridOnByteTarget(deps, byteRT);
+    }
+    if (compositeWireframe) {
+      compositeWireframeOnByteTarget(deps, byteRT);
     }
     const pixels = new Uint8Array(readW * readH * 4);
     renderer.readRenderTargetPixels(byteRT, 0, 0, readW, readH, pixels);
@@ -203,6 +216,8 @@ export function captureDrawingBufferReadback(deps, opts) {
  *   camera?: import('three').Camera,
  *   scene?: import('three').Scene | null,
  *   getGroundGrid?: () => import('three').Object3D | null | undefined,
+ *   getWireframeOverlayMeshes?: () => import('three').Mesh[] | null | undefined,
+ *   getWireframeThickness?: () => number,
  *   getCreativeLookAsciiActive?: () => boolean,
  *   getGridLineWidth?: () => number,
  *   exportScale?: number,

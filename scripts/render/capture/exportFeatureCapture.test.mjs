@@ -19,6 +19,7 @@ import {
 import {
   compositeAsciiGroundGridOnByteTarget,
   resolveCaptureGridLineWidthPx,
+  resolveCaptureWireframeLineWidthPx,
   shouldCompositeGroundGridForCapture,
 } from './capturePostStackOverlays.js';
 
@@ -46,6 +47,36 @@ describe('artistic paper backdrop keying', () => {
     ]);
     keyArtisticPaperBackdropToAlpha(pixels, 1, 1);
     assert.ok(pixels[3] > 0 && pixels[3] < 255, `expected partial alpha, got ${pixels[3]}`);
+  });
+});
+
+describe('wireframe capture composite', () => {
+  it('resolveCaptureWireframeLineWidthPx scales with export size', () => {
+    assert.equal(resolveCaptureWireframeLineWidthPx(1, 1), 1);
+    assert.equal(resolveCaptureWireframeLineWidthPx(2, 1), 2);
+    assert.equal(resolveCaptureWireframeLineWidthPx(2, 2), 4);
+    assert.equal(resolveCaptureWireframeLineWidthPx(2.25, 1, 2, 2, 2), 4.5);
+  });
+
+  it('resolveCaptureWireframeLineWidthPx matches viewport DPR rules at Ultra', () => {
+    assert.equal(resolveCaptureWireframeLineWidthPx(1, 1, 2, 2, 2), 2);
+    assert.equal(resolveCaptureWireframeLineWidthPx(0.75, 1, 2, 2, 2), 1.5);
+  });
+
+  it('backing-store scale doubles linewidth for 2× export buffers', () => {
+    const thickness = 0.75;
+    const studioLinePx = 1.5;
+    const studioBackingW = 1920;
+    const byteTargetW = 3840;
+    const lineWidthPx = Math.min(
+      5,
+      Math.max(0.5, studioLinePx * (byteTargetW / studioBackingW)),
+    );
+    assert.equal(lineWidthPx, 3);
+    assert.equal(
+      lineWidthPx,
+      resolveCaptureWireframeLineWidthPx(thickness, 2, 2, 2, 2),
+    );
   });
 });
 

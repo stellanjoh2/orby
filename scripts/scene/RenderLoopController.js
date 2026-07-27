@@ -294,6 +294,7 @@ export class RenderLoopController {
     const controls = this.scene.cameraController?.getControls?.();
     this._bindWakeListener(controls, 'start', wake);
     this._bindWakeListener(controls, 'change', wake);
+    this._bindWakeListener(controls, 'end', wake);
 
     for (const transformControl of [
       this.scene.transformControlsTranslate,

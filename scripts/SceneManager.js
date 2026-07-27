@@ -4208,6 +4208,13 @@ export class SceneManager {
     const viewportFbHeight = Math.max(1, logical.y * previewDensity);
     const dustCaptureScale = captureSize.height / viewportFbHeight;
     this.materialController?.setDustFieldCaptureScale?.(dustCaptureScale);
+    this.imageExporter.setExportViewportReference?.({
+      logicalWidth: logical.x,
+      logicalHeight: logical.y,
+      backingWidth: logical.x * previewDensity,
+      backingHeight: logical.y * previewDensity,
+      previewDensity,
+    });
 
     try {
       if (transparent) {
@@ -4257,6 +4264,7 @@ export class SceneManager {
       }
     } finally {
       this.materialController?.setDustFieldCaptureScale?.(1);
+      this.imageExporter.setExportViewportReference?.(null);
       this.ui?.endLoadSpinner?.();
       this._suppressResizeForExport = false;
       this.handleResize();

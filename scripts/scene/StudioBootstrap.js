@@ -558,6 +558,15 @@ export async function bootstrapStudio(scene) {
     scene.materialController = new MaterialController({
       stateStore: scene.stateStore,
       modelRoot: scene.modelRoot,
+      getWireframeViewportSync: () => {
+        const size = new THREE.Vector2();
+        scene.renderer?.getSize(size);
+        return {
+          width: size.x,
+          height: size.y,
+          pixelRatio: scene.renderer?.getPixelRatio?.() ?? 1,
+        };
+      },
       getCreativeLookKeyLightDir: (out) => scene._getCreativeLookKeyLightDir(out),
       getCreativeLookToonLightScalars: () =>
         scene._getCreativeLookToonLightScalars(),

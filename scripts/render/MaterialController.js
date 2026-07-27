@@ -164,7 +164,8 @@ import {
   WIREFRAME_POLYGON_OFFSET_UNITS,
   DEFAULT_WIREFRAME_LINE_WIDTH,
   DEFAULT_WIREFRAME_OPACITY,
-  wireframeLineWidthToPixels,
+  resolveRenderQualityTier,
+  resolveViewportWireframeLineWidthPx,
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
@@ -334,6 +335,8 @@ export class MaterialController {
     onNeedsTransmissionBackdrop = null,
     /** Called when ASCII Art live uniforms change — sync screen-space glyph pass. */
     onCreativeLookAsciiSync = null,
+    /** Studio canvas logical size + DPR for Line2 resolution / linewidth (not `window` dimensions). */
+    getWireframeViewportSync = null,
   }) {
     this.stateStore = stateStore;
     this.modelRoot = modelRoot;
@@ -346,6 +349,7 @@ export class MaterialController {
     this.onObjectSurfacePresentationRefresh = onObjectSurfacePresentationRefresh;
     this.onNeedsTransmissionBackdrop = onNeedsTransmissionBackdrop;
     this.onCreativeLookAsciiSync = onCreativeLookAsciiSync;
+    this.getWireframeViewportSync = getWireframeViewportSync;
 
     this.currentModel = null;
     this.currentShading = null;
@@ -4978,6 +4982,29 @@ export class MaterialController {
     this.wireframeOverlayMeshes = null;
   }
 
+  _getWireframeViewportContext() {
+    const sync = this.getWireframeViewportSync?.();
+    if (sync?.width > 0 && sync?.height > 0) {
+      return {
+        width: sync.width,
+        height: sync.height,
+        pixelRatio: Math.max(1e-6, sync.pixelRatio ?? 1),
+      };
+    }
+    return {
+      width: 0,
+      height: 0,
+      pixelRatio: Math.max(1e-6, window.devicePixelRatio || 1),
+    };
+  }
+
+  _syncWireframeOverlayScreenSpace() {
+    const { width, height, pixelRatio } = this._getWireframeViewportContext();
+    if (width > 0 && height > 0) {
+      this.syncWireframeLineResolution(width, height, pixelRatio);
+    }
+  }
+
   _resolveWireframeLineResolution(width, height, pixelRatio = 1) {
     const w = width > 0 ? width : window.innerWidth;
     const h = height > 0 ? height : window.innerHeight;
@@ -4994,8 +5021,40 @@ export class MaterialController {
     this._wireframeLineMaterial.resolution.set(res.x, res.y);
   }
 
+  _resolveWireframeLineWidthPx(thickness, pixelRatio) {
+    const rDpr = Math.max(1e-6, pixelRatio ?? window.devicePixelRatio ?? 1);
+    const dDpr = Math.max(rDpr, window.devicePixelRatio ?? rDpr);
+    const studioDpr = Math.max(
+      rDpr,
+      resolveRenderQualityTier(this.stateStore?.getState?.()?.renderQuality).maxPixelRatio,
+    );
+    return resolveViewportWireframeLineWidthPx(
+      thickness ?? DEFAULT_WIREFRAME_LINE_WIDTH,
+      rDpr,
+      dDpr,
+      studioDpr,
+    );
+  }
+
+  _applyWireframeLineWidthPx(pixelRatio = 1) {
+    const linePx = this._resolveWireframeLineWidthPx(
+      this.wireframeSettings?.thickness,
+      pixelRatio,
+    );
+    if (this._wireframeLineMaterial) {
+      this._wireframeLineMaterial.linewidth = linePx;
+    }
+    for (const wireMesh of this.wireframeOverlayMeshes ?? []) {
+      const mats = Array.isArray(wireMesh.material) ? wireMesh.material : [wireMesh.material];
+      for (const mat of mats) {
+        if (mat?.linewidth !== undefined) mat.linewidth = linePx;
+      }
+    }
+  }
+
   syncWireframeLineResolution(width, height, pixelRatio = 1) {
     this._syncWireframeLineMaterialResolution(width, height, pixelRatio);
+    this._applyWireframeLineWidthPx(pixelRatio);
   }
 
   _resolveWireframeSurfaceOffsetForGeometry(sourceGeometry) {
@@ -5104,7 +5163,7 @@ export class MaterialController {
   }) {
     const material = new LineMaterial({
       color: new THREE.Color(color).getHex(),
-      linewidth: wireframeLineWidthToPixels(thickness),
+      linewidth: this._resolveWireframeLineWidthPx(thickness, pixelRatio),
       depthTest: onlyVisibleFaces,
       depthWrite: false,
       transparent: opacity < 1 || !onlyVisibleFaces,
@@ -5122,7 +5181,7 @@ export class MaterialController {
     return material;
   }
 
-  _createWireframeBasicMaterial({ color, onlyVisibleFaces, thickness, opacity, skinning = true, morphTargets = true }) {
+  _createWireframeBasicMaterial({ color, onlyVisibleFaces, thickness, opacity, skinning = true, morphTargets = true, pixelRatio = 1 }) {
     const material = new THREE.MeshBasicMaterial({
       color: new THREE.Color(color),
       wireframe: true,
@@ -5133,7 +5192,7 @@ export class MaterialController {
       transparent: opacity < 1 || !onlyVisibleFaces,
       opacity,
     });
-    material.linewidth = wireframeLineWidthToPixels(thickness);
+    material.linewidth = this._resolveWireframeLineWidthPx(thickness, pixelRatio);
     if (onlyVisibleFaces) {
       material.polygonOffset = true;
       material.polygonOffsetFactor = WIREFRAME_POLYGON_OFFSET_FACTOR;
@@ -5176,14 +5235,15 @@ export class MaterialController {
         thickness = DEFAULT_WIREFRAME_LINE_WIDTH,
         opacity = DEFAULT_WIREFRAME_OPACITY,
       } = this.wireframeSettings;
+      const viewport = this._getWireframeViewportContext();
       this._wireframeLineMaterial = this._createWireframeLineMaterial({
         color,
         onlyVisibleFaces,
         thickness,
         opacity,
-        width: 0,
-        height: 0,
-        pixelRatio: window.devicePixelRatio || 1,
+        width: viewport.width,
+        height: viewport.height,
+        pixelRatio: viewport.pixelRatio,
       });
 
       // Create wireframe meshes that follow the model.
@@ -5218,6 +5278,7 @@ export class MaterialController {
             opacity,
             skinning: skinned,
             morphTargets: morph,
+            pixelRatio: viewport.pixelRatio,
           });
 
           if (skinned) {
@@ -5268,6 +5329,7 @@ export class MaterialController {
         }
         this.wireframeOverlayMeshes.push(wireMesh);
       });
+      this._syncWireframeOverlayScreenSpace();
     }
   }
 

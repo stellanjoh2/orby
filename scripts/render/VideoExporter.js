@@ -1059,6 +1059,13 @@ export class VideoExporter {
     // stable by scaling for the export vs viewport framebuffer height (see MaterialController setter).
     const viewportFbHeight = Math.max(1, previousSize.y * previousPixelRatio);
     this.setDustFieldCaptureScale?.(synced.height / viewportFbHeight);
+    this.imageExporter?.setExportViewportReference?.({
+      logicalWidth: previousSize.x,
+      logicalHeight: previousSize.y,
+      backingWidth: previousSize.x * previousPixelRatio,
+      backingHeight: previousSize.y * previousPixelRatio,
+      previewDensity: previousPixelRatio,
+    });
 
     return {
       previousSize,
@@ -1072,6 +1079,7 @@ export class VideoExporter {
   _restoreVideoExportSize(snapshot) {
     if (!snapshot) return;
     this.setDustFieldCaptureScale?.(1);
+    this.imageExporter?.setExportViewportReference?.(null);
     coerceRendererLogicalSize(
       this.renderer,
       snapshot.previousSize.x,

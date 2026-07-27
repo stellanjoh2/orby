@@ -117,6 +117,31 @@ export class ImageExporter {
     this.reapplyStudioAfterCapture = null;
     /** @type {(() => number) | null} */
     this.getHdriRotationDegrees = null;
+    /**
+     * Pre-export studio viewport reference — capture composites scale wireframe linewidth
+     * against this backing store (Ultra DPR) while GL is pinned to DPR 1.
+     * @type {{
+     *   logicalWidth: number,
+     *   logicalHeight: number,
+     *   backingWidth: number,
+     *   backingHeight: number,
+     *   previewDensity: number,
+     * } | null}
+     */
+    this._exportViewportReference = null;
+  }
+
+  /**
+   * @param {{
+   *   logicalWidth: number,
+   *   logicalHeight: number,
+   *   backingWidth: number,
+   *   backingHeight: number,
+   *   previewDensity: number,
+   * } | null} reference
+   */
+  setExportViewportReference(reference) {
+    this._exportViewportReference = reference;
   }
 
   /**
@@ -619,6 +644,13 @@ export class ImageExporter {
         camera: this.camera,
         scene: this.scene,
         getGroundGrid: () => this.composerLifecycle?.getGroundGrid?.(),
+        getWireframeOverlayMeshes: () =>
+          this.composerLifecycle?.getWireframeOverlayMeshes?.(),
+        getWireframeThickness: () => {
+          const thickness = this.getRenderState?.()?.wireframe?.thickness;
+          return Number.isFinite(thickness) ? thickness : undefined;
+        },
+        getExportViewportReference: () => this._exportViewportReference,
         getCreativeLookAsciiActive: () =>
           this.composerLifecycle?.getCreativeLookAsciiActive?.(),
         getGridLineWidth: () => {

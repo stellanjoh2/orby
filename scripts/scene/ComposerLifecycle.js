@@ -406,9 +406,12 @@ export class ComposerLifecycle {
 
   /** Wireframe on top of post stack — crisp helper lines, not AO / bloom / DoF / grading. */
   _renderWireframeOverlay() {
+    // Offline capture composites wireframe on the byte readback RT (captureReadback.js).
+    if (this.composer?.renderToScreen === false) return;
     renderWireframeOverlay({
       renderer: this.renderer,
       camera: this.camera,
+      scene: this.scene,
       wireframeMeshes: this.getWireframeOverlayMeshes?.() ?? [],
     });
   }

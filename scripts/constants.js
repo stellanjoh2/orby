@@ -107,6 +107,29 @@ export function wireframeLineWidthToPixels(width) {
   return clampWireframeLineWidth(width);
 }
 
+/**
+ * Wireframe linewidth in framebuffer pixels. Weight tracks render-quality tier DPR (Ultra = 2×)
+ * even when export capture runs at DPR 1. When the buffer upscales to the display (Medium/Low on
+ * HiDPI), enforces a minimum width so LineMaterial edge falloff survives the browser scale-up.
+ * @param {number} wireframeLineWidth — studio slider (0.5–2.5)
+ * @param {number} [rendererPixelRatio=1]
+ * @param {number} [displayPixelRatio=rendererPixelRatio]
+ * @param {number} [studioPixelRatio=rendererPixelRatio]
+ */
+export function resolveViewportWireframeLineWidthPx(
+  wireframeLineWidth,
+  rendererPixelRatio = 1,
+  displayPixelRatio = rendererPixelRatio,
+  studioPixelRatio = rendererPixelRatio,
+) {
+  return resolveViewportGridLineWidthPx(
+    wireframeLineWidth,
+    rendererPixelRatio,
+    displayPixelRatio,
+    studioPixelRatio,
+  );
+}
+
 /** Default ground grid thickness slider value (maps to CSS-pixel weight via LineMaterial). */
 export const DEFAULT_GRID_LINE_WIDTH = 1;
 /** Default ground grid line color — sRGB 100,100,100. */
