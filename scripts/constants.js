@@ -745,6 +745,13 @@ export const USE_CAPTURE_PREVIEW_ON_SCRUB = true;
 /** Ms to wait after last scrub input before offline capture (when USE_CAPTURE_PREVIEW_ON_SCRUB). */
 export const SCRUB_CAPTURE_DEBOUNCE_MS = 450;
 
+/**
+ * Reuse the last N8AO geometry plate when the camera and model are settled; still
+ * recomposites each frame with a fresh RenderPass backdrop (HDRI rotation, etc.).
+ * Set false to restore per-frame full N8AO (rollback).
+ */
+export const USE_N8AO_VIEW_CACHE = true;
+
 /** @typedef {'max' | 'medium' | 'low'} RenderQualityTierId */
 
 export const RENDER_QUALITY_DEFAULT = /** @type {const} */ ('medium');

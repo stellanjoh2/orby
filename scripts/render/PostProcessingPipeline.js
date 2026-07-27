@@ -82,7 +82,7 @@ export class PostProcessingPipeline {
    * @param {import('three').WebGLRenderer} renderer
    * @param {import('three').Scene} scene
    * @param {import('three').Camera} camera
-   * @param {{ getDofDepthProxy?: () => import('three').Object3D | null, getDofDepthProxies?: () => import('three').Object3D[] }} [opts]
+   * @param {{ getDofDepthProxy?: () => import('three').Object3D | null, getDofDepthProxies?: () => import('three').Object3D[], getBackgroundGradientController?: () => unknown, getBackgroundController?: () => unknown, getOrbitControls?: () => import('three/examples/jsm/controls/OrbitControls.js').OrbitControls | null | undefined, getModelRoot?: () => import('three').Object3D | null | undefined, getForceAoRecompute?: () => boolean }} [opts]
    */
   constructor(renderer, scene, camera, opts = {}) {
     this.renderer = renderer;
@@ -115,6 +115,11 @@ export class PostProcessingPipeline {
           ? opts.getBackgroundController
           : null,
       resolveRenderPassColorBuffer: () => this.renderPass.lastComposerColorBuffer,
+      resolveOrbitControls:
+        typeof opts.getOrbitControls === 'function' ? opts.getOrbitControls : null,
+      resolveModelRoot: typeof opts.getModelRoot === 'function' ? opts.getModelRoot : null,
+      resolveForceAoRecompute:
+        typeof opts.getForceAoRecompute === 'function' ? opts.getForceAoRecompute : null,
     });
     this.n8aoPass.enabled = false;
     /** Last N8AO preset applied via `setQualityMode` (shader recompile if changed). */
@@ -1743,6 +1748,13 @@ export class PostProcessingPipeline {
   }
 
   /**
+   * Drop cached N8AO geometry plate (resize, model swap, AO settings).
+   */
+  invalidateN8aoViewCache() {
+    this.n8aoPass?.invalidateViewCache?.();
+  }
+
+  /**
    * Screen-space ambient occlusion (N8AO / WebGL). RenderPass stays enabled for the backdrop
    * plate; MeshglN8AOPass restores HDRI / solid / gradient after AO using a geometry mask.
    * @param {object} settings
@@ -1754,6 +1766,7 @@ export class PostProcessingPipeline {
     const active = wants && !forceOffTier;
     this.renderPass.enabled = true;
     this.n8aoPass.enabled = active;
+    this.invalidateN8aoViewCache();
     if (!active) return;
 
     this.n8aoPass.configuration.gammaCorrection = false;

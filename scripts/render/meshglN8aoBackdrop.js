@@ -283,6 +283,7 @@ export function compositeAoWithBackdrop(
 /** Files guarded by meshglN8aoBackdrop regression tests (repo-relative). */
 export const N8AO_GUARDED_SOURCE_FILES = [
   'scripts/render/MeshglN8AOPass.js',
+  'scripts/render/meshglN8aoViewCache.js',
   'scripts/render/n8aoBackdropRestoreShader.js',
   'scripts/render/PostProcessingPipeline.js',
   'scripts/render/MeshglRenderPass.js',

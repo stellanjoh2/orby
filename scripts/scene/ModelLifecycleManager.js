@@ -92,6 +92,7 @@ export class ModelLifecycleManager {
     s.isImportSmoothingModel = false;
     s._pivotCenterDelta = null;
     s._disposeImportRawCaches();
+    s.postPipeline?.invalidateN8aoViewCache?.();
     s.originalGeometryIndices = new WeakMap();
     s.originalGeometryAttributes = new WeakMap();
     s.originalMaterialSides = new WeakMap();
@@ -215,6 +216,7 @@ export class ModelLifecycleManager {
     }
     this.clearModel();
     s.currentModel = object;
+    s.postPipeline?.invalidateN8aoViewCache?.();
 
     s.transformController?.reset();
     s.modelRoot.add(object);

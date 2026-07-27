@@ -187,9 +187,21 @@ describe('N8AO + HDRI source invariants', () => {
     assert.match(pass, /withCameraLayerMask/);
     assert.match(pass, /_restoreScreenSpaceOverlays/);
     assert.match(pass, /setGlassAoFloor/);
+    assert.match(pass, /_aoResultRT/);
+    assert.match(pass, /invalidateViewCache/);
+    assert.match(pass, /needsN8aoViewRecompute/);
     assert.doesNotMatch(pass, /withN8aoExcludedMeshesHidden/);
     assert.match(pass, /tBeauty\.value/);
     assert.match(pass, /_restoreBackdropPass\.render\(renderer, readBuffer, writeBuffer\)/);
+  });
+
+  it('invalidates N8AO view cache when AO settings change', () => {
+    const pipeline = readRepoFile('scripts/render/PostProcessingPipeline.js');
+    assert.match(pipeline, /invalidateN8aoViewCache/);
+    assert.match(
+      pipeline,
+      /updateAmbientOcclusion[\s\S]*invalidateN8aoViewCache/,
+    );
   });
 
   it('base glass reflector gets AO on top of RenderPass reflections', () => {

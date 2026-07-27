@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { N8AOPass } from 'n8ao';
 import { CopyShader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/shaders/CopyShader.js';
 import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js';
+import { USE_N8AO_VIEW_CACHE } from '../constants.js';
 import { renderSceneBeautyToTarget } from './renderSceneBeautyToTarget.js';
 import { N8aoBackdropRestoreShader } from './n8aoBackdropRestoreShader.js';
 import {
@@ -14,6 +15,7 @@ import {
   withN8aoExcludedMeshRenderHooksPaused,
   withOnlyN8aoExcludedMeshesVisible,
 } from './meshglN8aoBackdrop.js';
+import { needsN8aoViewRecompute, snapshotN8aoViewCache } from './meshglN8aoViewCache.js';
 import { resetRendererFullViewport } from './resetRendererFullViewport.js';
 
 /** Depth-only override — fills beauty depth for imports with depthWrite:false. */
@@ -46,6 +48,9 @@ export class MeshglN8AOPass extends N8AOPass {
    *   resolveBackgroundGradientController?: (() => unknown) | null,
    *   resolveBackgroundController?: (() => unknown) | null,
    *   resolveRenderPassColorBuffer?: (() => import('three').WebGLRenderTarget | null) | null,
+   *   resolveOrbitControls?: (() => import('three/examples/jsm/controls/OrbitControls.js').OrbitControls | null | undefined) | null,
+   *   resolveModelRoot?: (() => import('three').Object3D | null | undefined) | null,
+   *   resolveForceAoRecompute?: (() => boolean) | null,
    * }} [opts]
    */
   constructor(scene, camera, width, height, opts = {}) {
@@ -62,6 +67,12 @@ export class MeshglN8AOPass extends N8AOPass {
       typeof opts.resolveRenderPassColorBuffer === 'function'
         ? opts.resolveRenderPassColorBuffer
         : null;
+    this.resolveOrbitControls =
+      typeof opts.resolveOrbitControls === 'function' ? opts.resolveOrbitControls : null;
+    this.resolveModelRoot =
+      typeof opts.resolveModelRoot === 'function' ? opts.resolveModelRoot : null;
+    this.resolveForceAoRecompute =
+      typeof opts.resolveForceAoRecompute === 'function' ? opts.resolveForceAoRecompute : null;
     this._meshglN8aoRender = N8AOPass.prototype.render;
     this._copyPass = new ShaderPass(CopyShader);
     this._copyPass.clear = false;
@@ -69,8 +80,15 @@ export class MeshglN8AOPass extends N8AOPass {
     this._restoreBackdropPass.clear = false;
     this._backdropHoldRT = this._createPlateRenderTarget(width, height);
     this._glassMaskRT = this._createPlateRenderTarget(width, height);
+    this._aoResultRT = this._createPlateRenderTarget(width, height);
     this._beautyDepthMaterial = createBeautyDepthOverrideMaterial();
     this._glassMaskMaterial = createGlassMaskOverrideMaterial();
+    this._viewCacheValid = false;
+    this._cacheHadGlassMesh = false;
+    this._cacheCameraPos = new THREE.Vector3();
+    this._cacheCameraQuat = new THREE.Quaternion();
+    this._cacheProjection = new THREE.Matrix4();
+    this._cacheModelMatrix = new THREE.Matrix4();
     // Final plate lands in readBuffer — RenderPass wrote there; bloom reads it next.
     this.needsSwap = false;
     this.autoDetectTransparency = false;
@@ -93,12 +111,51 @@ export class MeshglN8AOPass extends N8AOPass {
     beauty.setSize(width, height);
     this._backdropHoldRT?.setSize(width, height);
     this._glassMaskRT?.setSize(width, height);
+    this._aoResultRT?.setSize(width, height);
+    this.invalidateViewCache();
     const depthTex = beauty.depthTexture;
     if (depthTex?.image) {
       depthTex.image.width = width;
       depthTex.image.height = height;
       depthTex.needsUpdate = true;
     }
+  }
+
+  /** Drop cached AO geometry plate — call on resize, model swap, or AO setting changes. */
+  invalidateViewCache() {
+    this._viewCacheValid = false;
+  }
+
+  /** @returns {boolean} */
+  _needsRecomputeViewDependentAo() {
+    if (!USE_N8AO_VIEW_CACHE) return true;
+    return needsN8aoViewRecompute({
+      viewCacheValid: this._viewCacheValid,
+      resolveOrbitControls: this.resolveOrbitControls,
+      resolveModelRoot: this.resolveModelRoot,
+      resolveForceAoRecompute: this.resolveForceAoRecompute,
+      camera: this.camera,
+      scene: this.scene,
+      cacheCameraPos: this._viewCacheValid ? this._cacheCameraPos : null,
+      cacheCameraQuat: this._viewCacheValid ? this._cacheCameraQuat : null,
+      cacheProjection: this._viewCacheValid ? this._cacheProjection : null,
+      cacheModelMatrix: this._viewCacheValid ? this._cacheModelMatrix : null,
+      cacheHadGlassMesh: this._cacheHadGlassMesh,
+    });
+  }
+
+  _markViewCacheFromCurrentScene() {
+    const snap = snapshotN8aoViewCache({
+      camera: this.camera,
+      scene: this.scene,
+      resolveModelRoot: this.resolveModelRoot,
+      cacheCameraPos: this._cacheCameraPos,
+      cacheCameraQuat: this._cacheCameraQuat,
+      cacheProjection: this._cacheProjection,
+      cacheModelMatrix: this._cacheModelMatrix,
+    });
+    this._cacheHadGlassMesh = snap.cacheHadGlassMesh;
+    this._viewCacheValid = true;
   }
 
   /**
@@ -286,14 +343,17 @@ export class MeshglN8AOPass extends N8AOPass {
    * @param {import('three').WebGLRenderTarget} readBuffer
    * @param {import('three').WebGLRenderTarget} writeBuffer
    * @param {import('three').WebGLRenderTarget} backdropHold
+   * @param {import('three').Texture | null | undefined} [aoTextureOverride]
    */
-  _compositeBackdropOverAo(renderer, readBuffer, writeBuffer, backdropHold) {
+  _compositeBackdropOverAo(renderer, readBuffer, writeBuffer, backdropHold, aoTextureOverride) {
     const beauty = this.beautyRenderTarget;
     const sceneDepth = beauty?.depthTexture;
     const glassMask = this._glassMaskRT?.texture;
+    const aoTexture = aoTextureOverride ?? writeBuffer?.texture;
     if (
       !readBuffer?.texture
       || !writeBuffer?.texture
+      || !aoTexture
       || !backdropHold?.texture
       || !beauty?.texture
       || !sceneDepth
@@ -303,7 +363,7 @@ export class MeshglN8AOPass extends N8AOPass {
     }
 
     const u = this._restoreBackdropPass.uniforms;
-    u.tAO.value = writeBuffer.texture;
+    u.tAO.value = aoTexture;
     u.tBackdrop.value = backdropHold.texture;
     u.tBeauty.value = beauty.texture;
     u.tSceneDepth.value = sceneDepth;
@@ -369,6 +429,19 @@ export class MeshglN8AOPass extends N8AOPass {
 
     const backdropBuffer = this._resolveBackdropColorBuffer(writeBuffer, readBuffer);
     const backdropHold = this._preserveBackdropPlate(renderer, backdropBuffer);
+    const recomputeAo = this._needsRecomputeViewDependentAo();
+
+    if (!recomputeAo && backdropHold && this._aoResultRT?.texture) {
+      this._compositeBackdropOverAo(
+        renderer,
+        readBuffer,
+        writeBuffer,
+        backdropHold,
+        this._aoResultRT.texture,
+      );
+      this._restoreScreenSpaceOverlays(renderer, readBuffer);
+      return;
+    }
 
     this._seedBeautyForAo(renderer);
     this._renderGlassMask(renderer);
@@ -390,6 +463,10 @@ export class MeshglN8AOPass extends N8AOPass {
       if (backdropHold) {
         this._compositeBackdropOverAo(renderer, readBuffer, writeBuffer, backdropHold);
         this._restoreScreenSpaceOverlays(renderer, readBuffer);
+      }
+      if (writeBuffer?.texture && this._aoResultRT) {
+        this._copyRenderTarget(renderer, this._aoResultRT, writeBuffer);
+        this._markViewCacheFromCurrentScene();
       }
     } finally {
       this.configuration.autoRenderBeauty = prevAutoRenderBeauty;

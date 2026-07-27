@@ -21,6 +21,7 @@ import { VideoExporter } from '../render/VideoExporter.js';
 import { ExportMovementPreview } from '../render/ExportMovementPreview.js';
 import { prepareArtisticCreativeLookForCapture } from '../render/capture/captureArtisticLookPrep.js';
 import { isFontExtrudeRevealModel } from './FontTextRevealController.js';
+import { toggleScaleAnimActive } from './renderLoopIdle.js';
 
 /** @param {import('../SceneManager.js').SceneManager} scene */
 export function setupStudioComposer(scene) {
@@ -28,6 +29,17 @@ export function setupStudioComposer(scene) {
       getDofDepthProxy: () => scene.backgroundController?.getBackgroundSphere?.() ?? null,
       getBackgroundGradientController: () => scene.backgroundGradientController,
       getBackgroundController: () => scene.backgroundController,
+      getOrbitControls: () => scene.controls,
+      getModelRoot: () => scene.modelRoot,
+      getForceAoRecompute: () => {
+        if (scene._gizmoDragActive) return true;
+        if (toggleScaleAnimActive(scene._ccToggleCtx)) return true;
+        if (toggleScaleAnimActive(scene._baseToggleCtx)) return true;
+        if (toggleScaleAnimActive(scene._baseGlassToggleCtx)) return true;
+        if (toggleScaleAnimActive(scene._backdropToggleCtx)) return true;
+        if (toggleScaleAnimActive(scene._infinityCoveToggleCtx)) return true;
+        return false;
+      },
     });
     scene.composer = scene.postPipeline.composer;
     scene.lensDirtPass = scene.postPipeline.lensDirtPass;
