@@ -11,12 +11,27 @@ export function isFontExtrudeImporter(importer) {
 }
 
 /**
+ * Type Creator / font extrude — face + extrude colours live in Extrude settings, not Object → Material.
+ * @param {import('three').Object3D | null | undefined} root
+ */
+export function isFontExtrudeModel(root) {
+  if (!root) return false;
+  if (root.userData?.orbyFontGenerated || root.userData?.orbyFontExtrude) return true;
+  let found = false;
+  root.traverse((child) => {
+    if (found || !child.isMesh) return;
+    if (child.userData?.orbyFontExtrude) found = true;
+  });
+  return found;
+}
+
+/**
  * Imported SVG file extrude — not Type Creator / font extrude.
  * @param {import('three').Object3D | null | undefined} root
  */
 export function isSvgFileExtrudeModel(root) {
   if (!root) return false;
-  if (root.userData?.orbyFontGenerated || root.userData?.orbyFontExtrude) return false;
+  if (isFontExtrudeModel(root)) return false;
   if (root.userData?.orbySvgExtrude) return true;
   let found = false;
   root.traverse((child) => {

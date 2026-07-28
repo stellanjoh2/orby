@@ -96,7 +96,7 @@ import {
 } from './creativeLookSketchArt.js';
 import { normalizeCreativeLookPresetParams } from './creativeLookPresetSliders.js';
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
-import { isSvgFileExtrudeModel } from '../scene/SvgExtrudeSceneOps.js';
+import { isFontExtrudeModel, isSvgFileExtrudeModel } from '../scene/SvgExtrudeSceneOps.js';
 import {
   applyFontExtrudeTwoToneToMesh,
   fontExtrudeTwoToneActive,
@@ -1270,7 +1270,8 @@ export class MaterialController {
   /** Shape library primitives and untextured imports get a direct Material colour control. */
   _modelColorOverrideEligible(object) {
     if (!object) return false;
-    if (isSvgFileExtrudeModel(object)) return false;
+    // Font / SVG file extrude own face+side colours in Extrude settings — mute Material colour.
+    if (isFontExtrudeModel(object) || isSvgFileExtrudeModel(object)) return false;
     if (object.userData?.orbyShapeLibrary) return true;
     return !this._modelHasImportAlbedoMaps(object);
   }
@@ -1323,7 +1324,7 @@ export class MaterialController {
       return;
     }
 
-    if (isSvgFileExtrudeModel(model)) {
+    if (isFontExtrudeModel(model) || isSvgFileExtrudeModel(model)) {
       this.materialSettings.colorOverride = false;
       this.stateStore?.set('material.colorOverride', false);
       this.stateStore?.set('material.colorOverrideEligible', false);
@@ -4611,7 +4612,10 @@ export class MaterialController {
 
   _shouldUseMaterialColorOverride(importMat) {
     if (!this.currentModel || !importMat) return false;
-    if (isSvgFileExtrudeModel(this.currentModel)) return false;
+    // Type Creator face/extrude + SVG file colours must survive brightness / MR updates.
+    if (isFontExtrudeModel(this.currentModel) || isSvgFileExtrudeModel(this.currentModel)) {
+      return false;
+    }
     if (this.currentModel.userData?.orbyShapeLibrary) {
       return this.materialSettings.colorOverride === true;
     }
@@ -6895,14 +6899,7 @@ export class MaterialController {
 
   /** @param {THREE.Object3D | null | undefined} [root] */
   _isFontExtrudeModel(root = this.currentModel) {
-    if (!root) return false;
-    if (root.userData?.orbyFontGenerated) return true;
-    let found = false;
-    root.traverse((child) => {
-      if (found || !child.isMesh) return;
-      if (child.userData?.orbyFontExtrude) found = true;
-    });
-    return found;
+    return isFontExtrudeModel(root);
   }
 
   /**

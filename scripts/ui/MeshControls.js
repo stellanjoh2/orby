@@ -34,7 +34,7 @@ import {
   normalizeCreativeLookTransmissionDispersion,
   creativeLookTransmissionControlsVisible,
 } from '../render/creativeLookPhysicalTransmission.js';
-import { isSvgFileExtrudeModel } from '../scene/SvgExtrudeSceneOps.js';
+import { isFontExtrudeModel, isSvgFileExtrudeModel } from '../scene/SvgExtrudeSceneOps.js';
 import {
   CREATIVE_LOOK_ALL_PRESET_SLIDER_IDS,
   creativeLookPresetHidesPatternScale,
@@ -1534,9 +1534,10 @@ export class MeshControls {
     }
 
     const shapeLib = !!model?.userData?.orbyShapeLibrary;
-    const svgFileExtrude = isSvgFileExtrudeModel(model);
+    // Font + SVG file extrude use Extrude face/side pickers — hide Object → Material colour.
+    const extrudeOwnsColor = isFontExtrudeModel(model) || isSvgFileExtrudeModel(model);
     const hasAlbedo = !!material.hasImportAlbedoMaps;
-    const eligible = !!model && !svgFileExtrude && (shapeLib || material.colorOverrideEligible || hasAlbedo);
+    const eligible = !!model && !extrudeOwnsColor && (shapeLib || material.colorOverrideEligible || hasAlbedo);
     section.hidden = !eligible;
     if (!eligible) return;
 
