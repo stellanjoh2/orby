@@ -153,10 +153,25 @@ function renderFigure(section, revealDir) {
     const posterSrc = section.videoPoster ? slides[0]?.src || '' : '';
     const posterAttr = posterSrc ? ` poster="${escapeMarketingHtml(posterSrc)}"` : '';
     const imageAlt = slides[0]?.alt || section.imageAlt || '';
+    const playVideo = section.playVideo === true;
+    const playHref = typeof section.playVideoHref === 'string' ? section.playVideoHref.trim() : '';
+    const playSrc =
+      (typeof section.playVideoSrc === 'string' && section.playVideoSrc.trim()) ||
+      videoSrc ||
+      '';
+    const playHrefAttr = playHref ? ` data-play-href="${escapeMarketingHtml(playHref)}"` : '';
+    const playSrcAttr = playSrc ? ` data-play-src="${escapeMarketingHtml(playSrc)}"` : '';
+    const playOverlay = playVideo
+      ? `<button type="button" class="orby-marketing__play-hit" data-orby-marketing-play-video${playSrcAttr}${playHrefAttr} aria-label="Play video">
+          <span class="orby-marketing__play-icon" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
+        </button>`
+      : '';
+    const playMaskClass = playVideo ? ' orby-marketing__figure-mask--play' : '';
     return `<figure class="orby-marketing__figure">
-      <div class="orby-marketing__figure-mask" data-orby-marketing-reveal="media" data-reveal-dir="${escapeMarketingHtml(revealDir)}">
+      <div class="orby-marketing__figure-mask${playMaskClass}" data-orby-marketing-reveal="media" data-reveal-dir="${escapeMarketingHtml(revealDir)}">
         <span class="orby-marketing__media-ph" aria-hidden="true"></span>
         <video class="orby-marketing__figure-media orby-marketing__figure-video" src="${escapeMarketingHtml(videoSrc)}"${posterAttr} ${MARKETING_VIDEO_HTML_ATTRS} aria-label="${escapeMarketingHtml(imageAlt || 'Feature preview video')}"></video>
+        ${playOverlay}
         ${renderMarketingImageCredit(slides[0]?.imageCredit || section.imageCredit)}
       </div>
     </figure>`;

@@ -63,6 +63,9 @@
  * @property {{ src: string, alt: string }[]} [marquee]
  * @property {string} [videoSrc]
  * @property {boolean} [videoPoster] — split video: use imageSrc as poster (default false)
+ * @property {boolean} [playVideo] — center play affordance on trailer preview reel
+ * @property {string} [playVideoSrc] — full 1920×1080 trailer for lightbox (defaults to videoSrc)
+ * @property {string} [playVideoHref] — Framerate / external embed URL (future; lightbox uses local src for now)
  * @property {string} [ctaLabel]
  * @property {string} [ctaHref] — mailto: or https: link (In Progress section)
  * @property {'scroll-top' | 'browse' | 'load-sample'} [ctaAction]
@@ -107,13 +110,7 @@ export const MARKETING_SECTIONS = [
     videoSrc: './assets/marketing/orby-marketing-microreel.mp4',
     videoPoster: true,
     imageAlt: 'Lighting and grading a model in Orby',
-    imageCredit: {
-      title: '(FREE) Porsche 911 Carrera 4S',
-      artist: 'Lionsharp Studios',
-      sourceLabel: 'Sketchfab',
-      sourceHref:
-        'https://sketchfab.com/3d-models/free-porsche-911-carrera-4s-d01b254483794de3819786d93e0e1ebf',
-    },
+    playVideo: true,
   },
   {
     type: 'split',

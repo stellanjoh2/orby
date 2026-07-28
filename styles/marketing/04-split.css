@@ -326,3 +326,183 @@ html.safari-browser .orby-marketing__figure-video {
     right: 0;
   }
 }
+
+/* Trailer preview — center play affordance (Set the stage reel) */
+.orby-marketing__figure-mask--play {
+  --orby-marketing-play-size: calc(184px * var(--orby-marketing-scale));
+}
+
+.orby-marketing__play-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.orby-marketing__play-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--orby-marketing-play-size);
+  height: var(--orby-marketing-play-size);
+  color: var(--brand-primary, #c4ff00);
+  opacity: 0.42;
+  pointer-events: none;
+  transform: translate(-46%, -50%) scale(1);
+  transition:
+    opacity 0.28s ease,
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  text-shadow:
+    0 2px 18px color-mix(in srgb, var(--orby-black, #080808) 28%, transparent),
+    0 0 40px color-mix(in srgb, var(--orby-black, #080808) 18%, transparent);
+}
+
+.orby-marketing__play-icon .fa-play {
+  font-size: var(--orby-marketing-play-size);
+  line-height: 1;
+  width: 1em;
+  text-align: center;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .orby-marketing__play-hit:hover .orby-marketing__play-icon,
+  .orby-marketing__play-hit:focus-visible .orby-marketing__play-icon {
+    color: var(--brand-primary, #c4ff00);
+    opacity: 1;
+    transform: translate(-46%, -50%) scale(1.12);
+  }
+}
+
+.orby-marketing__play-hit:focus {
+  outline: none;
+}
+
+.orby-marketing__play-hit:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orby-marketing__play-icon {
+    transition: opacity 0.12s ease;
+  }
+
+  .orby-marketing__play-hit:hover .orby-marketing__play-icon,
+  .orby-marketing__play-hit:focus-visible .orby-marketing__play-icon {
+    transform: translate(-46%, -50%) scale(1);
+  }
+}
+
+/* Trailer lightbox — 1920×1080 frame, darkened + blurred page behind */
+.orby-marketing__video-lightbox {
+  --lightbox-backdrop-blur: 0px;
+  position: fixed;
+  inset: 0;
+  z-index: 100060;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(1.25rem, env(safe-area-inset-top, 0px))
+    max(1.25rem, env(safe-area-inset-right, 0px))
+    max(1.25rem, env(safe-area-inset-bottom, 0px))
+    max(1.25rem, env(safe-area-inset-left, 0px));
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--orby-black, #080808) 72%, transparent);
+  backdrop-filter: blur(var(--lightbox-backdrop-blur));
+  -webkit-backdrop-filter: blur(var(--lightbox-backdrop-blur));
+  opacity: 0;
+}
+
+.orby-marketing__video-lightbox[hidden] {
+  display: none !important;
+}
+
+.orby-marketing__video-lightbox-scrim {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.orby-marketing__video-lightbox-frame {
+  position: relative;
+  z-index: 1;
+  width: min(1920px, calc(100vw - 2.5rem), calc((100vh - 2.5rem) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  max-height: min(1080px, calc(100vh - 2.5rem));
+  border-radius: clamp(10px, 1.2vw, 20px);
+  overflow: hidden;
+  background: var(--orby-black, #080808);
+  box-shadow:
+    0 24px 80px color-mix(in srgb, var(--orby-black, #080808) 55%, transparent),
+    0 0 0 1px color-mix(in srgb, #fff 8%, transparent);
+  transform-origin: center center;
+}
+
+.orby-marketing__video-lightbox-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--orby-black, #080808);
+}
+
+.orby-marketing__video-lightbox-close {
+  position: absolute;
+  top: max(0.65rem, env(safe-area-inset-top, 0px));
+  right: max(0.65rem, env(safe-area-inset-right, 0px));
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--orby-black, #080808) 55%, transparent);
+  color: #fff;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.orby-marketing__video-lightbox-close:hover {
+  background: color-mix(in srgb, var(--orby-black, #080808) 72%, transparent);
+  color: var(--brand-primary, #c4ff00);
+}
+
+.orby-marketing__video-lightbox-close:focus {
+  outline: none;
+}
+
+.orby-marketing__video-lightbox-close:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
+  outline-offset: 3px;
+}
+
+html.orby-marketing-video-lightbox-open,
+html.orby-marketing-video-lightbox-open body {
+  overflow: hidden;
+}

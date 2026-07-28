@@ -23,6 +23,7 @@ import { ensureSiteNavStyles } from './orbySiteNavStyles.js';
 import { subscribeMarketingScroll } from './orbyMarketingScrollDispatcher.js';
 import { blockTabletStudioAccess } from '../orbyTabletGate.js';
 import { teardownTabletDesktopOnlyModalUi } from '../ui/orbyTabletDesktopOnlyModal.js';
+import { initMarketingPlayVideo } from './orbyMarketingPlayVideo.js';
 
 /** Mega sections (intro + CTA) — fire when the block is actually on screen */
 const MEGA_REVEAL_IO = { root: null, rootMargin: '0px 0px -22% 0px', threshold: 0.32 };
@@ -196,6 +197,8 @@ export function initOrbyMarketingPage(options = {}) {
   let teardownPngMarqueePerf = null;
   /** @type {(() => void) | null} */
   let teardownInProgressCurtain = null;
+  /** @type {(() => void) | null} */
+  let teardownPlayVideo = null;
   /** @type {Comment | null} Placeholder when #orby-marketing is detached during studio. */
   let marketingAnchor = null;
   let destroyed = false;
@@ -442,6 +445,8 @@ export function initOrbyMarketingPage(options = {}) {
     app.appendChild(root);
     bindMarketingInteractions(root);
     bindMarketingCopyEmail(root);
+    teardownPlayVideo?.();
+    teardownPlayVideo = initMarketingPlayVideo(root);
 
     root.querySelectorAll('.orby-marketing__section').forEach((section) => {
       section.classList.add('orby-marketing__section--pending');
@@ -554,6 +559,8 @@ export function initOrbyMarketingPage(options = {}) {
     destroy() {
       destroyed = true;
       unbindMarketingCopyEmail();
+      teardownPlayVideo?.();
+      teardownPlayVideo = null;
       teardownTabletDesktopOnlyModalUi();
       if (!isMobileLanding()) {
         void import('./orbyMarketingIntroTurntable.js').then((mod) => {
