@@ -1343,8 +1343,12 @@ export class CameraController {
         this._unlockOrbitSolve();
       }
 
-      // Wheel dolly moves radius directly — do not run OrbitControls rotation damping in parallel.
-      const runOrbitSolve = zoomSettling ? false : this._shouldRunOrbitSolve();
+      // Keep rotational coast under eased zoom; idle zoom still skips orbit solve.
+      const coasting =
+        this._orbitDampingSettling || orbitControlsNeedFrame(this.controls);
+      const runOrbitSolve = zoomSettling
+        ? coasting
+        : this._shouldRunOrbitSolve();
       if (!runOrbitSolve && !zoomSettling) {
         if (this._wheelZoomInteractionActive) {
           this._finalizeWheelZoomInteraction();
@@ -1354,16 +1358,10 @@ export class CameraController {
 
       let changed = false;
       if (runOrbitSolve) {
-        if (this._orbitInteractionActive && !this._orbitDampingSettling) {
-          // OrbitControls.update() runs on each pointermove — only re-apply tilt here so
-          // rAF does not reset camera.up and double-consume damping (especially after zoom).
-          if (!this._isometricModeActive) {
-            this._applyTilt();
-          }
-          changed = true;
-        } else {
-          changed = this._runOrbitSolveAndTilt();
-        }
+        // Always solve on rAF while dragging. OrbitControls also calls update() from
+        // pointermove (stock Three), but skipping rAF leaves sphericalDelta frozen between
+        // pointer events — visible as micro-freezes / hitching while orbiting with damping.
+        changed = this._runOrbitSolveAndTilt();
       }
 
       if (zoomSettling) {
@@ -1372,6 +1370,10 @@ export class CameraController {
           this._applyTilt();
         }
         changed = changed || zoomChanged;
+      }
+
+      if (this._orbitDampingSettling && !orbitControlsNeedFrame(this.controls)) {
+        this._orbitDampingSettling = false;
       }
 
       if (this._getIsGizmoDragging()) {
@@ -1383,9 +1385,6 @@ export class CameraController {
         !this.isFocusAnimating() &&
         !this.hasViewportInteraction()
       ) {
-        if (this._orbitDampingSettling && !orbitControlsNeedFrame(this.controls)) {
-          this._orbitDampingSettling = false;
-        }
         // Lock only when per-frame motion and damping deltas have both settled.
         const dampingSettled =
           !this._orbitDampingSettling && !orbitControlsNeedFrame(this.controls);
@@ -1640,9 +1639,11 @@ export class CameraController {
       }
       if (this._getIsGizmoDragging()) return;
 
+      // While a pointer orbit is active, leave wheel to OrbitControls. During post-release
+      // rotational coast, keep intercepting so zoom eases in parallel instead of a hard dolly.
       const orbitPointerActive =
         typeof controls.state === 'number' && controls.state !== -1;
-      if (orbitPointerActive || this._orbitDampingSettling) return;
+      if (orbitPointerActive) return;
 
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -1707,7 +1708,7 @@ export class CameraController {
   _beginWheelZoomInteraction() {
     if (this._wheelZoomInteractionActive) return;
     this._wheelZoomInteractionActive = true;
-    this._clearOrbitControlDeltas();
+    // Keep sphericalDelta / panOffset so rotational coast continues under zoom.
     queueMicrotask(() => {
       if (this._getIsGizmoDragging()) {
         this._wheelZoomInteractionActive = false;
@@ -1722,8 +1723,16 @@ export class CameraController {
     if (!this._wheelZoomInteractionActive) return;
     this._wheelZoomInteractionActive = false;
     this._wheelZoomPendingScale = 1;
-    this._syncOrbitControlsFromCamera();
-    this._lockOrbitSolve();
+    const coasting =
+      this._orbitDampingSettling || orbitControlsNeedFrame(this.controls);
+    if (coasting) {
+      // Radius is already on the camera; next orbit solve re-reads position without
+      // clearing remaining rotational inertia.
+      this._unlockOrbitSolve();
+    } else {
+      this._syncOrbitControlsFromCamera();
+      this._lockOrbitSolve();
+    }
     queueMicrotask(() => {
       if (this._getIsGizmoDragging()) return;
       if (this._suppressPoseEvents || this._exportCameraDriveActive) return;
@@ -1733,7 +1742,8 @@ export class CameraController {
   }
 
   /**
-   * Ease accumulated wheel zoom toward the camera each frame (rotation already damped).
+   * Ease accumulated wheel zoom toward the camera each frame.
+   * Safe to run after orbit damping — scales radius only, leaves sphericalDelta intact.
    * @returns {boolean}
    */
   _applyWheelZoomSmoothing() {
