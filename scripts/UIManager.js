@@ -18,9 +18,11 @@ import {
   MATERIAL_METALNESS_TOOLTIP,
   MATERIAL_METALNESS_MR_MAP_TOOLTIP,
   MATERIAL_METALNESS_AUTHORED_TOOLTIP,
+  MATERIAL_METALNESS_SPEC_GLOSS_TOOLTIP,
   MATERIAL_ROUGHNESS_TOOLTIP,
   MATERIAL_ROUGHNESS_MR_MAP_TOOLTIP,
   MATERIAL_ROUGHNESS_AUTHORED_TOOLTIP,
+  MATERIAL_ROUGHNESS_SPEC_GLOSS_TOOLTIP,
   isBloomPipelineActive,
   isBloomTuningActive,
   sanitizeDof,
@@ -450,6 +452,7 @@ export class UIManager {
     this.dom.animationJointScaleRow = q('#animationJointScaleRow');
     this.dom.animationBoneStrokeRow = q('#animationBoneStrokeRow');
     this.dom.animationShowJointNamesRow = q('#animationShowJointNamesRow');
+    this.dom.animationShowWireframeRow = q('#animationShowWireframeRow');
     this.dom.animationHideMeshRow = q('#animationHideMeshRow');
     this.dom.animationTime = q('#animationTime');
     this.dom.exportPreviewPlayPause = q('#exportPreviewPlayPause');
@@ -579,6 +582,7 @@ export class UIManager {
       animationShowJointNames: q('#animationShowJointNames'),
       animationTimeReference: q('#animationTimeReference'),
       animationDisplayFps: q('#animationDisplayFps'),
+      animationShowWireframe: q('#animationShowWireframe'),
       animationHideMesh: q('#animationHideMesh'),
       animationJointScale: q('#animationJointScale'),
       animationBoneStrokeWidth: q('#animationBoneStrokeWidth'),
@@ -2658,6 +2662,10 @@ export class UIManager {
     this.animationControls?.syncAnimationBoneStroke(options);
   }
 
+  syncAnimationShowWireframe(options) {
+    this.animationControls?.syncAnimationShowWireframe(options);
+  }
+
   syncAnimationHideMesh(options) {
     this.animationControls?.syncAnimationHideMesh(options);
   }
@@ -3052,8 +3060,12 @@ export class UIManager {
     this.animationControls?.syncAnimationTimeReference(checked, available);
   }
 
-  /** Swap Metalness/Roughness tooltips for PBR imports (1.0 = pass-through multiplier). */
-  syncMaterialMrMapTooltips(importUsesAuthoredPbr = false, importHasMrMaps = false) {
+  /** Swap Metalness/Roughness tooltips for PBR / SpecGloss imports. */
+  syncMaterialMrMapTooltips(
+    importUsesAuthoredPbr = false,
+    importHasMrMaps = false,
+    importIsSpecGloss = false,
+  ) {
     const metalLabel = this.inputs.materialMetalness
       ?.closest('.slider-line')
       ?.querySelector('span[data-tooltip]');
@@ -3062,14 +3074,18 @@ export class UIManager {
       ?.querySelector('span[data-tooltip]');
     const metalTooltip = importHasMrMaps
       ? MATERIAL_METALNESS_MR_MAP_TOOLTIP
-      : importUsesAuthoredPbr
-        ? MATERIAL_METALNESS_AUTHORED_TOOLTIP
-        : MATERIAL_METALNESS_TOOLTIP;
+      : importIsSpecGloss
+        ? MATERIAL_METALNESS_SPEC_GLOSS_TOOLTIP
+        : importUsesAuthoredPbr
+          ? MATERIAL_METALNESS_AUTHORED_TOOLTIP
+          : MATERIAL_METALNESS_TOOLTIP;
     const roughTooltip = importHasMrMaps
       ? MATERIAL_ROUGHNESS_MR_MAP_TOOLTIP
-      : importUsesAuthoredPbr
-        ? MATERIAL_ROUGHNESS_AUTHORED_TOOLTIP
-        : MATERIAL_ROUGHNESS_TOOLTIP;
+      : importIsSpecGloss
+        ? MATERIAL_ROUGHNESS_SPEC_GLOSS_TOOLTIP
+        : importUsesAuthoredPbr
+          ? MATERIAL_ROUGHNESS_AUTHORED_TOOLTIP
+          : MATERIAL_ROUGHNESS_TOOLTIP;
     if (metalLabel) {
       metalLabel.setAttribute('data-tooltip', metalTooltip);
     }

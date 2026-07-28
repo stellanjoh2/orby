@@ -111,32 +111,40 @@ export const SCENE_CONTROL_MANIFEST = [
     event: 'mesh:wireframe-always-on',
     apply: { controller: 'materialController', method: 'setWireframeSettings' },
     mapArg: (value) => ({ alwaysOn: value }),
-    afterApply: (scene) => scene.setSceneGeometryWireframe(false),
+    afterApply: (scene) => {
+      scene.setSceneGeometryWireframe(false);
+      scene.requestRender?.();
+    },
   },
   {
     event: 'mesh:wireframe-color',
     apply: { controller: 'materialController', method: 'setWireframeSettings' },
     mapArg: (value) => ({ color: value }),
+    afterApply: (scene) => scene.requestRender?.(),
   },
   {
     event: 'mesh:wireframe-only-visible-faces',
     apply: { controller: 'materialController', method: 'setWireframeSettings' },
     mapArg: (value) => ({ onlyVisibleFaces: value }),
+    afterApply: (scene) => scene.requestRender?.(),
   },
   {
     event: 'mesh:wireframe-hide-mesh',
     apply: { controller: 'materialController', method: 'setWireframeSettings' },
     mapArg: (value) => ({ hideMesh: value }),
+    afterApply: (scene) => scene.requestRender?.(),
   },
   {
     event: 'mesh:wireframe-thickness',
     apply: { controller: 'materialController', method: 'setWireframeSettings' },
     mapArg: (value) => ({ thickness: value }),
+    afterApply: (scene) => scene.requestRender?.(),
   },
   {
     event: 'mesh:wireframe-opacity',
     apply: { controller: 'materialController', method: 'setWireframeSettings' },
     mapArg: (value) => ({ opacity: value }),
+    afterApply: (scene) => scene.requestRender?.(),
   },
   { event: 'mesh:clay-normal-map', apply: 'setClayNormalMap' },
 
@@ -511,6 +519,7 @@ export const SCENE_CONTROL_MANIFEST = [
   { event: 'animation:show-joint-names', apply: 'setAnimationShowJointNames' },
   { event: 'animation:joint-scale', apply: 'setAnimationJointScale' },
   { event: 'animation:bone-stroke-width', apply: 'setAnimationBoneStrokeWidth' },
+  { event: 'animation:show-wireframe', apply: 'setAnimationShowWireframe' },
   { event: 'animation:hide-mesh', apply: 'setAnimationHideMesh' },
 
   // ── Export (simple delegates) ─────────────────────────────────────────────

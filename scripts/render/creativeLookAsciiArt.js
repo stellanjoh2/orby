@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { APP_BACKGROUND, ORBY_LIME } from '../constants.js';
+import { ORBY_BLACK, ORBY_LIME } from '../constants.js';
 import { blitVga8x16Glyph } from './asciiVga8x16Font.js';
 
 /** Solid Orby lime — Master Hue rotates from this base. */
@@ -357,5 +357,5 @@ void main() {
 /** @deprecated Mesh no longer samples glyphs — kept for export symmetry. */
 export const ASCII_ART_FRAGMENT = ASCII_LUMINANCE_PREP_FRAGMENT;
 
-/** Background token for ASCII pass (re-export for callers). */
-export const ASCII_ART_BG_HEX = parseInt(APP_BACKGROUND.slice(1), 16);
+/** Terminal backdrop for all ASCII presets — Orby black, not studio workspace gray. */
+export const ASCII_ART_BG_HEX = ORBY_BLACK;

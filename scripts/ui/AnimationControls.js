@@ -82,6 +82,9 @@ export class AnimationControls {
     this.ui.inputs.animationShowJointNames?.addEventListener('change', (event) => {
       this.eventBus.emit('animation:show-joint-names', event.target.checked);
     });
+    this.ui.inputs.animationShowWireframe?.addEventListener('change', (event) => {
+      this.eventBus.emit('animation:show-wireframe', event.target.checked);
+    });
     this.ui.inputs.animationHideMesh?.addEventListener('change', (event) => {
       this.eventBus.emit('animation:hide-mesh', event.target.checked);
     });
@@ -269,6 +272,11 @@ export class AnimationControls {
       enabled: bonesOn,
       checked: bonesOn ? !!animation.showJointNames : false,
     });
+    this.syncAnimationShowWireframe({
+      visible: bonesOn,
+      enabled: bonesOn,
+      checked: bonesOn ? !!animation.showWireframe : false,
+    });
     this.syncAnimationHideMesh({
       visible: bonesOn,
       enabled: bonesOn,
@@ -289,6 +297,22 @@ export class AnimationControls {
   syncAnimationShowJointNames({ visible, enabled, checked } = {}) {
     const row = this.ui.dom.animationShowJointNamesRow;
     const input = this.ui.inputs.animationShowJointNames;
+    if (row && visible !== undefined) {
+      row.hidden = !visible;
+    }
+    if (input) {
+      if (enabled !== undefined) {
+        input.disabled = !enabled;
+      }
+      if (checked !== undefined) {
+        input.checked = !!checked;
+      }
+    }
+  }
+
+  syncAnimationShowWireframe({ visible, enabled, checked } = {}) {
+    const row = this.ui.dom.animationShowWireframeRow;
+    const input = this.ui.inputs.animationShowWireframe;
     if (row && visible !== undefined) {
       row.hidden = !visible;
     }

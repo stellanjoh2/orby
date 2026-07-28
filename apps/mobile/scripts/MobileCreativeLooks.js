@@ -122,10 +122,13 @@ export class MobileCreativeLooks {
    */
   applyStudioMaterialDefaults(model) {
     const importUsesAuthoredPbr = this.materialController._modelHasAuthoredPbrMaterials(model);
+    const importIsSpecGloss = this.materialController._modelHasSpecGlossMaterials(model);
     const hasMrMaps = this.materialController._modelHasImportMrMaps(model);
-    const mrDefaults = importUsesAuthoredPbr
-      ? MOBILE_MATERIAL_MR_MAP_DEFAULTS
-      : MOBILE_MATERIAL_SCALAR_DEFAULTS;
+    const mrDefaults = importIsSpecGloss
+      ? { metalness: 0, roughness: 1 }
+      : importUsesAuthoredPbr
+        ? MOBILE_MATERIAL_MR_MAP_DEFAULTS
+        : MOBILE_MATERIAL_SCALAR_DEFAULTS;
 
     const brightness = MOBILE_MATERIAL_DEFAULTS.brightness;
     const metalness = mrDefaults.metalness;
@@ -137,6 +140,7 @@ export class MobileCreativeLooks {
     this.stateStore.set('material.emissive', MOBILE_MATERIAL_DEFAULTS.emissive);
     this.stateStore.set('material.importHasMrMaps', hasMrMaps);
     this.stateStore.set('material.importUsesAuthoredPbr', importUsesAuthoredPbr);
+    this.stateStore.set('material.importIsSpecGloss', importIsSpecGloss);
 
     this.materialController.setMaterialBrightness(brightness);
     this.materialController.setMaterialMetalness(metalness);
@@ -147,9 +151,12 @@ export class MobileCreativeLooks {
   getMaterialSettings() {
     const state = this.stateStore.getState();
     const importUsesAuthoredPbr = !!state.material?.importUsesAuthoredPbr;
-    const mrDefaults = importUsesAuthoredPbr
-      ? MOBILE_MATERIAL_MR_MAP_DEFAULTS
-      : MOBILE_MATERIAL_SCALAR_DEFAULTS;
+    const importIsSpecGloss = !!state.material?.importIsSpecGloss;
+    const mrDefaults = importIsSpecGloss
+      ? { metalness: 0, roughness: 1 }
+      : importUsesAuthoredPbr
+        ? MOBILE_MATERIAL_MR_MAP_DEFAULTS
+        : MOBILE_MATERIAL_SCALAR_DEFAULTS;
     return {
       brightness: state.material?.brightness ?? MOBILE_MATERIAL_DEFAULTS.brightness,
       metalness: state.material?.metalness ?? mrDefaults.metalness,

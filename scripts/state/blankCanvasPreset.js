@@ -38,6 +38,7 @@ export function createBlankCanvasPreset() {
       emissive: 0,
       importHasMrMaps: false,
       importUsesAuthoredPbr: false,
+      importIsSpecGloss: false,
       surfacePreset: 'none',
       surfaceScale: 1,
       surfaceStrength: 1,
@@ -458,6 +459,7 @@ export function createBlankCanvasPreset() {
     animation: {
       showBones: false,
       showJointNames: false,
+      showWireframe: false,
       hideMesh: false,
       jointScale: 0.5,
       boneStrokeWidth: 2,

@@ -296,19 +296,28 @@ export class BackgroundGradientControls {
 
   _drawStopHandles(gradient, width, height) {
     const ctx = this.previewCtx;
-    const pad = 10 * (window.devicePixelRatio || 1);
+    const dpr = window.devicePixelRatio || 1;
+    const pad = 10 * dpr;
     const y = height * 0.5;
     for (let i = 0; i < gradient.stops.length; i += 1) {
       const stop = gradient.stops[i];
       const x = pad + (stop.position / 100) * (width - pad * 2);
       const selected = i === this.selectedStopIndex;
+      const r = 7 * dpr;
       ctx.beginPath();
       ctx.fillStyle = stop.color;
       ctx.strokeStyle = selected ? ORBY_LIME : 'rgba(255,255,255,0.85)';
-      ctx.lineWidth = selected ? 3 * (window.devicePixelRatio || 1) : 2 * (window.devicePixelRatio || 1);
-      const r = 7 * (window.devicePixelRatio || 1);
+      ctx.lineWidth = selected ? 3 * dpr : 2 * dpr;
+      // Match shelf --thumb-shadow so lime/white rings stay visible on light stops
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+      ctx.shadowBlur = 3 * dpr;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 1 * dpr;
       ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
       ctx.stroke();
     }
   }

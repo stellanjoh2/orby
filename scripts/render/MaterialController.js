@@ -133,6 +133,8 @@ import {
 import { effectiveRoughnessWithHdriBlur } from './hdriBlur.js';
 import {
   applySpecGlossDiffuseOnlyRoughnessSlider,
+  applySpecGlossGlossyRoughnessSlider,
+  modelHasSpecGlossMaterials,
   readSpecGlossImportMetadata,
 } from './gltfSpecGlossConversion.js';
 import { resolveMaterialBrightnessMetalnessClamp } from './materialBrightnessMetalnessClamp.js';
@@ -162,6 +164,7 @@ import {
   resolveWireframeSurfaceOffset,
   WIREFRAME_POLYGON_OFFSET_FACTOR,
   WIREFRAME_POLYGON_OFFSET_UNITS,
+  WIREFRAME_CLIP_DEPTH_BIAS,
   DEFAULT_WIREFRAME_LINE_WIDTH,
   DEFAULT_WIREFRAME_OPACITY,
   resolveRenderQualityTier,
@@ -504,6 +507,11 @@ export class MaterialController {
     this.stateStore?.set(
       'material.importUsesAuthoredPbr',
       this._modelHasAuthoredPbrMaterials(model) && !model.userData?.orbyShapeLibrary,
+    );
+    this.stateStore?.set(
+      'material.importIsSpecGloss',
+      modelHasSpecGlossMaterials(model, this.originalMaterials)
+        && !model.userData?.orbyShapeLibrary,
     );
     this.stateStore?.set('material.surfaceEligible', this._modelSurfaceEligible(model));
     this._migrateLegacyExtrudeSurfaceStateToMaterial();
@@ -1048,6 +1056,22 @@ export class MaterialController {
    */
   _applyUserEmissiveOrRestoreImport(target, importMat, adjustedColor, userEmissive, modelHasEmissive = false) {
     const slider = userEmissive > 0 ? userEmissive : 0;
+
+    // Font / SVG file extrude are studio-authored — never treat polluted snapshots as file emissive.
+    // (prepareMesh used to alias live materials as originals, so Mesh→Emissive could never clear.)
+    if (this._isStudioExtrudeColorModel()) {
+      if (slider > 0) {
+        target.emissive.copy(adjustedColor).multiplyScalar(slider);
+        target.emissiveIntensity = slider;
+      } else {
+        target.emissive.set(0, 0, 0);
+        target.emissiveIntensity = 0;
+        target.emissiveMap = null;
+        this._clearStudioExtrudeEmissiveBaseline(importMat);
+      }
+      return;
+    }
+
     if (slider > 0) {
       if (this._importMaterialHasEmissiveBaseline(importMat, target)) {
         const map = importMat?.emissiveMap || target?.emissiveMap;
@@ -1113,6 +1137,29 @@ export class MaterialController {
     }
     target.emissive.set(0, 0, 0);
     target.emissiveIntensity = 0;
+  }
+
+  /** Type Creator / SVG file extrude — colours live in Extrude settings, not file emissive. */
+  _isStudioExtrudeColorModel(root = this.currentModel) {
+    return isFontExtrudeModel(root) || isSvgFileExtrudeModel(root);
+  }
+
+  /** @param {THREE.Material | null | undefined} mat */
+  _clearStudioExtrudeEmissiveOnMaterial(mat) {
+    if (!mat || !('emissive' in mat)) return;
+    if (mat.emissive?.isColor) mat.emissive.set(0, 0, 0);
+    if ('emissiveIntensity' in mat) mat.emissiveIntensity = 0;
+    mat.emissiveMap = null;
+  }
+
+  /** Heal import snapshots when live Mesh→Emissive is cleared (may share refs with live). */
+  _clearStudioExtrudeEmissiveBaseline(importMat) {
+    if (!importMat) return;
+    if (Array.isArray(importMat)) {
+      importMat.forEach((m) => this._clearStudioExtrudeEmissiveOnMaterial(m));
+      return;
+    }
+    this._clearStudioExtrudeEmissiveOnMaterial(importMat);
   }
 
   /**
@@ -1213,6 +1260,11 @@ export class MaterialController {
       }
     });
     return hasPbr;
+  }
+
+  /** Whether any import material came from KHR_materials_pbrSpecularGlossiness. */
+  _modelHasSpecGlossMaterials(object) {
+    return modelHasSpecGlossMaterials(object, this.originalMaterials);
   }
 
   /**
@@ -1351,11 +1403,14 @@ export class MaterialController {
     if (!this._modelHasAuthoredPbrMaterials(model)) return;
     if (options.preserveSession) return;
     if (model.userData?.orbyShapeLibrary) return;
-    const neutral = IMPORT_MATERIAL_MR_MULTIPLIER;
-    this.materialSettings.metalness = neutral;
-    this.materialSettings.roughness = neutral;
-    this.stateStore?.set('material.metalness', neutral);
-    this.stateStore?.set('material.roughness', neutral);
+    const isSpecGloss = modelHasSpecGlossMaterials(model, this.originalMaterials);
+    // SpecGloss metalness is absolute (file converts to 0); roughness 1.0 = as-authored gloss.
+    const metalness = isSpecGloss ? 0 : IMPORT_MATERIAL_MR_MULTIPLIER;
+    const roughness = IMPORT_MATERIAL_MR_MULTIPLIER;
+    this.materialSettings.metalness = metalness;
+    this.materialSettings.roughness = roughness;
+    this.stateStore?.set('material.metalness', metalness);
+    this.stateStore?.set('material.roughness', roughness);
   }
 
   /**
@@ -1387,28 +1442,60 @@ export class MaterialController {
     const authored = this._resolveAuthoredMetalRoughness(importMat);
     if (authored) {
       const baseline = importMat?.userData?.orbyGltfImportBaseline;
+      const specGlossImport =
+        baseline?.orbySpecGlossImport === true ||
+        importMat?.userData?.orbySpecGlossImport === true ||
+        baseline?.orbySpecGlossDiffuseOnly === true ||
+        importMat?.userData?.orbySpecGlossDiffuseOnly === true;
       const specGlossDiffuseOnly =
         baseline?.orbySpecGlossDiffuseOnly === true ||
         importMat?.userData?.orbySpecGlossDiffuseOnly === true;
-      if (specGlossDiffuseOnly) {
-        const authoredGlossiness =
-          baseline?.orbySpecGlossAuthoredGlossiness ??
-          importMat?.userData?.orbySpecGlossAuthoredGlossiness ??
-          0;
-        const specGloss = applySpecGlossDiffuseOnlyRoughnessSlider(
-          globalR,
-          authoredGlossiness,
-        );
-        target.metalness = THREE.MathUtils.clamp(authored.metalness * globalM, 0, 1);
-        target.roughness = effectiveRoughnessWithHdriBlur(
-          specGloss.roughness,
-          this._lastHdriBlurriness,
-        );
-        if ('specularIntensity' in target) {
-          target.specularIntensity = specGloss.specularIntensity;
-        }
-        if (target.specularColor && specGloss.specularColor) {
-          target.specularColor.copy(specGloss.specularColor);
+      if (specGlossImport) {
+        // SpecGloss converts to metalness 0 — use the slider as an absolute metal control.
+        target.metalness = THREE.MathUtils.clamp(globalM, 0, 1);
+        if (specGlossDiffuseOnly) {
+          const authoredGlossiness =
+            baseline?.orbySpecGlossAuthoredGlossiness ??
+            importMat?.userData?.orbySpecGlossAuthoredGlossiness ??
+            0;
+          const specGloss = applySpecGlossDiffuseOnlyRoughnessSlider(
+            globalR,
+            authoredGlossiness,
+          );
+          target.roughness = effectiveRoughnessWithHdriBlur(
+            specGloss.roughness,
+            this._lastHdriBlurriness,
+          );
+          if ('specularIntensity' in target) {
+            target.specularIntensity = specGloss.specularIntensity;
+          }
+          if (target.specularColor && specGloss.specularColor) {
+            target.specularColor.copy(specGloss.specularColor);
+          }
+        } else {
+          const authoredSpec =
+            baseline?.specularIntensity !== undefined
+              ? baseline.specularIntensity
+              : Number.isFinite(importMat?.specularIntensity)
+                ? importMat.specularIntensity
+                : 1;
+          const specGloss = applySpecGlossGlossyRoughnessSlider(
+            globalR,
+            authored.roughness,
+            authoredSpec,
+          );
+          target.roughness = effectiveRoughnessWithHdriBlur(
+            specGloss.roughness,
+            this._lastHdriBlurriness,
+          );
+          if ('specularIntensity' in target) {
+            target.specularIntensity = specGloss.specularIntensity;
+          }
+          if (target.specularColor && baseline?.specularColor?.isColor) {
+            target.specularColor.copy(baseline.specularColor);
+          } else if (target.specularColor && importMat?.specularColor?.isColor) {
+            target.specularColor.copy(importMat.specularColor);
+          }
         }
         if ('metalnessMap' in target) target.metalnessMap = null;
         if ('roughnessMap' in target) target.roughnessMap = null;
@@ -1463,12 +1550,20 @@ export class MaterialController {
   }
 
   _backfillSpecGlossBaselineFromUserData(m) {
-    if (!m.userData?.orbySpecGlossDiffuseOnly) return;
+    const isSpecGloss =
+      m.userData?.orbySpecGlossImport || m.userData?.orbySpecGlossDiffuseOnly;
+    if (!isSpecGloss) return;
     const baseline = m.userData.orbyGltfImportBaseline;
-    if (!baseline || baseline.orbySpecGlossDiffuseOnly) return;
-    baseline.orbySpecGlossDiffuseOnly = true;
-    baseline.orbySpecGlossAuthoredGlossiness =
-      m.userData.orbySpecGlossAuthoredGlossiness ?? 1;
+    if (!baseline) return;
+    baseline.orbySpecGlossImport = true;
+    if (m.userData.orbySpecGlossDiffuseOnly && !baseline.orbySpecGlossDiffuseOnly) {
+      baseline.orbySpecGlossDiffuseOnly = true;
+      baseline.orbySpecGlossAuthoredGlossiness =
+        m.userData.orbySpecGlossAuthoredGlossiness ?? 1;
+    } else if (baseline.orbySpecGlossAuthoredGlossiness === undefined) {
+      baseline.orbySpecGlossAuthoredGlossiness =
+        m.userData.orbySpecGlossAuthoredGlossiness ?? 1;
+    }
   }
 
   /**
@@ -1520,15 +1615,19 @@ export class MaterialController {
           baseline.specularColor = m.specularColor.clone();
         }
       }
-      const specGlossMeta = m.userData?.orbySpecGlossDiffuseOnly
+      const specGlossMeta = m.userData?.orbySpecGlossImport
         ? {
-            orbySpecGlossDiffuseOnly: true,
+            orbySpecGlossImport: true,
+            orbySpecGlossDiffuseOnly: !!m.userData.orbySpecGlossDiffuseOnly,
             orbySpecGlossAuthoredGlossiness:
               m.userData.orbySpecGlossAuthoredGlossiness ?? 1,
           }
         : readSpecGlossImportMetadata(m.userData?.gltfExtensions);
       if (specGlossMeta) {
-        baseline.orbySpecGlossDiffuseOnly = specGlossMeta.orbySpecGlossDiffuseOnly;
+        baseline.orbySpecGlossImport = true;
+        if (specGlossMeta.orbySpecGlossDiffuseOnly) {
+          baseline.orbySpecGlossDiffuseOnly = true;
+        }
         baseline.orbySpecGlossAuthoredGlossiness =
           specGlossMeta.orbySpecGlossAuthoredGlossiness;
       }
@@ -2546,7 +2645,12 @@ export class MaterialController {
     return standard;
   }
 
-  setShading(mode) {
+  /**
+   * @param {string} mode
+   * @param {{ skipWireframeOverlay?: boolean }} [options]
+   *   When true, caller rebuilds the wireframe overlay (e.g. behind a load spinner).
+   */
+  setShading(mode, options = {}) {
     if (!this.currentModel) return;
     this.mapInspectPreview?.clear();
     this.currentShading = mode;
@@ -2809,7 +2913,9 @@ export class MaterialController {
     });
 
     this.unlitMode = mode === 'textures';
-    this.updateWireframeOverlay();
+    if (!options.skipWireframeOverlay) {
+      this.updateWireframeOverlay();
+    }
     this.uvCheckerOverlay.rebuild();
     this.normalViewOverlay.rebuild();
     this.applyFresnelToModel(this.currentModel);
@@ -2857,6 +2963,35 @@ export class MaterialController {
     );
   }
 
+  /**
+   * Clone extrude import snapshots so updateMaterials (emissive / MR) never mutates the baseline.
+   * @param {THREE.Material | THREE.Material[]} matOrArr
+   */
+  _cloneExtrudeImportBaseline(matOrArr) {
+    const cloneOne = (m) => {
+      if (!m?.clone) return m;
+      const c = m.clone();
+      this._clearStudioExtrudeEmissiveOnMaterial(c);
+      return c;
+    };
+    if (Array.isArray(matOrArr)) return matOrArr.map(cloneOne);
+    return cloneOne(matOrArr);
+  }
+
+  /**
+   * True when every stored baseline material is the same object as the live mesh material.
+   * @param {THREE.Mesh} mesh
+   * @param {THREE.Material | THREE.Material[]} stored
+   */
+  _extrudeBaselineAliasesLive(mesh, stored) {
+    const live = mesh?.material;
+    if (!live || !stored) return false;
+    const liveArr = Array.isArray(live) ? live : [live];
+    const storedArr = Array.isArray(stored) ? stored : [stored];
+    if (liveArr.length !== storedArr.length) return false;
+    return storedArr.every((m, i) => m && m === liveArr[i]);
+  }
+
   /** Rebuild a shaded import material when snapshots were lost or polluted by Shader Lab. */
   _synthesizeExtrudeImportMaterial(mesh) {
     const linear = mesh.userData?.orbySvgBaseColorLinear;
@@ -2869,28 +3004,37 @@ export class MaterialController {
     } else {
       color = new THREE.Color('#ffffff');
     }
-    return new THREE.MeshStandardMaterial({
-      color: this._diffuseColorWithBrightness(color),
-      metalness: this.materialSettings.metalness ?? DEFAULT_MATERIAL_METALNESS,
-      roughness: this.materialSettings.roughness ?? DEFAULT_MATERIAL_ROUGHNESS,
+    const mat = new THREE.MeshStandardMaterial({
+      color: color.clone(),
+      metalness: 0,
+      roughness: DEFAULT_MATERIAL_ROUGHNESS,
       side: THREE.FrontSide,
     });
+    this._clearStudioExtrudeEmissiveOnMaterial(mat);
+    return mat;
   }
 
   /**
    * Resolve the import baseline for an extrude mesh — never a Shader Lab material.
+   * Always returns a snapshot distinct from live materials when cloning from live.
    * @param {THREE.Mesh} mesh
    */
   _resolveExtrudeImportMaterialForMesh(mesh) {
     const stored = this.originalMaterials.get(mesh);
     if (stored) {
       const items = Array.isArray(stored) ? stored : [stored];
-      if (items.every((m) => this._isImportBaselineMaterial(m))) return stored;
+      if (items.every((m) => this._isImportBaselineMaterial(m))) {
+        // Prior prepareMesh aliased live === original; detach so emissive/MR can clear.
+        if (this._extrudeBaselineAliasesLive(mesh, stored)) {
+          return this._cloneExtrudeImportBaseline(stored);
+        }
+        return stored;
+      }
     }
     const live = mesh.material;
     const liveItems = Array.isArray(live) ? live : live ? [live] : [];
     if (liveItems.length > 0 && liveItems.every((m) => this._isImportBaselineMaterial(m))) {
-      return live;
+      return this._cloneExtrudeImportBaseline(live);
     }
     if (mesh.userData?.orbySvgExtrude || mesh.userData?.orbyFontExtrude) {
       return this._synthesizeExtrudeImportMaterial(mesh);
@@ -4480,20 +4624,20 @@ export class MaterialController {
     }
   }
 
-  /** @param {THREE.Color} color @param {THREE.Material} [importMat] @param {number} [effectiveScale] — already effective when passed from {@link #_diffuseColorWithBrightness} */
-  _softCapTexturedBrightnessAlbedo(color, importMat, effectiveScale) {
+  /**
+   * Fixed HDR ceiling on albedo-mapped imports after brightness scale.
+   * Must not raise with the brightness slider — otherwise MR-mapped metals (clamp skipped)
+   * keep ×brightness specular blowout and bloom fireflies.
+   * @param {THREE.Color} color
+   * @param {THREE.Material} [importMat]
+   */
+  _softCapTexturedBrightnessAlbedo(color, importMat) {
     if (!color?.isColor || !importMat) return;
     const hasAlbedo =
       !!importMat.map?.isTexture || !!importMat.userData?.orbyFbxSlotMaps;
     if (!hasAlbedo) return;
-    const passed = Number(effectiveScale);
-    const scale = Number.isFinite(passed)
-      ? passed
-      : materialBrightnessEffectiveScale(
-          this.materialSettings.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS,
-        );
     const peak = Math.max(color.r, color.g, color.b);
-    const maxPeak = Math.max(MATERIAL_TEXTURED_BRIGHTNESS_HDR_PEAK, scale);
+    const maxPeak = MATERIAL_TEXTURED_BRIGHTNESS_HDR_PEAK;
     if (peak > maxPeak) {
       color.multiplyScalar(maxPeak / peak);
     }
@@ -4510,11 +4654,20 @@ export class MaterialController {
    * @param {THREE.Material} [importMat]
    */
   _metalnessForBrightnessClamp(metalnessForClamp, importMat) {
-    const authored = importMat ? this._resolveAuthoredMetalRoughness(importMat) : null;
+    // Font/SVG extrude snapshots keep placeholder metalness 0; the Object → Material slider is authoritative.
+    // Using authored 0 skipped the metal brightness clamp, so HDR white from Brightness looked brighter than
+    // white applied via the face colour picker (which clamped with slider metalness) — white became “gray”.
+    const studioExtrude = this._isStudioExtrudeColorModel();
+    const authored = studioExtrude
+      ? null
+      : importMat
+        ? this._resolveAuthoredMetalRoughness(importMat)
+        : null;
     return resolveMaterialBrightnessMetalnessClamp({
       explicitMetalness: metalnessForClamp,
       hasMrMaps: !!(importMat && this._importMaterialHasMrMaps(importMat)),
-      isShapeLibrary: !!this.currentModel?.userData?.orbyShapeLibrary,
+      isShapeLibrary:
+        studioExtrude || !!this.currentModel?.userData?.orbyShapeLibrary,
       sliderMetalness: this.materialSettings.metalness,
       authored,
     });
@@ -4661,7 +4814,7 @@ export class MaterialController {
       color.g = THREE.MathUtils.lerp(color.g, clamp(color.g), metal);
       color.b = THREE.MathUtils.lerp(color.b, clamp(color.b), metal);
     }
-    this._softCapTexturedBrightnessAlbedo(color, importMat, scale);
+    this._softCapTexturedBrightnessAlbedo(color, importMat);
     return color;
   }
 
@@ -4958,9 +5111,63 @@ export class MaterialController {
   setWireframeSettings(patch) {
     this.wireframeSettings = { ...this.wireframeSettings, ...patch };
     this.stateStore.set('wireframe', this.wireframeSettings);
+
+    const keys = patch && typeof patch === 'object' ? Object.keys(patch) : [];
+    const overlayLive =
+      this.wireframeOverlayMeshes?.length > 0 && this._shouldShowWireframeOverlay();
+    // Thickness / opacity / color can update materials in place — avoid full rebuild
+    // (expensive on dense skinned meshes, and needed for responsive bones-mode scrubbing).
+    if (
+      overlayLive
+      && keys.length > 0
+      && keys.every((k) => k === 'thickness' || k === 'opacity' || k === 'color')
+    ) {
+      if (keys.includes('thickness')) {
+        const viewport = this._getWireframeViewportContext();
+        this._applyWireframeLineWidthPx(viewport.pixelRatio);
+      }
+      if (keys.includes('opacity') || keys.includes('color')) {
+        this._applyWireframeOverlayAppearance();
+      }
+      return;
+    }
+
     this.updateWireframeOverlay();
     // Wireframe mode now uses overlay, so any setting change just updates the overlay
     // No need to refresh shading mode
+  }
+
+  /**
+   * Bones mode uses `animation.showWireframe` (default off) instead of Mesh → Wireframe /
+   * shading === 'wireframe', so skeleton view can stay solid/ghosted unless opted in.
+   */
+  _shouldShowWireframeOverlay() {
+    const animation = this.stateStore?.getState?.()?.animation;
+    if (animation?.showBones) {
+      return !!animation.showWireframe;
+    }
+    return this.wireframeSettings.alwaysOn || this.currentShading === 'wireframe';
+  }
+
+  /** Live-update color/opacity on existing overlay materials (no geometry rebuild). */
+  _applyWireframeOverlayAppearance() {
+    const { color, opacity = DEFAULT_WIREFRAME_OPACITY, onlyVisibleFaces } =
+      this.wireframeSettings;
+    const hex = new THREE.Color(color).getHex();
+    const transparent = opacity < 1 || !onlyVisibleFaces;
+    const applyMat = (mat) => {
+      if (!mat) return;
+      if (mat.color?.isColor) mat.color.setHex(hex);
+      else if (mat.color !== undefined) mat.color = hex;
+      if (mat.opacity !== undefined) mat.opacity = opacity;
+      if (mat.transparent !== undefined) mat.transparent = transparent;
+    };
+    applyMat(this._wireframeLineMaterial);
+    applyMat(this._wireframeBasicMaterial);
+    for (const wireMesh of this.wireframeOverlayMeshes ?? []) {
+      const mats = Array.isArray(wireMesh.material) ? wireMesh.material : [wireMesh.material];
+      for (const mat of mats) applyMat(mat);
+    }
   }
 
   clearWireframeOverlay() {
@@ -4968,7 +5175,8 @@ export class MaterialController {
     if (meshes?.length) {
       for (const child of meshes) {
         child.parent?.remove(child);
-        if (child.userData.ownsGeometry || child.userData.isCloned) {
+        // Never dispose shared source geometry (skinned only-visible path).
+        if (child.userData.ownsGeometry) {
           child.geometry?.dispose?.();
         }
         if (child.userData.ownsMaterial) {
@@ -5198,9 +5406,28 @@ export class MaterialController {
     });
     material.linewidth = this._resolveWireframeLineWidthPx(thickness, pixelRatio);
     if (onlyVisibleFaces) {
+      // polygonOffset is kept for the solid depth prepass (triangles); WebGL ignores it for GL_LINES.
       material.polygonOffset = true;
       material.polygonOffsetFactor = WIREFRAME_POLYGON_OFFSET_FACTOR;
       material.polygonOffsetUnits = WIREFRAME_POLYGON_OFFSET_UNITS;
+      const bias = WIREFRAME_CLIP_DEPTH_BIAS;
+      material.onBeforeCompile = (shader) => {
+        // Prefer project_vertex — always present on MeshBasic; runs before log-depth varyings.
+        if (shader.vertexShader.includes('#include <project_vertex>')) {
+          shader.vertexShader = shader.vertexShader.replace(
+            '#include <project_vertex>',
+            `#include <project_vertex>
+  gl_Position.z -= float(${bias}) * gl_Position.w;`,
+          );
+        } else {
+          shader.vertexShader = shader.vertexShader.replace(
+            '#include <logdepthbuf_vertex>',
+            `#include <logdepthbuf_vertex>
+  gl_Position.z -= float(${bias}) * gl_Position.w;`,
+          );
+        }
+      };
+      material.customProgramCacheKey = () => `orbyWireframeClipBias:${bias}`;
     }
     return material;
   }
@@ -5211,24 +5438,29 @@ export class MaterialController {
     // Always clear existing overlay first to prevent duplicates
     this.clearWireframeOverlay();
 
-    // Update mesh visibility based on hideMesh setting
+    // Update mesh visibility based on hideMesh setting — skip when bones mode
+    // owns visibility via MeshDiagnosticsController (ghost / hide mesh).
+    const bonesMode = !!this.stateStore?.getState?.()?.animation?.showBones;
     const { hideMesh } = this.wireframeSettings;
-    this.currentModel.traverse((child) => {
-      if (
-        child.isMesh
-        && !child.userData.isWireframeOverlay
-        && !child.userData.isUvCheckerOverlay
-        && !child.userData.isNormalViewOverlay
-        && !child.userData.isTopologyWarningsOverlay
-      ) {
-        // Hide mesh if hideMesh is enabled (but keep diagnostic overlays visible)
-        child.visible = !hideMesh;
-      }
-    });
+    if (!bonesMode) {
+      this.currentModel.traverse((child) => {
+        if (
+          child.isMesh
+          && !child.userData.isWireframeOverlay
+          && !child.userData.isUvCheckerOverlay
+          && !child.userData.isNormalViewOverlay
+          && !child.userData.isTopologyWarningsOverlay
+        ) {
+          // Hide mesh if hideMesh is enabled (but keep diagnostic overlays visible)
+          child.visible = !hideMesh;
+        }
+      });
+    }
 
-    // Create overlay if "always on" is enabled OR if wireframe mode is active
+    // Create overlay if "always on" is enabled OR if wireframe mode is active.
+    // In bones mode, animation.showWireframe wins (default off) over Mesh → Wireframe.
     // Wireframe mode now shows overlay on top of original materials (not pure wireframe)
-    const shouldShowOverlay = this.wireframeSettings.alwaysOn || this.currentShading === 'wireframe';
+    const shouldShowOverlay = this._shouldShowWireframeOverlay();
     
     if (shouldShowOverlay) {
       this.wireframeOverlayMeshes = [];
@@ -5271,10 +5503,15 @@ export class MaterialController {
         let wireMesh;
 
         if (usesDeform) {
-          // GLB rigs / morph clips — offset clone hovers above the surface; skin weights stay intact.
-          const offsetGeometry = this._buildOffsetWireframeSourceGeometry(child.geometry, {
-            applySurfaceOffset: true,
-          });
+          // When depth-testing ("only visible faces"), share the source bind-pose geometry so
+          // skinned wire lines match the depth-prime pass. Offset/merged clones drift under LBS
+          // and get masked as camera-dependent holes. X-ray mode still uses a surface offset.
+          const shareSourceGeometry = !!onlyVisibleFaces;
+          const wireGeometry = shareSourceGeometry
+            ? child.geometry
+            : this._buildOffsetWireframeSourceGeometry(child.geometry, {
+                applySurfaceOffset: true,
+              });
           const material = this._createWireframeBasicMaterial({
             color,
             onlyVisibleFaces,
@@ -5286,13 +5523,13 @@ export class MaterialController {
           });
 
           if (skinned) {
-            wireMesh = new THREE.SkinnedMesh(offsetGeometry, material);
+            wireMesh = new THREE.SkinnedMesh(wireGeometry, material);
             wireMesh.bind(child.skeleton, child.bindMatrix);
             if (child.bindMatrixInverse) {
               wireMesh.bindMatrixInverse = child.bindMatrixInverse.clone();
             }
           } else {
-            wireMesh = new THREE.Mesh(offsetGeometry, material);
+            wireMesh = new THREE.Mesh(wireGeometry, material);
           }
 
           if (morph) {
@@ -5300,8 +5537,12 @@ export class MaterialController {
             wireMesh.morphTargetDictionary = child.morphTargetDictionary;
           }
 
-          wireMesh.userData.ownsGeometry = true;
+          // Bind-pose bounds ignore skeletal deform — avoid whole-mesh cull at tight camera angles.
+          wireMesh.frustumCulled = false;
+          wireMesh.userData.ownsGeometry = !shareSourceGeometry;
           wireMesh.userData.ownsMaterial = true;
+          // GL_LINES ignore polygonOffset — solid triangle prepass writes matching depth first.
+          wireMesh.userData.wireframeNeedsSolidDepthPrime = !!onlyVisibleFaces;
         } else {
           // Static meshes — crisp screen-space lines via LineSegments2.
           let offsetGeometry = this._buildOffsetWireframeSourceGeometry(child.geometry, {
@@ -5316,7 +5557,7 @@ export class MaterialController {
         }
 
         wireMesh.userData.originalMesh = child;
-        wireMesh.userData.isCloned = skinned;
+        wireMesh.userData.isCloned = !!wireMesh.userData.ownsGeometry && !!skinned;
         wireMesh.userData.isWireframeOverlay = true;
         wireMesh.name = child.name ? `${child.name}_wireframe` : 'wireframe';
         wireMesh.renderOrder = 999;
@@ -6868,6 +7109,7 @@ export class MaterialController {
     this.originalMaterials = new WeakMap();
     this.stateStore?.set('material.importHasMrMaps', false);
     this.stateStore?.set('material.importUsesAuthoredPbr', false);
+    this.stateStore?.set('material.importIsSpecGloss', false);
     this.stateStore?.set('material.surfaceEligible', false);
     this.stateStore?.set('material.colorOverrideEligible', false);
     this.stateStore?.set('material.hasImportAlbedoMaps', false);
@@ -6940,8 +7182,6 @@ export class MaterialController {
     const twoTone = fontExtrudeTwoToneActive(faceHex, sideHex);
     const faceBase = new THREE.Color(faceHex);
     const sideBase = new THREE.Color(sideHex);
-    const faceVisible = this._diffuseColorWithBrightness(faceBase);
-    const sideVisible = this._diffuseColorWithBrightness(sideBase);
     const faceLinear = { r: faceBase.r, g: faceBase.g, b: faceBase.b };
     const colorOverrideEnabled = !!this.stateStore?.getState()?.svgExtrude?.colorOverride;
 
@@ -6958,30 +7198,20 @@ export class MaterialController {
 
       if (twoTone && !child.userData.orbyExtrudeTwoTone) {
         applyFontExtrudeTwoToneToMesh(child, faceHex, sideHex);
-        const baseline = Array.isArray(child.material)
-          ? child.material.map((mat) => mat.clone())
-          : child.material?.clone?.();
+        const baseline = this._cloneExtrudeImportBaseline(child.material);
         if (baseline) this.originalMaterials.set(child, baseline);
       }
 
       const patchCapBase = (mat) => {
         if (!mat?.color || mat.userData?.orbyCreativeLook) return;
         mat.color.copy(faceBase);
+        this._clearStudioExtrudeEmissiveOnMaterial(mat);
         mat.needsUpdate = true;
       };
       const patchSideBase = (mat) => {
         if (!mat?.color || mat.userData?.orbyCreativeLook) return;
         mat.color.copy(sideBase);
-        mat.needsUpdate = true;
-      };
-      const patchCapVisible = (mat) => {
-        if (!mat?.color || mat.userData?.orbyCreativeLook) return;
-        mat.color.copy(faceVisible);
-        mat.needsUpdate = true;
-      };
-      const patchSideVisible = (mat) => {
-        if (!mat?.color || mat.userData?.orbyCreativeLook) return;
-        mat.color.copy(sideVisible);
+        this._clearStudioExtrudeEmissiveOnMaterial(mat);
         mat.needsUpdate = true;
       };
 
@@ -6995,17 +7225,22 @@ export class MaterialController {
         else patchCapBase(original);
       }
 
+      // Keep live in sync when originals are missing (pre-prepareMesh) or still aliased.
       const live = child.material;
-      if (isTwoTone && Array.isArray(live)) {
-        patchCapVisible(live[FONT_EXTRUDE_CAP_MATERIAL_INDEX]);
-        patchSideVisible(live[FONT_EXTRUDE_SIDE_MATERIAL_INDEX]);
-      } else if (Array.isArray(live)) {
-        live.forEach(patchCapVisible);
-      } else {
-        patchCapVisible(live);
+      if (!original || this._extrudeBaselineAliasesLive(child, original)) {
+        if (isTwoTone && Array.isArray(live)) {
+          patchCapBase(live[FONT_EXTRUDE_CAP_MATERIAL_INDEX]);
+          patchSideBase(live[FONT_EXTRUDE_SIDE_MATERIAL_INDEX]);
+        } else if (Array.isArray(live)) {
+          live.forEach(patchCapBase);
+        } else {
+          patchCapBase(live);
+        }
       }
     });
 
+    // Single brightness / MR path — same as Mesh → Brightness (avoids picker vs slider divergence).
+    this.updateMaterials();
     this._presentExtrudeTwoToneSurfaceChange();
   }
 
@@ -7021,8 +7256,6 @@ export class MaterialController {
     const twoTone = fontExtrudeTwoToneActive(face, side);
     const faceBase = new THREE.Color(face);
     const sideBase = new THREE.Color(side);
-    const faceVisible = this._diffuseColorWithBrightness(faceBase);
-    const sideVisible = this._diffuseColorWithBrightness(sideBase);
     const faceLinear = { r: faceBase.r, g: faceBase.g, b: faceBase.b };
 
     this.currentModel.traverse((child) => {
@@ -7036,30 +7269,20 @@ export class MaterialController {
 
       if (twoTone && !child.userData.orbyExtrudeTwoTone) {
         applyFontExtrudeTwoToneToMesh(child, face, side);
-        const baseline = Array.isArray(child.material)
-          ? child.material.map((mat) => mat.clone())
-          : child.material?.clone?.();
+        const baseline = this._cloneExtrudeImportBaseline(child.material);
         if (baseline) this.originalMaterials.set(child, baseline);
       }
 
       const patchCapBase = (mat) => {
         if (!mat?.color || mat.userData?.orbyCreativeLook) return;
         mat.color.copy(faceBase);
+        this._clearStudioExtrudeEmissiveOnMaterial(mat);
         mat.needsUpdate = true;
       };
       const patchSideBase = (mat) => {
         if (!mat?.color || mat.userData?.orbyCreativeLook) return;
         mat.color.copy(sideBase);
-        mat.needsUpdate = true;
-      };
-      const patchCapVisible = (mat) => {
-        if (!mat?.color || mat.userData?.orbyCreativeLook) return;
-        mat.color.copy(faceVisible);
-        mat.needsUpdate = true;
-      };
-      const patchSideVisible = (mat) => {
-        if (!mat?.color || mat.userData?.orbyCreativeLook) return;
-        mat.color.copy(sideVisible);
+        this._clearStudioExtrudeEmissiveOnMaterial(mat);
         mat.needsUpdate = true;
       };
 
@@ -7074,16 +7297,19 @@ export class MaterialController {
       }
 
       const live = child.material;
-      if (isTwoTone && Array.isArray(live)) {
-        patchCapVisible(live[FONT_EXTRUDE_CAP_MATERIAL_INDEX]);
-        patchSideVisible(live[FONT_EXTRUDE_SIDE_MATERIAL_INDEX]);
-      } else if (Array.isArray(live)) {
-        live.forEach(patchCapVisible);
-      } else {
-        patchCapVisible(live);
+      if (!original || this._extrudeBaselineAliasesLive(child, original)) {
+        if (isTwoTone && Array.isArray(live)) {
+          patchCapBase(live[FONT_EXTRUDE_CAP_MATERIAL_INDEX]);
+          patchSideBase(live[FONT_EXTRUDE_SIDE_MATERIAL_INDEX]);
+        } else if (Array.isArray(live)) {
+          live.forEach(patchCapBase);
+        } else {
+          patchCapBase(live);
+        }
       }
     });
 
+    this.updateMaterials();
     this._presentExtrudeTwoToneSurfaceChange();
   }
 

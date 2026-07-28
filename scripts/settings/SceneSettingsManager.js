@@ -793,6 +793,7 @@ export class SceneSettingsManager {
         this.eventBus.emit('animation:show-joint-names', !!merged.showJointNames);
         this.eventBus.emit('animation:joint-scale', merged.jointScale ?? 0.5);
         this.eventBus.emit('animation:bone-stroke-width', merged.boneStrokeWidth ?? 2);
+        this.eventBus.emit('animation:show-wireframe', !!merged.showWireframe);
         this.eventBus.emit('animation:hide-mesh', !!merged.hideMesh);
         this.eventBus.emit('animation:clip-mode', merged.clipPlaybackMode ?? 'loop');
         this.eventBus.emit('animation:display-fps', merged.displayFps ?? 60);

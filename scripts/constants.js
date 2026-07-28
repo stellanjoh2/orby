@@ -91,6 +91,13 @@ export function resolveWireframeSurfaceOffset(maxDimension) {
 /** Negative values pull wireframe toward the camera in the depth buffer (matches UV/normal overlays). */
 export const WIREFRAME_POLYGON_OFFSET_FACTOR = -4;
 export const WIREFRAME_POLYGON_OFFSET_UNITS = -4;
+/**
+ * Clip-space Z pull for skinned/morph MeshBasicMaterial wireframe (`GL_LINES`).
+ * `polygonOffset` only affects `POLYGON_OFFSET_FILL` — it is a no-op on wireframe lines — so
+ * "only visible faces" depth-tests against primed mesh depth fail at grazing angles without this.
+ * Kept large enough that exact-surface skinned lines still pass after the solid depth prepass.
+ */
+export const WIREFRAME_CLIP_DEPTH_BIAS = 0.01;
 export const WIREFRAME_OPACITY_VISIBLE = 1.0;
 export const WIREFRAME_OPACITY_OVERLAY = 0.8;
 /** Default wireframe line thickness slider value (maps to screen-space pixels via LineMaterial). */
@@ -216,8 +223,9 @@ export function materialBrightnessEffectiveScale(uiBrightness) {
 }
 
 /**
- * Peak linear RGB after brightness scale on albedo-mapped imports — keeps map × tint in HDR headroom
- * for tonemap without hard clipping that reads as “burnt” texture (desktop + mobile share MaterialController).
+ * Fixed linear RGB ceiling after brightness scale on albedo-mapped imports (not raised with the slider).
+ * Keeps map × tint in HDR headroom for tonemap; caps MR-mapped metals where the metalness brightness
+ * clamp is skipped (desktop + mobile share MaterialController).
  */
 export const MATERIAL_TEXTURED_BRIGHTNESS_HDR_PEAK = 2.5;
 
@@ -248,15 +256,29 @@ export const MATERIAL_METALNESS_MR_MAP_TOOLTIP =
   'Multiplies the metalness map — 1.0 matches the file; lower or higher scales the texture';
 export const MATERIAL_METALNESS_AUTHORED_TOOLTIP =
   'Scales each material\'s authored metalness — 1.0 matches the file';
+export const MATERIAL_METALNESS_SPEC_GLOSS_TOOLTIP =
+  'Control metallic appearance (0 = dielectric, 1 = metal). Spec/gloss imports start at 0';
 export const MATERIAL_ROUGHNESS_TOOLTIP =
   'Control surface smoothness (0 = mirror, 1 = rough)';
 export const MATERIAL_ROUGHNESS_MR_MAP_TOOLTIP =
   'Multiplies the roughness map — 1.0 matches the file; lower or higher scales the texture';
 export const MATERIAL_ROUGHNESS_AUTHORED_TOOLTIP =
   'Scales each material\'s authored roughness — 1.0 matches the file';
+export const MATERIAL_ROUGHNESS_SPEC_GLOSS_TOOLTIP =
+  '1.0 matches the file gloss; lower softens toward matte (legacy specular/glossiness assets)';
 
 /** Material reset / UI fallbacks when a PBR import uses per-material authored factors. */
-export function getMaterialMrResetDefaults(importUsesAuthoredPbr = false) {
+export function getMaterialMrResetDefaults(
+  importUsesAuthoredPbr = false,
+  importIsSpecGloss = false,
+) {
+  if (importIsSpecGloss) {
+    return {
+      metalness: 0,
+      roughness: IMPORT_MATERIAL_MR_MULTIPLIER,
+      brightness: DEFAULT_MATERIAL_BRIGHTNESS,
+    };
+  }
   if (importUsesAuthoredPbr) {
     return {
       metalness: IMPORT_MATERIAL_MR_MULTIPLIER,

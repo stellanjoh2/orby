@@ -22,6 +22,8 @@ export function createMaterialDefaults() {
       importHasMrMaps: false,
       /** True when import carries per-material PBR factors (sliders scale authored values; 1.0 = file). */
       importUsesAuthoredPbr: false,
+      /** True when import used KHR_materials_pbrSpecularGlossiness (special MR slider mapping). */
+      importIsSpecGloss: false,
       /** Triplanar normal-map surface detail for eligible imports (Object → Material). */
       surfacePreset: DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
       surfaceScale: DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,

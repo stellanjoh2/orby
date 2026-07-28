@@ -6,6 +6,7 @@ export function createAnimationDefaults() {
     animation: {
       showBones: false,
       showJointNames: false,
+      showWireframe: false,
       hideMesh: false,
       jointScale: 0.5,
       boneStrokeWidth: 2,

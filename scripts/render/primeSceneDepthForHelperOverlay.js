@@ -17,6 +17,25 @@ function getSharedDepthOverrideMaterial() {
 }
 
 /**
+ * Helpers / overlays that must not punch holes in grid / wireframe depth tests.
+ * @param {import('three').Object3D} object
+ */
+function shouldSkipDepthPrimeObject(object) {
+  const u = object?.userData;
+  if (!u) return false;
+  return !!(
+    u.isWireframeOverlay
+    || u.isUvCheckerOverlay
+    || u.isNormalViewOverlay
+    || u.isTopologyWarningsOverlay
+    || u.meshglHdriShadowReceiver
+    || u.meshglDofDepthProxy
+    || u.meshglDofFocusPlane
+    || u.skipBokehDepth
+  );
+}
+
+/**
  * Write mesh depth into `renderTarget` (or the screen) so helper overlays can depth-test
  * against scene geometry. Post stacks only touch color — composer RT depth is not on screen.
  * Color writes are disabled so the graded beauty plate is not overwritten.
@@ -42,11 +61,30 @@ export function primeSceneDepthForHelperOverlay({
 
   /** @type {Array<{ object: import('three').Object3D, visible: boolean }>} */
   const snapshots = [];
+  const seen = new Set();
   for (const object of exclude) {
-    if (!object) continue;
+    if (!object || seen.has(object)) continue;
+    seen.add(object);
     snapshots.push({ object, visible: object.visible });
     object.visible = false;
   }
+
+  scene.traverse((object) => {
+    if (!object.visible || seen.has(object)) return;
+    if (!shouldSkipDepthPrimeObject(object)) return;
+    seen.add(object);
+    snapshots.push({ object, visible: object.visible });
+    object.visible = false;
+  });
+
+  // Bind-pose depth from stale bone matrices punches ghost holes in the grid / wireframe.
+  const skeletonsUpdated = new Set();
+  scene.traverse((object) => {
+    if (!object.visible || !object.isSkinnedMesh || !object.skeleton) return;
+    if (skeletonsUpdated.has(object.skeleton)) return;
+    object.skeleton.update();
+    skeletonsUpdated.add(object.skeleton);
+  });
 
   const prevAutoClear = renderer.autoClear;
   const prevRenderTarget = renderer.getRenderTarget();

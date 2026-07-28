@@ -4,6 +4,7 @@ import {
   renderWireframeOverlay,
   shouldOverlayWireframeMeshes,
   wireframeMeshesWantDepthTest,
+  wireframeOverlayIsXRay,
 } from '../wireframeOverlayPass.js';
 
 /**
@@ -163,12 +164,15 @@ export function compositeAsciiGroundGridOnByteTarget(deps, byteTarget) {
   }
 
   try {
+    const wireframeMeshes = deps.getWireframeOverlayMeshes?.() ?? [];
+    const wireframeXRay = wireframeOverlayIsXRay(wireframeMeshes);
     renderGroundGridOverlay({
       renderer: deps.renderer,
       camera: deps.camera,
       scene: deps.scene ?? null,
       grid,
       renderTarget: byteTarget,
+      depthTestAgainstScene: !wireframeXRay,
     });
   } finally {
     for (let i = 0; i < mats.length; i += 1) {

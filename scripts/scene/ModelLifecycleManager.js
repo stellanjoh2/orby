@@ -316,6 +316,7 @@ export class ModelLifecycleManager {
     s.diagnosticsController.setHideMesh(false);
     s.stateStore.set('animation.showBones', false);
     s.stateStore.set('animation.showJointNames', false);
+    s.stateStore.set('animation.showWireframe', false);
     s.stateStore.set('animation.hideMesh', false);
     const hasSkinnedSkeleton = s.diagnosticsController.hasSkinnedSkeleton();
     s.ui.syncAnimationShowBones(false, hasSkinnedSkeleton);

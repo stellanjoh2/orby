@@ -1574,7 +1574,10 @@ export class MeshControls {
       rotationZ: state.rotationZ ?? 0,
     });
     if (this.ui.inputs.materialBrightness) {
-      const mrDefaults = getMaterialMrResetDefaults(!!state.material?.importUsesAuthoredPbr);
+      const mrDefaults = getMaterialMrResetDefaults(
+        !!state.material?.importUsesAuthoredPbr,
+        !!state.material?.importIsSpecGloss,
+      );
       const brightness = state.material?.brightness ?? mrDefaults.brightness;
       this._syncMaterialRangeSlider(
         this.ui.inputs.materialBrightness,
@@ -1583,7 +1586,10 @@ export class MeshControls {
       );
     }
     if (this.ui.inputs.materialMetalness) {
-      const mrDefaults = getMaterialMrResetDefaults(!!state.material?.importUsesAuthoredPbr);
+      const mrDefaults = getMaterialMrResetDefaults(
+        !!state.material?.importUsesAuthoredPbr,
+        !!state.material?.importIsSpecGloss,
+      );
       const metalness = state.material?.metalness ?? mrDefaults.metalness;
       this._syncMaterialRangeSlider(
         this.ui.inputs.materialMetalness,
@@ -1592,7 +1598,10 @@ export class MeshControls {
       );
     }
     if (this.ui.inputs.materialRoughness) {
-      const mrDefaults = getMaterialMrResetDefaults(!!state.material?.importUsesAuthoredPbr);
+      const mrDefaults = getMaterialMrResetDefaults(
+        !!state.material?.importUsesAuthoredPbr,
+        !!state.material?.importIsSpecGloss,
+      );
       const roughness = state.material?.roughness ?? mrDefaults.roughness;
       this._syncMaterialRangeSlider(
         this.ui.inputs.materialRoughness,
@@ -1611,6 +1620,7 @@ export class MeshControls {
     this.ui.syncMaterialMrMapTooltips?.(
       !!state.material?.importUsesAuthoredPbr,
       !!state.material?.importHasMrMaps,
+      !!state.material?.importIsSpecGloss,
     );
     this.syncMaterialColorControls(state);
     syncObjectSurfaceControls(this._objectSurfaceCtx(), state, !!window.orby?.scene?.currentModel);

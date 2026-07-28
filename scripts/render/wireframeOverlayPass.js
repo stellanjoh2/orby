@@ -45,13 +45,34 @@ export function restoreWireframeOverlaysFromPass(snapshot) {
 export function wireframeMeshesWantDepthTest(wireframeMeshes) {
   if (!wireframeMeshes?.length) return false;
   for (const mesh of wireframeMeshes) {
-    if (!mesh?.isMesh || !mesh.visible) continue;
+    if (!mesh?.isMesh) continue;
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     for (const mat of mats) {
       if (mat?.depthTest) return true;
     }
   }
   return false;
+}
+
+/**
+ * X-ray wireframe (only-visible-faces off): overlays exist but materials have depthTest false.
+ * Ignores mesh.visible — overlays are hidden during the beauty/grid passes.
+ * @param {import('three').Mesh[] | null | undefined} wireframeMeshes
+ * @returns {boolean}
+ */
+export function wireframeOverlayIsXRay(wireframeMeshes) {
+  if (!wireframeMeshes?.length) return false;
+  let sawMaterial = false;
+  for (const mesh of wireframeMeshes) {
+    if (!mesh?.isMesh) continue;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const mat of mats) {
+      if (!mat) continue;
+      sawMaterial = true;
+      if (mat.depthTest) return false;
+    }
+  }
+  return sawMaterial;
 }
 
 /**
@@ -79,6 +100,83 @@ function revealHiddenWireframeSourcesForDepth(wireframeMeshes) {
 function restoreHiddenWireframeSourcesFromDepth(snapshots) {
   for (const { mesh, visible } of snapshots) {
     mesh.visible = visible;
+  }
+}
+
+/**
+ * MeshBasicMaterial.wireframe draws GL_LINES — polygonOffset does not apply. Write a solid
+ * triangle depth pass with the same skinned/morph geometry first so line fragments can pass
+ * the depth test. Disable polygonOffset here so solid depth matches the clip-biased line shader
+ * (polygonOffset + clip bias would push solid ahead of the lines and mask them again).
+ * @param {{
+ *   renderer: import('three').WebGLRenderer,
+ *   camera: import('three').Camera,
+ *   wireframeMeshes: import('three').Mesh[] | null | undefined,
+ * }} ctx
+ */
+function primeSolidDepthForWireframeLines({ renderer, camera, wireframeMeshes }) {
+  if (!renderer || !camera || !wireframeMeshes?.length) return;
+
+  const gl = renderer.getContext();
+  /** @type {[boolean, boolean, boolean, boolean] | null} */
+  let prevColorMask = null;
+  if (gl) {
+    prevColorMask = gl.getParameter(gl.COLOR_WRITEMASK);
+    gl.colorMask(false, false, false, false);
+  }
+
+  /** @type {Array<{
+   *   mat: import('three').Material,
+   *   wireframe: boolean,
+   *   depthWrite: boolean,
+   *   depthTest: boolean,
+   *   colorWrite?: boolean,
+   *   polygonOffset: boolean,
+   * }>} */
+  const snapshots = [];
+  try {
+    const skeletonsUpdated = new Set();
+    for (const mesh of wireframeMeshes) {
+      if (!mesh?.isMesh || !mesh.visible || !mesh.userData?.wireframeNeedsSolidDepthPrime) {
+        continue;
+      }
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      for (const mat of mats) {
+        if (!mat) continue;
+        snapshots.push({
+          mat,
+          wireframe: mat.wireframe,
+          depthWrite: mat.depthWrite,
+          depthTest: mat.depthTest,
+          colorWrite: mat.colorWrite,
+          polygonOffset: mat.polygonOffset,
+        });
+        mat.wireframe = false;
+        mat.depthWrite = true;
+        mat.depthTest = true;
+        mat.polygonOffset = false;
+        if ('colorWrite' in mat) mat.colorWrite = false;
+      }
+      if (mesh.isSkinnedMesh && mesh.skeleton && !skeletonsUpdated.has(mesh.skeleton)) {
+        mesh.skeleton.update();
+        skeletonsUpdated.add(mesh.skeleton);
+      }
+      mesh.updateMatrixWorld(true);
+      renderer.render(mesh, camera);
+    }
+  } finally {
+    for (const snap of snapshots) {
+      snap.mat.wireframe = snap.wireframe;
+      snap.mat.depthWrite = snap.depthWrite;
+      snap.mat.depthTest = snap.depthTest;
+      snap.mat.polygonOffset = snap.polygonOffset;
+      if ('colorWrite' in snap.mat && snap.colorWrite !== undefined) {
+        snap.mat.colorWrite = snap.colorWrite;
+      }
+    }
+    if (gl && prevColorMask) {
+      gl.colorMask(prevColorMask[0], prevColorMask[1], prevColorMask[2], prevColorMask[3]);
+    }
   }
 }
 
@@ -163,6 +261,10 @@ export function renderWireframeOverlay({
   }
 
   try {
+    if (depthPrimed) {
+      primeSolidDepthForWireframeLines({ renderer, camera, wireframeMeshes });
+    }
+
     const skeletonsUpdated = new Set();
     for (const mesh of wireframeMeshes) {
       if (!mesh?.isMesh || !mesh.visible) continue;

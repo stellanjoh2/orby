@@ -7,7 +7,9 @@ import { describe, it } from 'node:test';
 import {
   resolveSpecGlossMaterialParams,
   applySpecGlossDiffuseOnlyRoughnessSlider,
+  applySpecGlossGlossyRoughnessSlider,
   applySpecGlossMaterialUserData,
+  modelHasSpecGlossMaterials,
   SPEC_GLOSS_DIFFUSE_ONLY_EPSILON,
 } from './gltfSpecGlossConversion.js';
 
@@ -68,8 +70,22 @@ describe('applySpecGlossMaterialUserData', () => {
       glossinessFactor: 0.9,
     });
     assert.equal(tagged, true);
+    assert.equal(material.userData.orbySpecGlossImport, true);
     assert.equal(material.userData.orbySpecGlossDiffuseOnly, true);
     assert.equal(material.userData.orbySpecGlossAuthoredGlossiness, 0.9);
+  });
+
+  it('tags glossy spec/gloss materials without diffuse-only flag', () => {
+    const material = { userData: {} };
+    const tagged = applySpecGlossMaterialUserData(material, {
+      specularFactor: [0.05, 0.05, 0.05],
+      glossinessFactor: 1,
+      specularGlossinessTexture: { index: 0 },
+    });
+    assert.equal(tagged, true);
+    assert.equal(material.userData.orbySpecGlossImport, true);
+    assert.equal(material.userData.orbySpecGlossDiffuseOnly, undefined);
+    assert.equal(material.userData.orbySpecGlossAuthoredGlossiness, 1);
   });
 });
 
@@ -92,5 +108,43 @@ describe('applySpecGlossDiffuseOnlyRoughnessSlider', () => {
     const out = applySpecGlossDiffuseOnlyRoughnessSlider(0.5, 0.9);
     assert.ok(Math.abs(out.roughness - 0.55) < 1e-6);
     assert.ok(Math.abs(out.specularIntensity - 0.5) < 1e-6);
+  });
+});
+
+describe('applySpecGlossGlossyRoughnessSlider', () => {
+  it('multiplier 1.0 keeps authored gloss and full specular', () => {
+    const out = applySpecGlossGlossyRoughnessSlider(1, 0.04, 1);
+    assert.ok(Math.abs(out.roughness - 0.04) < 1e-6);
+    assert.equal(out.specularIntensity, 1);
+  });
+
+  it('multiplier 0 fully mattes and kills specular', () => {
+    const out = applySpecGlossGlossyRoughnessSlider(0, 0.04, 1);
+    assert.equal(out.roughness, 1);
+    assert.equal(out.specularIntensity, 0);
+  });
+
+  it('partial multiplier dulls toward matte', () => {
+    const out = applySpecGlossGlossyRoughnessSlider(0.5, 0.04, 1);
+    assert.ok(Math.abs(out.roughness - 0.52) < 1e-6);
+    assert.equal(out.specularIntensity, 0.5);
+  });
+});
+
+describe('modelHasSpecGlossMaterials', () => {
+  it('returns false for null / empty scene', () => {
+    assert.equal(modelHasSpecGlossMaterials(null), false);
+    const root = { traverse(fn) { fn({ isMesh: false }); } };
+    assert.equal(modelHasSpecGlossMaterials(root), false);
+  });
+
+  it('detects tagged SpecGloss import materials', () => {
+    const mat = { userData: { orbySpecGlossImport: true } };
+    const root = {
+      traverse(fn) {
+        fn({ isMesh: true, material: mat });
+      },
+    };
+    assert.equal(modelHasSpecGlossMaterials(root), true);
   });
 });

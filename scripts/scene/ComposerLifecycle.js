@@ -22,6 +22,7 @@ import {
   renderWireframeOverlay,
   restoreWireframeOverlaysFromPass,
   shouldOverlayWireframeMeshes,
+  wireframeOverlayIsXRay,
 } from '../render/wireframeOverlayPass.js';
 import {
   hideLightIndicatorOverlaysForPass,
@@ -395,12 +396,18 @@ export class ComposerLifecycle {
   _renderGroundGridOverlay() {
     // Offline capture composites grid on the byte readback RT (captureReadback.js).
     if (this.composer?.renderToScreen === false) return;
+    const wireframeMeshes = this.getWireframeOverlayMeshes?.() ?? [];
+    // X-ray wireframe (only-visible-faces off): skip scene depth so the grid is not punched out
+    // under see-through wires — that reads as an invisible "clipping mask" on the floor.
+    // Use material flags (not mesh.visible): overlays are still hidden when the grid is drawn.
+    const wireframeXRay = wireframeOverlayIsXRay(wireframeMeshes);
     renderGroundGridOverlay({
       renderer: this.renderer,
       camera: this.camera,
       scene: this.scene,
       grid: this.getGroundGrid?.(),
       renderTarget: null,
+      depthTestAgainstScene: !wireframeXRay,
     });
   }
 

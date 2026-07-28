@@ -207,6 +207,8 @@ export class SceneManager {
     this._capturePreviewInFlight = false;
     /** Keep rAF alive briefly after shader/material swaps (surface, overlays) while idle. */
     this._viewportPresentationFrames = 0;
+    /** Invalidates in-flight wireframe overlay builds (spinner path). */
+    this._wireframeOverlayBuildGen = 0;
     this.eventBus.on('ui:panels-scrolling', (payload) => {
       this.setPanelsShelfScrolling(!!payload?.active);
     });
@@ -1443,6 +1445,20 @@ export class SceneManager {
 
   updateWireframeOverlay() {
     this.materialController.updateWireframeOverlay();
+  }
+
+  /**
+   * Rebuild wireframe lines behind the viewport load spinner (heavy on dense meshes).
+   * @returns {Promise<void>}
+   */
+  _buildWireframeOverlayWithSpinner() {
+    const buildGen = ++this._wireframeOverlayBuildGen;
+    return withViewportLoadSpinner(this.ui, 'Loading wireframe', async () => {
+      if (buildGen !== this._wireframeOverlayBuildGen) return;
+      this.materialController.updateWireframeOverlay();
+      if (buildGen !== this._wireframeOverlayBuildGen) return;
+      this._refreshViewportAfterOverlayChange();
+    });
   }
 
   updateWireframeOverlayTransforms() {
@@ -3709,13 +3725,25 @@ export class SceneManager {
   _finalizeModifierMeshTopologyChange() {
     this.applyModifiersFromState();
     this.syncModifiersSceneAfterScrub();
-    const wireframeOn =
-      this.stateStore.getState()?.shading === 'wireframe'
-      || !!this.stateStore.getState()?.wireframe?.alwaysOn;
-    if (wireframeOn) {
+    if (this._isWireframeOverlayWanted()) {
       this.updateWireframeOverlay();
     }
     this._refreshViewportAfterOverlayChange?.();
+  }
+
+  /**
+   * Whether the mesh wireframe overlay should be drawn.
+   * In bones mode, `animation.showWireframe` wins (default off) over Mesh → Wireframe / shading.
+   * @param {string} [shadingMode]
+   */
+  _isWireframeOverlayWanted(shadingMode) {
+    const state = this.stateStore.getState() ?? {};
+    const animation = state.animation ?? {};
+    if (animation.showBones) {
+      return !!animation.showWireframe;
+    }
+    const mode = shadingMode ?? this.currentShading ?? state.shading;
+    return mode === 'wireframe' || !!state.wireframe?.alwaysOn;
   }
 
   setShading(mode) {
@@ -3725,7 +3753,17 @@ export class SceneManager {
       this.stateStore.set('colorChecker.rawColors', false);
       this._colorCheckerRestoreShading = null;
     }
-    this.materialController.setShading(mode);
+    const wireframeOverlayWanted = this._isWireframeOverlayWanted(mode);
+
+    if (wireframeOverlayWanted) {
+      // Apply display materials first; rebuild line geometry behind the spinner
+      // so dense meshes don't freeze the UI with no feedback.
+      this.materialController.setShading(mode, { skipWireframeOverlay: true });
+    } else {
+      this._wireframeOverlayBuildGen += 1;
+      this.materialController.setShading(mode);
+    }
+
     this.unlitMode = this.materialController.getUnlitMode();
     if (mode !== 'textures' && this.scene.environment) {
       const intensity = Math.max(0, this.hdriStrength ?? 0);
@@ -3737,13 +3775,13 @@ export class SceneManager {
     this.setReverseNormals(this.reverseNormalsEnabled);
     if (isShapeLibraryModel(this.currentModel)) {
       this.applyModifiersFromState();
-      const wireframeOn =
-        mode === 'wireframe' || !!this.stateStore.getState()?.wireframe?.alwaysOn;
-      if (wireframeOn) {
-        this.updateWireframeOverlay();
-      }
     }
-    this._refreshViewportAfterOverlayChange();
+
+    if (wireframeOverlayWanted) {
+      void this._buildWireframeOverlayWithSpinner();
+    } else {
+      this._refreshViewportAfterOverlayChange();
+    }
     if (clearReference) {
       this.ui?.syncUIFromState?.();
     }
@@ -3820,6 +3858,8 @@ export class SceneManager {
       }
     }
 
+    this._syncBonesModeWireframeOverlay();
+    this.ui?.applyBlockStates?.(this.stateStore.getState());
     this.requestRender();
     return next;
   }
@@ -3874,6 +3914,28 @@ export class SceneManager {
     return next;
   }
 
+  setAnimationShowWireframe(enabled, { updateUi = true } = {}) {
+    if (!this.diagnosticsController) return false;
+
+    const hasSkinned = this.diagnosticsController.hasSkinnedSkeleton();
+    const bonesOn = !!this.diagnosticsController.showBones;
+    const next = !!enabled && hasSkinned && bonesOn;
+    this.stateStore.set('animation.showWireframe', next);
+
+    if (updateUi) {
+      this.ui.syncAnimationShowWireframe({
+        visible: bonesOn,
+        enabled: bonesOn,
+        checked: next,
+      });
+    }
+
+    this._syncBonesModeWireframeOverlay();
+    this.ui?.applyBlockStates?.(this.stateStore.getState());
+    this.requestRender();
+    return next;
+  }
+
   setAnimationHideMesh(enabled, { updateUi = true } = {}) {
     if (!this.diagnosticsController) return false;
 
@@ -3889,6 +3951,18 @@ export class SceneManager {
 
     this.requestRender();
     return next;
+  }
+
+  /**
+   * Bones mode owns wireframe overlay visibility via `animation.showWireframe`
+   * (default off). Refresh overlay + ghost mesh after that flag or showBones changes.
+   */
+  _syncBonesModeWireframeOverlay() {
+    this.updateWireframeOverlay();
+    if (this.diagnosticsController?.showBones) {
+      this.diagnosticsController.refreshGhostMesh();
+    }
+    this._refreshViewportAfterOverlayChange?.();
   }
 
   setObjectHidden(hidden, { updateUi = true } = {}) {

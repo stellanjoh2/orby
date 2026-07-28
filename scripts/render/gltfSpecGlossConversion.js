@@ -66,16 +66,20 @@ export function resolveSpecGlossMaterialParams(ext, options = {}) {
 /**
  * Read spec/gloss metadata stored on import materials (`userData.gltfExtensions`).
  * @param {object | undefined} gltfExtensions
- * @returns {{ orbySpecGlossDiffuseOnly: true, orbySpecGlossAuthoredGlossiness: number } | null}
+ * @returns {{
+ *   orbySpecGlossImport: true,
+ *   orbySpecGlossDiffuseOnly: boolean,
+ *   orbySpecGlossAuthoredGlossiness: number,
+ * } | null}
  */
 export function readSpecGlossImportMetadata(gltfExtensions) {
   const ext = gltfExtensions?.KHR_materials_pbrSpecularGlossiness;
   if (!ext) return null;
   const hasSpecGlossTexture = ext.specularGlossinessTexture !== undefined;
   const resolved = resolveSpecGlossMaterialParams(ext, { hasSpecGlossTexture });
-  if (!resolved.diffuseOnly) return null;
   return {
-    orbySpecGlossDiffuseOnly: true,
+    orbySpecGlossImport: true,
+    orbySpecGlossDiffuseOnly: !!resolved.diffuseOnly,
     orbySpecGlossAuthoredGlossiness:
       ext.glossinessFactor !== undefined ? ext.glossinessFactor : 1,
   };
@@ -86,20 +90,20 @@ export function readSpecGlossImportMetadata(gltfExtensions) {
  * copied to `userData.gltfExtensions` by THREE.GLTFLoader).
  * @param {import('three').Material} material
  * @param {object} ext — KHR_materials_pbrSpecularGlossiness payload
- * @returns {boolean} true when tagged as diffuse-only spec/gloss
+ * @returns {boolean} true when tagged as a SpecGloss import
  */
 export function applySpecGlossMaterialUserData(material, ext) {
   if (!material?.userData || !ext) return false;
   const hasSpecGlossTexture = ext.specularGlossinessTexture !== undefined;
   const resolved = resolveSpecGlossMaterialParams(ext, { hasSpecGlossTexture });
-  if (!resolved.diffuseOnly) {
-    delete material.userData.orbySpecGlossDiffuseOnly;
-    delete material.userData.orbySpecGlossAuthoredGlossiness;
-    return false;
-  }
-  material.userData.orbySpecGlossDiffuseOnly = true;
+  material.userData.orbySpecGlossImport = true;
   material.userData.orbySpecGlossAuthoredGlossiness =
     ext.glossinessFactor !== undefined ? ext.glossinessFactor : 1;
+  if (resolved.diffuseOnly) {
+    material.userData.orbySpecGlossDiffuseOnly = true;
+  } else {
+    delete material.userData.orbySpecGlossDiffuseOnly;
+  }
   return true;
 }
 
@@ -151,4 +155,78 @@ export function applySpecGlossDiffuseOnlyRoughnessSlider(
     specularIntensity: t,
     specularColor,
   };
+}
+
+/**
+ * Glossy SpecGloss imports (real specular / packed SG map): 1.0 keeps file gloss; lower values
+ * dull toward matte and fade specular so Object → Material roughness is usable.
+ *
+ * @param {number} globalRoughnessMultiplier — Object → Material roughness slider (0–1)
+ * @param {number} authoredRoughness — converted MeshPhysical roughness from the file
+ * @param {number} [authoredSpecularIntensity=1]
+ * @returns {{ roughness: number, specularIntensity: number }}
+ */
+export function applySpecGlossGlossyRoughnessSlider(
+  globalRoughnessMultiplier,
+  authoredRoughness,
+  authoredSpecularIntensity = 1,
+) {
+  const globalR = THREE.MathUtils.clamp(
+    Number.isFinite(Number(globalRoughnessMultiplier))
+      ? Number(globalRoughnessMultiplier)
+      : 1,
+    0,
+    1,
+  );
+  const baseRough = THREE.MathUtils.clamp(
+    Number.isFinite(Number(authoredRoughness)) ? Number(authoredRoughness) : 0.04,
+    0.04,
+    1,
+  );
+  const baseSpec = THREE.MathUtils.clamp(
+    Number.isFinite(Number(authoredSpecularIntensity))
+      ? Number(authoredSpecularIntensity)
+      : 1,
+    0,
+    1,
+  );
+  return {
+    // 1.0 → authored gloss; 0 → fully matte (per-material factors stay relative at neutral).
+    roughness: THREE.MathUtils.lerp(1, baseRough, globalR),
+    specularIntensity: baseSpec * globalR,
+  };
+}
+
+/**
+ * Whether any mesh material on `object` came from KHR_materials_pbrSpecularGlossiness.
+ * @param {import('three').Object3D | null | undefined} object
+ * @param {WeakMap<object, import('three').Material | import('three').Material[]> | null | undefined} [originalMaterials]
+ * @returns {boolean}
+ */
+export function modelHasSpecGlossMaterials(object, originalMaterials = null) {
+  if (!object) return false;
+  let hasSpecGloss = false;
+  object.traverse((child) => {
+    if (hasSpecGloss || !child.isMesh) return;
+    const stored = originalMaterials?.get?.(child);
+    const mats = stored
+      ? Array.isArray(stored)
+        ? stored
+        : [stored]
+      : Array.isArray(child.material)
+        ? child.material
+        : [child.material];
+    for (const mat of mats) {
+      if (
+        mat?.userData?.orbySpecGlossImport ||
+        mat?.userData?.orbySpecGlossDiffuseOnly ||
+        mat?.userData?.orbyGltfImportBaseline?.orbySpecGlossImport ||
+        mat?.userData?.gltfExtensions?.KHR_materials_pbrSpecularGlossiness
+      ) {
+        hasSpecGloss = true;
+        return;
+      }
+    }
+  });
+  return hasSpecGloss;
 }

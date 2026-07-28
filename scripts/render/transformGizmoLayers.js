@@ -97,12 +97,15 @@ export function restoreGroundGridFromPass(snapshot) {
 /**
  * Draw the ground grid after the post stack — crisp helper lines, no AO / bloom / DoF / grading.
  * Depth-tests against scene meshes so the grid does not draw through solid geometry.
+ * Pass `depthTestAgainstScene: false` for x-ray wireframe (only-visible-faces off) so the grid
+ * stays continuous under see-through wires instead of looking like an invisible mask.
  * @param {{
  *   renderer: import('three').WebGLRenderer,
  *   camera: import('three').Camera,
  *   scene?: import('three').Scene | null,
  *   grid: import('three').Object3D | null | undefined,
  *   renderTarget?: import('three').WebGLRenderTarget | null,
+ *   depthTestAgainstScene?: boolean,
  * }} ctx
  */
 export function renderGroundGridOverlay({
@@ -111,6 +114,7 @@ export function renderGroundGridOverlay({
   scene = null,
   grid,
   renderTarget = null,
+  depthTestAgainstScene = true,
 }) {
   if (!renderer || !camera || !grid?.visible) return;
 
@@ -122,7 +126,7 @@ export function renderGroundGridOverlay({
   /** @type {Array<{ mat: import('three').Material, depthTest: boolean, depthWrite: boolean }>} */
   const depthSnapshots = [];
 
-  const depthPrimed = scene
+  const depthPrimed = depthTestAgainstScene && scene
     ? primeSceneDepthForHelperOverlay({
         renderer,
         scene,

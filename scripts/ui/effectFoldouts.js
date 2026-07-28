@@ -93,8 +93,12 @@ export function applyMeshFoldouts(state, setOpen) {
   setOpen('font-extrude', !!state.fontExtrude?.panelOpen);
 }
 
-/** Wireframe overlay settings apply in wireframe display mode or when always-on is enabled. */
+/** Wireframe overlay settings apply when the overlay is actually drawn. */
 export function isWireframeSectionActive(state) {
+  // Bones mode owns overlay visibility via animation.showWireframe (default off).
+  if (state.animation?.showBones) {
+    return !!state.animation?.showWireframe;
+  }
   return state.shading === 'wireframe' || !!state.wireframe?.alwaysOn;
 }
 

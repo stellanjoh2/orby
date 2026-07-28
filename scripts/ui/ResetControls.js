@@ -603,12 +603,14 @@ export class ResetControls {
       const scene = window.orby?.scene;
       this.stateStore.batch(() => {
         this.stateStore.resetSlice(MESH_TAB_RESET_PATHS);
+        const matFlags = this.stateStore.getState().material;
         const mrDefaults = getMaterialMrResetDefaults(
-          !!this.stateStore.getState().material?.importUsesAuthoredPbr,
+          !!matFlags?.importUsesAuthoredPbr,
+          !!matFlags?.importIsSpecGloss,
         );
         this.stateStore.set('material.brightness', defaults.material?.brightness ?? mrDefaults.brightness);
-        this.stateStore.set('material.metalness', defaults.material?.metalness ?? mrDefaults.metalness);
-        this.stateStore.set('material.roughness', defaults.material?.roughness ?? mrDefaults.roughness);
+        this.stateStore.set('material.metalness', mrDefaults.metalness);
+        this.stateStore.set('material.roughness', mrDefaults.roughness);
         this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
         if (scene?.currentModel) {
           scene.materialController?._syncMaterialColorFromModel?.(scene.currentModel);
@@ -636,12 +638,14 @@ export class ResetControls {
       this.eventBus.emit('mesh:clay-normal-map', defaults.clay.normalMap);
       // Emit material reset events
       {
+        const matFlags = this.stateStore.getState().material;
         const mrDefaults = getMaterialMrResetDefaults(
-          !!this.stateStore.getState().material?.importUsesAuthoredPbr,
+          !!matFlags?.importUsesAuthoredPbr,
+          !!matFlags?.importIsSpecGloss,
         );
         this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? mrDefaults.brightness);
-        this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? mrDefaults.metalness);
-        this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? mrDefaults.roughness);
+        this.eventBus.emit('mesh:material-metalness', mrDefaults.metalness);
+        this.eventBus.emit('mesh:material-roughness', mrDefaults.roughness);
         this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
       }
       const matState = this.stateStore.getState().material ?? {};
@@ -896,14 +900,20 @@ export class ResetControls {
 
         switch (resetType) {
           case 'material': {
+            const matFlags = this.stateStore.getState().material;
             const mrDefaults = getMaterialMrResetDefaults(
-              !!this.stateStore.getState().material?.importUsesAuthoredPbr,
+              !!matFlags?.importUsesAuthoredPbr,
+              !!matFlags?.importIsSpecGloss,
             );
+            const colorOverride = defaults.material?.colorOverride ?? false;
+            const overrideColor = defaults.material?.overrideColor ?? '#ffffff';
             this.stateStore.batch(() => {
               this.stateStore.set('material.brightness', defaults.material?.brightness ?? mrDefaults.brightness);
-              this.stateStore.set('material.metalness', defaults.material?.metalness ?? mrDefaults.metalness);
-              this.stateStore.set('material.roughness', defaults.material?.roughness ?? mrDefaults.roughness);
+              this.stateStore.set('material.metalness', mrDefaults.metalness);
+              this.stateStore.set('material.roughness', mrDefaults.roughness);
               this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
+              this.stateStore.set('material.colorOverride', colorOverride);
+              this.stateStore.set('material.overrideColor', overrideColor);
               this.stateStore.set('material.surfacePreset', defaults.material?.surfacePreset ?? 'none');
               this.stateStore.set('material.surfaceScale', defaults.material?.surfaceScale ?? 1);
               this.stateStore.set('material.surfaceStrength', defaults.material?.surfaceStrength ?? 1);
@@ -914,9 +924,11 @@ export class ResetControls {
               );
             });
             this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? mrDefaults.brightness);
-            this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? mrDefaults.metalness);
-            this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? mrDefaults.roughness);
+            this.eventBus.emit('mesh:material-metalness', mrDefaults.metalness);
+            this.eventBus.emit('mesh:material-roughness', mrDefaults.roughness);
             this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
+            this.eventBus.emit('mesh:material-override-color', overrideColor);
+            this.eventBus.emit('mesh:material-color-override', colorOverride);
             this.eventBus.emit('mesh:object-surface', {
               enabled: false,
               preset: 'none',

@@ -30,7 +30,7 @@ import {
   ensureAscii4FontAtlasLoaded,
   getSharedAscii4FontAtlas,
 } from './creativeLookAscii4Art.js';
-import { APP_BACKGROUND } from '../constants.js';
+import { ORBY_BLACK } from '../constants.js';
 
 const VERTEX_SHADER = /* glsl */ `
 varying vec2 vUv;
@@ -114,7 +114,7 @@ export class CreativeLookAsciiPass {
         uResolution: { value: new THREE.Vector2(1, 1) },
         uCellSize: { value: new THREE.Vector2(cell.width, cell.height) },
         uInkColor: { value: new THREE.Color(ASCII_ART_INK_HEX) },
-        uBgColor: { value: new THREE.Color(APP_BACKGROUND) },
+        uBgColor: { value: new THREE.Color(ORBY_BLACK) },
         uFontAtlas: { value: atlas.texture },
         uCharCount: { value: atlas.charCount },
         uCellGlyphSize: { value: new THREE.Vector2(atlas.cellGlyphW, atlas.cellGlyphH) },

@@ -13,7 +13,8 @@ const EXTENSION = 'KHR_materials_pbrSpecularGlossiness';
  * Maps diffuse → map, glossiness → roughness, and specular → Physical specularColor/intensity.
  * Zero scalar specular (no spec/gloss texture) = diffuse-only — glossiness is ignored.
  * Packed specularGlossinessTexture RGB drives specularColorMap; per-texel glossiness (alpha) is
- * not remapped to roughnessMap without an offline metal/rough bake.
+ * not remapped to roughnessMap without an offline metal/rough bake — Object → Material roughness
+ * dulls via scalar roughness + specularIntensity instead.
  */
 export function registerKHRMaterialsPbrSpecularGlossiness(loader) {
   loader.register((parser) => new GLTFKHRMaterialsPbrSpecularGlossiness(parser));

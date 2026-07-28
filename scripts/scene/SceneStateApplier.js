@@ -451,6 +451,7 @@ function createStateApplySteps() {
         s.setAnimationShowJointNames(!!animation.showJointNames);
         s.setAnimationJointScale(animation.jointScale ?? 0.5);
         s.setAnimationBoneStrokeWidth(animation.boneStrokeWidth ?? 2);
+        s.setAnimationShowWireframe(!!animation.showWireframe);
         s.setAnimationHideMesh(!!animation.hideMesh);
         s._syncAnimationControllerFromState?.();
       },
