@@ -258,6 +258,9 @@ export const CREATIVE_LOOK_INTENSITY_MIN = 0;
 export const CREATIVE_LOOK_INTENSITY_MAX = 2;
 export const CREATIVE_LOOK_INTENSITY_DEFAULT = 1;
 
+/** Default Shader Lab intensity for Toon (cel strength). */
+export const TOON_DEFAULT_INTENSITY = 0.5;
+
 /** Default Shader Lab intensity for Scanline Hologram (strength slider). */
 export const SCANLINE_HOLOGRAM_DEFAULT_INTENSITY = 0.25;
 
@@ -722,6 +725,7 @@ export function normalizeCreativeLookIntensity(value) {
 /** Preset-specific intensity when the slider is not locked (`creativeLookFixedIntensity`). */
 export function creativeLookDefaultIntensity(preset) {
   const id = normalizeCreativeLookPreset(preset);
+  if (id === 'toon') return TOON_DEFAULT_INTENSITY;
   if (id === 'scanline-hologram') return SCANLINE_HOLOGRAM_DEFAULT_INTENSITY;
   if (id === 'vectrex') return VECTREX_DEFAULT_INTENSITY;
   if (id === 'wire-pulse') return WIRE_PULSE_DEFAULT_INTENSITY;
@@ -1762,6 +1766,35 @@ void main() {
 }
 `;
 
+/** Toon — world lighting + UVs for colormap preserve (no vertex wobble). */
+const TOON_VERTEX = /* glsl */ `
+#include <common>
+#include <uv_pars_vertex>
+#include <morphtarget_pars_vertex>
+#include <skinning_pars_vertex>
+#include <shadowmap_pars_vertex>
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+varying vec2 vUv;
+void main() {
+  #include <uv_vertex>
+  #include <beginnormal_vertex>
+  #include <morphnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
+  #include <defaultnormal_vertex>
+  vWorldNormal = normalize((modelMatrix * vec4(objectNormal, 0.0)).xyz);
+  #include <begin_vertex>
+  #include <morphtarget_vertex>
+  #include <skinning_vertex>
+  ${CREATIVE_LOOK_WORLD_POSITION_VS}
+  #include <shadowmap_vertex>
+  vWorldPosition = worldPosition.xyz;
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+}
+`;
+
 const WORLD_SURFACE_VERTEX = /* glsl */ `
 #include <common>
 #include <morphtarget_pars_vertex>
@@ -1806,29 +1839,90 @@ void main() {
 const TOON_FRAGMENT = /* glsl */ `
 varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
+varying vec2 vUv;
 uniform vec3 uLightDir;
-uniform vec3 uShadow;
-uniform vec3 uLight;
+uniform vec3 uTint;
+uniform sampler2D uMap;
+uniform float uHasMap;
 uniform float uBands;
 uniform float uLightScale;
 uniform float uAmbientFloor;
+uniform float uIntensity;
 uniform float uOpacity;
 
 void main() {
+  // Intensity = cel strength: never fully off. 0 mild → 0.5 default blend → 1 full → 2 crush.
+  float inten = clamp(uIntensity, 0.0, 2.0);
+  float crushT = clamp(inten - 1.0, 0.0, 1.0);
+  float t = clamp(inten, 0.0, 1.0);
+  float celAmt = t <= 0.5
+    ? mix(0.4, 0.72, t * 2.0)
+    : mix(0.72, 1.0, (t - 0.5) * 2.0);
+
+  vec3 tintCol = clamp(uTint, vec3(0.0), vec3(1.0));
+  vec3 baseCol = tintCol;
+  float mapAlpha = 1.0;
+  if (uHasMap > 0.5) {
+    // Mild soften only — heavy blur read as vaseline smear.
+    vec4 mapSample = texture2D(uMap, vUv, mix(0.35, 1.1, celAmt));
+    baseCol = mapSample.rgb;
+    mapAlpha = mapSample.a;
+  }
+
   vec3 N = normalize(vWorldNormal);
   vec3 L = normalize(uLightDir);
   float ndl = max(dot(N, L), 0.0);
-  float b = max(uBands, 2.0);
-  float idx = floor(ndl * b);
+  // Bias N·L so more of the surface sits in mid/deep cels (Maya-style coverage).
+  float ndlCel = clamp(ndl * mix(0.92, 0.78, celAmt) - mix(0.02, 0.1, celAmt), 0.0, 1.0);
+  float b = max(mix(uBands, 3.0, crushT), 2.0);
+  float idx = floor(ndlCel * b);
   float stepped = idx / max(b - 1.0, 1.0);
   stepped = clamp(stepped, 0.0, 1.0);
-  vec3 shadowCol = uShadow * max(uAmbientFloor, 0.15);
-  vec3 lightCol = uLight * uLightScale;
-  vec3 col = mix(shadowCol, lightCol, stepped);
+  float shade = mix(ndlCel, stepped, celAmt);
+
+  // High-contrast cel ramp: deep shadow plates, punchy lit — hue stays via multiply.
+  float amb = mix(0.14, 0.09, crushT);
+  amb = mix(amb, max(uAmbientFloor * 0.45, amb), 0.35);
+  float hi = max(uLightScale, 1.0) * mix(1.06, 1.2, celAmt);
+  float lit = mix(amb, hi, shade);
+  float deep = 1.0 - smoothstep(0.0, 0.42, shade);
+  lit *= mix(1.0, 0.62, deep * mix(0.55, 1.0, celAmt));
+  vec3 col = baseCol * lit;
+
   vec3 V = normalize(cameraPosition - vWorldPosition);
-  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.2);
-  col += rim * vec3(0.12, 0.18, 0.48);
-  gl_FragColor = vec4(col, uOpacity);
+  float ndv = max(dot(N, V), 0.0);
+
+  // One tight white specular plate (Unity-style) — not a wet multi-lobe gloss.
+  vec3 H = normalize(L + V);
+  float ndh = max(dot(N, H), 0.0);
+  float spec = pow(ndh, mix(96.0, 160.0, celAmt));
+  float specCel = smoothstep(0.62, 0.88, spec) * smoothstep(0.12, 0.45, ndl);
+  col += vec3(1.0) * specCel * mix(0.28, 0.48, celAmt);
+
+  // Subtle fresnel: brighter take on mesh/tint colour (not pure white rim wash).
+  vec3 fresnelBase = mix(tintCol, baseCol, uHasMap > 0.5 ? 0.55 : 1.0);
+  vec3 fresnelCol = clamp(fresnelBase * mix(1.55, 1.95, celAmt) + 0.08, 0.0, 1.0);
+  float fresnel = pow(1.0 - ndv, mix(3.2, 2.5, crushT));
+  fresnel *= mix(0.22, 0.4, celAmt);
+  // Slightly stronger on the lit limb so it reads as rimlight opposite the deep shadow.
+  fresnel *= mix(0.55, 1.0, smoothstep(-0.05, 0.35, ndl));
+  col += fresnelCol * fresnel;
+
+  // Screen-space ink — ~constant pixel width on the silhouette + creases.
+  float ndvFw = max(fwidth(ndv), 1e-5);
+  float silPx = mix(2.4, 3.6, celAmt) + crushT * 0.8;
+  float sil = 1.0 - smoothstep(0.0, ndvFw * silPx, ndv);
+  float crease = length(fwidth(N));
+  float creaseInk = smoothstep(0.08, 0.42, crease);
+  float bandInk = abs(fract(ndlCel * b - 0.001) - 0.5) * 2.0;
+  float bandEdge = smoothstep(0.7, 1.0, bandInk);
+  float outline = max(sil, max(creaseInk * 0.9, bandEdge * 0.5));
+  outline *= mix(0.85, 1.15, celAmt);
+  vec3 ink = vec3(0.031);
+  col = mix(col, ink, clamp(outline, 0.0, 1.0));
+  col = clamp(col, 0.0, 1.0);
+
+  gl_FragColor = vec4(col, uOpacity * mapAlpha);
 }
 `;
 
@@ -3329,7 +3423,7 @@ void main() {
  * @param {number} [opts.patternScale] — 1 = preset default; higher values make the pattern larger
  * @param {number} [opts.hdriBlurriness] — for chrome / glass presets; roughness vs HDRI blur
  * @param {THREE.Color} [opts.diffuseTint] — mesh albedo fallback when no diffuse map
- * @param {THREE.Texture} [opts.diffuseMap] — albedo for ps2-crush (bilinear bake) / psx|vga-dos-3d (nearest bake)
+ * @param {THREE.Texture} [opts.diffuseMap] — albedo for toon / watercolour / sketch / ps2-crush (bilinear) / psx|vga-dos-3d (nearest bake)
  * @param {number} [opts.masterHue] — global hue shift in degrees (-180…180)
  * @param {number} [opts.intensity] — effect punch (0–2, 1 = default)
  * @param {number} [opts.liftCrush] — shadow lift (+) vs crush (−), -1…1
@@ -3508,18 +3602,29 @@ export function createCreativeLookMaterial(preset, opts = {}) {
   }
 
   if (id === 'toon') {
+    const tint = diffuseTint ?? new THREE.Color(0xffffff);
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
+    if (map) {
+      // Mips + lod bias in the fragment kill high-frequency albedo detail.
+      map.generateMipmaps = true;
+      map.minFilter = THREE.LinearMipmapLinearFilter;
+      map.magFilter = THREE.LinearFilter;
+      map.needsUpdate = true;
+    }
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         /** Default; overridden each frame from the scene key light when MaterialController supplies `getCreativeLookKeyLightDir`. */
         uLightDir: { value: new THREE.Vector3(0.35, 0.92, 0.42).normalize() },
-        uShadow: { value: new THREE.Color(0x1a2040) },
-        uLight: { value: new THREE.Color(0xe8f0ff) },
+        uTint: { value: tint },
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
         uBands: { value: 4.0 },
         uOpacity: { value: shaderAlpha },
         ...toonLightUniforms,
         ...gradeUniforms,
+        ...intensityUniform,
       },
-      vertexShader: WORLD_VERTEX,
+      vertexShader: TOON_VERTEX,
       fragmentShader: lookFrag(TOON_FRAGMENT),
       ...commonMatOpts,
     });

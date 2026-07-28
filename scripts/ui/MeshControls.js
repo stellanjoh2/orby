@@ -675,6 +675,7 @@ export class MeshControls {
             this.stateStore.set('creativeLook.intensity', fixedIntensity);
           } else if (
             resetDitherTuning
+            || normalizeCreativeLookPreset(preset) === 'toon'
             || normalizeCreativeLookPreset(preset) === 'scanline-hologram'
             || normalizeCreativeLookPreset(preset) === 'vectrex'
             || normalizeCreativeLookPreset(preset) === 'wire-pulse'

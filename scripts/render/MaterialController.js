@@ -3910,7 +3910,7 @@ export class MaterialController {
       || (
         nextPreset !== prevPreset
         && patch.intensity === undefined
-        && (nextPreset === 'scanline-hologram' || nextPreset === 'vectrex' || nextPreset === 'wire-pulse' || nextPreset === 'dust-field' || isDitherPixelCreativeLookPreset(nextPreset))
+        && (nextPreset === 'toon' || nextPreset === 'scanline-hologram' || nextPreset === 'vectrex' || nextPreset === 'wire-pulse' || nextPreset === 'dust-field' || isDitherPixelCreativeLookPreset(nextPreset))
       )
     ) {
       this.creativeLookSettings.intensity = creativeLookDefaultIntensity(nextPreset);
