@@ -76,6 +76,22 @@ export function shadowCameraOrthoPaddingForQuality(quality) {
   );
 }
 
+/**
+ * Mesh-focused shadow reach for studio floors (base / cove / cyclorama).
+ * Caps full AABB receive reach so large cove/backdrop walls do not dilute map texels.
+ * @param {number} meshRadius
+ * @param {string | undefined} quality
+ * @param {number} fullReceiveReach — corner distance of the receive surface from the mesh center
+ */
+export function meshFocusedStudioFloorShadowReach(meshRadius, quality, fullReceiveReach) {
+  const pad = shadowCameraOrthoPaddingForQuality(quality);
+  const r = Number.isFinite(meshRadius) ? Math.max(0.5, meshRadius) : 0.5;
+  const meshFootprintR = r * pad + 0.35;
+  const full = Number.isFinite(fullReceiveReach) ? Math.max(0, fullReceiveReach) : 0;
+  if (full <= 0) return 0;
+  return Math.min(full, meshFootprintR);
+}
+
 export function goboBlurModeForQuality(quality) {
   const q = normalizeShadowQuality(quality);
   return GOBO_BLUR_MODE_BY_QUALITY[q] ?? GOBO_BLUR_MODE_BY_QUALITY.medium;

@@ -189,6 +189,7 @@ import {
 
 import {
   shadowMapSizeForQuality,
+  meshFocusedStudioFloorShadowReach,
   normalizeShadowQuality,
   shadowCameraOrthoPaddingForQuality,
 } from './config/shadowQuality.js';
@@ -1844,8 +1845,8 @@ export class SceneManager {
   /**
    * Horizontal radius from the model center to the shadow receive surface edge (podium / HDRI catcher).
    * Keeps the directional shadow frustum large enough that out-of-map samples do not paint a square slab.
-   * Solid-base scale only enlarges the visual floor — shadow maps stay mesh-focused so Base scale
-   * does not dilute contact-shadow resolution.
+   * Studio floors (solid base, infinity cove, cyclorama) stay mesh-focused — fitting the full
+   * cove/backdrop AABB (esp. wall-top corners) dilutes contact-shadow texels to unusable.
    */
   _getShadowReceiveSurfaceRadius(bounds) {
     const center = bounds?.center;
@@ -1858,6 +1859,7 @@ export class SceneManager {
     const shadowPad = shadowCameraOrthoPaddingForQuality(
       normalizeShadowQuality(state.lightsShadowQuality),
     );
+    const meshFootprintR = meshRadius * shadowPad + 0.35;
     let radius = 0;
 
     if (
@@ -1874,10 +1876,10 @@ export class SceneManager {
       const centerToBottomY = Math.abs((center.y ?? 0) - (py - podiumHeight));
       const verticalReach = Math.max(centerToTopY, centerToBottomY);
       const horizontalOffset = Math.hypot(center.x - px, center.z - pz);
-      const meshFootprintR = horizontalOffset + meshRadius * shadowPad + 0.35;
+      const podiumMeshFootprintR = horizontalOffset + meshFootprintR;
       const horizontalReach = Math.min(
         horizontalOffset + visualPodiumR,
-        meshFootprintR,
+        podiumMeshFootprintR,
       );
       radius = Math.max(
         radius,
@@ -1889,9 +1891,17 @@ export class SceneManager {
       (state.backdropEnabled && this.groundController?.backdropEnabled)
       || (state.infinityCoveEnabled && this.groundController?.infinityCove?.enabled)
     ) {
+      const fullReach =
+        this.groundController.getShadowReceiveRadiusFromCenter(center) ?? 0;
+      // Cap at mesh footprint (same policy as solid base). Default cove scale×width
+      // otherwise forces a ~20+ unit ortho half-extent and ultra-pixelated contacts.
       radius = Math.max(
         radius,
-        this.groundController.getShadowReceiveRadiusFromCenter(center) ?? 0,
+        meshFocusedStudioFloorShadowReach(
+          meshRadius,
+          state.lightsShadowQuality,
+          fullReach,
+        ),
       );
     }
 
