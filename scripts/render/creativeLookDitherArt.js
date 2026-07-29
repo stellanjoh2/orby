@@ -1,6 +1,7 @@
 import { APP_BACKGROUND } from '../constants.js';
 import {
   CREATIVE_LOOK_LIFT_CRUSH_GLSL,
+  FLAT_POST_EMPTY_CELL_GLSL,
   FLAT_POST_MASTER_HUE_GLSL,
 } from './creativeLookFlatPostMasterHue.js';
 
@@ -167,7 +168,7 @@ void main() {
   vec4 cellColor = texture2D(tDiffuse, centerUv);
   float srcLuma = dot(cellColor.rgb, vec3(0.2126, 0.7152, 0.0722));
 
-  if (cellColor.a < 0.04 && srcLuma < 0.001) {
+  if (isFlatPostEmptyCell(cellColor, uBgColor)) {
     gl_FragColor = vec4(uBgColor, 1.0);
     return;
   }
@@ -188,6 +189,7 @@ uniform vec3 uBgColor;
 uniform float uIntensity;
 
 ${FLAT_POST_MASTER_HUE_GLSL}
+${FLAT_POST_EMPTY_CELL_GLSL}
 
 ${CREATIVE_LOOK_LIFT_CRUSH_GLSL}
 
@@ -220,6 +222,7 @@ uniform vec3 uBgColor;
 uniform float uIntensity;
 
 ${FLAT_POST_MASTER_HUE_GLSL}
+${FLAT_POST_EMPTY_CELL_GLSL}
 
 ${CREATIVE_LOOK_LIFT_CRUSH_GLSL}
 
@@ -299,6 +302,7 @@ uniform vec3 uBgColor;
 uniform float uIntensity;
 
 ${FLAT_POST_MASTER_HUE_GLSL}
+${FLAT_POST_EMPTY_CELL_GLSL}
 
 ${CREATIVE_LOOK_LIFT_CRUSH_GLSL}
 
@@ -417,6 +421,7 @@ uniform vec3 uBgColor;
 uniform float uIntensity;
 
 ${FLAT_POST_MASTER_HUE_GLSL}
+${FLAT_POST_EMPTY_CELL_GLSL}
 
 ${CREATIVE_LOOK_LIFT_CRUSH_GLSL}
 
@@ -444,7 +449,7 @@ void main() {
   vec4 cellColor = texture2D(tDiffuse, centerUv);
   float srcLuma = dot(cellColor.rgb, DITHER_LUMA);
 
-  if (cellColor.a < 0.04 && srcLuma < 0.001) {
+  if (isFlatPostEmptyCell(cellColor, uBgColor)) {
     gl_FragColor = vec4(uBgColor, 1.0);
     return;
   }

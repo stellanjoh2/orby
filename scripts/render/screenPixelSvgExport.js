@@ -40,8 +40,14 @@ import {
 } from './creativeLookNesArt.js';
 import { APP_BACKGROUND } from '../constants.js';
 
-/** Flat fill used by all Screen pixels post passes (`uBgColor`). */
+/** Fallback flat fill when export does not pass Studio Color (`uBgColor`). */
 export const SCREEN_PIXEL_BG_FILL = APP_BACKGROUND;
+
+/** @param {string} [explicit] */
+export function resolveScreenPixelBgFill(explicit) {
+  if (typeof explicit === 'string' && explicit.trim()) return explicit.trim();
+  return SCREEN_PIXEL_BG_FILL;
+}
 
 /** @typedef {{ refLogicalWidth: number, refLogicalHeight: number, cellPx: number }} ScreenPixelGridMeta */
 
@@ -319,5 +325,6 @@ export function buildScreenPixelSvgFromGlPixels(pixels, width, height, presetId,
     cellPxW: layout.cellPxW,
     cellPxH: layout.cellPxH,
     transparent: opts.transparent === true,
+    bgFill: resolveScreenPixelBgFill(opts.bgFill),
   });
 }

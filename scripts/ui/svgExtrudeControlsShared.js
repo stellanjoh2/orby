@@ -36,6 +36,8 @@ import { MAX_FONT_TRACKING_ANIMATOR_START } from '../scene/fontTextTrackingAnima
 import {
   clampSurfaceStrength,
   clampSurfaceUiScale,
+  SURFACE_UI_SCALE_MAX,
+  SURFACE_UI_SCALE_MIN,
   creativeLookPresetSupportsSurfaceDetail,
   getSvgExtrudeSurfacePresetConfig,
   isMaterialObjectSurfaceEnabled,
@@ -114,7 +116,7 @@ export function buildSvgExtrudeSurfaceControlsHtml(ids = {}) {
             </label>
             <label class="slider-line slider-line--surface-detail">
               <span data-tooltip="Surface detail — finer pattern toward the right (mesh-local, rotates with the model)">Surface Detail</span>
-              <input id="${scaleId}" type="range" min="0.2" max="10" step="0.05" value="1" />
+              <input id="${scaleId}" type="range" min="${SURFACE_UI_SCALE_MIN}" max="${SURFACE_UI_SCALE_MAX}" step="0.05" value="1" />
               <span class="value" data-output="${scaleOutput}">1.00</span>
             </label>
             <label class="slider-line svg-extrude-surface-strength-line">

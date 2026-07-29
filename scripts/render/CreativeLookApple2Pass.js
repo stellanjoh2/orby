@@ -7,6 +7,7 @@ import {
   A2_REF_LOGICAL_WIDTH,
   creativeApple2CellSize,
 } from './creativeLookApple2Art.js';
+import { applyFlatPostBgColorUniform } from './creativeLookFlatPostMasterHue.js';
 
 const VERTEX_SHADER = /* glsl */ `
 varying vec2 vUv;
@@ -89,7 +90,7 @@ export class CreativeLookApple2Pass {
     this._applyCellSize();
   }
 
-  /** @param {{ enabled?: boolean, masterHue?: number }} settings */
+  /** @param {{ enabled?: boolean, masterHue?: number, bgColor?: string }} settings */
   updateSettings(settings = {}) {
     if (!settings) return;
     if (typeof settings.enabled === 'boolean') {
@@ -98,6 +99,7 @@ export class CreativeLookApple2Pass {
     if (typeof settings.masterHue === 'number') {
       this.material.uniforms.uMasterHue.value = settings.masterHue;
     }
+    applyFlatPostBgColorUniform(this.material, settings.bgColor);
   }
 
   dispose() {

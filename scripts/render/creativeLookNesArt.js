@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { APP_BACKGROUND } from '../constants.js';
-import { FLAT_POST_MASTER_HUE_GLSL } from './creativeLookFlatPostMasterHue.js';
+import {
+  FLAT_POST_EMPTY_CELL_GLSL,
+  FLAT_POST_MASTER_HUE_GLSL,
+} from './creativeLookFlatPostMasterHue.js';
 
 /**
  * 2C02 PPU system palette — FCEUX default decode of all 64 indices ($00–$3F).
@@ -200,6 +203,7 @@ uniform vec3 uBgColor;
 uniform float uPaletteCount;
 
 ${FLAT_POST_MASTER_HUE_GLSL}
+${FLAT_POST_EMPTY_CELL_GLSL}
 
 const vec3 NES_LUMA = vec3(0.2126, 0.7152, 0.0722);
 const int NES_PAL_MAX = 55;
@@ -295,7 +299,7 @@ void main() {
   vec2 centerUv = (centerPx + 0.5) / res;
   vec4 cellColor = texture2D(tDiffuse, centerUv);
 
-  if (cellColor.a < 0.04) {
+  if (isFlatPostEmptyCell(cellColor, uBgColor)) {
     gl_FragColor = vec4(uBgColor, 1.0);
     return;
   }

@@ -770,9 +770,18 @@ export const SCRUB_CAPTURE_DEBOUNCE_MS = 450;
 /**
  * Reuse the last N8AO geometry plate when the camera and model are settled; still
  * recomposites each frame with a fresh RenderPass backdrop (HDRI rotation, etc.).
+ * Invalidate / force-recompute on material, mesh IBL, scrub, resize, model swap, AO settings,
+ * and while the idle render loop's activity grace is active (toggles / shelf edits).
  * Set false to restore per-frame full N8AO (rollback).
  */
 export const USE_N8AO_VIEW_CACHE = true;
+
+/**
+ * After any idle-loop wake, keep chaining frames for this long so appear animations,
+ * material swaps, and AO plate refreshes finish without requiring an orbit nudge.
+ * Covers base / backdrop / cove scale toggles (~380ms in) with headroom.
+ */
+export const RENDER_LOOP_IDLE_GRACE_MS = 600;
 
 /** @typedef {'max' | 'medium' | 'low'} RenderQualityTierId */
 
@@ -949,40 +958,13 @@ export function isCreativeLookAscii4PostActive(state) {
   return preset === 'ascii-art-4';
 }
 
-/** Flat-post Shader Lab presets that can run Cam/FX bloom in the ascii terminal stack. */
-const SHADER_LAB_FLAT_POST_PRESETS = new Set([
-  'ascii-art',
-  'ascii-art-2',
-  'ascii-art-3',
-  'ascii-art-4',
-  'ega-pixel',
-  'c64-pixel',
-  'gameboy-pixel',
-  'gba-pixel',
-  'nes-pixel',
-  'megadrive-pixel',
-  'intellivision-pixel',
-  'apple2-pixel',
-  'dither-neutral',
-  'dither-tritone',
-  'dither-crosshatch',
-  'dither-raster',
-]);
-
-/** Cam/FX bloom sliders — Shader Lab viewport bloom, or flat-post Cam/FX bloom stack. */
+/** Cam/FX bloom sliders — live when Shader Lab Bloom is on, else when Cam/FX bloom is on. */
 export function isBloomTuningActive(state) {
   const cl = state?.creativeLook ?? {};
   if (cl.enabled !== true) {
     return !!state?.bloom?.enabled;
   }
-  if (cl.viewportBloom) {
-    return true;
-  }
-  const preset = typeof cl.preset === 'string' ? cl.preset : '';
-  if (SHADER_LAB_FLAT_POST_PRESETS.has(preset)) {
-    return isBloomPipelineActive(state);
-  }
-  return false;
+  return isCreativeLookViewportPostActive(state);
 }
 
 /** Anamorphic streak runs when bloom output exists (Cam/FX bloom or Shader Lab viewport bloom). */

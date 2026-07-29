@@ -9,6 +9,7 @@ import {
   createNesPaletteTexture,
   creativeNesCellSize,
 } from './creativeLookNesArt.js';
+import { applyFlatPostBgColorUniform } from './creativeLookFlatPostMasterHue.js';
 
 const VERTEX_SHADER = /* glsl */ `
 varying vec2 vUv;
@@ -94,7 +95,7 @@ export class CreativeLookNesPass {
     this._applyCellSize();
   }
 
-  /** @param {{ enabled?: boolean, masterHue?: number }} settings */
+  /** @param {{ enabled?: boolean, masterHue?: number, bgColor?: string }} settings */
   updateSettings(settings = {}) {
     if (!settings) return;
     if (typeof settings.enabled === 'boolean') {
@@ -103,6 +104,7 @@ export class CreativeLookNesPass {
     if (typeof settings.masterHue === 'number') {
       this.material.uniforms.uMasterHue.value = settings.masterHue;
     }
+    applyFlatPostBgColorUniform(this.material, settings.bgColor);
   }
 
   dispose() {

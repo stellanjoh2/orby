@@ -60,7 +60,7 @@ import {
   USE_MERGED_GRADING_PASS,
   USE_MERGED_BLOOM_COMPOSITE_PASS,
   isAnamorphicBloomPipelineActive,
-  isBloomPipelineActive,
+  isCreativeLookViewportPostActive,
   GRAIN_SCALE_DEFAULT,
   GRAIN_SCALE_MAX,
   GRAIN_SCALE_MIN,
@@ -400,14 +400,17 @@ export class PostProcessingPipeline {
   }
 
   /**
-   * Sync Camera & FX bloom for ASCII Art terminal stack (scene → glyphs → bloom → screen).
+   * Sync bloom for flat-post (ASCII / screen pixels / dither) stack.
+   * Follows Shader Lab Bloom toggle (`viewportBloom`) — not Cam/FX bloom (on by default).
    * @param {object} [state]
    */
   prepareCreativeLookAsciiPresentation(state) {
-    this._asciiBloomActive = isBloomPipelineActive(state ?? {});
-    this._asciiAnamorphicActive = isAnamorphicBloomPipelineActive(state ?? {});
-    if (this._lastBloomSettings) {
-      this.updateBloom(this._lastBloomSettings);
+    const bloomOn = isCreativeLookViewportPostActive(state ?? {});
+    this._asciiBloomActive = bloomOn;
+    this._asciiAnamorphicActive =
+      bloomOn && isAnamorphicBloomPipelineActive(state ?? {});
+    if (bloomOn) {
+      this.prepareCreativeLookViewportPresentation();
     }
   }
 

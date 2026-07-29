@@ -1168,7 +1168,12 @@ export class MaterialController {
    * on the import material still reaches the mesh.
    */
   resyncEmissiveFromImportedMaterials() {
-    if (!this.currentModel || this.currentShading !== 'shaded') return;
+    if (
+      !this.currentModel
+      || (this.currentShading !== 'shaded' && this.currentShading !== 'wireframe')
+    ) {
+      return;
+    }
 
     const userEm = this.materialSettings.emissive ?? 0;
     const bright = this.materialSettings.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS;
@@ -1895,7 +1900,9 @@ export class MaterialController {
     }
     if (
       this.currentModel &&
-      (this.currentShading === 'shaded' || this.currentShading === 'clay')
+      (this.currentShading === 'shaded'
+        || this.currentShading === 'wireframe'
+        || this.currentShading === 'clay')
     ) {
       this.setShading(this.currentShading);
     }
@@ -2057,7 +2064,12 @@ export class MaterialController {
           this._shouldPromoteBlendMapAlphaCutout(m) || this._applyBlendMapAlphaCutoutFallback(m);
         if (!applied) return;
         const shading = this.currentShading ?? this.stateStore?.getState()?.shading ?? 'shaded';
-        if (shading === 'shaded' || shading === 'clay' || shading === 'textures') {
+        if (
+          shading === 'shaded'
+          || shading === 'wireframe'
+          || shading === 'clay'
+          || shading === 'textures'
+        ) {
           this.setShading(shading);
         }
       });
@@ -2250,7 +2262,12 @@ export class MaterialController {
     if (!this.currentModel) return;
     this.applyTransparencyPipeline(this.currentModel);
     const shading = this.currentShading ?? this.stateStore?.getState()?.shading ?? 'shaded';
-    if (shading === 'shaded' || shading === 'clay' || shading === 'textures') {
+    if (
+      shading === 'shaded'
+      || shading === 'wireframe'
+      || shading === 'clay'
+      || shading === 'textures'
+    ) {
       this.setShading(shading);
     }
   }
@@ -2693,19 +2710,9 @@ export class MaterialController {
         return factory(original);
       };
 
-      if (mode === 'wireframe') {
-        const resolveWireframeMaterial = (mat) => {
-          if (this._isEmissiveBlendDisplayImport(mat)) {
-            const built = this._buildEmissiveDisplayMaterial(
-              mat,
-              this.materialSettings.emissive || 0.0,
-            );
-            if (built) return built;
-          }
-          return mat;
-        };
-        applyMaterial(buildArray(resolveWireframeMaterial));
-      } else if (mode === 'clay') {
+      // Wireframe display mode keeps shaded albedo (brightness / MR / emissive) and draws
+      // lines via the overlay — do not restore raw import materials (that drops ×brightness).
+      if (mode === 'clay') {
         const { color } = this.claySettings;
         // Use material settings for roughness and metalness (unified controls)
         const createClay = (originalMat) => {
@@ -2792,8 +2799,7 @@ export class MaterialController {
         };
         applyMaterial(buildArray(createTextureMaterial));
       } else {
-        // Restore original materials when switching away from wireframe/clay/textures
-        // But apply diffuse brightness to them
+        // Shaded + wireframe: clones with diffuse brightness (wireframe lines are overlay-only)
         const createShadedMaterial = (mat, isGlass = false) => {
           if (!mat) return mat;
           // glTF `KHR_materials_unlit` imports as `MeshBasicMaterial`, which has no
@@ -2927,7 +2933,7 @@ export class MaterialController {
 
     // After recreating shaded materials, either apply user emissive glow or re-sync file emissive
     // (microtask so hooks like Fresnel/SVG run first; import textures may also finish binding).
-    if (mode === 'shaded') {
+    if (mode === 'shaded' || mode === 'wireframe') {
       if (this.materialSettings?.emissive > 0) {
         this.updateMaterials();
         this.onPostShaderMaterialSync?.();
@@ -2937,7 +2943,7 @@ export class MaterialController {
           this.onPostShaderMaterialSync?.();
         });
       }
-    } else if (this.materialSettings?.emissive > 0 && mode !== 'wireframe' && mode !== 'textures') {
+    } else if (this.materialSettings?.emissive > 0 && mode !== 'textures') {
       this.updateMaterials();
       this.onPostShaderMaterialSync?.();
     }
@@ -4875,11 +4881,12 @@ export class MaterialController {
     // miss the parked materials and leave a stale restore (brightness pop after unpin).
     if (this.mapInspectPreview?.activeSlot) return;
 
-    // Update existing materials in all modes (except wireframe which has its own color)
-    // Material controls now apply to both Color/Textures modes AND Clay mode
-    if (this.currentModel && (this.currentShading === 'shaded' || this.currentShading === 'textures' || this.currentShading === 'clay')) {
+    // Material controls apply in Shaded / Wireframe / Textures / Clay (wireframe shares shaded albedo)
+    if (this.currentModel && (this.currentShading === 'shaded' || this.currentShading === 'wireframe' || this.currentShading === 'textures' || this.currentShading === 'clay')) {
       const modelHasEmissive =
-        this.currentShading === 'shaded' ? this._modelHasAnyEmissiveBaseline() : false;
+        this.currentShading === 'shaded' || this.currentShading === 'wireframe'
+          ? this._modelHasAnyEmissiveBaseline()
+          : false;
       this.currentModel.traverse((child) => {
         if (!child.isMesh) return;
         const original = this.originalMaterials.get(child);
@@ -4934,8 +4941,11 @@ export class MaterialController {
             material.color.copy(adjustedColor);
             material.needsUpdate = true;
           }
-        } else if (this.currentShading === 'shaded') {
-          // For shaded mode, update brightness, metalness, and roughness
+        } else if (
+          this.currentShading === 'shaded'
+          || this.currentShading === 'wireframe'
+        ) {
+          // Shaded / wireframe: update brightness, metalness, and roughness on live clones
           if (!original) return;
 
           const tSub = this._isSubsurfaceActive()
@@ -5459,7 +5469,7 @@ export class MaterialController {
 
     // Create overlay if "always on" is enabled OR if wireframe mode is active.
     // In bones mode, animation.showWireframe wins (default off) over Mesh → Wireframe.
-    // Wireframe mode now shows overlay on top of original materials (not pure wireframe)
+    // Wireframe mode draws the overlay on top of shaded materials (not pure wireframe).
     const shouldShowOverlay = this._shouldShowWireframeOverlay();
     
     if (shouldShowOverlay) {
@@ -5842,7 +5852,7 @@ export class MaterialController {
    */
   _syncShadedMaterialRoughnessForHdriBlur(child, material, matIndex = 0) {
     if (
-      this.currentShading !== 'shaded' ||
+      (this.currentShading !== 'shaded' && this.currentShading !== 'wireframe') ||
       !material ||
       (!material.isMeshStandardMaterial && !material.isMeshPhysicalMaterial)
     ) {

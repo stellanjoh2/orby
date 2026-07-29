@@ -1,5 +1,8 @@
 import { APP_BACKGROUND } from '../constants.js';
-import { FLAT_POST_MASTER_HUE_GLSL } from './creativeLookFlatPostMasterHue.js';
+import {
+  FLAT_POST_EMPTY_CELL_GLSL,
+  FLAT_POST_MASTER_HUE_GLSL,
+} from './creativeLookFlatPostMasterHue.js';
 
 /**
  * Game Boy Advance — 15-bit RGB (32,768 colors, 5 bits per channel).
@@ -40,6 +43,7 @@ export function creativeGbaCellSize(_patternScale) {
   };
 }
 
+/** Default empty-cell fill — overridden live from Studio Color via `uBgColor`. */
 export const GBA_BG_HEX = parseInt(APP_BACKGROUND.slice(1), 16);
 
 /**
@@ -121,6 +125,7 @@ uniform vec2 uCellSize;
 uniform vec3 uBgColor;
 
 ${FLAT_POST_MASTER_HUE_GLSL}
+${FLAT_POST_EMPTY_CELL_GLSL}
 
 const vec3 GBA_LUMA = vec3(0.2126, 0.7152, 0.0722);
 
@@ -151,7 +156,7 @@ void main() {
   vec2 centerUv = (centerPx + 0.5) / res;
   vec4 cellColor = texture2D(tDiffuse, centerUv);
 
-  if (cellColor.a < 0.04) {
+  if (isFlatPostEmptyCell(cellColor, uBgColor)) {
     gl_FragColor = vec4(uBgColor, 1.0);
     return;
   }

@@ -53,15 +53,16 @@ const PRESET_TO_INDEX = {
 const normalTextureCache = new Map();
 let normalTextureLoader = null;
 
+/** UI slider range for surface detail (stored in state; lower = finer pattern). */
+export const SURFACE_UI_SCALE_MIN = 0.05;
+export const SURFACE_UI_SCALE_MAX = 10;
+
 const clampScale = (v) => {
   const n = Number(v);
   if (!Number.isFinite(n)) return 1.0;
-  return Math.max(0.12, Math.min(10, n));
+  // Shader freq = 1 / UI scale; keep in sync with SURFACE_UI_SCALE_* so fine end is usable.
+  return Math.max(1 / SURFACE_UI_SCALE_MAX, Math.min(1 / SURFACE_UI_SCALE_MIN, n));
 };
-
-/** UI slider range for surface detail (stored in state; lower = finer pattern). */
-export const SURFACE_UI_SCALE_MIN = 0.2;
-export const SURFACE_UI_SCALE_MAX = 10;
 
 export function clampSurfaceUiScale(v) {
   const n = Number(v);
@@ -333,16 +334,14 @@ export function relinkOuterShaderPatchesAfterSurface(material) {
       material.onBeforeCompile = shadowHook;
       dirty = true;
     }
+    // Surface sync replaces customProgramCacheKey — always re-wrap shadow (tint key may be unchanged).
     const colorHex = stash.color?.getHexString?.() ?? '080808';
     const nextTintKey = `${colorHex}:${stash.strength}:${stash.opacity}`;
-    if (stash.programCacheKey !== nextTintKey) {
-      stash.programCacheKey = nextTintKey;
-      const surfaceKeyFn = material.customProgramCacheKey.bind(material);
-      material.customProgramCacheKey = function orbyShadowTintCacheKey() {
-        return `${surfaceKeyFn()}|orbyShadowTint:${nextTintKey}`;
-      };
-      dirty = true;
-    }
+    stash.programCacheKey = nextTintKey;
+    const surfaceKeyFn = material.customProgramCacheKey.bind(material);
+    material.customProgramCacheKey = function orbyShadowTintCacheKey() {
+      return `${surfaceKeyFn()}|orbyShadowTint:${nextTintKey}`;
+    };
   }
 
   if (material.userData?.goboPatched && material.userData.orbyGobo) {
@@ -803,9 +802,6 @@ function createOnBefore(args) {
 /** Keep WebGL program cache in sync when Fresnel and SVG surface share a material. */
 export function syncSvgExtrudeSurfaceProgramCacheKey(material) {
   if (!material?.userData?.svgExtrudeProceduralPatched) return;
-  const presetId = material.userData.svgExtrudeSurfacePresetId ?? 'none';
-  const fresnelSuffix = material.userData?.fresnelPatched ? ':f' : '';
-  const glassSuffix = material.userData?.orbySurfaceTransmissionSafe ? ':tg' : '';
   const existingKey = material.customProgramCacheKey;
   if (
     !material.userData.orbySvgSurfBaseCacheKey
@@ -818,9 +814,13 @@ export function syncSvgExtrudeSurfaceProgramCacheKey(material) {
     typeof material.userData.orbySvgSurfBaseCacheKey === 'function'
       ? `${material.userData.orbySvgSurfBaseCacheKey()}|`
       : '';
-  // Scale + strength are uniforms — keep them out of the program cache key so scrubbing stays live.
-  material.customProgramCacheKey = () =>
-    `${basePrefix}orbySvgSurf:v22:${presetId}${fresnelSuffix}${glassSuffix}`;
+  // Preset / scale / strength are uniforms — keep them out of the program cache key so
+  // dropdown swaps and scrubbing stay live without tearing down the compile hook.
+  material.customProgramCacheKey = () => {
+    const fresnelSuffix = material.userData?.fresnelPatched ? ':f' : '';
+    const glassSuffix = material.userData?.orbySurfaceTransmissionSafe ? ':tg' : '';
+    return `${basePrefix}orbySvgSurf:v23${fresnelSuffix}${glassSuffix}`;
+  };
 }
 
 function getOrUpdateUniformRefs(material, opts) {
@@ -881,14 +881,13 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
     presetId,
     normalBounds: opts.normalBounds ?? null,
   });
-  const prevPreset = material.userData?.svgExtrudeSurfacePresetId;
-  const prevStrength = material.userData?.svgExtrudeSurfaceStrength;
   const prevTransmissionSafe = !!material.userData?.orbySurfaceTransmissionSafeWas;
   const hadPatch = !!material.userData?.svgExtrudeProceduralPatched;
 
-  if (hadPatch && prevPreset !== presetId) {
-    removeSvgExtrudeProceduralFromMaterial(material);
-  } else if (hadPatch && prevTransmissionSafe !== transmissionSafe) {
+  // Only tear down when the compiled shader shape changes (glass transmission path).
+  // Preset / scale / strength are uniforms — tearing down on dropdown change left the
+  // viewport on the old program until another uniform scrub forced a live update.
+  if (hadPatch && prevTransmissionSafe !== transmissionSafe) {
     removeSvgExtrudeProceduralFromMaterial(material);
   }
 
@@ -898,12 +897,6 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
     installSurfaceCompileHook(material, hook, uniformRefs, previous);
   } else {
     material.userData.svgExtrudeProceduralUniforms = uniformRefs;
-    // Scale + strength are uniforms — live scrub without forcing a program rebuild.
-    if (prevPreset !== presetId) {
-      material.needsUpdate = true;
-    } else if (prevStrength !== surfaceStrength) {
-      uniformRefs.uOrbyNormalStrength.value = normalStrength;
-    }
     ensureOrbySurfaceHookLinked(material);
     ensureSvgExtrudeFresnelChain(material);
   }
@@ -1257,11 +1250,7 @@ export function applyOrbySurfaceUniformStateToMaterial(material, state) {
       }
     }
   }
-  const tex = state?.normalMap;
-  if (tex?.isTexture) {
-    tex.needsUpdate = true;
-  }
-  material.needsUpdate = true;
+  // Uniform-only — do not force ShaderMaterial recompile (same as PBR surface path).
   return true;
 }
 

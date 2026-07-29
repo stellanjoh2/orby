@@ -355,7 +355,15 @@ export const SCENE_CONTROL_MANIFEST = [
   // ── Ground / podium / backdrop ────────────────────────────────────────────
   { event: 'studio:ground-solid', apply: 'setGroundSolid' },
   { event: 'studio:ground-wire', apply: { controller: 'groundController', method: 'setWireEnabled' } },
-  { event: 'studio:ground-solid-color', apply: { controller: 'groundController', method: 'setSolidColor' } },
+  {
+    event: 'studio:ground-solid-color',
+    apply: { controller: 'groundController', method: 'setSolidColor' },
+    afterApply: (scene) => {
+      // Podium albedo is baked into the N8AO beauty plate.
+      scene.postPipeline?.invalidateN8aoViewCache?.();
+      scene.requestRender?.();
+    },
+  },
   { event: 'studio:ground-wire-color', apply: { controller: 'groundController', method: 'setWireColor' } },
   { event: 'studio:ground-wire-opacity', apply: { controller: 'groundController', method: 'setWireOpacity' } },
   { event: 'studio:ground-y', apply: 'setGroundY' },
@@ -364,22 +372,34 @@ export const SCENE_CONTROL_MANIFEST = [
   {
     event: 'studio:base-metalness',
     apply: { controller: 'groundController', method: 'setBaseMetalness' },
-    afterApply: (scene) => scene.requestRender?.(),
+    afterApply: (scene) => {
+      scene.postPipeline?.invalidateN8aoViewCache?.();
+      scene.requestRender?.();
+    },
   },
   {
     event: 'studio:base-roughness',
     apply: { controller: 'groundController', method: 'setBaseRoughness' },
-    afterApply: (scene) => scene.requestRender?.(),
+    afterApply: (scene) => {
+      scene.postPipeline?.invalidateN8aoViewCache?.();
+      scene.requestRender?.();
+    },
   },
   {
     event: 'studio:base-reflection',
     apply: { controller: 'groundController', method: 'setBaseReflection' },
-    afterApply: (scene) => scene.requestRender?.(),
+    afterApply: (scene) => {
+      scene.postPipeline?.invalidateN8aoViewCache?.();
+      scene.requestRender?.();
+    },
   },
   {
     event: 'studio:base-clearcoat',
     apply: { controller: 'groundController', method: 'setBaseClearcoat' },
-    afterApply: (scene) => scene.requestRender?.(),
+    afterApply: (scene) => {
+      scene.postPipeline?.invalidateN8aoViewCache?.();
+      scene.requestRender?.();
+    },
   },
   { event: 'studio:base-surface', apply: 'setBaseSurface', defaultArg: {} },
   { event: 'studio:base-glass-surface', apply: 'setBaseGlassSurface' },
@@ -389,7 +409,14 @@ export const SCENE_CONTROL_MANIFEST = [
   { event: 'studio:backdrop-enabled', apply: 'setBackdropEnabled' },
   { event: 'studio:backdrop-scale', apply: 'setBackdropScale' },
   { event: 'studio:backdrop-width', apply: 'setBackdropWidth' },
-  { event: 'studio:backdrop-color', apply: { controller: 'groundController', method: 'setBackdropColor' } },
+  {
+    event: 'studio:backdrop-color',
+    apply: { controller: 'groundController', method: 'setBackdropColor' },
+    afterApply: (scene) => {
+      scene.postPipeline?.invalidateN8aoViewCache?.();
+      scene.requestRender?.();
+    },
+  },
   { event: 'studio:backdrop-rotation', apply: 'setBackdropRotation' },
   {
     event: 'studio:backdrop-y',
@@ -397,8 +424,22 @@ export const SCENE_CONTROL_MANIFEST = [
     mapArg: (value) => [value, { updateState: false }],
     spreadArgs: true,
   },
-  { event: 'studio:backdrop-metalness', apply: { controller: 'groundController', method: 'setBackdropMetalness' } },
-  { event: 'studio:backdrop-roughness', apply: { controller: 'groundController', method: 'setBackdropRoughness' } },
+  {
+    event: 'studio:backdrop-metalness',
+    apply: { controller: 'groundController', method: 'setBackdropMetalness' },
+    afterApply: (scene) => {
+      scene.postPipeline?.invalidateN8aoViewCache?.();
+      scene.requestRender?.();
+    },
+  },
+  {
+    event: 'studio:backdrop-roughness',
+    apply: { controller: 'groundController', method: 'setBackdropRoughness' },
+    afterApply: (scene) => {
+      scene.postPipeline?.invalidateN8aoViewCache?.();
+      scene.requestRender?.();
+    },
+  },
   { event: 'studio:backdrop-surface', apply: 'setBackdropSurface', defaultArg: {} },
   { event: 'studio:backdrop-snap', apply: 'snapBackdropToBottom', noArg: true },
   { event: 'studio:infinity-cove-enabled', apply: 'setInfinityCoveEnabled' },
@@ -407,6 +448,10 @@ export const SCENE_CONTROL_MANIFEST = [
   {
     event: 'studio:infinity-cove-color',
     apply: { controller: 'groundController', method: 'setInfinityCoveColor' },
+    afterApply: (scene) => {
+      scene.postPipeline?.invalidateN8aoViewCache?.();
+      scene.requestRender?.();
+    },
   },
   { event: 'studio:infinity-cove-rotation', apply: 'setInfinityCoveRotation' },
   {

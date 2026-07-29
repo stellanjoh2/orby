@@ -623,6 +623,8 @@ export async function bootstrapStudio(scene) {
         }
       },
       onMaterialUpdate: () => {
+        // Mesh albedo / MR / emissive live in the N8AO geometry plate — drop the settle cache.
+        scene.postPipeline?.invalidateN8aoViewCache?.();
         scene.fontTextRevealController?.onMaterialBaselineChanged?.();
       },
       onPostShaderMaterialSync: () => {

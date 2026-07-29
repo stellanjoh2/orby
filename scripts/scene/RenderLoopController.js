@@ -1,10 +1,12 @@
 /**
  * Owns the interactive viewport rAF loop: per-frame updates, render, post-render.
  * Pauses between frames when the scene is static to save CPU/GPU; wakes on orbit,
- * state changes, and other motion sources.
+ * state changes, and other motion sources. After each activity wake, keeps chaining
+ * frames for {@link RENDER_LOOP_IDLE_GRACE_MS} so toggles / material edits paint
+ * without requiring a camera nudge.
  */
 
-import { dofNeedsLiveUpdate } from '../constants.js';
+import { dofNeedsLiveUpdate, RENDER_LOOP_IDLE_GRACE_MS } from '../constants.js';
 import {
   buildRenderLoopFrameContext,
   needsContinuousFrames,
@@ -30,6 +32,8 @@ export class RenderLoopController {
     this._stateStoreUnsub = null;
     this._inTick = false;
     this._queuedWake = false;
+    /** Keep chaining frames until this timestamp after any wake (ms, performance.now). */
+    this._idleGraceUntil = 0;
     /** @type {Array<{ target: EventTarget, type: string, listener: (event?: Event) => void }>} */
     this._wakeBindings = [];
 
@@ -267,15 +271,35 @@ export class RenderLoopController {
 
   stop() {
     this._active = false;
+    this._idleGraceUntil = 0;
     this._clearHistogramWake();
     this._clearLuminanceSampleWake();
     this._cancelFrame();
     this.detachWakeSources();
   }
 
-  /** Schedule at least one frame while the studio loop is armed. */
-  requestFrame() {
+  /** True while the post-wake activity grace window is still open. */
+  isIdleGraceActive() {
+    return this._idleGraceUntil > 0 && performance.now() < this._idleGraceUntil;
+  }
+
+  /**
+   * Extend the activity grace window so the loop keeps painting after UI / scene edits.
+   * @param {number} [ms]
+   */
+  bumpIdleGrace(ms = RENDER_LOOP_IDLE_GRACE_MS) {
+    const hold = Math.max(0, Number(ms) || 0);
+    if (hold <= 0) return;
+    this._idleGraceUntil = Math.max(this._idleGraceUntil, performance.now() + hold);
+  }
+
+  /** Schedule at least one frame while the studio loop is armed.
+   * @param {{ extendGrace?: boolean }} [options] — timers pass `extendGrace: false` so
+   * histogram / luminance sample wakes do not keep the activity grace forever.
+   */
+  requestFrame({ extendGrace = true } = {}) {
     if (!this._active || !this.scene?.isStudioReady) return;
+    if (extendGrace) this.bumpIdleGrace();
     if (this._inTick) {
       this._queuedWake = true;
       return;
@@ -307,7 +331,11 @@ export class RenderLoopController {
       });
     }
 
-    this._stateStoreUnsub = this.scene.stateStore?.subscribe?.(() => wake());
+    // State edits: grace + AO plate bust so Base / cove / materials paint without orbiting.
+    this._stateStoreUnsub = this.scene.stateStore?.subscribe?.(() => {
+      this.scene.postPipeline?.invalidateN8aoViewCache?.();
+      this.scene.wakeViewportPresentation?.(12);
+    });
   }
 
   _bindWakeListener(target, type, listener) {
@@ -357,7 +385,7 @@ export class RenderLoopController {
     this._histogramWakeTimer = setTimeout(() => {
       this._histogramWakeTimer = 0;
       if (this._active && !this._frameId) {
-        this.requestFrame();
+        this.requestFrame({ extendGrace: false });
       }
     }, HISTOGRAM_IDLE_WAKE_MS);
   }
@@ -373,13 +401,14 @@ export class RenderLoopController {
     this._luminanceSampleWakeTimer = setTimeout(() => {
       this._luminanceSampleWakeTimer = 0;
       if (this._active && !this._frameId) {
-        this.requestFrame();
+        this.requestFrame({ extendGrace: false });
       }
     }, LUMINANCE_SAMPLE_INTERVAL_MS);
   }
 
   _shouldContinue(ctx) {
     if (needsContinuousFrames(this.scene, ctx)) return true;
+    if (this.isIdleGraceActive()) return true;
     if (ctx.histogramEnabled && !ctx.panelsShelfScrolling) {
       this._scheduleHistogramIdleWake();
     }
@@ -399,30 +428,35 @@ export class RenderLoopController {
     this._inTick = true;
 
     const scene = this.scene;
-    const delta = scene.clock.getDelta();
-    const ctx = buildRenderLoopFrameContext(scene);
+    let ctx = null;
+    try {
+      const delta = scene.clock.getDelta();
+      ctx = buildRenderLoopFrameContext(scene);
 
-    for (const step of this._updateSteps) {
-      if (step.when && !step.when(ctx, scene)) continue;
-      step.run(delta, scene);
+      for (const step of this._updateSteps) {
+        if (step.when && !step.when(ctx, scene)) continue;
+        step.run(delta, scene);
+      }
+
+      scene.render();
+
+      if (scene._viewportPresentationFrames > 0) {
+        scene._viewportPresentationFrames -= 1;
+      }
+
+      for (const step of this._postRenderSteps) {
+        if (step.when && !step.when(ctx, scene)) continue;
+        step.run(delta, scene);
+      }
+    } finally {
+      // Must clear even when a step/render throws — otherwise requestFrame only sets
+      // _queuedWake and the idle loop never schedules another frame.
+      this._inTick = false;
     }
-
-    scene.render();
-
-    if (scene._viewportPresentationFrames > 0) {
-      scene._viewportPresentationFrames -= 1;
-    }
-
-    for (const step of this._postRenderSteps) {
-      if (step.when && !step.when(ctx, scene)) continue;
-      step.run(delta, scene);
-    }
-
-    this._inTick = false;
 
     if (
       this._active
-      && (this._queuedWake || this._shouldContinue(ctx))
+      && (this._queuedWake || (ctx && this._shouldContinue(ctx)))
     ) {
       this._queuedWake = false;
       this._scheduleFrameIfNeeded({ flushStaleDelta: false });

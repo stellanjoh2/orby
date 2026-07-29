@@ -355,6 +355,8 @@ export class UIHelpers {
       if (!isDeferredControl(event.target)) return;
       this._deferNotifyPointerIds.add(event.pointerId);
       this.stateStore.beginDeferredNotify();
+      // Kick the idle loop; per-sample wakes on `input` keep painting if the continuous
+      // scrub chain drops (orphan flush, missed frame, etc.).
       this.requestViewportRender();
     };
 
@@ -514,6 +516,16 @@ export class UIHelpers {
         this.updateSliderFill(event.target);
       }
     }, true); // Use capture phase to catch all events
+
+    // Bubble phase: after manifest/handlers apply scene changes. Deferred notify suppresses
+    // StateStore wakes during scrub, so each sample must kick the idle render loop — same
+    // pattern as color chips (continuous scrub frames alone are not enough after an orphan flush).
+    document.addEventListener('input', (event) => {
+      const el = event.target;
+      if (!(el instanceof HTMLInputElement)) return;
+      if (el.type !== 'range' && el.type !== 'color') return;
+      this.requestViewportRender();
+    });
 
     this.setupDeferredControlNotify();
     this.setupSliderThumbReset();

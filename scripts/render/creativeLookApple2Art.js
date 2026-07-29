@@ -1,5 +1,8 @@
 import { APP_BACKGROUND } from '../constants.js';
-import { FLAT_POST_MASTER_HUE_GLSL } from './creativeLookFlatPostMasterHue.js';
+import {
+  FLAT_POST_EMPTY_CELL_GLSL,
+  FLAT_POST_MASTER_HUE_GLSL,
+} from './creativeLookFlatPostMasterHue.js';
 
 /**
  * Apple II Hi-Res (HGR) — 280×192 luminance framebuffer + composite artifact decode.
@@ -40,6 +43,7 @@ export function creativeApple2CellSize(_patternScale) {
   };
 }
 
+/** Default empty-cell fill — overridden live from Studio Color via `uBgColor`. */
 export const A2_BG_HEX = parseInt(APP_BACKGROUND.slice(1), 16);
 
 /**
@@ -109,11 +113,9 @@ uniform vec2 uCellSize;
 uniform vec3 uBgColor;
 
 ${FLAT_POST_MASTER_HUE_GLSL}
+${FLAT_POST_EMPTY_CELL_GLSL}
 
 const vec3 A2_LUMA = vec3(0.2126, 0.7152, 0.0722);
-
-/** Clear / backdrop luma — mesh prepass floor is above this. */
-const float A2_BACKDROP_LUMA_MAX = 0.14;
 
 const vec3 A2_BLACK = vec3(0.031, 0.031, 0.031);
 const vec3 A2_WHITE = vec3(1.0, 1.0, 1.0);
@@ -190,9 +192,8 @@ void main() {
   vec2 centerPx = cellId * cellPx + floor(cellPx * 0.5);
   vec2 centerUv = (centerPx + 0.5) / res;
   vec4 cellColor = texture2D(tDiffuse, centerUv);
-  float rawLum = dot(cellColor.rgb, A2_LUMA);
 
-  if (cellColor.a < 0.04 || rawLum < A2_BACKDROP_LUMA_MAX) {
+  if (isFlatPostEmptyCell(cellColor, uBgColor)) {
     gl_FragColor = vec4(uBgColor, 1.0);
     return;
   }

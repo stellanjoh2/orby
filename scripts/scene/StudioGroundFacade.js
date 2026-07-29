@@ -136,6 +136,8 @@ export class StudioGroundFacade {
     this.scene._syncShadowCameraBounds();
     this.updateBaseAppearAnimation();
     this.updateBaseGlassAppearAnimation();
+    this.scene.postPipeline?.invalidateN8aoViewCache?.();
+    this.scene.requestRender?.();
     this.ui?.applyBlockStates?.(this.stateStore.getState());
   }
 
@@ -365,6 +367,8 @@ export class StudioGroundFacade {
     this.updateBaseAppearAnimation();
     this.updateBaseGlassAppearAnimation();
     this.scene._syncStudioGroundSurfaces();
+    this.scene.postPipeline?.invalidateN8aoViewCache?.();
+    this.scene.requestRender?.();
     this.ui?.applyBlockStates?.(this.stateStore.getState());
   }
 
@@ -375,6 +379,8 @@ export class StudioGroundFacade {
     this.updateBackdropAppearAnimation();
     this.scene._syncShadowAndGobo();
     this.scene._syncShadowCameraBounds();
+    this.scene.postPipeline?.invalidateN8aoViewCache?.();
+    this.scene.requestRender?.();
     this.ui?.applyBlockStates?.(this.stateStore.getState());
   }
 
@@ -463,6 +469,8 @@ export class StudioGroundFacade {
     this.updateInfinityCoveAppearAnimation();
     this.scene._syncShadowAndGobo();
     this.scene._syncShadowCameraBounds();
+    this.scene.postPipeline?.invalidateN8aoViewCache?.();
+    this.scene.requestRender?.();
     this.ui?.applyBlockStates?.(this.stateStore.getState());
   }
 

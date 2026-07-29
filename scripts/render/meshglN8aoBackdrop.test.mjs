@@ -204,6 +204,39 @@ describe('N8AO + HDRI source invariants', () => {
     );
   });
 
+  it('forces AO recompute while scrubbing and invalidates on material/env updates', () => {
+    const setup = readRepoFile('scripts/scene/StudioComposerSetup.js');
+    assert.match(setup, /isViewportScrubActive/);
+    assert.match(setup, /isIdleGraceActive/);
+    // Armed but not playing (Pause all / scrub-idle) must recompute — settled cache
+    // otherwise freezes light intensity and other beauty edits.
+    assert.match(
+      setup,
+      /exportMovementPreview[\s\S]*isActive[\s\S]*isPlaying/,
+    );
+    assert.match(setup, /_lightMoveDragActive/);
+    assert.match(setup, /altRightDragging/);
+    assert.match(setup, /lightsAutoRotate/);
+    assert.match(setup, /creativeLookPresetUsesShaderAnimation/);
+    assert.match(setup, /isExportSessionActive/);
+    assert.match(setup, /currentAction/);
+    const bootstrap = readRepoFile('scripts/scene/StudioBootstrap.js');
+    assert.match(
+      bootstrap,
+      /onMaterialUpdate:[\s\S]*invalidateN8aoViewCache/,
+    );
+    const sceneManager = readRepoFile('scripts/SceneManager.js');
+    assert.match(
+      sceneManager,
+      /updateMaterialsEnvironment\([\s\S]*invalidateN8aoViewCache/,
+    );
+    const manifest = readRepoFile('scripts/state/sceneControlManifest.js');
+    assert.match(
+      manifest,
+      /studio:ground-solid-color[\s\S]*invalidateN8aoViewCache/,
+    );
+  });
+
   it('base glass reflector gets AO on top of RenderPass reflections', () => {
     assert.ok(N8AO_EXCLUDED_MESH_USER_DATA_KEYS.includes('meshglBaseGlassReflector'));
     const pass = readRepoFile('scripts/render/MeshglN8AOPass.js');

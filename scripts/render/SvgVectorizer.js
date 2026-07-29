@@ -1,5 +1,6 @@
 import {
   buildScreenPixelSvg,
+  resolveScreenPixelBgFill,
   resolveScreenPixelGridLayout,
   sampleScreenPixelGridFromCanvasData,
 } from './screenPixelSvgExport.js';
@@ -115,6 +116,7 @@ export class SvgVectorizer {
             cellPxW: layout.cellPxW,
             cellPxH: layout.cellPxH,
             transparent,
+            bgFill: resolveScreenPixelBgFill(opts.bgFill),
           }));
         } catch (err) {
           reject(err);

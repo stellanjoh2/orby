@@ -42,3 +42,23 @@ vec3 applyFlatPostMasterHue(vec3 color) {
   return clamp(YIQ_TO_RGB * yiq, 0.0, 4.0);
 }
 `;
+
+/**
+ * Empty / studio-clear cells — match the live Studio Color picker (`uBgColor`), not a baked hex.
+ * Distance keys the opaque clear plate so Bayer crush never grid-dithers the backdrop.
+ */
+export const FLAT_POST_EMPTY_CELL_GLSL = /* glsl */ `
+bool isFlatPostEmptyCell(vec4 cellColor, vec3 bgColor) {
+  return cellColor.a < 0.04 || distance(cellColor.rgb, bgColor) < 0.05;
+}
+`;
+
+/**
+ * @param {{ uniforms?: { uBgColor?: { value?: { set?: (hex: string) => void } } } }} material
+ * @param {string | undefined | null} hex
+ */
+export function applyFlatPostBgColorUniform(material, hex) {
+  if (!material?.uniforms?.uBgColor?.value?.set) return;
+  if (typeof hex !== 'string' || !hex.trim()) return;
+  material.uniforms.uBgColor.value.set(hex.trim());
+}

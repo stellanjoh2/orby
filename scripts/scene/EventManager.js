@@ -152,7 +152,6 @@ export class EventManager {
       }
       if (property === 'castShadows') {
         setPerLightCastShadows(s, lightId, value === true);
-        return;
       } else {
         s.lightsController?.updateLightProperty(lightId, property, value);
         if (property === 'enabled' && lightId !== 'ambient') {
@@ -166,6 +165,9 @@ export class EventManager {
       ) {
         s.goboProjection.syncUniformsOnScene(s._getGoboSceneTargets());
       }
+      // Lighting is baked into the N8AO beauty plate — bust settled-view cache.
+      s.postPipeline?.invalidateN8aoViewCache?.();
+      s.requestRender?.();
     });
     eventBus.on('lights:gobo-enabled', (enabled) => {
       void s.setGoboEnabled(enabled);

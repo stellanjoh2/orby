@@ -1149,6 +1149,8 @@ export class SceneManager {
     );
     this._syncStudioGroundSurfaces();
     this._syncColorCheckerReferenceProbes(envTexture, intensity, this.hdriBlurriness);
+    // Mesh IBL is baked into the N8AO geometry plate; HDRI bg still recomposites without this.
+    this.postPipeline?.invalidateN8aoViewCache?.();
   }
 
   /**
@@ -1956,6 +1958,8 @@ export class SceneManager {
     this.lightsMaster = value ?? 0.30;
     const lightsState = this.stateStore.getState().lights;
     this.lightsController?.setMaster(this.lightsMaster, lightsState);
+    this.postPipeline?.invalidateN8aoViewCache?.();
+    this.requestRender();
   }
 
   setShowLightIndicators(enabled) {

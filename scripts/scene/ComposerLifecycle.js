@@ -272,12 +272,13 @@ export class ComposerLifecycle {
         this.postPipeline?.prepareCreativeLookViewportPresentation?.();
       }
       this.postPipeline?.pushCreativeLookVectrexPresentation?.({ viewportBloom });
+    } else if (asciiTerminal) {
+      // Flat-post first — bloom follows Shader Lab Bloom via prepareCreativeLookAsciiPresentation.
+      this.postPipeline?.prepareCreativeLookAsciiPresentation?.(this.getRenderState());
+      this.postPipeline?.pushCreativeLookAsciiPresentation?.();
     } else if (viewportBloom) {
       this.postPipeline?.prepareCreativeLookViewportPresentation?.();
       this.postPipeline?.pushCreativeLookViewportPresentation?.();
-    } else if (asciiTerminal) {
-      this.postPipeline?.prepareCreativeLookAsciiPresentation?.(this.getRenderState());
-      this.postPipeline?.pushCreativeLookAsciiPresentation?.();
     } else {
       this.applyCreativeLookBloomSuppression();
     }
@@ -355,10 +356,10 @@ export class ComposerLifecycle {
         this.postPipeline?.popCreativeLookSketchPresentation?.();
       } else if (vectrex) {
         this.postPipeline?.popCreativeLookVectrexPresentation?.();
-      } else if (viewportBloom) {
-        this.postPipeline?.popCreativeLookViewportPresentation?.();
       } else if (asciiTerminal) {
         this.postPipeline?.popCreativeLookAsciiPresentation?.();
+      } else if (viewportBloom) {
+        this.postPipeline?.popCreativeLookViewportPresentation?.();
       } else {
         this.postPipeline?.releaseCreativeLookWatercolour?.();
         this.postPipeline?.releaseCreativeLookGouache?.();

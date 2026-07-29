@@ -13,7 +13,10 @@ import {
   isCreativeLookVectrexPostActive,
   isCreativeLookAscii4PostActive,
 } from '../constants.js';
-import { isFlatPostCreativeLookPreset } from '../render/CreativeLookMaterials.js';
+import {
+  isFlatPostCreativeLookPreset,
+  creativeLookPresetUsesShaderAnimation,
+} from '../render/CreativeLookMaterials.js';
 import { PostProcessingPipeline } from '../render/PostProcessingPipeline.js';
 import { ComposerLifecycle } from './ComposerLifecycle.js';
 import { ImageExporter } from '../render/ImageExporter.js';
@@ -33,6 +36,32 @@ export function setupStudioComposer(scene) {
       getModelRoot: () => scene.modelRoot,
       getForceAoRecompute: () => {
         if (scene._gizmoDragActive) return true;
+        // Viewport light HUD drag / Alt+RMB light height (live path skips StateStore).
+        if (scene._lightMoveDragActive) return true;
+        if (scene.cameraController?.altRightDragging) return true;
+        // Settled-view AO plate must not freeze mesh beauty while scrubbing materials / HDRI / FX.
+        if (scene.ui?.helpers?.isViewportScrubActive?.()) return true;
+        // Soft idle grace after toggles / state edits — Base, cove, etc. must recompute AO.
+        if (scene.renderLoop?.isIdleGraceActive?.()) return true;
+        // Pause all / scrub-idle export preview: camera + mesh are frozen so the AO plate
+        // would otherwise hide light intensity and other beauty edits until resume.
+        const exportPreview = scene.exportMovementPreview;
+        if (exportPreview?.isActive?.() && !exportPreview?.isPlaying?.()) return true;
+        // Lights auto-rotate updates with updateState:false — plate would freeze lighting.
+        if (scene.lightsAutoRotate) return true;
+        // Shader Lab uTime animation is beauty-baked; force while live (not paused).
+        const cl = scene.stateStore?.peekState?.()?.creativeLook;
+        if (
+          cl?.enabled === true
+          && cl.pauseShaderAnimations !== true
+          && creativeLookPresetUsesShaderAnimation(cl.preset)
+        ) {
+          return true;
+        }
+        // Skinned / morph clips deform without changing modelRoot.matrixWorld.
+        if (scene.animationController?.isExportSessionActive?.()) return true;
+        const action = scene.animationController?.currentAction;
+        if (action && !action.paused && action.isRunning?.()) return true;
         if (toggleScaleAnimActive(scene._ccToggleCtx)) return true;
         if (toggleScaleAnimActive(scene._baseToggleCtx)) return true;
         if (toggleScaleAnimActive(scene._baseGlassToggleCtx)) return true;

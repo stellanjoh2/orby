@@ -13,6 +13,7 @@ import {
   creativeDitherCellSize,
   creativeDitherRasterCellSize,
 } from './creativeLookDitherArt.js';
+import { applyFlatPostBgColorUniform } from './creativeLookFlatPostMasterHue.js';
 
 const VERTEX_SHADER = /* glsl */ `
 varying vec2 vUv;
@@ -139,7 +140,7 @@ export class CreativeLookDitherPass {
     this._applyCellSize();
   }
 
-  /** @param {{ enabled?: boolean, variant?: string, masterHue?: number, patternScale?: number, intensity?: number, liftCrush?: number }} settings */
+  /** @param {{ enabled?: boolean, variant?: string, masterHue?: number, patternScale?: number, intensity?: number, liftCrush?: number, bgColor?: string }} settings */
   updateSettings(settings = {}) {
     if (!settings) return;
     if (typeof settings.variant === 'string') {
@@ -161,6 +162,7 @@ export class CreativeLookDitherPass {
     if (typeof settings.liftCrush === 'number') {
       this.material.uniforms.uLiftCrush.value = settings.liftCrush;
     }
+    applyFlatPostBgColorUniform(this.material, settings.bgColor);
   }
 
   dispose() {

@@ -1,6 +1,5 @@
 import {
   isAnamorphicBloomPipelineActive,
-  isBloomPipelineActive,
   isBloomTuningActive,
   isCreativeLookViewportPostActive,
 } from '../constants.js';
@@ -203,7 +202,6 @@ export function getCreativeLookPostFxUiBlocks(state) {
   const gouache = isGouacheCreativeLookPreset(cl.preset);
   const sketch = isSketchFamilyCreativeLookPreset(cl.preset);
   const vectrex = isVectrexCreativeLookPreset(cl.preset);
-  const bloomCamFxOn = isBloomPipelineActive(state);
 
   /** @type {Set<string>} */
   const mutedSubsections = new Set();
@@ -306,11 +304,11 @@ export function getCreativeLookPostFxUiBlocks(state) {
     mute('color-tone');
     mute('tone-curve');
     mute('look-filters');
-    disable('toneMapping', 'antiAliasing');
-    if (!bloomCamFxOn && !viewportBloom) {
+    disable('toneMapping', 'antiAliasing', 'toggleBloom');
+    if (!viewportBloom) {
       mute('bloom');
-    }
-    if (!isAnamorphicBloomPipelineActive(state)) {
+      mute('anamorphic-lens-flare');
+    } else if (!isAnamorphicBloomPipelineActive(state)) {
       mute('anamorphic-lens-flare');
     }
   } else if (viewportBloom) {

@@ -41,6 +41,55 @@ describe('meshglN8aoViewCache', () => {
     assert.equal(modelRootChangedSinceCache(modelRoot, cached), true);
   });
 
+  it('requires recompute when force callback is true (scrub / gizmo)', () => {
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    camera.updateProjectionMatrix();
+    const scene = new THREE.Scene();
+    const pos = new THREE.Vector3();
+    const quat = new THREE.Quaternion();
+    const proj = new THREE.Matrix4();
+    const modelMatrix = new THREE.Matrix4();
+
+    snapshotN8aoViewCache({
+      camera,
+      scene,
+      cacheCameraPos: pos,
+      cacheCameraQuat: quat,
+      cacheProjection: proj,
+      cacheModelMatrix: modelMatrix,
+    });
+
+    assert.equal(
+      needsN8aoViewRecompute({
+        viewCacheValid: true,
+        camera,
+        scene,
+        cacheCameraPos: pos,
+        cacheCameraQuat: quat,
+        cacheProjection: proj,
+        cacheModelMatrix: modelMatrix,
+        cacheHadGlassMesh: false,
+        resolveForceAoRecompute: () => false,
+      }),
+      false,
+    );
+
+    assert.equal(
+      needsN8aoViewRecompute({
+        viewCacheValid: true,
+        camera,
+        scene,
+        cacheCameraPos: pos,
+        cacheCameraQuat: quat,
+        cacheProjection: proj,
+        cacheModelMatrix: modelMatrix,
+        cacheHadGlassMesh: false,
+        resolveForceAoRecompute: () => true,
+      }),
+      true,
+    );
+  });
+
   it('requires recompute when cache is invalid or glass mesh appears', () => {
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     camera.updateProjectionMatrix();

@@ -63,6 +63,31 @@ export class CreativeLookSceneSync {
   /** @param {string} hex */
   noteStudioBackgroundColor(hex) {
     this._studioBgHex = hex;
+    this.syncFlatPostBgColor(hex);
+  }
+
+  /**
+   * Screen-pixel / dither empty cells follow Studio → Color (`uBgColor`).
+   * @param {string} [hex]
+   */
+  syncFlatPostBgColor(hex) {
+    const scene = this.scene;
+    const bg =
+      (typeof hex === 'string' && hex.trim())
+      || scene.stateStore?.getState()?.background
+      || scene.backgroundController?.getColor?.()
+      || APP_BACKGROUND;
+    const settings = { bgColor: bg };
+    const pp = scene.postPipeline;
+    pp?.updateCreativeLookEga?.(settings);
+    pp?.updateCreativeLookC64?.(settings);
+    pp?.updateCreativeLookGameBoy?.(settings);
+    pp?.updateCreativeLookNes?.(settings);
+    pp?.updateCreativeLookMegaDrive?.(settings);
+    pp?.updateCreativeLookIntellivision?.(settings);
+    pp?.updateCreativeLookGba?.(settings);
+    pp?.updateCreativeLookApple2?.(settings);
+    pp?.updateCreativeLookDither?.(settings);
   }
 
   /** Shared deps for Gouache / Watercolour / Sketch capture hooks + live viewport prep. */
@@ -105,6 +130,10 @@ export class CreativeLookSceneSync {
 
     const masterHue = normalizeCreativeLookMasterHue(storeCl.masterHue ?? mcCl.masterHue);
     const masterHueRad = creativeLookMasterHueRadians(masterHue);
+    const bgColor =
+      scene.stateStore?.getState()?.background
+      ?? scene.backgroundController?.getColor?.()
+      ?? APP_BACKGROUND;
     const asciiSettings = {
       enabled: enabled && isAscii,
       variant: presetId,
@@ -113,35 +142,43 @@ export class CreativeLookSceneSync {
     const egaSettings = {
       enabled: enabled && flatVariant === 'ega-pixel',
       masterHue: masterHueRad,
+      bgColor,
     };
     const c64Settings = {
       enabled: enabled && flatVariant === 'c64-pixel',
       masterHue: masterHueRad,
+      bgColor,
     };
     const gameBoySettings = {
       enabled: enabled && flatVariant === 'gameboy-pixel',
       masterHue: masterHueRad,
+      bgColor,
     };
     const nesSettings = {
       enabled: enabled && flatVariant === 'nes-pixel',
       masterHue: masterHueRad,
+      bgColor,
     };
     const megaDriveSettings = {
       enabled: enabled && flatVariant === 'megadrive-pixel',
       masterHue: masterHueRad,
+      bgColor,
     };
     const gbaSettings = {
       enabled: enabled && flatVariant === 'gba-pixel',
       masterHue: masterHueRad,
+      bgColor,
     };
     const intellivisionSettings = {
       enabled: enabled && flatVariant === 'intellivision-pixel',
       masterHue: masterHueRad,
+      bgColor,
     };
 
     const apple2Settings = {
       enabled: enabled && flatVariant === 'apple2-pixel',
       masterHue: masterHueRad,
+      bgColor,
     };
 
     const patternScale = normalizeCreativeLookPatternScale(
@@ -157,6 +194,7 @@ export class CreativeLookSceneSync {
       patternScale,
       intensity,
       liftCrush,
+      bgColor,
     };
 
     scene.postPipeline?.setCreativeLookFlatPostMode?.({ enabled, variant: flatVariant });

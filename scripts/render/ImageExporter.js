@@ -1399,6 +1399,7 @@ export class ImageExporter {
       const capture = this.composer
         ? this._readComposerOutputPixels(width, height)
         : null;
+      const bgFill = this.backgroundController?.getColor?.();
 
       if (capture?.pixels) {
         svg = buildScreenPixelSvgFromGlPixels(
@@ -1406,7 +1407,7 @@ export class ImageExporter {
           capture.width,
           capture.height,
           presetId,
-          { transparent },
+          { transparent, bgFill },
         );
       } else {
         svg = await this.svgVectorizer.buildScreenPixelSvgFromCanvasDataUrl(
@@ -1414,7 +1415,7 @@ export class ImageExporter {
           width,
           height,
           presetId,
-          { transparent },
+          { transparent, bgFill },
         );
       }
 
