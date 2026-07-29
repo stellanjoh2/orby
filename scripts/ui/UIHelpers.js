@@ -406,6 +406,9 @@ export class UIHelpers {
   /** Drop stale scrub / defer state when pointer sessions end without a balanced pointerup. */
   _reconcileOrphanedDeferredNotify() {
     if (this._rangePointerDrags.size > 0 || this._deferNotifyPointerIds.size > 0) return;
+    // Orby color picker holds deferred notify across SV/hue pointerups while the popover
+    // stays open — do not treat that as an orphaned range scrub.
+    if (this.ui?.colorPickerController?.isEditing?.()) return;
     if (this.stateStore?.isNotifyDeferred?.()) {
       this.stateStore.flushDeferredNotify();
     }
@@ -435,7 +438,10 @@ export class UIHelpers {
       active.blur();
     }
 
-    this.stateStore?.flushDeferredNotify?.();
+    // Color popover owns its deferred-notify scope until close — don't orphan-flush it.
+    if (!this.ui?.colorPickerController?.isEditing?.()) {
+      this.stateStore?.flushDeferredNotify?.();
+    }
   }
 
   protectScrubSlider(slider) {
@@ -881,6 +887,8 @@ export class UIHelpers {
           const value = event.target.value;
           writeState(value);
           emitAfter(value);
+          // Orby picker defers StateStore notify while scrubbing — wake the viewport each sample.
+          this.requestViewportRender();
         });
         continue;
       }
@@ -944,8 +952,12 @@ export class UIHelpers {
       if (!editing) {
         editing = true;
         this.stateStore.beginDeferredNotify();
-        this.requestViewportRender();
+      } else if (!this.stateStore.isNotifyDeferred?.()) {
+        // Popover SV/hue pointerup can orphan-flush deferred notify mid-session.
+        this.stateStore.beginDeferredNotify();
       }
+      // Wake every sample so live preview works even when the idle loop dropped.
+      this.requestViewportRender();
       this.writeStateAndEmit(statePath, eventName, event.target.value);
     });
     input.addEventListener('change', (event) => {

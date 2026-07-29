@@ -86,16 +86,28 @@ export class OrbyColorPickerController {
     });
   }
 
+  /** True while the popover is scrubbing a chip (deferred notify held open). */
+  isEditing() {
+    return this._editing;
+  }
+
   /** @param {string} hex */
   _onPickerInput(hex) {
     const anchor = this._anchor;
     if (!anchor) return;
 
+    // Keep deferred-notify armed for the whole popover session. Pointerup on the SV/hue
+    // field can orphan-flush range scrub state; re-arm so syncControls stays suppressed
+    // and the idle render loop keeps painting live color samples.
     if (!this._editing) {
       this._editing = true;
       this.stateStore.beginDeferredNotify();
-      this.helpers.requestViewportRender?.();
+    } else if (!this.stateStore.isNotifyDeferred?.()) {
+      this.stateStore.beginDeferredNotify();
     }
+
+    // Wake every sample — continuous frames alone are not enough after an orphan flush.
+    this.helpers.requestViewportRender?.();
 
     anchor.value = hex;
     anchor.dispatchEvent(new Event('input', { bubbles: true }));

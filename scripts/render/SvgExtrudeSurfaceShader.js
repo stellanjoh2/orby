@@ -804,9 +804,6 @@ function createOnBefore(args) {
 export function syncSvgExtrudeSurfaceProgramCacheKey(material) {
   if (!material?.userData?.svgExtrudeProceduralPatched) return;
   const presetId = material.userData.svgExtrudeSurfacePresetId ?? 'none';
-  const scale = material.userData.svgExtrudeProceduralScale ?? 1;
-  const normalStrength =
-    material.userData?.svgExtrudeProceduralUniforms?.uOrbyNormalStrength?.value ?? 0;
   const fresnelSuffix = material.userData?.fresnelPatched ? ':f' : '';
   const glassSuffix = material.userData?.orbySurfaceTransmissionSafe ? ':tg' : '';
   const existingKey = material.customProgramCacheKey;
@@ -821,8 +818,9 @@ export function syncSvgExtrudeSurfaceProgramCacheKey(material) {
     typeof material.userData.orbySvgSurfBaseCacheKey === 'function'
       ? `${material.userData.orbySvgSurfBaseCacheKey()}|`
       : '';
+  // Scale + strength are uniforms — keep them out of the program cache key so scrubbing stays live.
   material.customProgramCacheKey = () =>
-    `${basePrefix}orbySvgSurf:v21:${presetId}:${Number(scale).toFixed(3)}:${Number(normalStrength).toFixed(3)}${fresnelSuffix}${glassSuffix}`;
+    `${basePrefix}orbySvgSurf:v22:${presetId}${fresnelSuffix}${glassSuffix}`;
 }
 
 function getOrUpdateUniformRefs(material, opts) {
@@ -884,11 +882,8 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
     normalBounds: opts.normalBounds ?? null,
   });
   const prevPreset = material.userData?.svgExtrudeSurfacePresetId;
-  const prevScale = material.userData?.svgExtrudeProceduralScale;
   const prevStrength = material.userData?.svgExtrudeSurfaceStrength;
   const prevTransmissionSafe = !!material.userData?.orbySurfaceTransmissionSafeWas;
-  const presetOrScaleChanged = prevPreset !== presetId || prevScale !== scale;
-  const strengthChanged = prevStrength !== surfaceStrength;
   const hadPatch = !!material.userData?.svgExtrudeProceduralPatched;
 
   if (hadPatch && prevPreset !== presetId) {
@@ -903,9 +898,10 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
     installSurfaceCompileHook(material, hook, uniformRefs, previous);
   } else {
     material.userData.svgExtrudeProceduralUniforms = uniformRefs;
-    if (presetOrScaleChanged) {
+    // Scale + strength are uniforms — live scrub without forcing a program rebuild.
+    if (prevPreset !== presetId) {
       material.needsUpdate = true;
-    } else if (strengthChanged) {
+    } else if (prevStrength !== surfaceStrength) {
       uniformRefs.uOrbyNormalStrength.value = normalStrength;
     }
     ensureOrbySurfaceHookLinked(material);
@@ -922,7 +918,6 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
   material.userData.orbySurfaceTransmissionSafe = transmissionSafe;
   material.userData.orbySurfaceTransmissionSafeWas = transmissionSafe;
   syncSvgExtrudeSurfaceProgramCacheKey(material);
-  material.needsUpdate = true;
   return true;
 }
 

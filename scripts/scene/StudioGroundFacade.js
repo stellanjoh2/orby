@@ -339,6 +339,7 @@ export class StudioGroundFacade {
 
   setBaseSurface(settings = {}, { updateState = true } = {}) {
     const state = this.stateStore.getState();
+    const prevPreset = state.baseSurfacePreset ?? 'none';
     const preset = settings.preset ?? state.baseSurfacePreset ?? 'none';
     const scale = settings.scale ?? state.baseSurfaceScale ?? 1;
     const strength = settings.strength ?? state.baseSurfaceStrength ?? 1;
@@ -348,7 +349,13 @@ export class StudioGroundFacade {
       if (settings.strength !== undefined) this.stateStore.set('baseSurfaceStrength', strength);
     }
     this.groundController?.setBaseSurface({ preset, scale, strength });
-    this.scene._syncStudioGroundSurfaces();
+    // Preset changes need shadow/gobo relink + compile; scale/strength are live uniforms.
+    const presetChanged = settings.preset !== undefined && preset !== prevPreset;
+    if (presetChanged) {
+      this.scene._syncStudioGroundSurfaces();
+    } else {
+      this.scene.requestRender?.();
+    }
   }
 
   setBaseGlassSurface(enabled, { updateState = true } = {}) {

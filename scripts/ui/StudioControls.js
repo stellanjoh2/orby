@@ -463,6 +463,7 @@ export class StudioControls {
           property: 'color',
           value: colorInput.value,
         });
+        this.helpers.requestViewportRender();
       });
     });
 

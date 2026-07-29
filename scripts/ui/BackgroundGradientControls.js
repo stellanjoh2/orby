@@ -80,8 +80,10 @@ export class BackgroundGradientControls {
       if (!this._stopColorEditing) {
         this._stopColorEditing = true;
         this.stateStore.beginDeferredNotify();
-        this.helpers.requestViewportRender();
+      } else if (!this.stateStore.isNotifyDeferred?.()) {
+        this.stateStore.beginDeferredNotify();
       }
+      this.helpers.requestViewportRender();
       this._updateStop(this.selectedStopIndex, { color: event.target.value });
     });
     this.ui.inputs.backgroundGradientStopColor?.addEventListener('change', (event) => {

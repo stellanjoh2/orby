@@ -750,28 +750,47 @@ export class GroundController {
     }
   }
 
+  /**
+   * Live PBR scrub — update podium material params only.
+   * Avoids re-applying surface shaders + full scene compile on every sample.
+   */
+  _applyBasePbrParams() {
+    const mat = this.podium?.material;
+    if (!mat || !(mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial)) return;
+    const intensity = Math.max(0, this._lastHdriIntensity ?? 1);
+    const blur = clamp01(this._lastHdriBlurriness ?? 0);
+    mat.metalness = this.podiumMetalness;
+    mat.roughness = effectiveRoughnessWithHdriBlur(this.podiumRoughness, blur);
+    mat.envMapIntensity = intensity * this.podiumReflection;
+    if (mat.isMeshPhysicalMaterial) {
+      mat.clearcoat = this.podiumClearcoat;
+      mat.clearcoatRoughness = 0.22;
+    }
+  }
+
   setBaseMetalness(value) {
     this.podiumMetalness = clamp01(value);
-    this.applyBaseEnvironment(this._lastEnvTexture, this._lastHdriIntensity, this._lastHdriBlurriness);
+    this._applyBasePbrParams();
   }
 
   setBaseRoughness(value) {
     this.podiumRoughness = clamp01(value);
-    this.applyBaseEnvironment(this._lastEnvTexture, this._lastHdriIntensity, this._lastHdriBlurriness);
+    this._applyBasePbrParams();
   }
 
   setBaseReflection(value) {
     const v = Number(value);
     this.podiumReflection = Math.min(3, Math.max(0, Number.isFinite(v) ? v : 1));
-    this.applyBaseEnvironment(this._lastEnvTexture, this._lastHdriIntensity, this._lastHdriBlurriness);
+    this._applyBasePbrParams();
   }
 
   setBaseClearcoat(value) {
     this.podiumClearcoat = clamp01(value);
-    this.applyBaseEnvironment(this._lastEnvTexture, this._lastHdriIntensity, this._lastHdriBlurriness);
+    this._applyBasePbrParams();
   }
 
   setBaseSurface({ preset, scale, strength } = {}) {
+    const prevPreset = this.baseSurfacePreset ?? 'none';
     if (preset !== undefined) this.baseSurfacePreset = preset || 'none';
     if (scale !== undefined) {
       this.baseSurfaceScale = Number(scale) || DEFAULT_SVG_EXTRUDE_SURFACE_SCALE;
@@ -780,7 +799,12 @@ export class GroundController {
       this.baseSurfaceStrength = clampSurfaceStrength(strength);
     }
     this.applyBaseSurface();
-    this._requestSurfacePresentationSync();
+    // Scale/strength are shader uniforms — skip full surface relink + compile while scrubbing.
+    const presetChanged =
+      preset !== undefined && (this.baseSurfacePreset ?? 'none') !== prevPreset;
+    if (presetChanged) {
+      this._requestSurfacePresentationSync();
+    }
   }
 
   applyBaseSurface() {
