@@ -310,7 +310,12 @@ export const SCENE_CONTROL_MANIFEST = [
   { event: 'render:clarity', apply: { controller: 'postPipeline', method: 'setClarity' } },
   { event: 'render:fade', apply: { controller: 'postPipeline', method: 'setFade' } },
   { event: 'render:sharpness', apply: { controller: 'postPipeline', method: 'setSharpness' } },
-  { event: 'render:tone-curve', apply: { controller: 'postPipeline', method: 'setToneCurve' } },
+  {
+    event: 'render:tone-curve',
+    apply: { controller: 'postPipeline', method: 'setToneCurve' },
+    // Tone curve UI emits on pointermove (preview) without StateStore notify — wake idle loop.
+    afterApply: (scene) => scene.requestRender?.(),
+  },
   { event: 'render:temperature', apply: { controller: 'postPipeline', method: 'setTemperature' } },
   { event: 'render:tint', apply: { controller: 'postPipeline', method: 'setTint' } },
   { event: 'render:highlights', apply: { controller: 'postPipeline', method: 'setHighlights' } },

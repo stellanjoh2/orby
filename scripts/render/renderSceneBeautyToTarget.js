@@ -12,27 +12,54 @@ import {
  *   backgroundController?: import('./BackgroundController.js').BackgroundController | null,
  *   backgroundGradientController?: import('./backgroundGradient/BackgroundGradientController.js').BackgroundGradientController | null,
  * }} sources
- * @returns {{ usesFallbackBackdrop: boolean, useGpuGradientBlit: boolean, clearColor: string | null }}
+ * @returns {{
+ *   usesFallbackBackdrop: boolean,
+ *   useGpuGradientBlit: boolean,
+ *   keepSceneBackgroundTexture: boolean,
+ *   clearColor: string | number | null,
+ * }}
  */
 export function resolveStudioBackdropForBeauty(sources = {}) {
   const gradientCtrl = sources.backgroundGradientController ?? null;
   const bgCtrl = sources.backgroundController ?? gradientCtrl?.backgroundController ?? null;
   if (bgCtrl?.usesFallbackBackdrop?.() !== true) {
-    return { usesFallbackBackdrop: false, useGpuGradientBlit: false, clearColor: null };
+    return {
+      usesFallbackBackdrop: false,
+      useGpuGradientBlit: false,
+      keepSceneBackgroundTexture: false,
+      clearColor: null,
+    };
+  }
+  // Match BackgroundController.refreshAppearance: image → gradient → solid.
+  // Image uses scene.background = Texture; MeshglRenderPass must not strip it.
+  if (bgCtrl.imageController?.isActive?.() === true) {
+    return {
+      usesFallbackBackdrop: true,
+      useGpuGradientBlit: false,
+      keepSceneBackgroundTexture: true,
+      clearColor: bgCtrl.imageController.getFallbackColor?.() ?? APP_BACKGROUND,
+    };
   }
   if (gradientCtrl?.isActive?.() === true) {
     return {
       usesFallbackBackdrop: true,
       useGpuGradientBlit: gradientCtrl.shouldGpuBlitGradient?.() === true,
+      keepSceneBackgroundTexture: false,
       clearColor: gradientCtrl.getFallbackColor?.() ?? APP_BACKGROUND,
     };
   }
   if (bgCtrl.solidEnabled === false) {
-    return { usesFallbackBackdrop: true, useGpuGradientBlit: false, clearColor: null };
+    return {
+      usesFallbackBackdrop: true,
+      useGpuGradientBlit: false,
+      keepSceneBackgroundTexture: false,
+      clearColor: null,
+    };
   }
   return {
     usesFallbackBackdrop: true,
     useGpuGradientBlit: false,
+    keepSceneBackgroundTexture: false,
     clearColor: bgCtrl.getColor?.() ?? APP_BACKGROUND,
   };
 }

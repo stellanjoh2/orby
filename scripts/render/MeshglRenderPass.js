@@ -103,7 +103,8 @@ export class MeshglRenderPass extends RenderPass {
           resetRendererFullViewport(renderer);
         }
       };
-      if (backdrop.usesFallbackBackdrop) {
+      // Solid/gradient clear into the RT; image keeps scene.background Texture so Three draws it.
+      if (backdrop.usesFallbackBackdrop && !backdrop.keepSceneBackgroundTexture) {
         savedSceneBackground = this.scene.background;
         this.scene.background = null;
       }
@@ -132,6 +133,7 @@ export class MeshglRenderPass extends RenderPass {
             renderer.setClearColor(new THREE.Color(backdrop.clearColor), clearAlpha);
           }
           // Always clear color on the active RT — bloom passes can leave autoClearColor false.
+          // With keepSceneBackgroundTexture, this fills letterbox bars; the image draws on render.
           renderer.clear(true, renderer.autoClearDepth, renderer.autoClearStencil);
         }
       } else if (useGpuGradientBlit) {

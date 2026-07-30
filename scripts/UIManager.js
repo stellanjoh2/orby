@@ -387,6 +387,7 @@ export class UIManager {
     ensureObjectSurfaceControlsMounted();
     this.dom.canvas = q('#webgl');
     this.dom.viewport = q('.viewport');
+    this.dom.captureFreeze = q('#viewportCaptureFreeze');
     this.dom.exportPreviewBanner = q('#viewportExportPreviewBanner');
     this.dom.exportPreviewExit = q('#viewportExportPreviewExit');
     this.dom.offlineExportOverlay = q('#viewportOfflineExportOverlay');
@@ -2199,6 +2200,40 @@ export class UIManager {
   updateTopBarDetail(detail) {
     if (this.dom.topBarAnimation) {
       this.dom.topBarAnimation.textContent = detail;
+    }
+  }
+
+  /**
+   * Pin the last WebGL frame over the viewport so offline capture can clear #webgl
+   * without flashing black (preserveDrawingBuffer is false).
+   */
+  showViewportCaptureFreeze() {
+    const src = this.dom.canvas;
+    const freeze = this.dom.captureFreeze;
+    if (!src || !freeze) return;
+    const w = Math.max(1, src.width | 0);
+    const h = Math.max(1, src.height | 0);
+    if (freeze.width !== w) freeze.width = w;
+    if (freeze.height !== h) freeze.height = h;
+    const ctx = freeze.getContext('2d');
+    if (!ctx) return;
+    try {
+      ctx.drawImage(src, 0, 0);
+    } catch {
+      return;
+    }
+    freeze.hidden = false;
+    freeze.setAttribute('aria-hidden', 'false');
+  }
+
+  hideViewportCaptureFreeze() {
+    const freeze = this.dom.captureFreeze;
+    if (!freeze) return;
+    freeze.hidden = true;
+    freeze.setAttribute('aria-hidden', 'true');
+    const ctx = freeze.getContext('2d');
+    if (ctx && freeze.width > 0 && freeze.height > 0) {
+      ctx.clearRect(0, 0, freeze.width, freeze.height);
     }
   }
 

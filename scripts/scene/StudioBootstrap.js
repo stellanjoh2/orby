@@ -451,6 +451,7 @@ export async function bootstrapStudio(scene) {
     scene.backgroundGradientController.setConfig(initialState.backgroundGradient ?? {});
     scene.backgroundImageController.setConfig(initialState.backgroundImage ?? {});
     scene.backgroundController.setSolidEnabled(getBackgroundMode(initialState) === 'solid');
+    scene.syncStudioBackgroundColor(initialState.background ?? APP_BACKGROUND);
 
     scene.creativeLookSceneSync = new CreativeLookSceneSync(scene);
 

@@ -42,4 +42,5 @@ describe('migrateLegacyMaterialBrightness', () => {
     migrateLegacyMaterialBrightness(payload, 3);
     assert.equal(payload.material.brightness, 1);
   });
+
 });

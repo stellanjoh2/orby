@@ -46,6 +46,11 @@ export class BackgroundImageController {
     texture.generateMipmaps = false;
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
+    // ImageBitmap uploads don't follow UNPACK_FLIP_Y like HTMLImage/canvas —
+    // match THREE.ImageBitmapLoader (flipY false) or images appear upside down.
+    texture.flipY = !(
+      typeof ImageBitmap !== 'undefined' && this._source instanceof ImageBitmap
+    );
   }
 
   /** @param {Partial<import('./backgroundImageDefaults.js').BackgroundImageConfig>} patch @param {{ skipRefresh?: boolean }} [options] */

@@ -264,10 +264,9 @@ export class SceneManager {
     try {
       await this.ui.ensureStudioUiReady();
       await this.ensureStudioReady();
-      // Apply the minimal "blank canvas" snapshot (HDRI panorama hidden → solid
-      // black void, lights off, ground wireframe on) before the viewport is shown.
-      // Bootstrap uses default hdriBackground:true; revealing WebGL first would flash
-      // the beach HDRI for a frame before this preset lands.
+      // Apply blank canvas (defaults + HDRI panorama hidden + ground grid on)
+      // before the viewport is shown. Bootstrap uses hdriBackground:true; revealing
+      // WebGL first would flash the beach HDRI for a frame before this preset lands.
       try {
         await this.ui.sceneSettingsManager?.loadFromText(
           JSON.stringify(createBlankCanvasPreset()),
@@ -4573,6 +4572,8 @@ export class SceneManager {
     if (resumeRenderLoop) {
       this.renderLoop.stop();
     }
+    // Snapshot before offline capture clears the drawing buffer (preserveDrawingBuffer: false).
+    this.ui?.showViewportCaptureFreeze?.();
     this._suppressResizeForExport = true;
     this._capturePreviewInFlight = true;
 
@@ -4585,7 +4586,7 @@ export class SceneManager {
 
     try {
       if (showSpinner) {
-        return await withViewportLoadSpinner(this.ui, 'Capture preview frame', runCapture);
+        return await withViewportLoadSpinner(this.ui, 'Capturing Preview', runCapture);
       }
       return await runCapture();
     } finally {
@@ -4603,6 +4604,10 @@ export class SceneManager {
       } else {
         this._resumeLiveAnimationAfterExportCapture();
       }
+      // Drop freeze after the next paint so the repaired live buffer is on screen.
+      requestAnimationFrame(() => {
+        this.ui?.hideViewportCaptureFreeze?.();
+      });
     }
   }
 

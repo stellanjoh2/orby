@@ -2952,6 +2952,22 @@ html.orby-studio-reveal-instant-chrome .viewport-fullscreen-btn {
   outline: none;
 }
 
+/* Last live frame while offline capture clears #webgl (renderToScreen=false) */
+.viewport-capture-freeze {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  object-fit: fill;
+}
+
+.viewport-capture-freeze[hidden] {
+  display: none !important;
+}
+
 /* Offline PNG sequence: hide live WebGL (renderToScreen=false clears canvas each frame) */
 .viewport.is-offline-export-capture #webgl {
   visibility: hidden;
@@ -7395,12 +7411,7 @@ button.advanced-info-doc-btn {
   margin-bottom: var(--shelf-section-gap);
 }
 
-/* Collapsed color foldout — keep row gap to Surface (global rule zeroes margin when + foldout) */
-[data-subsection='svg-extrude']
-  > .slider-line:has(+ .effect-foldout--collapsed[data-effect-foldout='svg-color-override']) {
-  margin-bottom: var(--shelf-section-gap);
-}
-
+/* Color Override + trailing foldout is last — no extra margin when collapsed (panel padding only). */
 [data-subsection='svg-extrude'] > :is(.slider-line, .select-line, .color-line):last-child {
   margin-bottom: 0;
 }
