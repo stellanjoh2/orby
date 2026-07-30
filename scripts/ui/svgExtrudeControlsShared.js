@@ -1730,7 +1730,7 @@ export const FONT_EXTRUDE_ANIMATION_PREVIEW_DOCK_HTML = `
           >
             <div class="font-extrude-animation-preview-dock__inner">
               <div class="font-extrude-reset-scope" data-reset-scope="font-extrude-preview">
-              ${buildFontExtrudeSectionTitleHtml('Preview', 'font-extrude-preview')}
+              ${buildFontExtrudeSectionTitleHtml('Type Reveal Preview', 'font-extrude-preview')}
               <div class="animation-timeline">
                 <div class="animation-controls">
                   <div class="animation-transport-btns">

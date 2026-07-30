@@ -105,6 +105,7 @@ import {
 } from '../import/fontExtrudeTwoTone.js';
 import {
   applySvgExtrudeSurfaceToMaterial,
+  clampSurfaceUiScale,
   computeExtrudeSurfaceMappingBounds,
   resolveOrbySurfaceUniformState,
   syncCreativeLookSurfaceToModel,
@@ -2978,6 +2979,9 @@ export class MaterialController {
       if (!m?.clone) return m;
       const c = m.clone();
       this._clearStudioExtrudeEmissiveOnMaterial(c);
+      // Material.clone JSON-copies userData — keeps patched:true but drops compile hooks.
+      // Strip orphan surface/fresnel flags so setShading never restores zombie mats.
+      removeSvgExtrudeProceduralFromMaterial(c);
       return c;
     };
     if (Array.isArray(matOrArr)) return matOrArr.map(cloneOne);
@@ -5964,9 +5968,15 @@ export class MaterialController {
         delete material.userData.fresnelUniforms;
         delete material.userData.fresnelOnBeforeCompile;
         if (hadSvg && getSvgExtrudeSurfacePresetConfig(svgPreset).kind !== 'none') {
+          // svgExtrudeProceduralScale is shader frequency; apply expects UI scale.
+          const shaderScale = Number(svgScale);
+          const uiScale =
+            Number.isFinite(shaderScale) && shaderScale > 0
+              ? clampSurfaceUiScale(1 / shaderScale)
+              : 1;
           applySvgExtrudeSurfaceToMaterial(material, {
             preset: svgPreset,
-            scale: svgScale ?? 1,
+            scale: uiScale,
             strength: svgStrength,
             normalBounds: material.userData?.svgExtrudeNormalBounds ?? null,
           });

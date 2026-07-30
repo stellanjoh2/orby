@@ -150,3 +150,68 @@ test('surface preset dropdown swaps normal map without program rebuild', () => {
   assert.notEqual(refs.uOrbyNormalMap.value, firstMap);
   assert.equal(mat.needsUpdate, false);
 });
+
+test('reinstalls surface hook after JSON-cloned zombie patch flags', () => {
+  const mat = mockStandardMaterial();
+  applySvgExtrudeSurfaceToMaterial(mat, { preset: 'galvanizedSteel', scale: 1, strength: 1 });
+
+  // Simulate Three.js Material.copy/clone: JSON userData keeps patched:true, drops functions.
+  mat.userData.svgExtrudeProceduralPatched = true;
+  delete mat.userData.svgExtrudeProceduralOnBeforeCompile;
+  mat.userData.svgExtrudeProceduralUniforms = {
+    uOrbySurfaceMode: { value: 0 },
+    uOrbyScale: { value: 1 },
+    uOrbyNormalStrength: { value: 0.58 },
+    uOrbyNormalMap: { value: null },
+  };
+  mat.onBeforeCompile = null;
+
+  applySvgExtrudeSurfaceToMaterial(mat, { preset: 'dirtyMetal', scale: 0.45, strength: 0.48 });
+
+  assert.equal(typeof mat.userData.svgExtrudeProceduralOnBeforeCompile, 'function');
+  assert.equal(typeof mat.onBeforeCompile, 'function');
+  const expected = 0.58 * 0.48;
+  assert.ok(
+    Math.abs(mat.userData.svgExtrudeProceduralUniforms.uOrbyNormalStrength.value - expected) < 1e-6,
+  );
+
+  const shader = {
+    vertexShader: '#include <common>\n#include <begin_vertex>',
+    fragmentShader: mockPhysicalFragment(),
+    uniforms: {},
+  };
+  mat.onBeforeCompile(shader);
+  assert.match(shader.fragmentShader, /orby_svg_surf/);
+  assert.equal(
+    shader.uniforms.uOrbyNormalStrength,
+    mat.userData.svgExtrudeProceduralUniforms.uOrbyNormalStrength,
+  );
+
+  applySvgExtrudeSurfaceToMaterial(mat, { preset: 'dirtyMetal', scale: 0.45, strength: 1.5 });
+  assert.ok(
+    Math.abs(shader.uniforms.uOrbyNormalStrength.value - 0.58 * 1.5) < 1e-6,
+  );
+});
+
+test('surface compile hook follows fresnel previous updates from userData', () => {
+  const mat = mockStandardMaterial();
+  applySvgExtrudeSurfaceToMaterial(mat, { preset: 'galvanizedSteel', scale: 1, strength: 1 });
+  let fresnelCalled = false;
+  const fresnelHook = () => {
+    fresnelCalled = true;
+  };
+  fresnelHook.__orbyFresnelShaderPatch = true;
+  mat.userData.fresnelPatched = true;
+  mat.userData.fresnelOnBeforeCompile = fresnelHook;
+  // ensureSvgExtrudeFresnelChain / applyFresnel only write userData previous — not a closed-over arg.
+  mat.userData.svgExtrudeProceduralPrevious = fresnelHook;
+
+  const shader = {
+    vertexShader: '#include <common>\n#include <begin_vertex>',
+    fragmentShader: mockPhysicalFragment(),
+    uniforms: {},
+  };
+  mat.onBeforeCompile(shader);
+  assert.equal(fresnelCalled, true);
+  assert.match(shader.fragmentShader, /orby_svg_surf/);
+});

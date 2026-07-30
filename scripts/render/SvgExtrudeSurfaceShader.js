@@ -778,17 +778,65 @@ function applyShaderPatches(shader, uniformRefs, { transmissionSafe = false } = 
 }
 
 /**
+ * True when the surface compile hook is still a live function (not a JSON-cloned zombie).
+ * Three.js Material.copy/clone does `JSON.parse(JSON.stringify(userData))`, which keeps
+ * `svgExtrudeProceduralPatched: true` but drops all function hooks.
+ * @param {THREE.Material | null | undefined} material
+ */
+export function isSvgExtrudeSurfaceHookLive(material) {
+  return (
+    !!material?.userData?.svgExtrudeProceduralPatched &&
+    typeof material.userData.svgExtrudeProceduralOnBeforeCompile === 'function'
+  );
+}
+
+/**
+ * Drop JSON-cloned / hook-lost surface markers so the next apply can reinstall.
+ * Does not touch `onBeforeCompile` (already empty after Material.clone).
+ * @param {THREE.Material} material
+ */
+export function discardStaleSvgExtrudeSurfacePatch(material) {
+  if (!material?.userData) return;
+  delete material.userData.svgExtrudeProceduralPatched;
+  delete material.userData.svgExtrudeProceduralPrevious;
+  delete material.userData.svgExtrudeProceduralOnBeforeCompile;
+  delete material.userData.svgExtrudeProceduralUniforms;
+  delete material.userData.svgExtrudeProceduralPresetIndex;
+  delete material.userData.svgExtrudeProceduralScale;
+  delete material.userData.svgExtrudeSurfacePresetId;
+  delete material.userData.svgExtrudeSurfaceStrength;
+  delete material.userData.svgExtrudeNormalBounds;
+  delete material.userData.orbySurfaceTransmissionSafe;
+  delete material.userData.orbySurfaceTransmissionSafeWas;
+  delete material.userData.orbySvgSurfBaseCacheKey;
+  // Fresnel functions also die on Material.clone — clear orphan flags so reapply can repatch.
+  if (
+    material.userData.fresnelPatched &&
+    typeof material.userData.fresnelOnBeforeCompile !== 'function'
+  ) {
+    delete material.userData.fresnelPatched;
+    delete material.userData.fresnelUniforms;
+    delete material.userData.fresnelOnBeforeCompile;
+    delete material.userData.originalOnBeforeCompile;
+  }
+}
+
+/**
  * @param {THREE.MeshStandardMaterial} material
- * @param {{ previous?: (s:object) => void, uniformRefs: object }} args
  * @returns {(s: { vertexShader: string, fragmentShader: string, uniforms: object }) => void}
  */
-function createOnBefore(args) {
+function createOnBefore(material) {
   const hook = (shader) => {
-    if (typeof args.previous === 'function') {
-      args.previous(shader);
+    // Read previous from userData each compile so Fresnel / outer patches can update the
+    // chain without rebuilding this closure (ensureSvgExtrudeFresnelChain writes here).
+    const previous = material.userData?.svgExtrudeProceduralPrevious;
+    if (typeof previous === 'function' && previous !== hook) {
+      previous(shader);
     }
-    applyShaderPatches(shader, args.uniformRefs, {
-      transmissionSafe: !!args.transmissionSafe,
+    const uniformRefs = material.userData?.svgExtrudeProceduralUniforms;
+    if (!uniformRefs) return;
+    applyShaderPatches(shader, uniformRefs, {
+      transmissionSafe: !!material.userData?.orbySurfaceTransmissionSafe,
     });
   };
   hook.__orbySvgSurfPatch = true;
@@ -873,6 +921,14 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
   const normalMap =
     config.kind === 'normalMap' ? getNormalMapTexture(config.normalMapUrl) : null;
 
+  // Material.clone() keeps patched:true but drops function hooks — heal before uniform reuse.
+  if (
+    material.userData?.svgExtrudeProceduralPatched &&
+    !isSvgExtrudeSurfaceHookLive(material)
+  ) {
+    discardStaleSvgExtrudeSurfacePatch(material);
+  }
+
   const uniformRefs = getOrUpdateUniformRefs(material, {
     proceduralIndex,
     scale,
@@ -882,7 +938,7 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
     normalBounds: opts.normalBounds ?? null,
   });
   const prevTransmissionSafe = !!material.userData?.orbySurfaceTransmissionSafeWas;
-  const hadPatch = !!material.userData?.svgExtrudeProceduralPatched;
+  const hadPatch = isSvgExtrudeSurfaceHookLive(material);
 
   // Only tear down when the compiled shader shape changes (glass transmission path).
   // Preset / scale / strength are uniforms — tearing down on dropdown change left the
@@ -891,9 +947,12 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
     removeSvgExtrudeProceduralFromMaterial(material);
   }
 
-  if (!material.userData?.svgExtrudeProceduralPatched) {
+  if (!isSvgExtrudeSurfaceHookLive(material)) {
+    // transmissionSafe must be on userData before compile (hook reads it live).
+    material.userData.orbySurfaceTransmissionSafe = transmissionSafe;
+    material.userData.svgExtrudeProceduralUniforms = uniformRefs;
     const previous = resolveSvgSurfacePreviousHook(material);
-    const hook = createOnBefore({ previous, uniformRefs, transmissionSafe });
+    const hook = createOnBefore(material);
     installSurfaceCompileHook(material, hook, uniformRefs, previous);
   } else {
     material.userData.svgExtrudeProceduralUniforms = uniformRefs;
@@ -944,6 +1003,13 @@ export function applySvgExtrudeProceduralToMaterial(material, opts) {
  */
 export function removeSvgExtrudeProceduralFromMaterial(material) {
   if (!material || !material.userData?.svgExtrudeProceduralPatched) return;
+  // JSON-cloned materials keep the patched flag but lose the compile hook — just clear markers.
+  if (!isSvgExtrudeSurfaceHookLive(material)) {
+    discardStaleSvgExtrudeSurfacePatch(material);
+    delete material.customProgramCacheKey;
+    material.needsUpdate = true;
+    return;
+  }
   const fresnelHook =
     material.userData.fresnelPatched && material.userData.fresnelOnBeforeCompile;
   const shadowHook = material.userData?.shadowTintOnBeforeCompile;
