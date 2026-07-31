@@ -89,7 +89,8 @@ body.legal-doc--support {
   background: var(--legal-surface);
   border: 1px solid var(--legal-border);
   border-radius: 12px;
-  overflow: hidden;
+  /* visible so category/severity listboxes aren't clipped */
+  overflow: visible;
 }
 
 /* Match in-app bug-report modal (.load-settings-header h3), white on support page */
@@ -105,6 +106,7 @@ body.legal-doc--support {
 .legal-support-bug-report__header {
   padding: 1.25rem 1.35rem 1.15rem;
   border-bottom: 1px solid var(--legal-border);
+  border-radius: 12px 12px 0 0;
   background: color-mix(in srgb, var(--legal-accent) 4%, var(--legal-surface));
 }
 
@@ -210,7 +212,7 @@ body.legal-doc--support {
   left: 0;
   right: 0;
   top: calc(100% + 4px);
-  z-index: 20;
+  z-index: 40;
   margin: 0;
   padding: 0.35rem 0;
   list-style: none;
@@ -449,18 +451,36 @@ body.legal-doc--support {
   height: 54px;
 }
 
-.legal-support-bug-report .bug-report-action-btn.orby-magic-btn:disabled {
-  opacity: 0.45;
+.legal-support-bug-report .bug-report-action-btn.orby-magic-btn--outline-dark:disabled {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.34);
+  opacity: 1;
   cursor: not-allowed;
   pointer-events: none;
+}
+
+.legal-support-bug-report .bug-report-action-btn.orby-magic-btn--outline-dark:disabled .orby-magic-btn__ring {
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .legal-support-bug-report .bug-report-submit-wrap:has(.bug-report-action-btn:disabled) {
   cursor: not-allowed;
 }
 
-.legal-support-bug-report .bug-report-submit-wrap:has(.legal-support-submit-btn:disabled) .legal-support-submit-btn {
-  pointer-events: none;
+@media (hover: hover) and (pointer: fine) {
+  .legal-support-bug-report .bug-report-action-btn.orby-magic-btn--outline-dark:disabled:hover,
+  .legal-support-bug-report .bug-report-action-btn.orby-magic-btn--outline-dark:disabled:focus-visible {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.34);
+    filter: none;
+  }
+
+  .legal-support-bug-report .bug-report-action-btn.orby-magic-btn:disabled:hover .orby-magic-btn__inner,
+  .legal-support-bug-report .bug-report-action-btn.orby-magic-btn:disabled:hover .orby-magic-btn__arrow,
+  .legal-support-bug-report .bug-report-action-btn.orby-magic-btn:disabled:focus-visible .orby-magic-btn__inner,
+  .legal-support-bug-report .bug-report-action-btn.orby-magic-btn:disabled:focus-visible .orby-magic-btn__arrow {
+    transform: none;
+  }
 }
 
 .legal-support-bug-report .bug-report-status {
@@ -481,16 +501,20 @@ body.legal-doc--support {
   border: 0;
 }
 
-.legal-support-thank-you[hidden] {
+.legal-support-bug-report .legal-support-thank-you[hidden] {
   display: none !important;
 }
 
-.legal-support-thank-you {
-  margin: 0 0 0;
+.legal-support-bug-report .legal-support-thank-you {
+  margin: 0;
+  border: none;
+  border-radius: 0 0 12px 12px;
+  box-shadow: none;
 }
 
-.legal-support-thank-you:not([hidden]) {
-  margin-bottom: 2rem;
+.legal-support-bug-report .legal-support-thank-you:not([hidden]) {
+  display: block;
+  padding: 1.25rem 1.35rem 1.45rem;
 }
 
 .legal-support-section {

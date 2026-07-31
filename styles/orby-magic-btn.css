@@ -327,3 +327,84 @@ html.safari-browser .orby-magic-btn::before {
     transition: none !important;
   }
 }
+
+/* Flat inverted pills on dark surfaces — keep in sync with styles.css (.orby-magic-btn--on-dark) */
+.orby-magic-btn--on-dark::before,
+.orby-magic-btn--on-dark::after {
+  display: none;
+  content: none;
+}
+
+.orby-magic-btn--on-dark .orby-magic-btn__fill {
+  display: none;
+}
+
+.orby-magic-btn--on-dark .orby-magic-btn__inner {
+  min-height: 0;
+}
+
+.orby-magic-btn--on-dark.orby-magic-btn--solid-dark {
+  background: var(--brand-primary, var(--orby-lime));
+  color: var(--brand-text, var(--orby-black));
+  transition:
+    background 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orby-magic-btn--on-dark.orby-magic-btn--outline-dark {
+  background: transparent;
+  color: var(--brand-primary, var(--orby-lime));
+  border: none;
+  overflow: visible;
+  transition:
+    background 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orby-magic-btn--on-dark.orby-magic-btn--outline-dark .orby-magic-btn__ring {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  border-radius: inherit;
+  border: var(--orby-magic-btn-stroke) solid var(--brand-primary, var(--orby-lime));
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .orby-magic-btn--on-dark.orby-magic-btn--solid-dark:hover,
+  .orby-magic-btn--on-dark.orby-magic-btn--solid-dark:focus-visible {
+    background: color-mix(in srgb, var(--brand-primary, var(--orby-lime)) 86%, white);
+    color: var(--brand-text, var(--orby-black));
+    outline: none;
+  }
+
+  .orby-magic-btn--on-dark.orby-magic-btn--outline-dark:hover,
+  .orby-magic-btn--on-dark.orby-magic-btn--outline-dark:focus-visible {
+    background: var(--brand-primary, var(--orby-lime));
+    color: var(--brand-text, var(--orby-black));
+    outline: none;
+  }
+
+  .orby-magic-btn--on-dark:hover .orby-magic-btn__inner,
+  .orby-magic-btn--on-dark:focus-visible .orby-magic-btn__inner {
+    transform: translateX(4px);
+  }
+
+  .orby-magic-btn--on-dark:hover .orby-magic-btn__arrow,
+  .orby-magic-btn--on-dark:focus-visible .orby-magic-btn__arrow {
+    transform: translateX(9px);
+  }
+}
+
+.orby-magic-btn--on-dark.orby-magic-btn--solid-dark:active {
+  background: color-mix(in srgb, var(--brand-primary, var(--orby-lime)) 86%, white);
+  color: var(--brand-text, var(--orby-black));
+  filter: brightness(0.96);
+}
+
+.orby-magic-btn--on-dark.orby-magic-btn--outline-dark:active {
+  background: var(--brand-primary, var(--orby-lime));
+  color: var(--brand-text, var(--orby-black));
+  filter: brightness(0.96);
+}

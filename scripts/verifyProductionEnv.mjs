@@ -97,6 +97,19 @@ export function collectProductionEnvIssues(options = {}) {
     }
   }
 
+  const supportBugJs = distDir ? join(distDir, 'support', 'supportBugReport.js') : '';
+  if (supportBugJs && existsSync(supportBugJs)) {
+    const supportJs = readFileSync(supportBugJs, 'utf-8');
+    if (/scripts\/ui\/bugReportListbox/.test(supportJs)) {
+      issues.push({
+        level: 'error',
+        message:
+          'dist/support/supportBugReport.js still imports scripts/ui/bugReportListbox — ' +
+          'bundle it in build.js or Pages will 404 the helper and the form will be dead.',
+      });
+    }
+  }
+
   return issues;
 }
 

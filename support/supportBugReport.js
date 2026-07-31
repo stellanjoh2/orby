@@ -229,7 +229,7 @@ function initSupportBugReport() {
   function showThankYou() {
     thankYouEl?.removeAttribute('hidden');
     formPanel?.setAttribute('hidden', '');
-    thankYouEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    thankYouEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   async function submit() {

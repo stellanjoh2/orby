@@ -271,6 +271,23 @@ if (existsSync(join(__dirname, 'support'))) {
       injectTurnstileSiteKey(injectStatsApiUrl(injectBugReportApiUrl(supportHtml))),
     );
   }
+  // Bundle so shared listbox helper ships (raw cp leaves import → scripts/ui/ as 404 on Pages).
+  if (existsSync(join(__dirname, 'support', 'supportBugReport.js'))) {
+    await esbuild.build({
+      entryPoints: [join(__dirname, 'support', 'supportBugReport.js')],
+      bundle: true,
+      minify: true,
+      sourcemap: false,
+      format: 'esm',
+      target: ['es2020'],
+      outfile: join(distDir, 'support', 'supportBugReport.js'),
+      treeShaking: true,
+      legalComments: 'none',
+      banner: {
+        js: '/* Orby Support issue report — https://orby.studio/support */',
+      },
+    });
+  }
 }
 
 // Copy assets
