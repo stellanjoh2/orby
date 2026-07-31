@@ -1582,21 +1582,22 @@ export class CameraController {
       ?? new THREE.Vector3(0, 1, 0);
     const radius = this.modelBounds?.radius ?? 1;
     const distance = radius * 2.4 || 5;
-    const yLift = radius * 0.2;
     let position;
 
+    // Front / Left / Right sit on the target's Y so the look is axis-aligned
+    // (DCC-style straight-on). Top is straight down; three-quarter keeps a lift.
     if (preset === 'front') {
-      position = target.clone().add(new THREE.Vector3(0, yLift, distance));
+      position = target.clone().add(new THREE.Vector3(0, 0, distance));
     } else if (preset === 'left') {
-      position = target.clone().add(new THREE.Vector3(-distance, yLift, 0));
+      position = target.clone().add(new THREE.Vector3(-distance, 0, 0));
     } else if (preset === 'right') {
-      position = target.clone().add(new THREE.Vector3(distance, yLift, 0));
+      position = target.clone().add(new THREE.Vector3(distance, 0, 0));
     } else if (preset === 'top') {
       position = target.clone().add(new THREE.Vector3(0, distance, 0.0001));
     } else if (preset === 'three-quarter') {
       position = target
         .clone()
-        .add(new THREE.Vector3(distance, yLift * 2, distance));
+        .add(new THREE.Vector3(distance, radius * 0.4, distance));
     }
 
     if (position) {
