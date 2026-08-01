@@ -136,13 +136,12 @@
           <li><a href="#animation-ui">Animation &amp; UI</a></li>
           <li><a href="#typography">Typography</a></li>
           <li><a href="#audio-textures">Audio &amp; textures</a></li>
-          <li><a href="#export-tools">Export &amp; tools</a></li>
+          <li><a href="#export-tools">Import, export &amp; tools</a></li>
           <li><a href="#three-d-assets">3D assets — overview</a></li>
           <li><a href="#orby-non-commercial">Orby &amp; licensing</a></li>
           <li><a href="#marketing-3d">Marketing homepage</a></li>
           <li><a href="#meshy-community">Meshy Community</a></li>
           <li><a href="#dropzone-hero">Dropzone hero</a></li>
-          <li><a href="#launch-trailer-audio">Launch Trailer audio</a></li>
           <li><a href="#development">Development</a></li>
           <li><a href="#special-thanks">Special thanks</a></li>
           <li><a href="#licensed-assets">Licensed assets note</a></li>
@@ -196,6 +195,31 @@
             </p>
             <span class="legal-credits-card__tag">MIT</span>
           </li>
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a
+                href="http://blenderartists.org/forum/showthread.php?237488-GLSL-depth-of-field-with-bokeh-v2-4-(update)"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Martins Upitis</a
+              >
+            </p>
+            <p class="legal-credits-card__desc">
+              Depth of field / bokeh GLSL — ported into Orby’s DOF pass (same lineage as Three.js
+              <code>webgl_postprocessing_dof2</code>)
+            </p>
+          </li>
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://www.decarpentier.nl/lens-distortion" target="_blank" rel="noopener noreferrer"
+                >Giliam de Carpentier</a
+              >
+            </p>
+            <p class="legal-credits-card__desc">
+              Fisheye / barrel lens distortion (post-process)
+            </p>
+            <span class="legal-credits-card__tag">BSD</span>
+          </li>
         </ul>
       </section>
 
@@ -220,6 +244,17 @@
               <a href="https://github.com/N8python/n8ao" target="_blank" rel="noopener noreferrer">N8AO (N8python)</a>
             </p>
             <p class="legal-credits-card__desc">Screen-space ambient occlusion (SSAO) pass</p>
+          </li>
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://github.com/zeux/meshoptimizer" target="_blank" rel="noopener noreferrer">meshoptimizer</a>
+              ·
+              <span class="legal-credits-card__name-inline">Arseny Kapoulkine</span>
+            </p>
+            <p class="legal-credits-card__desc">
+              MeshoptDecoder — decompresses meshopt-compressed glTF / GLB on import
+            </p>
+            <span class="legal-credits-card__tag">MIT</span>
           </li>
           <li class="legal-credits-card">
             <p class="legal-credits-card__name">
@@ -312,9 +347,31 @@
       </section>
 
       <section id="export-tools" class="legal-credits-section">
-        <h2>Export &amp; tools</h2>
-        <p class="legal-credits-section__intro">Loaded on demand when those export features are used in the app.</p>
+        <h2>Import, export &amp; tools</h2>
+        <p class="legal-credits-section__intro">
+          Libraries used for font extrude, import geometry, and export features in the app.
+        </p>
         <ul class="legal-credits-grid">
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://opentype.js.org/" target="_blank" rel="noopener noreferrer">opentype.js</a>
+              ·
+              <span class="legal-credits-card__name-inline">Frederik De Bleser</span>
+            </p>
+            <p class="legal-credits-card__desc">OpenType / TrueType parsing for 3D text (font extrude)</p>
+            <span class="legal-credits-card__tag">MIT</span>
+          </li>
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://github.com/mikolalysenko/cdt2d" target="_blank" rel="noopener noreferrer">cdt2d</a>
+              ·
+              <span class="legal-credits-card__name-inline">Mikola Lysenko</span>
+            </p>
+            <p class="legal-credits-card__desc">
+              Constrained Delaunay triangulation for font extrude cap meshes
+            </p>
+            <span class="legal-credits-card__tag">MIT</span>
+          </li>
           <li class="legal-credits-card">
             <p class="legal-credits-card__name">
               <a href="https://stuk.github.io/jszip/" target="_blank" rel="noopener noreferrer">JSZip</a>
@@ -387,9 +444,11 @@
         <h2>Marketing homepage</h2>
         <p class="legal-credits-section__intro">
           Assets used on the homepage: the dropzone hero, the scroll marketing one-pager (screenshots,
-          turntable WebP/JPEG sequences, PNG cutouts), and related stills. License pills reflect the
-          label on the linked Sketchfab or Meshy model page when a permalink is listed. Anyone reusing
-          these meshes should confirm the current license on the source site.
+          turntable WebP/JPEG sequences, PNG cutouts), and related stills. These are marketing
+          visuals only—meshes are not downloadable from Orby. License pills reflect the label on the
+          linked Sketchfab or Meshy model page when a permalink is listed; check that source if you
+          want the original mesh. If we missed a credit, please
+          <a href="mailto:orby-admin@proton.me">get in touch</a> and we’ll add it.
         </p>
 
         <p class="legal-sub" id="meshy-community">Meshy Community</p>
@@ -698,8 +757,8 @@
             <p class="legal-credits-asset__note">
               The mesh is <strong>not</strong> included in this repository—only original 3840×2160
               stills (<code>orby-marketing-promo1.jpg</code> hero three-quarter,
-              <code>orby-marketing-promo2.jpg</code> underside / in-flight). Fab downloads are licensed
-              through your Epic account; see
+              <code>orby-marketing-promo2.jpg</code> underside / in-flight). Source Fab assets are
+              subject to Epic’s
               <a href="https://www.fab.com/eula" target="_blank" rel="noopener noreferrer">Fab EULA</a>.
             </p>
             </div>
@@ -1013,8 +1072,8 @@
             <p class="legal-credits-asset__note">
               From the Megascans <strong>Medieval Farm</strong> collection on Fab. The mesh is
               <strong>not</strong> included in this repository—only an original marketing still
-              (<code>orby-marketing-trailer-wagon.jpg</code> and the encoded trailer. Megascans /
-              Fab downloads are licensed through your Epic account; see
+              (<code>orby-marketing-trailer-wagon.jpg</code> and the encoded trailer. Source
+              Megascans / Fab assets are subject to Epic’s
               <a href="https://www.fab.com/eula" target="_blank" rel="noopener noreferrer">Fab EULA</a>.
             </p>
             </div>
@@ -1150,54 +1209,6 @@
             <p class="legal-credits-asset__use">
               Used in: Lens Effects pro feature card on the homepage
               (<code>orby-feature-lensflare.mp4</code>)
-            </p>
-            </div>
-          </li>
-        </ul>
-
-        <p class="legal-sub" id="launch-trailer-audio">Launch Trailer audio</p>
-        <p>
-          Sounds mixed into the Launch Trailer
-          (<code>orby-marketing-microreel.mp4</code>) on the homepage. Source files are not shipped in
-          this repository—only the encoded trailer.
-        </p>
-        <ul class="legal-credits-asset-list">
-          <li class="legal-credits-asset">
-            <div class="legal-credits-asset__thumb-wrap legal-credits-asset__thumb-wrap--sound" aria-hidden="true">
-              <svg class="legal-credits-asset__sound-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-                <path
-                  d="M11 5L6.5 9H3v6h3.5L11 19V5z"
-                  fill="currentColor"
-                />
-                <path
-                  d="M15.5 8.5a4.5 4.5 0 0 1 0 7M18.2 6a7.5 7.5 0 0 1 0 12"
-                  stroke="currentColor"
-                  stroke-width="1.75"
-                  stroke-linecap="round"
-                />
-              </svg>
-            </div>
-            <div class="legal-credits-asset__body">
-            <p class="legal-credits-asset__title">SND01 “sine”</p>
-            <p class="legal-credits-asset__license">
-              <span class="legal-credits-card__tag">SND Terms</span>
-              <span class="legal-credits-asset__license-src">snd.dev</span>
-            </p>
-            <p class="legal-credits-asset__meta">
-              Designed by:
-              <a href="https://snd.dev/" target="_blank" rel="noopener noreferrer">Yasuhiro Tsuchiya (土屋泰洋)</a>
-              · Source:
-              <a href="https://snd.dev/" target="_blank" rel="noopener noreferrer">SND</a>
-            </p>
-            <p class="legal-credits-asset__use">
-              Used in: Launch Trailer / “Your virtual studio” section trailer on the homepage
-              (<code>orby-marketing-microreel.mp4</code>)
-            </p>
-            <p class="legal-credits-asset__note">
-              Free for personal and commercial use under the
-              <a href="https://snd.dev/" target="_blank" rel="noopener noreferrer">SND Terms of Service</a>.
-              Source kit files are not shipped in this repository—only the mix in the encoded trailer.
-              Also credited under <a href="#audio-textures">Audio &amp; textures</a> for UI sounds.
             </p>
             </div>
           </li>

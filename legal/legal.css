@@ -599,20 +599,6 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
   box-sizing: border-box;
 }
 
-.legal-credits-asset__thumb-wrap--sound {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: color-mix(in srgb, var(--legal-border) 55%, var(--orby-black, #080808));
-}
-
-.legal-credits-asset__sound-icon {
-  display: block;
-  width: 2.25rem;
-  height: 2.25rem;
-  color: var(--legal-muted);
-}
-
 .legal-credits-asset__body {
   flex: 1;
   min-width: 0;
