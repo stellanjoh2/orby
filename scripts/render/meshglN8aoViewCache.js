@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { orbitControlsNeedFrame } from '../scene/renderLoopIdle.js';
-import { sceneHasN8aoExcludedMesh } from './meshglN8aoBackdrop.js';
+import {
+  sceneHasN8aoBackdropMultiplyMesh,
+  sceneHasN8aoExcludedMesh,
+} from './meshglN8aoBackdrop.js';
 
 const CAMERA_POS_EPS_SQ = 1e-10;
 const CAMERA_QUAT_EPS = 1e-6;
@@ -45,6 +48,7 @@ export function modelRootChangedSinceCache(modelRoot, cachedModelMatrix) {
  *   cacheProjection?: import('three').Matrix4 | null,
  *   cacheModelMatrix?: import('three').Matrix4 | null,
  *   cacheHadGlassMesh?: boolean,
+ *   cacheHadBackdropMultiplyMesh?: boolean,
  * }} ctx
  */
 export function needsN8aoViewRecompute(ctx) {
@@ -66,6 +70,10 @@ export function needsN8aoViewRecompute(ctx) {
   }
   const hasGlass = sceneHasN8aoExcludedMesh(ctx.scene);
   if (hasGlass !== ctx.cacheHadGlassMesh) return true;
+  const hasMultiply = sceneHasN8aoBackdropMultiplyMesh(ctx.scene);
+  if (hasMultiply !== (ctx.cacheHadBackdropMultiplyMesh ?? ctx.cacheHadGlassMesh)) {
+    return true;
+  }
   return false;
 }
 
@@ -79,7 +87,7 @@ export function needsN8aoViewRecompute(ctx) {
  *   cacheProjection: import('three').Matrix4,
  *   cacheModelMatrix: import('three').Matrix4,
  * }} ctx
- * @returns {{ cacheHadGlassMesh: boolean }}
+ * @returns {{ cacheHadGlassMesh: boolean, cacheHadBackdropMultiplyMesh: boolean }}
  */
 export function snapshotN8aoViewCache(ctx) {
   ctx.cacheCameraPos.copy(ctx.camera.position);
@@ -94,5 +102,8 @@ export function snapshotN8aoViewCache(ctx) {
     ctx.cacheModelMatrix.identity();
   }
 
-  return { cacheHadGlassMesh: sceneHasN8aoExcludedMesh(ctx.scene) };
+  return {
+    cacheHadGlassMesh: sceneHasN8aoExcludedMesh(ctx.scene),
+    cacheHadBackdropMultiplyMesh: sceneHasN8aoBackdropMultiplyMesh(ctx.scene),
+  };
 }

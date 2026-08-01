@@ -110,7 +110,8 @@
                     <span class="sr-only">Render HDRI as viewport backdrop</span>
                   </label>
                 </div>
-                <div class="slider-line">
+                <!-- TEMP: HDRI Receive Shadows + AO hidden (catcher / N8AO composite bugs). Runtime forced off in SceneManager. -->
+                <div class="slider-line" hidden aria-hidden="true">
                   <span data-tooltip="Invisible floor at Ground Y under the model: Ambient Occlusion for contact on the HDRI; 3-point lights + Cast Shadows for directional shadow maps. Uses Ground Y (snap to mesh if it floats).">Receive Shadows + AO</span>
                   <label class="effect-toggle">
                     <input type="checkbox" id="hdriReceiveShadowsAo" />

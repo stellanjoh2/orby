@@ -9,10 +9,13 @@ import {
   N8AO_SKY_DEPTH_THRESHOLD,
   getN8aoSceneLayerMaskWithoutOverlays,
   getN8aoScreenSpaceOverlayLayerMask,
+  sceneHasN8aoBackdropMultiplyMesh,
+  sceneHasN8aoCatcherMesh,
   sceneHasN8aoDepthIgnoredMesh,
   sceneHasN8aoExcludedMesh,
   withCameraLayerMask,
   withN8aoExcludedMeshRenderHooksPaused,
+  withOnlyN8aoCatcherMeshesVisible,
   withOnlyN8aoExcludedMeshesVisible,
 } from './meshglN8aoBackdrop.js';
 import { needsN8aoViewRecompute, snapshotN8aoViewCache } from './meshglN8aoViewCache.js';
@@ -27,9 +30,14 @@ function createBeautyDepthOverrideMaterial() {
   return mat;
 }
 
-/** White fill for the base-glass screen mask (restores RenderPass colour in composite). */
+/** R channel — base-glass silhouette (reflection plate + AO). */
 function createGlassMaskOverrideMaterial() {
-  return new THREE.MeshBasicMaterial({ color: 0xffffff });
+  return new THREE.MeshBasicMaterial({ color: 0xff0000 });
+}
+
+/** G channel — HDRI AO catcher (force backdrop / invisible disc). */
+function createCatcherMaskOverrideMaterial() {
+  return new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 }
 
 /**
@@ -83,8 +91,10 @@ export class MeshglN8AOPass extends N8AOPass {
     this._aoResultRT = this._createPlateRenderTarget(width, height);
     this._beautyDepthMaterial = createBeautyDepthOverrideMaterial();
     this._glassMaskMaterial = createGlassMaskOverrideMaterial();
+    this._catcherMaskMaterial = createCatcherMaskOverrideMaterial();
     this._viewCacheValid = false;
     this._cacheHadGlassMesh = false;
+    this._cacheHadBackdropMultiplyMesh = false;
     this._cacheCameraPos = new THREE.Vector3();
     this._cacheCameraQuat = new THREE.Quaternion();
     this._cacheProjection = new THREE.Matrix4();
@@ -141,6 +151,7 @@ export class MeshglN8AOPass extends N8AOPass {
       cacheProjection: this._viewCacheValid ? this._cacheProjection : null,
       cacheModelMatrix: this._viewCacheValid ? this._cacheModelMatrix : null,
       cacheHadGlassMesh: this._cacheHadGlassMesh,
+      cacheHadBackdropMultiplyMesh: this._cacheHadBackdropMultiplyMesh,
     });
   }
 
@@ -155,6 +166,7 @@ export class MeshglN8AOPass extends N8AOPass {
       cacheModelMatrix: this._cacheModelMatrix,
     });
     this._cacheHadGlassMesh = snap.cacheHadGlassMesh;
+    this._cacheHadBackdropMultiplyMesh = snap.cacheHadBackdropMultiplyMesh;
     this._viewCacheValid = true;
   }
 
@@ -228,59 +240,71 @@ export class MeshglN8AOPass extends N8AOPass {
   }
 
   /**
-   * Screen mask for base glass — composite restores the RenderPass reflection plate there.
+   * Screen mask RT: R = base glass, G = HDRI AO catcher.
    *
    * @param {import('three').WebGLRenderer} renderer
    */
   _renderGlassMask(renderer) {
     const maskRT = this._glassMaskRT;
     if (!maskRT) return;
-    if (!sceneHasN8aoExcludedMesh(this.scene)) {
+    if (!sceneHasN8aoBackdropMultiplyMesh(this.scene)) {
       this._clearGlassMask(renderer);
       return;
     }
 
-    withOnlyN8aoExcludedMeshesVisible(this.scene, () => {
-      withN8aoExcludedMeshRenderHooksPaused(this.scene, () => {
-        const camera = this.camera;
-        const savedCameraViewport = camera?.viewport;
-        if (camera && savedCameraViewport !== undefined) {
-          camera.viewport = undefined;
-        }
+    const camera = this.camera;
+    const savedCameraViewport = camera?.viewport;
+    if (camera && savedCameraViewport !== undefined) {
+      camera.viewport = undefined;
+    }
 
-        const oldTarget = renderer.getRenderTarget();
-        const oldAutoClear = renderer.autoClear;
-        const oldOverride = this.scene.overrideMaterial;
-        const oldClearColor = renderer.getClearColor(new THREE.Color());
-        const oldClearAlpha = renderer.getClearAlpha();
-        let savedSceneBackground = null;
+    const oldTarget = renderer.getRenderTarget();
+    const oldAutoClear = renderer.autoClear;
+    const oldOverride = this.scene.overrideMaterial;
+    const oldClearColor = renderer.getClearColor(new THREE.Color());
+    const oldClearAlpha = renderer.getClearAlpha();
+    let savedSceneBackground = null;
 
-        try {
-          savedSceneBackground = this.scene.background;
-          this.scene.background = null;
-          this.scene.overrideMaterial = this._glassMaskMaterial;
+    try {
+      savedSceneBackground = this.scene.background;
+      this.scene.background = null;
 
-          renderer.setClearColor(0x000000, 1);
-          renderer.autoClear = true;
-          renderer.setRenderTarget(maskRT);
-          resetRendererFullViewport(renderer);
-          renderer.clear(true, true, true);
+      renderer.setClearColor(0x000000, 1);
+      renderer.autoClear = true;
+      renderer.setRenderTarget(maskRT);
+      resetRendererFullViewport(renderer);
+      renderer.clear(true, true, true);
+
+      if (sceneHasN8aoExcludedMesh(this.scene)) {
+        withOnlyN8aoExcludedMeshesVisible(this.scene, () => {
+          withN8aoExcludedMeshRenderHooksPaused(this.scene, () => {
+            this.scene.overrideMaterial = this._glassMaskMaterial;
+            renderer.autoClear = false;
+            renderer.render(this.scene, camera);
+          });
+        });
+      }
+
+      if (sceneHasN8aoCatcherMesh(this.scene)) {
+        withOnlyN8aoCatcherMeshesVisible(this.scene, () => {
+          this.scene.overrideMaterial = this._catcherMaskMaterial;
+          renderer.autoClear = false;
           renderer.render(this.scene, camera);
-        } finally {
-          if (savedSceneBackground !== null) {
-            this.scene.background = savedSceneBackground;
-          }
-          this.scene.overrideMaterial = oldOverride;
-          renderer.setClearColor(oldClearColor, oldClearAlpha);
-          renderer.autoClear = oldAutoClear;
-          renderer.setRenderTarget(oldTarget);
-          if (camera && savedCameraViewport !== undefined) {
-            camera.viewport = savedCameraViewport;
-          }
-          resetRendererFullViewport(renderer);
-        }
-      });
-    });
+        });
+      }
+    } finally {
+      if (savedSceneBackground !== null) {
+        this.scene.background = savedSceneBackground;
+      }
+      this.scene.overrideMaterial = oldOverride;
+      renderer.setClearColor(oldClearColor, oldClearAlpha);
+      renderer.autoClear = oldAutoClear;
+      renderer.setRenderTarget(oldTarget);
+      if (camera && savedCameraViewport !== undefined) {
+        camera.viewport = savedCameraViewport;
+      }
+      resetRendererFullViewport(renderer);
+    }
   }
 
   /**

@@ -31,13 +31,17 @@ export const N8aoBackdropRestoreShader = {
     void main() {
       float depth = texture2D(tSceneDepth, vUv).r;
       float geometry = 1.0 - step(skyDepthThreshold, depth);
-      float glass = step(0.5, texture2D(tGlassMask, vUv).r);
+      vec4 maskSample = texture2D(tGlassMask, vUv);
+      float glass = step(0.5, maskSample.r);
+      float catcher = step(0.5, maskSample.g);
       vec3 ao = texture2D(tAO, vUv).rgb;
       vec3 backdrop = texture2D(tBackdrop, vUv).rgb;
       vec3 beauty = texture2D(tBeauty, vUv).rgb;
 
-      // Mesh / podium: full N8AO plate. Sky: untouched RenderPass backdrop.
-      vec3 geomMix = mix(backdrop, ao, geometry);
+      // Mesh / podium: full N8AO plate. Sky + HDRI AO catcher: untouched RenderPass backdrop.
+      // Catcher still writes beauty depth so N8AO can form foot contact on the mesh; the disc
+      // itself must stay invisible (multiply/replace paths painted a huge darkened oval).
+      vec3 geomMix = mix(backdrop, ao, geometry * (1.0 - catcher));
 
       // Glass disc: darken the reflection base (beauty) but keep screen-space overlays
       // (lens flare — in backdrop but excluded from beauty seed) at full strength.

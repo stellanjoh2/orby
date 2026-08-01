@@ -8,11 +8,13 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 import {
+  N8AO_CATCHER_MESH_USER_DATA_KEYS,
   N8AO_DEPTH_IGNORED_USER_DATA_KEYS,
   N8AO_EXCLUDED_MESH_USER_DATA_KEYS,
   N8AO_GUARDED_SOURCE_FILES,
   N8AO_SKY_DEPTH_THRESHOLD,
   compositeAoWithBackdrop,
+  isN8aoCatcherMesh,
   isN8aoDepthIgnoredMesh,
 } from './meshglN8aoBackdrop.js';
 
@@ -110,6 +112,24 @@ describe('N8AO backdrop composite math', () => {
     );
   });
 
+  it('HDRI AO catcher restores backdrop (invisible disc, no darkened oval)', () => {
+    const backdrop = [0.9, 0.7, 0.4];
+    const ao = [0.05, 0.05, 0.05];
+    assert.deepEqual(
+      compositeAoWithBackdrop(
+        backdrop,
+        ao,
+        0.42,
+        N8AO_SKY_DEPTH_THRESHOLD,
+        0,
+        [1, 1, 1],
+        0.2,
+        1,
+      ),
+      backdrop,
+    );
+  });
+
   it('sky pixels stay backdrop even when depth would be flare-corrupted (geometry path unused without glass)', () => {
     const backdrop = [0.9, 0.7, 0.4];
     const ao = [0.05, 0.05, 0.05];
@@ -130,6 +150,8 @@ describe('N8AO backdrop composite math', () => {
     assert.match(shader, /beauty \* aoFactor \+ overlay/);
     assert.match(shader, /max\(backdrop - beauty/);
     assert.match(shader, /aoLum \/ beautyLum/);
+    assert.match(shader, /geometry \* \(1\.0 - catcher\)/);
+    assert.match(shader, /maskSample\.g/);
   });
 });
 
@@ -249,6 +271,20 @@ describe('N8AO + HDRI source invariants', () => {
     assert.doesNotMatch(ground, /layers\.set/);
     const backdrop = readRepoFile('scripts/render/meshglN8aoBackdrop.js');
     assert.match(backdrop, /meshglBaseGlassReflector/);
+  });
+
+  it('HDRI Receive Shadows + AO catcher stays invisible over backdrop', () => {
+    assert.ok(N8AO_CATCHER_MESH_USER_DATA_KEYS.includes('meshglHdriAoCatcher'));
+    assert.equal(isN8aoCatcherMesh({ userData: { meshglHdriAoCatcher: true } }), true);
+    const pass = readRepoFile('scripts/render/MeshglN8AOPass.js');
+    assert.match(pass, /withOnlyN8aoCatcherMeshesVisible/);
+    assert.match(pass, /_catcherMaskMaterial/);
+    assert.match(pass, /sceneHasN8aoCatcherMesh/);
+    const catcher = readRepoFile('scripts/render/HdriShadowReceiver.js');
+    assert.match(catcher, /meshglHdriAoCatcher/);
+    assert.match(catcher, /colorWrite:\s*false/);
+    const shader = readRepoFile('scripts/render/n8aoBackdropRestoreShader.js');
+    assert.match(shader, /geometry \* \(1\.0 - catcher\)/);
   });
 
   it('RenderPass records composer colour for backdrop restore', () => {

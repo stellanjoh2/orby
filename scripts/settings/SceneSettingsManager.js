@@ -873,8 +873,9 @@ export class SceneSettingsManager {
         this.uiHelper?.updateHdriReceiveShadowsAoDisabled?.();
       }
       if (payload.hdriReceiveShadowsAo !== undefined) {
-        this.stateStore.set('hdriReceiveShadowsAo', !!payload.hdriReceiveShadowsAo);
-        this.eventBus.emit('studio:hdri-receive-shadows-ao', !!payload.hdriReceiveShadowsAo);
+        // TEMP: feature hidden — ignore scene-file requests to enable the HDRI catcher.
+        this.stateStore.set('hdriReceiveShadowsAo', false);
+        this.eventBus.emit('studio:hdri-receive-shadows-ao', false);
       }
       if (payload.lensFlare) {
         const d = this.stateStore.getDefaults().lensFlare;

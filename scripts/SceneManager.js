@@ -1204,8 +1204,9 @@ export class SceneManager {
     return this.creativeLookSceneSync?.syncTransmissionBackdrop() ?? false;
   }
 
-  setHdriReceiveShadowsAo(enabled) {
-    this.backgroundController?.setReceiveShadowsAoEnabled(!!enabled);
+  setHdriReceiveShadowsAo(_enabled) {
+    // TEMP: HDRI Receive Shadows + AO UI hidden — keep catcher off (N8AO composite bugs).
+    this.backgroundController?.setReceiveShadowsAoEnabled(false);
     this._syncHdriShadowReceiverFromState();
   }
 
@@ -1213,7 +1214,8 @@ export class SceneManager {
     const state = this.stateStore.getState();
     const bg = this.backgroundController;
     if (!bg) return;
-    bg.setReceiveShadowsAoEnabled(!!state.hdriReceiveShadowsAo);
+    // TEMP: force off while feature is hidden from Studio → HDRI.
+    bg.setReceiveShadowsAoEnabled(false);
     bg.setHdriBackgroundEnabled(this.hdriBackgroundEnabled);
     bg.setHdriEnabled(this.hdriEnabled);
     bg.setGroundSolid(!!state.groundSolid);

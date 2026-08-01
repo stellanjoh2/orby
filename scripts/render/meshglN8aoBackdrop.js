@@ -7,8 +7,15 @@
 /** Raw beauty depth at or above this is treated as sky (cleared far plane). */
 export const N8AO_SKY_DEPTH_THRESHOLD = 0.9995;
 
-/** Reflective studio surfaces — glass mask + RenderPass plate in composite. */
+/** Reflective studio surfaces — glass mask (R) + RenderPass plate in composite. */
 export const N8AO_EXCLUDED_MESH_USER_DATA_KEYS = ['meshglBaseGlassReflector'];
+
+/**
+ * HDRI Receive Shadows + AO depth disc — glass mask (G).
+ * Composite treats these pixels as sky (pure backdrop). Depth still feeds N8AO so the mesh
+ * gets foot contact; the disc must not darken the HDRI (SSAO on a ground plane looks like a oval).
+ */
+export const N8AO_CATCHER_MESH_USER_DATA_KEYS = ['meshglHdriAoCatcher'];
 
 /** Screen-space overlay effects — must not contribute to N8AO depth/beauty auxiliary buffers. */
 export const N8AO_DEPTH_IGNORED_USER_DATA_KEYS = ['lensflare'];
@@ -71,6 +78,14 @@ export function withCameraLayerMask(camera, layerMask, fn) {
  */
 export function isN8aoExcludedMesh(object) {
   return N8AO_EXCLUDED_MESH_USER_DATA_KEYS.some((key) => object.userData?.[key]);
+}
+
+/**
+ * @param {import('three').Object3D} object
+ * @returns {boolean}
+ */
+export function isN8aoCatcherMesh(object) {
+  return N8AO_CATCHER_MESH_USER_DATA_KEYS.some((key) => object.userData?.[key]);
 }
 
 /**
@@ -156,6 +171,27 @@ export function sceneHasN8aoExcludedMesh(scene) {
 
 /**
  * @param {import('three').Scene} scene
+ * @returns {boolean}
+ */
+export function sceneHasN8aoCatcherMesh(scene) {
+  let found = false;
+  scene.traverse((child) => {
+    if (found || !child.isMesh || !child.visible) return;
+    if (isN8aoCatcherMesh(child)) found = true;
+  });
+  return found;
+}
+
+/**
+ * @param {import('three').Scene} scene
+ * @returns {boolean}
+ */
+export function sceneHasN8aoBackdropMultiplyMesh(scene) {
+  return sceneHasN8aoExcludedMesh(scene) || sceneHasN8aoCatcherMesh(scene);
+}
+
+/**
+ * @param {import('three').Scene} scene
  * @param {() => void} fn
  */
 export function withN8aoExcludedMeshesHidden(scene, fn) {
@@ -187,6 +223,39 @@ export function withOnlyN8aoExcludedMeshesVisible(scene, fn) {
   scene.traverse((child) => {
     if (!child.isMesh) return;
     const keep = isN8aoExcludedMesh(child);
+    if (keep) {
+      if (!child.visible) {
+        toggled.push([child, false]);
+        child.visible = true;
+      }
+      return;
+    }
+    if (child.visible) {
+      toggled.push([child, true]);
+      child.visible = false;
+    }
+  });
+  try {
+    fn();
+  } finally {
+    for (const [node, wasVisible] of toggled) {
+      node.visible = wasVisible;
+    }
+  }
+}
+
+/**
+ * Render pass helper — hide everything except the HDRI AO catcher disc.
+ *
+ * @param {import('three').Scene} scene
+ * @param {() => void} fn
+ */
+export function withOnlyN8aoCatcherMeshesVisible(scene, fn) {
+  /** @type {Array<[import('three').Object3D, boolean]>} */
+  const toggled = [];
+  scene.traverse((child) => {
+    if (!child.isMesh) return;
+    const keep = isN8aoCatcherMesh(child);
     if (keep) {
       if (!child.visible) {
         toggled.push([child, false]);
@@ -244,9 +313,10 @@ export function withN8aoExcludedMeshRenderHooksPaused(scene, fn) {
  * @param {[number, number, number]} aoRgb
  * @param {number} rawDepth
  * @param {number} [threshold]
- * @param {number} [glassMask]
+ * @param {number} [glassMask] R channel (≥0.5 = base glass)
  * @param {[number, number, number] | null} [beautyRgb]
  * @param {number} [glassAoFloor]
+ * @param {number} [catcherMask] G channel (≥0.5 = HDRI AO catcher)
  * @returns {[number, number, number]}
  */
 export function compositeAoWithBackdrop(
@@ -257,27 +327,32 @@ export function compositeAoWithBackdrop(
   glassMask = 0,
   beautyRgb = null,
   glassAoFloor = 0.2,
+  catcherMask = 0,
 ) {
   const geometry = rawDepth < threshold ? 1 : 0;
   const glass = glassMask >= 0.5 ? 1 : 0;
+  const catcher = catcherMask >= 0.5 ? 1 : 0;
+  const luma = (rgb) => rgb[0] * 0.299 + rgb[1] * 0.587 + rgb[2] * 0.114;
+
+  // Catcher disc → sky path (backdrop only). Mesh/podium keep full AO plate.
+  const aoWeight = geometry * (1 - catcher);
+  let rgb = [
+    backdropRgb[0] * (1 - aoWeight) + aoRgb[0] * aoWeight,
+    backdropRgb[1] * (1 - aoWeight) + aoRgb[1] * aoWeight,
+    backdropRgb[2] * (1 - aoWeight) + aoRgb[2] * aoWeight,
+  ];
 
   if (glass === 1 && beautyRgb) {
-    const luma = (rgb) => rgb[0] * 0.299 + rgb[1] * 0.587 + rgb[2] * 0.114;
     const beautyLum = Math.max(luma(beautyRgb), 0.05);
     const aoLum = luma(aoRgb);
     const aoFactor = Math.min(1, Math.max(glassAoFloor, aoLum / beautyLum));
     const overlay = backdropRgb.map((backdrop, i) =>
       Math.max(0, backdrop - beautyRgb[i]),
     );
-    return beautyRgb.map((b, i) => b * aoFactor + overlay[i]);
+    rgb = beautyRgb.map((b, i) => b * aoFactor + overlay[i]);
   }
 
-  const aoWeight = geometry * (1 - glass);
-  return [
-    backdropRgb[0] * (1 - aoWeight) + aoRgb[0] * aoWeight,
-    backdropRgb[1] * (1 - aoWeight) + aoRgb[1] * aoWeight,
-    backdropRgb[2] * (1 - aoWeight) + aoRgb[2] * aoWeight,
-  ];
+  return rgb;
 }
 
 /** Files guarded by meshglN8aoBackdrop regression tests (repo-relative). */

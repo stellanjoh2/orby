@@ -157,6 +157,8 @@ export class HdriShadowReceiver {
     this.aoDepthMesh.frustumCulled = false;
     this.aoDepthMesh.renderOrder = -2;
     this.aoDepthMesh.userData.meshglHdriShadowReceiver = true;
+    // N8AO multiply-composite mask (HDRI contact) — not the ShadowMaterial disc.
+    this.aoDepthMesh.userData.meshglHdriAoCatcher = true;
     this.aoDepthMesh.userData.lensflare = 'no-occlusion';
 
     this._shadowMaterial = createFeatheredShadowMaterial(
