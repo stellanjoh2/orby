@@ -703,11 +703,12 @@ body.legal-doc--support p.legal-meta {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--warning) 8%, transparent);
 }
 
-.legal-doc--support .legal-callout--red p {
+.legal-doc--support .legal-callout--red p,
+.legal-doc--support .legal-callout--red .legal-callout__list {
   color: color-mix(in srgb, #fecaca 28%, var(--legal-text));
 }
 
-.legal-doc--support .legal-callout--red p + p {
+.legal-doc--support .legal-callout--red > * + * {
   margin-top: 0;
   padding-top: 0.85rem;
   border-top: 1px solid color-mix(in srgb, var(--warning) 18%, transparent);
@@ -717,13 +718,37 @@ body.legal-doc--support p.legal-meta {
   color: #fca5a5;
 }
 
-.legal-doc--support .legal-callout--red p > strong:first-child {
+.legal-doc--support .legal-callout--red > p > strong:first-child,
+.legal-doc--support .legal-callout--red > .legal-callout__section > strong:first-child {
   display: block;
   margin-bottom: 0.4em;
   font-weight: 700;
   font-size: 1.0625em;
   letter-spacing: -0.02em;
   color: #fff;
+}
+
+/* Match .legal-callout p bottom gap so the divider sits evenly above/below */
+.legal-doc--support .legal-callout--red .legal-callout__section {
+  margin-bottom: 0.75rem;
+}
+
+.legal-doc--support .legal-callout--red .legal-callout__section > p {
+  margin: 0;
+}
+
+.legal-doc--support .legal-callout--red .legal-callout__section > p + .legal-callout__list,
+.legal-doc--support .legal-callout--red .legal-callout__section > .legal-callout__list + p {
+  margin-top: 0.65em;
+}
+
+.legal-doc--support .legal-callout--red .legal-callout__list {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.legal-doc--support .legal-callout--red .legal-callout__list li + li {
+  margin-top: 0.25em;
 }
 
 .legal-doc--support .legal-callout--red a,

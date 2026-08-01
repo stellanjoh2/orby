@@ -180,6 +180,25 @@
           display mode — not everything lands perfectly out of the box. If your file looks right
           elsewhere and you think Orby is misreading it, I'd love to know: use the form below.
         </p>
+        <div id="polycount" class="legal-callout__section">
+          <strong>Game-ready polycounts.</strong>
+          <p>
+            Orby is a real-time browser renderer — built for game-ready and product assets, not
+            multimillion-poly source meshes. Comfort zone is under <strong>100k</strong> triangles per
+            asset; past roughly <strong>200–300k</strong> you really want LODs or a decimated export.
+            Typical per-asset targets:
+          </p>
+          <ul class="legal-callout__list">
+            <li><strong>Small props:</strong> 500–5k</li>
+            <li><strong>Medium props:</strong> 5k–20k</li>
+            <li><strong>Characters:</strong> 15k–100k</li>
+            <li><strong>Vehicles:</strong> 20k–80k</li>
+          </ul>
+          <p>
+            Dense scans, CAD exports, and AI subdiv meshes can choke orbit with effects off — see
+            <a href="#performance">Performance</a>.
+          </p>
+        </div>
         <p>
           <strong>SVGs vary just as much.</strong> Files differ in complexity and quality — many
           layers, paths, and colors can glitch or behave oddly when imported directly, especially on
@@ -903,6 +922,8 @@
             <p>
               Triangle count matters before any effect is turned on. Dense photogrammetry, CAD exports, and
               AI meshes with heavy subdivision can choke integrated GPUs and older laptops even at rest.
+              For typical game-ready ranges, see
+              <a href="#polycount">Game-ready polycounts</a> in Common Issues.
               If orbit feels sticky with effects off, try a decimated export, hide optional parts in the
               source file, or use <strong>Clay</strong> / <strong>Unlit</strong> while framing, then switch
               back to <strong>Shaded</strong> for the final look.
