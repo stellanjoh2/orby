@@ -88,6 +88,7 @@ export const ROADMAP_TASK_GRID_DEFS = [
 
   /* Q3 2026 (grid 20–24) — launch milestone @ grid 20 */
   { label: 'Bevels V2', startGrid: 21, endGrid: 24, status: 'priority' },
+  { label: 'BUG FIXES', startGrid: 20, endGrid: 24, status: 'priority' },
   { label: 'Scene sharing', startGrid: 20, endGrid: 23, status: 'todo' },
   { label: 'OUTLINER', startGrid: 20, endGrid: 24, status: 'future' },
 
@@ -99,7 +100,7 @@ export const ROADMAP_TASK_GRID_DEFS = [
 
   /* Q1 2027 (grid 28–32) */
   { label: 'WebGPU refactor', startGrid: 28, endGrid: 32, status: 'future' },
-  { label: 'Offline PWA', startGrid: 29, endGrid: 32, status: 'future' },
+  { label: 'Firefox Support (TBD)', startGrid: 29, endGrid: 32, status: 'future' },
 
   /* Q2 2027 → end (grid 32–40) */
   { label: 'Orby V2', startGrid: 32, endGrid: 40, status: 'future' },

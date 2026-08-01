@@ -1,6 +1,7 @@
 /**
  * Unsupported browser gate — sync head bootstrap.
- * Allows Google Chrome, Brave, and Safari only. Blocks Firefox, Edge, Opera, etc.
+ * Allows Google Chrome, Brave, and Safari only.
+ * Everyone else (Firefox, Edge, Opera, …) gets the VIP waitlist screen.
  *
  * Bypass: ?orbyBrowser=1 or window.__ORBY_DEBUG_BROWSER_GATE__ = true
  *
@@ -52,10 +53,10 @@
     gate.setAttribute('aria-labelledby', 'orby-unsupported-browser-title');
     gate.innerHTML =
       '<div class="orby-unsupported-browser-gate__panel">' +
-      '<h1 id="orby-unsupported-browser-title" class="orby-unsupported-browser-gate__title">Browser not supported yet</h1>' +
+      '<h1 id="orby-unsupported-browser-title" class="orby-unsupported-browser-gate__title">VIP — coming soon</h1>' +
       '<p class="orby-unsupported-browser-gate__body">' +
       label +
-      ' is not supported yet. Orby currently works in <strong>Google Chrome</strong>, <strong>Brave</strong>, and <strong>Safari</strong>. Please switch to one of those browsers to use the site.</p>' +
+      ' is VIP — support isn\'t ready yet. Orby currently works in <strong>Google Chrome</strong>, <strong>Brave</strong>, and <strong>Safari</strong>. Please switch to one of those browsers to use the site.</p>' +
       '</div>';
     document.body.appendChild(gate);
     document.documentElement.classList.add('orby-browser-gate-open');

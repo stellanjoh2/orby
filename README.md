@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Website](https://img.shields.io/badge/Website-orby.studio-brightgreen)](https://orby.studio)
-[![Browser](https://img.shields.io/badge/Browser-Chrome%20%7C%20Firefox%20%7C%20Safari%20%7C%20Edge-blue)](https://github.com/stellanjoh2/orby)
+[![Browser](https://img.shields.io/badge/Browser-Chrome%20%7C%20Brave%20%7C%20Safari-blue)](https://github.com/stellanjoh2/orby)
 [![Version](https://img.shields.io/badge/Version-0.5.898-brightgreen)](https://github.com/stellanjoh2/orby)
 
 </div>
@@ -504,12 +504,13 @@ Your 3D files never leave your device.
 
 ## 🌐 Browser Compatibility
 
-Orby requires a modern browser with WebGL 2.0 support:
+Orby requires a modern browser with WebGL 2.0 support. Supported today:
 
-- ✅ **Chrome/Edge** 90+
-- ✅ **Firefox** 88+
-- ✅ **Safari** 14+
-- ✅ **Opera** 76+
+- ✅ **Google Chrome**
+- ✅ **Brave**
+- ✅ **Safari**
+
+Other browsers (Firefox, Edge, Opera, etc.) see a VIP waitlist screen until support is ready.
 
 ### Required Features
 
@@ -546,7 +547,7 @@ The full **[Orby Studio](https://orby.studio/)** targets **desktop** — keyboar
 ### Browser-Specific Issues
 
 - **Safari**: Some advanced WebGL features may have limited support.
-- **Firefox**: Occasional rendering differences in post-processing effects.
+- **Firefox / Edge / Opera**: Not supported yet — VIP waitlist gate until ready.
 
 ---
 

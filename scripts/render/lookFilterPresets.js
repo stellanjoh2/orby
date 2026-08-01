@@ -1,6 +1,7 @@
 /**
  * Look filter (Camera & FX) presets: Instagram-style one-tap grades + post stack.
- * Presets only override grading and post keys; FOV, tilt, and orbit are preserved from current state.
+ * Presets only override grading and post keys; FOV, tilt, orbit, and DOF are preserved
+ * from current state (no preset defines DOF — focus stays a separate Camera control).
  */
 import { normalizeToneCurve } from '../math/toneCurvePchip.js';
 import { deepClone } from '../utils/deepClone.js';
@@ -301,6 +302,8 @@ function mergeCameraForNamedPreset(currentCamera, defaultsCamera, specCamera) {
  * @param {object} current  from stateStore.getState()
  */
 export function mergeLookFilterState(presetId, defaults, current) {
+  const preservedDof = deepClone(current.dof ?? defaults.dof);
+
   if (presetId === 'none') {
     return {
       lookFilterPreset: 'none',
@@ -308,7 +311,7 @@ export function mergeLookFilterState(presetId, defaults, current) {
       bloom: deepClone(defaults.bloom),
       grain: deepClone(defaults.grain),
       aberration: deepClone(defaults.aberration),
-      dof: deepClone(defaults.dof),
+      dof: preservedDof,
       exposure: defaults.exposure,
       autoExposure: defaults.autoExposure ?? false,
       toneCurve: deepClone(defaults.toneCurve),
@@ -334,7 +337,7 @@ export function mergeLookFilterState(presetId, defaults, current) {
     bloom: mergeObject(deepClone(d.bloom), spec.bloom),
     grain: mergeObject(deepClone(d.grain), spec.grain),
     aberration: mergeObject(deepClone(d.aberration), spec.aberration),
-    dof: deepClone(d.dof),
+    dof: spec.dof ? mergeObject(preservedDof, spec.dof) : preservedDof,
     exposure: spec.exposure !== undefined ? spec.exposure : current.exposure,
     autoExposure:
       spec.autoExposure !== undefined ? spec.autoExposure : current.autoExposure,
