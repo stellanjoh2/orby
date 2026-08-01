@@ -65,7 +65,7 @@
  * @property {boolean} [videoPoster] — split video: use imageSrc as poster (default false)
  * @property {boolean} [playVideo] — center play affordance on trailer preview reel
  * @property {string} [playVideoSrc] — full 1920×1080 trailer for lightbox (defaults to videoSrc)
- * @property {string} [playVideoHref] — Framerate / external embed URL (future; lightbox uses local src for now)
+ * @property {string} [playVideoHref] — Framerate / external embed URL (lightbox iframe; preview reel stays on videoSrc)
  * @property {string} [ctaLabel]
  * @property {string} [ctaHref] — mailto: or https: link (In Progress section)
  * @property {'scroll-top' | 'browse' | 'load-sample'} [ctaAction]
@@ -111,6 +111,8 @@ export const MARKETING_SECTIONS = [
     videoPoster: true,
     imageAlt: 'Lighting and grading a model in Orby',
     playVideo: true,
+    playVideoHref:
+      'https://framerate.tv/embed/b1692800-11a5-432c-bbd4-4f76e3746f4c?primary_color=%2523ffffff&track_color=%2523ffffff&theme=minimal',
   },
   {
     type: 'split',

@@ -155,10 +155,10 @@ function renderFigure(section, revealDir) {
     const imageAlt = slides[0]?.alt || section.imageAlt || '';
     const playVideo = section.playVideo === true;
     const playHref = typeof section.playVideoHref === 'string' ? section.playVideoHref.trim() : '';
-    const playSrc =
-      (typeof section.playVideoSrc === 'string' && section.playVideoSrc.trim()) ||
-      videoSrc ||
-      '';
+    const playSrcExplicit =
+      typeof section.playVideoSrc === 'string' ? section.playVideoSrc.trim() : '';
+    // Embed href wins for the lightbox; keep local playSrc only when no embed (or an explicit full trailer).
+    const playSrc = playSrcExplicit || (!playHref ? videoSrc : '') || '';
     const playHrefAttr = playHref ? ` data-play-href="${escapeMarketingHtml(playHref)}"` : '';
     const playSrcAttr = playSrc ? ` data-play-src="${escapeMarketingHtml(playSrc)}"` : '';
     const playOverlay = playVideo

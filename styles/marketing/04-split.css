@@ -453,12 +453,22 @@ html.safari-browser .orby-marketing__figure-video {
   transform-origin: center center;
 }
 
-.orby-marketing__video-lightbox-video {
+.orby-marketing__video-lightbox-video,
+.orby-marketing__video-lightbox-iframe {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  border: 0;
   background: var(--orby-black, #080808);
+}
+
+.orby-marketing__video-lightbox-video {
+  object-fit: contain;
+}
+
+.orby-marketing__video-lightbox-video[hidden],
+.orby-marketing__video-lightbox-iframe[hidden] {
+  display: none !important;
 }
 
 .orby-marketing__video-lightbox-close {

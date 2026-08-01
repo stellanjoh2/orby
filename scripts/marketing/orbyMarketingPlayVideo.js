@@ -1,5 +1,5 @@
 /**
- * Trailer play affordance — opens a 16∶9 lightbox (local full video until Framerate embed).
+ * Trailer play affordance — opens a 16∶9 lightbox (Framerate embed or local full video).
  */
 import { gsap, prefersReducedMotion } from './marketingMotion.js';
 import { playMarketingVideo } from './orbyMarketingVideo.js';
@@ -16,6 +16,8 @@ let abortController = null;
 let lightboxEl = null;
 /** @type {HTMLVideoElement | null} */
 let lightboxVideo = null;
+/** @type {HTMLIFrameElement | null} */
+let lightboxIframe = null;
 /** @type {HTMLElement | null} */
 let lightboxFrame = null;
 /** @type {HTMLElement | null} */
@@ -42,7 +44,8 @@ function ensureLightbox() {
       <button type="button" class="orby-marketing__video-lightbox-close" aria-label="Close video">
         <i class="fa-solid fa-xmark" aria-hidden="true"></i>
       </button>
-      <video class="orby-marketing__video-lightbox-video" controls playsinline preload="metadata"></video>
+      <video class="orby-marketing__video-lightbox-video" controls playsinline preload="metadata" hidden></video>
+      <iframe class="orby-marketing__video-lightbox-iframe" title="Launch trailer" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen hidden></iframe>
     </div>
   `;
   document.body.appendChild(root);
@@ -51,6 +54,7 @@ function ensureLightbox() {
   lightboxFrame = root.querySelector('.orby-marketing__video-lightbox-frame');
   lightboxCloseBtn = root.querySelector('.orby-marketing__video-lightbox-close');
   lightboxVideo = root.querySelector('.orby-marketing__video-lightbox-video');
+  lightboxIframe = root.querySelector('.orby-marketing__video-lightbox-iframe');
   return root;
 }
 
@@ -71,18 +75,32 @@ function stopLightboxVideo() {
   lightboxVideo.removeAttribute('src');
   lightboxVideo.removeAttribute('poster');
   lightboxVideo.load();
+  lightboxVideo.hidden = true;
+}
+
+function stopLightboxIframe() {
+  if (!lightboxIframe) return;
+  lightboxIframe.src = 'about:blank';
+  lightboxIframe.removeAttribute('src');
+  lightboxIframe.hidden = true;
+}
+
+function stopLightboxMedia() {
+  stopLightboxVideo();
+  stopLightboxIframe();
 }
 
 function destroyLightboxDom() {
   if (lightboxEl) {
     gsap.killTweensOf([lightboxEl, lightboxFrame].filter(Boolean));
   }
-  stopLightboxVideo();
+  stopLightboxMedia();
   lockScroll(false);
   restorePreview();
   lightboxEl?.remove();
   lightboxEl = null;
   lightboxVideo = null;
+  lightboxIframe = null;
   lightboxFrame = null;
   lightboxCloseBtn = null;
   lastFocus = null;
@@ -96,6 +114,8 @@ function destroyLightboxDom() {
  */
 function loadLightboxVideo(src, poster) {
   if (!lightboxVideo) return;
+  stopLightboxIframe();
+  lightboxVideo.hidden = false;
   if (poster) lightboxVideo.poster = poster;
   else lightboxVideo.removeAttribute('poster');
   lightboxVideo.src = src;
@@ -109,6 +129,31 @@ function loadLightboxVideo(src, poster) {
       lightboxVideo.play().catch(() => {});
     });
   }
+}
+
+/**
+ * FrameRate reads `autoplay=1` (+ optional volume fade-in after a user gesture).
+ * @param {string} href
+ * @returns {string}
+ */
+function withEmbedAutoplay(href) {
+  try {
+    const url = new URL(href, window.location.href);
+    url.searchParams.set('autoplay', '1');
+    url.searchParams.set('autoplay_volume_fadein', '1');
+    return url.href;
+  } catch {
+    const join = href.includes('?') ? '&' : '?';
+    return `${href}${join}autoplay=1&autoplay_volume_fadein=1`;
+  }
+}
+
+/** @param {string} href */
+function loadLightboxEmbed(href) {
+  if (!lightboxIframe) return;
+  stopLightboxVideo();
+  lightboxIframe.hidden = false;
+  lightboxIframe.src = withEmbedAutoplay(href);
 }
 
 /** @returns {Promise<void>} */
@@ -169,7 +214,7 @@ async function closeLightbox() {
   try {
     await animateClose();
   } finally {
-    stopLightboxVideo();
+    stopLightboxMedia();
     if (lightboxEl) lightboxEl.hidden = true;
     lockScroll(false);
     isOpen = false;
@@ -183,11 +228,11 @@ async function closeLightbox() {
 }
 
 /**
- * @param {{ src: string, poster?: string, trigger?: HTMLElement | null }} options
+ * @param {{ src?: string, href?: string, poster?: string, trigger?: HTMLElement | null }} options
  */
 async function openLightbox(options) {
-  const { src, poster = '', trigger = null } = options;
-  if (!src || isAnimating) return;
+  const { src = '', href = '', poster = '', trigger = null } = options;
+  if ((!src && !href) || isAnimating) return;
   if (isOpen) await closeLightbox();
 
   const root = ensureLightbox();
@@ -196,7 +241,8 @@ async function openLightbox(options) {
   isOpen = true;
   lockScroll(true);
   root.hidden = false;
-  loadLightboxVideo(src, poster);
+  if (href) loadLightboxEmbed(href);
+  else loadLightboxVideo(src, poster);
   try {
     await animateOpen();
     lightboxCloseBtn?.focus({ preventScroll: true });
@@ -248,12 +294,9 @@ export function initMarketingPlayVideo(root) {
     if (!(hit instanceof HTMLElement) || !root.contains(hit)) return;
     event.preventDefault();
 
-    const src = resolvePlaySource(hit);
-    if (!src) {
-      const href = hit.getAttribute('data-play-href')?.trim();
-      if (href) window.open(href, '_blank', 'noopener,noreferrer');
-      return;
-    }
+    const href = hit.getAttribute('data-play-href')?.trim() || '';
+    const src = href ? '' : resolvePlaySource(hit);
+    if (!href && !src) return;
 
     const preview = hit
       .closest('.orby-marketing__figure-mask')
@@ -264,8 +307,9 @@ export function initMarketingPlayVideo(root) {
     }
 
     void openLightbox({
+      href,
       src,
-      poster: resolvePoster(hit),
+      poster: href ? '' : resolvePoster(hit),
       trigger: hit,
     });
   };
