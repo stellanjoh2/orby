@@ -7,7 +7,7 @@ name: Deploy to GitHub Pages
 # to echo the request Origin).
 # Optional: TURNSTILE_SITE_KEY (public) must match TURNSTILE_SECRET_KEY on Vercel.
 # Optional: UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN on Vercel for rate limits.
-# ORBY_SR_PHRASE (Actions Secret) — studio shell phrase; only a SHA-256 digest lands in built JS.
+# Studio shell passphrase (ORBY_SR_PHRASE) is retired — site is open; do not re-wire it.
 
 on:
   push:
@@ -48,7 +48,6 @@ jobs:
           ORBY_STRICT_PRODUCTION_ENV: '1'
           BUG_REPORT_API_URL: ${{ vars.BUG_REPORT_API_URL }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
-          ORBY_SR_PHRASE: ${{ secrets.ORBY_SR_PHRASE }}
       
       - name: Setup Pages
         uses: actions/configure-pages@v4

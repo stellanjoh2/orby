@@ -1,5 +1,4 @@
 import * as esbuild from 'esbuild';
-import { createHash } from 'crypto';
 import { readFileSync, writeFileSync, cpSync, existsSync, rmSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -103,11 +102,9 @@ function injectTurnstileSiteKey(html) {
   );
 }
 
-/** Shell-ready SHA-256 digest; set ORBY_SR_PHRASE in CI (GitHub Secret) — never commit the phrase. */
+/** Shell-ready hash placeholder — gate is retired (site is open). Always clear so builds never lock. */
 function injectShellReadyHash(js) {
-  const phrase = process.env.ORBY_SR_PHRASE?.trim() ?? '';
-  const hash = phrase ? createHash('sha256').update(phrase, 'utf8').digest('hex') : '';
-  return js.replace(/__ORBY_SR_H__/g, hash);
+  return js.replace(/__ORBY_SR_H__/g, '');
 }
 
 async function writeShellReadyScript(outDir) {

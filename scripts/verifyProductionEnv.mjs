@@ -30,6 +30,15 @@ export function collectProductionEnvIssues(options = {}) {
   const turnstileSite = process.env.TURNSTILE_SITE_KEY?.trim() ?? '';
   const shellPhrase = process.env.ORBY_SR_PHRASE?.trim() ?? '';
 
+  if (shellPhrase) {
+    issues.push({
+      level: 'warn',
+      message:
+        'ORBY_SR_PHRASE is set but ignored — the studio shell gate is retired and the site stays open. ' +
+        'Delete the Actions secret ORBY_SR_PHRASE when convenient.',
+    });
+  }
+
   if (!bugUrl) {
     issues.push({
       level: strict ? 'error' : 'warn',
@@ -56,15 +65,6 @@ export function collectProductionEnvIssues(options = {}) {
     issues.push({
       level: 'warn',
       message: 'TURNSTILE_SITE_KEY format looks unusual — expected a Cloudflare Turnstile site key (0x…).',
-    });
-  }
-
-  if (!shellPhrase) {
-    issues.push({
-      level: 'warn',
-      message:
-        'ORBY_SR_PHRASE is unset — studio shell gate auto-unlocks on every visit. ' +
-        'Set Actions secret ORBY_SR_PHRASE if you want a launch curtain.',
     });
   }
 
