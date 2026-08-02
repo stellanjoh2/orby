@@ -15,6 +15,17 @@ import { getComposerOutputRenderTarget } from '../composerOutputBuffer.js';
  */
 export function applyTransparentCaptureSetup(deps) {
   const { renderer, scene, composer, backgroundController, postPipeline } = deps;
+
+  // Snapshot RenderPass clearAlpha BEFORE zeroing composer passes — renderPass is usually
+  // already in `composer.passes`, so reading it after the loop would capture 0 and restore
+  // would leave clearAlpha stuck at 0 (solid studio bg looks default gray on alpha:true canvas).
+  let renderPassClearAlpha = null;
+  let hasRenderPassClearAlpha = false;
+  if (postPipeline?.renderPass && 'clearAlpha' in postPipeline.renderPass) {
+    renderPassClearAlpha = postPipeline.renderPass.clearAlpha;
+    hasRenderPassClearAlpha = true;
+  }
+
   const passClearAlphas = [];
   if (composer?.passes?.length) {
     for (const pass of composer.passes) {
@@ -25,9 +36,7 @@ export function applyTransparentCaptureSetup(deps) {
     }
   }
 
-  let renderPassClearAlpha = null;
-  if (postPipeline?.renderPass && 'clearAlpha' in postPipeline.renderPass) {
-    renderPassClearAlpha = postPipeline.renderPass.clearAlpha;
+  if (hasRenderPassClearAlpha) {
     postPipeline.renderPass.clearAlpha = 0;
   }
 
@@ -47,6 +56,7 @@ export function applyTransparentCaptureSetup(deps) {
   return {
     passClearAlphas,
     renderPassClearAlpha,
+    hasRenderPassClearAlpha,
     originalBackgroundSphereVisible,
     originalBackground,
     originalClearColor,
@@ -66,12 +76,13 @@ export function applyTransparentCaptureSetup(deps) {
  */
 export function restoreTransparentCaptureSetup(deps, snapshot) {
   if (!snapshot) return;
-  const { renderer, scene, composer, backgroundController, postPipeline } = deps;
+  const { renderer, scene, backgroundController, postPipeline } = deps;
 
   for (const entry of snapshot.passClearAlphas || []) {
     if (entry?.pass) entry.pass.clearAlpha = entry.clearAlpha;
   }
-  if (postPipeline?.renderPass && snapshot.renderPassClearAlpha !== null) {
+  // Prefer the pre-mutation RenderPass snapshot (null is a valid Three.js default).
+  if (postPipeline?.renderPass && snapshot.hasRenderPassClearAlpha) {
     postPipeline.renderPass.clearAlpha = snapshot.renderPassClearAlpha;
   }
 
@@ -83,6 +94,8 @@ export function restoreTransparentCaptureSetup(deps, snapshot) {
   scene.background = snapshot.originalBackground;
   renderer.setClearColor(snapshot.originalClearColor, snapshot.originalClearAlpha);
   renderer.setClearAlpha(snapshot.originalClearAlpha);
+  // Re-bind solid/gradient/image from controller — do not leave a stale transparent clear.
+  backgroundController?.refreshAppearance?.();
 }
 
 /**

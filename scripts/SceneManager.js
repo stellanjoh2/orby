@@ -4285,7 +4285,9 @@ export class SceneManager {
     );
 
     // Still-image export uses the lightweight bottom-left load spinner (not the full black video
-    // export overlay) so the viewport stays visible for debugging during capture.
+    // export overlay). Pin the last live frame first — offline capture resizes/clears the
+    // drawing buffer (preserveDrawingBuffer: false) and would otherwise flash black.
+    this.ui?.showViewportCaptureFreeze?.();
     this._suppressResizeForExport = true;
     this.ui?.setLoadSpinnerStatusPrefix?.(`Capturing .${formatId.toUpperCase()}`);
     this.ui?.beginLoadSpinner?.();
@@ -4357,6 +4359,10 @@ export class SceneManager {
       this.ui?.endLoadSpinner?.();
       this._suppressResizeForExport = false;
       this.handleResize();
+      // Drop freeze after the next paint so the restored live buffer is on screen.
+      requestAnimationFrame(() => {
+        this.ui?.hideViewportCaptureFreeze?.();
+      });
     }
   }
 

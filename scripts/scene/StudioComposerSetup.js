@@ -195,7 +195,12 @@ export function setupStudioComposer(scene) {
     scene.imageExporter.reapplyStudioAfterCapture = () => {
       const rot = scene.hdriRotation ?? scene.stateStore.getState().hdriRotation ?? 0;
       scene.setHdriRotation(rot, { updateState: false, updateUi: false });
-      scene.backgroundController?.refreshAppearance?.();
+      // Transparent capture zeros RenderPass.clearAlpha; if restore snapped the wrong value,
+      // opaque studio clears stay alpha=0 and the alpha:true canvas shows CSS gray instead.
+      if (scene.postPipeline?.renderPass?.clearAlpha === 0) {
+        scene.postPipeline.renderPass.clearAlpha = 1;
+      }
+      scene.flushStudioViewportBackdrop?.();
       const size = new THREE.Vector2();
       scene.renderer?.getSize(size);
       if (size.x > 0 && size.y > 0) {
