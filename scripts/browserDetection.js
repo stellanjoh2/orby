@@ -4,12 +4,45 @@
  */
 
 /**
- * Sync-safe support check for head boot IIFEs.
+ * True for Orby Mobile routes (/mobile, /mobile/app, /mobile/learn, …).
+ * @param {string} [pathname]
+ * @returns {boolean}
+ */
+export function isOrbyMobilePath(pathname) {
+  const raw =
+    pathname != null
+      ? pathname
+      : typeof location !== 'undefined'
+        ? location.pathname || '/'
+        : '/';
+  const path = String(raw).replace(/\/$/, '') || '/';
+  return path === '/mobile' || path.startsWith('/mobile/');
+}
+
+/**
+ * iOS Apple WebKit shell (Safari or in-app WKWebView). X/Twitter and similar
+ * often omit "Safari" from the UA while still using Apple WebKit.
  * @param {string} userAgent
  * @param {string} [vendor]
  * @returns {boolean}
  */
-export function detectSupportedOrbyBrowser(userAgent, vendor = '') {
+export function detectIosAppleWebKitBrowser(userAgent, vendor = '') {
+  const ua = userAgent || '';
+  if (!/iPhone|iPod|iPad/i.test(ua)) return false;
+  if (!/AppleWebKit/i.test(ua) || !/Apple Computer/i.test(vendor)) return false;
+  return !/Chrome|CriOS|Chromium|Edg|EdgiOS|OPR|OPiOS|Firefox|FxiOS|SamsungBrowser/i.test(
+    ua,
+  );
+}
+
+/**
+ * Sync-safe support check for head boot IIFEs.
+ * @param {string} userAgent
+ * @param {string} [vendor]
+ * @param {{ allowIosInAppWebKit?: boolean }} [options]
+ * @returns {boolean}
+ */
+export function detectSupportedOrbyBrowser(userAgent, vendor = '', options = {}) {
   const ua = userAgent || '';
   const isWebKitSafari = /Safari/i.test(ua) && /Apple Computer/i.test(vendor);
   const excludedSafariShells =
@@ -18,7 +51,11 @@ export function detectSupportedOrbyBrowser(userAgent, vendor = '') {
   const isChromeOrBrave =
     /Chrome|CriOS/i.test(ua) &&
     !/Edg|EdgiOS|OPR|OPiOS|Firefox|FxiOS|SamsungBrowser/i.test(ua);
-  return isSafari || isChromeOrBrave;
+  if (isSafari || isChromeOrBrave) return true;
+  if (options.allowIosInAppWebKit && detectIosAppleWebKitBrowser(ua, vendor)) {
+    return true;
+  }
+  return false;
 }
 
 /** @returns {boolean} */
@@ -42,7 +79,9 @@ export function isChromeOrBraveBrowser() {
 /** @returns {boolean} */
 export function isSupportedOrbyBrowser() {
   if (typeof navigator === 'undefined') return false;
-  return detectSupportedOrbyBrowser(navigator.userAgent, navigator.vendor || '');
+  return detectSupportedOrbyBrowser(navigator.userAgent, navigator.vendor || '', {
+    allowIosInAppWebKit: isOrbyMobilePath(),
+  });
 }
 
 /** @returns {boolean} */

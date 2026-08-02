@@ -1,6 +1,6 @@
 /**
  * Unsupported browser gate — Chrome, Brave, and Safari only.
- * Other browsers see the VIP waitlist screen.
+ * Other browsers see the unsupported-browser screen.
  * Loaded on all public pages; inert unless html.orby-unsupported-browser is set by boot JS.
  */
 
