@@ -107,7 +107,7 @@ export const MARKETING_SECTIONS = [
     ],
     layout: 'media-left',
     imageSrc: './assets/marketing/present-cinema-look.png',
-    videoSrc: './assets/marketing/orby-marketing-microreel.mp4',
+    videoSrc: './assets/marketing/featureloop-virtualstudio.mp4',
     videoPoster: true,
     imageAlt: 'Lighting and grading a model in Orby',
     playVideo: true,
@@ -268,7 +268,7 @@ export const MARKETING_SECTIONS = [
     ],
     layout: 'media-right',
     imageSrc: './assets/images/creative-look-glass.png',
-    videoSrc: './assets/marketing/orby-feature-3dlogo.mp4',
+    videoSrc: './assets/marketing/featureloop-typelogos.mp4',
     imageAlt: 'SVG and type extrude — logos and live 3D text in Orby',
   },
   {
