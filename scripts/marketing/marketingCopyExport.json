@@ -377,15 +377,15 @@
       "type": "in-progress",
       "id": "orby-marketing-in-progress",
       "eyebrow": "In progress",
-      "title": "More from the same studio — rfrct",
+      "title": "More from the same studio — Rfrct",
       "titleLines": [
-        "More from the same studio — rfrct"
+        "More from the same studio — Rfrct"
       ],
-      "lede": "rfrct is a design tool for distorting type and building audio-reactive visuals, right in the browser. Bend your letters through glass, push them through waves, blur the edges until they frost over. Dial in chromatic aberration, layer on refraction, and let the whole thing react to sound. When you're done, export it as a PNG, a GIF, or straight to MP4 — no plugins, no timelines, no fuss. Early access is limited.",
+      "lede": "Rfrct is a browser tool for distorting type and building audio-reactive visuals — made for events, VJs, and anyone who just wants to make something cool or tear a design apart. Bend letters through glass, push them through waves, stack multiple files and see how weird you can get. Currently in development.",
       "bullets": null,
       "cta": {
         "label": "Request preview",
-        "href": "mailto:hello@rfrct.app?subject=rfrct%20early%20access"
+        "href": "mailto:hello@rfrct.app?subject=Rfrct%20early%20access"
       }
     }
   ],
