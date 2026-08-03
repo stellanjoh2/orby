@@ -466,6 +466,11 @@ html.safari-browser .orby-marketing__figure-video {
   object-fit: contain;
 }
 
+/* Framerate blank/loading docs paint white — keep host black until iframe load */
+.orby-marketing__video-lightbox-frame.is-embed-loading .orby-marketing__video-lightbox-iframe {
+  opacity: 0;
+}
+
 .orby-marketing__video-lightbox-video[hidden],
 .orby-marketing__video-lightbox-iframe[hidden] {
   display: none !important;

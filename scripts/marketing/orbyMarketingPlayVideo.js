@@ -6,6 +6,7 @@ import { playMarketingVideo } from './orbyMarketingVideo.js';
 
 const HIT_SELECTOR = '[data-orby-marketing-play-video]';
 const OPEN_CLASS = 'orby-marketing-video-lightbox-open';
+const EMBED_LOADING_CLASS = 'is-embed-loading';
 const OPEN_MS = 0.38;
 const CLOSE_MS = 0.28;
 const BACKDROP_BLUR = '18px';
@@ -26,6 +27,8 @@ let lightboxCloseBtn = null;
 let pausedPreview = null;
 /** @type {Element | null} */
 let lastFocus = null;
+/** @type {(() => void) | null} */
+let embedLoadHandler = null;
 let isOpen = false;
 let isAnimating = false;
 
@@ -78,8 +81,17 @@ function stopLightboxVideo() {
   lightboxVideo.hidden = true;
 }
 
+function clearEmbedLoadHandler() {
+  if (embedLoadHandler && lightboxIframe) {
+    lightboxIframe.removeEventListener('load', embedLoadHandler);
+  }
+  embedLoadHandler = null;
+}
+
 function stopLightboxIframe() {
   if (!lightboxIframe) return;
+  clearEmbedLoadHandler();
+  lightboxFrame?.classList.remove(EMBED_LOADING_CLASS);
   lightboxIframe.src = 'about:blank';
   lightboxIframe.removeAttribute('src');
   lightboxIframe.hidden = true;
@@ -103,6 +115,7 @@ function destroyLightboxDom() {
   lightboxIframe = null;
   lightboxFrame = null;
   lightboxCloseBtn = null;
+  embedLoadHandler = null;
   lastFocus = null;
   isOpen = false;
   isAnimating = false;
@@ -152,7 +165,16 @@ function withEmbedAutoplay(href) {
 function loadLightboxEmbed(href) {
   if (!lightboxIframe) return;
   stopLightboxVideo();
+  clearEmbedLoadHandler();
+  // Hide the iframe until Framerate paints — browser blank docs are white,
+  // and the black lightbox frame should show through until then.
+  lightboxFrame?.classList.add(EMBED_LOADING_CLASS);
   lightboxIframe.hidden = false;
+  embedLoadHandler = () => {
+    clearEmbedLoadHandler();
+    lightboxFrame?.classList.remove(EMBED_LOADING_CLASS);
+  };
+  lightboxIframe.addEventListener('load', embedLoadHandler);
   lightboxIframe.src = withEmbedAutoplay(href);
 }
 
