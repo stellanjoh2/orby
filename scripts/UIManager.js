@@ -2206,6 +2206,7 @@ export class UIManager {
   /**
    * Pin the last WebGL frame over the viewport so offline capture can clear #webgl
    * without flashing black (preserveDrawingBuffer is false).
+   * Caller must paint a fresh frame immediately before this (see SceneManager.pinViewportCaptureFreeze).
    */
   showViewportCaptureFreeze() {
     const src = this.dom.canvas;

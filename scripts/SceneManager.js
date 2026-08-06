@@ -4151,6 +4151,20 @@ export class SceneManager {
   }
 
   /**
+   * Re-paint the live viewport, then copy it onto the freeze canvas.
+   * With `preserveDrawingBuffer: false`, the WebGL backbuffer is cleared after the browser
+   * presents — copying from a click handler without this paint yields a solid black plate.
+   */
+  pinViewportCaptureFreeze() {
+    if (this.isStudioReady && this.renderer) {
+      // Flags that block render() must still be clear here (set after pinning).
+      this.render();
+      this.renderer.getContext()?.finish?.();
+    }
+    this.ui?.showViewportCaptureFreeze?.();
+  }
+
+  /**
    * Hold the idle render loop for several frames after material/shader edits so WebGL
    * program recompiles paint while the camera is still (orbit damping is not required).
    * @param {number} [frameCount]
@@ -4287,7 +4301,7 @@ export class SceneManager {
     // Still-image export uses the lightweight bottom-left load spinner (not the full black video
     // export overlay). Pin the last live frame first — offline capture resizes/clears the
     // drawing buffer (preserveDrawingBuffer: false) and would otherwise flash black.
-    this.ui?.showViewportCaptureFreeze?.();
+    this.pinViewportCaptureFreeze();
     this._suppressResizeForExport = true;
     this.ui?.setLoadSpinnerStatusPrefix?.(`Capturing .${formatId.toUpperCase()}`);
     this.ui?.beginLoadSpinner?.();
@@ -4581,7 +4595,7 @@ export class SceneManager {
       this.renderLoop.stop();
     }
     // Snapshot before offline capture clears the drawing buffer (preserveDrawingBuffer: false).
-    this.ui?.showViewportCaptureFreeze?.();
+    this.pinViewportCaptureFreeze();
     this._suppressResizeForExport = true;
     this._capturePreviewInFlight = true;
 

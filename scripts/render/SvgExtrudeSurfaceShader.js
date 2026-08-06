@@ -1477,7 +1477,10 @@ float orbyCreativeSurfaceFilmMod(vec3 worldPos, vec3 localPos, vec3 localN) {
     float texDetail = orbyCreativeTriplanarNormalDetail(localPos, n, uOrbyScale);
     float detail = max(bump, texDetail);
     float str = clamp(uOrbyNormalStrength, 0.0, 2.0);
-    return clamp(0.58 + detail * str * 1.05 + detailLit * str * 0.42, 0.48, 1.55);
+    // Legacy used a fixed 0.58 floor, so strength 0→ε jumped 1.0→~0.58 (holo luminance pop).
+    // Ramp the floor from 1.0→0.58 with strength; matches legacy once str ≥ preset unit (~0.58).
+    float floorAmt = mix(1.0, 0.58, clamp(str / 0.58, 0.0, 1.0));
+    return clamp(floorAmt + detail * str * 1.05 + detailLit * str * 0.42, 0.48, 1.55);
   }
   return 1.0;
 }
