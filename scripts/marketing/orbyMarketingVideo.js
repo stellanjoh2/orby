@@ -104,13 +104,17 @@ export function playMarketingVideo(video) {
   if (!(video instanceof HTMLVideoElement)) return;
   primeMarketingVideo(video);
 
-  video.addEventListener(
-    'playing',
-    () => {
+  // Keep poster until we have decoded pixels. Off-screen autoplay can fire
+  // `playing` with an empty frame (black box) — especially In Progress at mount.
+  const dropPosterWhenPainted = () => {
+    if (video.videoWidth > 0 && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
       video.removeAttribute('poster');
-    },
-    { once: true },
-  );
+      video.removeEventListener('loadeddata', dropPosterWhenPainted);
+      video.removeEventListener('playing', dropPosterWhenPainted);
+    }
+  };
+  video.addEventListener('loadeddata', dropPosterWhenPainted);
+  video.addEventListener('playing', dropPosterWhenPainted);
 
   ensureMarketingVideoLoaded(video);
 
@@ -186,7 +190,12 @@ function bindVisibilityPlay(video) {
         if (!entry.isIntersecting || entry.intersectionRatio < 0.12) continue;
         requestAnimationFrame(() => {
           ensureMarketingVideoLoaded(video);
-          if (video.paused || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+          // Retry when paused OR when we never got pixels (stuck black after early play).
+          if (
+            video.paused
+            || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
+            || video.videoWidth === 0
+          ) {
             playMarketingVideo(video);
           }
         });

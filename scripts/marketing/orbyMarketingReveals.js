@@ -192,8 +192,10 @@ function shouldPreloadMarketingElement(el) {
 export function preloadSectionMedia(sectionEl) {
   if (!sectionEl) return Promise.resolve();
   loadSectionMarketingVideos(sectionEl);
+  const isInProgress = sectionEl.classList.contains('orby-marketing__section--in-progress');
   sectionEl.querySelectorAll('video').forEach((video) => {
-    playMarketingVideo(video);
+    // In Progress is warmed at mount while off-screen — load only; play via IO.
+    if (!isInProgress) playMarketingVideo(video);
   });
   const media = [
     ...sectionEl.querySelectorAll(
@@ -1025,7 +1027,11 @@ export function showInProgressStatic(sectionEl) {
     )
     .forEach((el) => {
       el.classList.add('is-loaded');
-      if (el instanceof HTMLVideoElement) playMarketingVideo(el);
+      // Do not play here — section is usually off-screen at mount. Early play can
+      // strip the poster and leave a black plate; IntersectionObserver starts play.
+      if (el instanceof HTMLVideoElement) {
+        ensureMarketingVideoLoaded(el);
+      }
     });
 
   sectionEl.querySelectorAll('[data-orby-marketing-reveal="media"]').forEach((mask) => {
