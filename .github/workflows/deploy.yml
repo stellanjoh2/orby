@@ -13,6 +13,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 # Queue Pages deploys instead of cancelling mid-flight. Cancelling during
 # deploy-pages status polling leaves an orphaned deployment_in_progress and
