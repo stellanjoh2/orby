@@ -728,8 +728,26 @@ html.mobile-landing .orby-marketing__split-bleed {
 }
 
 /* Feature blocks — extra air between bullet list and media on narrow viewports */
-html.mobile-landing .orby-marketing__section--split .orby-marketing__split-bleed {
+html.mobile-landing .orby-marketing__section--split .orby-marketing__split-bleed,
+html.mobile-landing .orby-marketing__section--in-progress .orby-marketing__split-bleed {
   gap: var(--orby-marketing-feature-list-media-gap);
+}
+
+/*
+ * In Progress CTA — match split features’ .split-cta stack (Drop it in),
+ * not the desktop 54px / mobile 4.27rem lede→button gap.
+ */
+html.mobile-landing
+  .orby-marketing__section--in-progress
+  .orby-marketing__lede
+  + .orby-marketing__split-cta {
+  margin-top: calc(
+    clamp(
+        calc(1.25rem * var(--orby-marketing-scale)),
+        2.5vh,
+        calc(1.75rem * var(--orby-marketing-scale))
+      ) + var(--orby-marketing-space-sm)
+  );
 }
 
 html.mobile-landing .orby-marketing__split-copy {
