@@ -5,7 +5,7 @@
  *
  * Section naming:
  * - CTA — lime “Try it out for free now” block (type: `cta`)
- * - In Progress — white rfrct teaser panel (type: `in-progress`)
+ * - In Progress — white studio teaser panel (type: `in-progress`, `projects[]`)
  * - Footer — brand, legal strip, social (`.orby-marketing__footer-bar`); link fields live on the CTA section
  *
  * After editing marketing copy here, regenerate the review export:
@@ -13,6 +13,22 @@
  */
 
 /** @typedef {'intro' | 'split' | 'showcase' | 'marquee' | 'pro' | 'roadmap' | 'faq' | 'cta' | 'in-progress'} MarketingSectionType */
+
+/**
+ * @typedef {Object} MarketingInProgressProject
+ * @property {string} id
+ * @property {string} eyebrow
+ * @property {string} title
+ * @property {string} lede
+ * @property {string[]} [gradientPhrases]
+ * @property {'media-left' | 'media-right'} [layout]
+ * @property {string} [imageSrc]
+ * @property {string} [imageAlt]
+ * @property {string} [videoSrc]
+ * @property {boolean} [videoPoster]
+ * @property {string} [ctaLabel]
+ * @property {string} [ctaHref]
+ */
 
 /**
  * @typedef {Object} MarketingGallerySlide
@@ -48,8 +64,8 @@
  * @property {MarketingSectionType} type
  * @property {string} id
  * @property {string} [eyebrow]
- * @property {string} title
- * @property {string} lede
+ * @property {string} [title] — required except In Progress panels that use `projects`
+ * @property {string} [lede] — required except In Progress panels that use `projects`
  * @property {string[]} [gradientPhrases] — substrings in lede/body rendered with animated lime↔purple gradient
  * @property {string[]} [bullets]
  * @property {'media-left' | 'media-right'} [layout]
@@ -68,6 +84,7 @@
  * @property {string} [playVideoHref] — Framerate / external embed URL (lightbox iframe; preview reel stays on videoSrc)
  * @property {string} [ctaLabel]
  * @property {string} [ctaHref] — mailto: or https: link (In Progress section)
+ * @property {MarketingInProgressProject[]} [projects] — In Progress: stacked studio teasers (layout alternates like features)
  * @property {'scroll-top' | 'browse' | 'load-sample'} [ctaAction]
  * @property {{ question: string, answer: string }[]} [faq]
  * @property {MarketingProCard[]} [cards]
@@ -561,17 +578,33 @@ export const MARKETING_SECTIONS = [
   {
     type: 'in-progress',
     id: 'orby-marketing-in-progress',
-    eyebrow: 'In progress',
-    title: 'More from the same studio — Rfrct',
-    gradientPhrases: ['more things'],
-    lede:
-      'Rfrct is a browser tool for distorting type and building audio-reactive visuals — made for events, VJs, and anyone who just wants to make something cool or tear a design apart. Bend letters through glass, push them through waves, stack multiple files and see how weird you can get. Currently in development.',
-    layout: 'media-right',
-    imageSrc: './assets/marketing/rfrct.jpg',
-    videoSrc: './assets/marketing/rfrct.mp4',
-    videoPoster: true,
-    imageAlt: 'Rfrct design tool — distorted type in the browser',
-    ctaLabel: 'Request preview',
-    ctaHref: 'mailto:hello@rfrct.app?subject=Rfrct%20early%20access',
+    projects: [
+      {
+        id: 'orby-marketing-in-progress-rfrct',
+        eyebrow: 'In progress',
+        title: 'Rfrct — Distort type and visuals in the browser',
+        lede:
+          'Rfrct is a browser tool for distorting type and building audio-reactive visuals — made for events, VJs, and anyone who just wants to make something cool or tear a design apart. Bend letters through glass, push them through waves, stack multiple files and see how weird you can get. Currently in development.',
+        layout: 'media-right',
+        imageSrc: './assets/marketing/rfrct.jpg',
+        videoSrc: './assets/marketing/rfrct.mp4',
+        videoPoster: true,
+        imageAlt: 'Rfrct design tool — distorted type in the browser',
+        ctaLabel: 'Request preview',
+        ctaHref: 'mailto:hello@rfrct.app?subject=Rfrct%20early%20access',
+      },
+      {
+        id: 'orby-marketing-in-progress-quicktrace',
+        eyebrow: 'In progress',
+        title: 'QuickTrace — Apply HUD elements to your footage',
+        lede:
+          'QuickTrace is an After Effects plugin that applies motion-reactive surveillance HUD elements to any footage — boxes, rings, and connectors that light up wherever movement hits. Drop it on a layer, scrub, and dial in that sci-fi tracking look.',
+        layout: 'media-left',
+        videoSrc: './assets/marketing/QuickTrace.mp4',
+        imageAlt: 'QuickTrace After Effects plugin — HUD elements on footage',
+        ctaLabel: 'Request preview',
+        ctaHref: 'mailto:orby-admin@proton.me?subject=QuickTrace%20early%20access',
+      },
+    ],
   },
 ];

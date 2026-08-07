@@ -49,7 +49,30 @@ function sectionCta(section) {
   return { label: section.ctaLabel, action: section.ctaAction ?? 'scroll-top' };
 }
 
+function inProgressProjectToExport(project) {
+  return {
+    id: project.id,
+    eyebrow: project.eyebrow ?? null,
+    title: project.title,
+    titleLines: titleLines(project.title),
+    lede: project.lede ?? '',
+    layout: project.layout ?? null,
+    cta: project.ctaLabel
+      ? { label: project.ctaLabel, href: project.ctaHref ?? null }
+      : null,
+  };
+}
+
 function sectionToExport(section, order) {
+  if (section.type === 'in-progress' && Array.isArray(section.projects)) {
+    return {
+      order,
+      type: section.type,
+      id: section.id,
+      projects: section.projects.map(inProgressProjectToExport),
+    };
+  }
+
   /** @type {Record<string, unknown>} */
   const row = {
     order,

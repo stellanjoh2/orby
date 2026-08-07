@@ -34,8 +34,13 @@
   overflow: hidden;
   box-sizing: border-box;
   background: #fff;
+  /*
+   * Radius clears the lime CTA overlap; gap-big restores the old top inset that
+   * 100dvh flex-centering used to provide (without a full viewport per project).
+   */
   padding-top: calc(
-    max(0px, env(safe-area-inset-top, 0px)) + var(--orby-marketing-section-radius)
+    max(0px, env(safe-area-inset-top, 0px)) + var(--orby-marketing-section-radius) +
+      var(--orby-marketing-gap-big)
   );
   padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
 }
@@ -47,17 +52,24 @@
   justify-content: center;
   box-sizing: border-box;
   width: 100%;
-  min-height: 100dvh;
-  padding: 0;
-  padding-bottom: calc(
-    3.25rem + var(--orby-footer-lift, 36px) + var(--orby-footer-brand-height, 51px) +
-      var(--orby-marketing-footer-meta-size, 14px) * 1.45
-  );
+  /* Same 192px seam as split features — not a full viewport per project. */
+  min-height: 0;
+  padding: 0 0 var(--orby-marketing-gap-big);
   overflow-x: clip;
   background: #fff;
   color: var(--orby-marketing-on-white-ink);
   --brand-text: var(--orby-marketing-on-white-ink);
   pointer-events: none;
+}
+
+/*
+ * Last project: feature gap above the absolute footer, plus footer chrome clearance.
+ */
+.orby-marketing__section--in-progress-last {
+  padding-bottom: calc(
+    var(--orby-marketing-gap-big) + 3.25rem + var(--orby-footer-lift, 36px) +
+      var(--orby-footer-brand-height, 51px) + var(--orby-marketing-footer-meta-size, 14px) * 1.45
+  );
 }
 
 .orby-marketing__in-progress-reveal.is-revealed .orby-marketing__section--in-progress {

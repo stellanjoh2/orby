@@ -453,11 +453,10 @@ export function initOrbyMarketingPage(options = {}) {
     });
     reveals.prepareMarketingSections(root);
 
-    const inProgressSection = root.querySelector('.orby-marketing__section--in-progress');
-    if (inProgressSection) {
+    root.querySelectorAll('.orby-marketing__section--in-progress').forEach((inProgressSection) => {
       reveals.showInProgressStatic(inProgressSection);
       void reveals.preloadSectionMedia(inProgressSection);
-    }
+    });
 
     const marketingVideo = await import('./orbyMarketingVideo.js');
     marketingVideo.initMarketingVideos(root);

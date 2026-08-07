@@ -203,39 +203,55 @@ function renderFigure(section, revealDir) {
     </figure>`;
 }
 
-function renderInProgressCta(section) {
-  if (!section.ctaLabel || !section.ctaHref) return '';
+function renderInProgressCta(project) {
+  if (!project.ctaLabel || !project.ctaHref) return '';
   return `<div class="orby-marketing__split-cta">
-      ${orbyMagicButtonMonoLinkHtml(escapeMarketingButtonLabel(section.ctaLabel), escapeMarketingHtml(section.ctaHref), {
+      ${orbyMagicButtonMonoLinkHtml(escapeMarketingButtonLabel(project.ctaLabel), escapeMarketingHtml(project.ctaHref), {
         extraClass: 'orby-marketing__cta',
       })}
     </div>`;
 }
 
-function renderInProgressSection(section, ctaSection) {
-  const mediaLeft = section.layout === 'media-left';
+/**
+ * @param {import('./orbyMarketingContent.js').MarketingInProgressProject} project
+ * @param {{ isLast: boolean }} options
+ */
+function renderInProgressProject(project, { isLast }) {
+  const mediaLeft = project.layout === 'media-left';
   const bleedClass = mediaLeft
     ? 'orby-marketing__split-bleed orby-marketing__split-bleed--media-left'
     : 'orby-marketing__split-bleed orby-marketing__split-bleed--media-right';
   const revealDir = mediaLeft ? 'rtl' : 'ltr';
+  const lastClass = isLast ? ' orby-marketing__section--in-progress-last' : '';
 
-  return `<div class="orby-marketing__in-progress-reveal" data-orby-marketing-in-progress-reveal>
-    <div class="orby-marketing__in-progress-panel" data-orby-marketing-in-progress-panel>
-      <section class="orby-marketing__section orby-marketing__section--in-progress" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
+  return `<section class="orby-marketing__section orby-marketing__section--in-progress${lastClass}" id="${escapeMarketingHtml(project.id)}" aria-labelledby="${escapeMarketingHtml(project.id)}-title">
         <div class="${bleedClass}">
           <div class="orby-marketing__split-copy">
             <div class="orby-marketing__split-copy-inner">
-              <p class="orby-marketing__eyebrow">${escapeMarketingHtml(section.eyebrow)}</p>
-              <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title"><span class="orby-marketing__title-line">${renderMarketingBodyHtml(section.title, section.gradientPhrases)}</span></h2>
-              <p class="orby-marketing__lede">${escapeMarketingHtml(section.lede)}</p>
-              ${renderInProgressCta(section)}
+              <p class="orby-marketing__eyebrow">${escapeMarketingHtml(project.eyebrow)}</p>
+              <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(project.id)}-title"><span class="orby-marketing__title-line">${renderMarketingBodyHtml(project.title, project.gradientPhrases)}</span></h2>
+              <p class="orby-marketing__lede">${escapeMarketingHtml(project.lede)}</p>
+              ${renderInProgressCta(project)}
             </div>
           </div>
           <div class="orby-marketing__split-media">
-            ${renderFigure(section, revealDir)}
+            ${renderFigure(project, revealDir)}
           </div>
         </div>
-      </section>
+      </section>`;
+}
+
+function renderInProgressSection(section, ctaSection) {
+  const projects = Array.isArray(section.projects) ? section.projects : [];
+  const projectMarkup = projects
+    .map((project, index) =>
+      renderInProgressProject(project, { isLast: index === projects.length - 1 }),
+    )
+    .join('\n');
+
+  return `<div class="orby-marketing__in-progress-reveal" id="${escapeMarketingHtml(section.id)}" data-orby-marketing-in-progress-reveal>
+    <div class="orby-marketing__in-progress-panel" data-orby-marketing-in-progress-panel>
+      ${projectMarkup}
       ${ctaSection ? renderFooterMeta(ctaSection, { onWhite: true }) : ''}
     </div>
   </div>`;

@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-07-10T08:55:00.713Z",
+    "generatedAt": "2026-08-07T15:16:10.993Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -218,7 +218,12 @@
         "MP4 turntable video and numbered PNG sequences in a zip",
         "SVG silhouette or flat color, plus GLB from SVG extrude"
       ],
-      "cta": null
+      "cta": null,
+      "imageCredit": {
+        "title": "Goblin character",
+        "sourceLabel": "Meshy",
+        "sourceHref": "https://www.meshy.ai/"
+      }
     },
     {
       "order": 9,
@@ -376,17 +381,36 @@
       "order": 14,
       "type": "in-progress",
       "id": "orby-marketing-in-progress",
-      "eyebrow": "In progress",
-      "title": "More from the same studio — Rfrct",
-      "titleLines": [
-        "More from the same studio — Rfrct"
-      ],
-      "lede": "Rfrct is a browser tool for distorting type and building audio-reactive visuals — made for events, VJs, and anyone who just wants to make something cool or tear a design apart. Bend letters through glass, push them through waves, stack multiple files and see how weird you can get. Currently in development.",
-      "bullets": null,
-      "cta": {
-        "label": "Request preview",
-        "href": "mailto:hello@rfrct.app?subject=Rfrct%20early%20access"
-      }
+      "projects": [
+        {
+          "id": "orby-marketing-in-progress-rfrct",
+          "eyebrow": "In progress",
+          "title": "Rfrct — Distort type and visuals in the browser",
+          "titleLines": [
+            "Rfrct — Distort type and visuals in the browser"
+          ],
+          "lede": "Rfrct is a browser tool for distorting type and building audio-reactive visuals — made for events, VJs, and anyone who just wants to make something cool or tear a design apart. Bend letters through glass, push them through waves, stack multiple files and see how weird you can get. Currently in development.",
+          "layout": "media-right",
+          "cta": {
+            "label": "Request preview",
+            "href": "mailto:hello@rfrct.app?subject=Rfrct%20early%20access"
+          }
+        },
+        {
+          "id": "orby-marketing-in-progress-quicktrace",
+          "eyebrow": "In progress",
+          "title": "QuickTrace — Apply HUD elements to your footage",
+          "titleLines": [
+            "QuickTrace — Apply HUD elements to your footage"
+          ],
+          "lede": "QuickTrace is an After Effects plugin that applies motion-reactive surveillance HUD elements to any footage — boxes, rings, and connectors that light up wherever movement hits. Drop it on a layer, scrub, and dial in that sci-fi tracking look.",
+          "layout": "media-left",
+          "cta": {
+            "label": "Request preview",
+            "href": "mailto:orby-admin@proton.me?subject=QuickTrace%20early%20access"
+          }
+        }
+      ]
     }
   ],
   "studioOnly": {

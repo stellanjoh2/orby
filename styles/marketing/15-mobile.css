@@ -80,12 +80,18 @@ html.mobile-landing .orby-marketing__in-progress-panel {
   contain-intrinsic-size: none !important;
 }
 
-/* Desktop marketing partials still ship 100dvh — keep in-progress on stable svh. */
-html.mobile-landing .orby-marketing__in-progress-panel,
-html.mobile-landing .orby-marketing__section--in-progress {
+/* Panel can fill a viewport; stacked projects use feature gap (not 100svh each). */
+html.mobile-landing .orby-marketing__in-progress-panel {
   min-height: 100svh;
   height: auto;
   max-height: none;
+}
+
+html.mobile-landing .orby-marketing__section--in-progress {
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  padding-bottom: var(--orby-marketing-gap-big);
 }
 
 html.mobile-landing .orby-marketing-scroll-cue {
@@ -996,7 +1002,9 @@ html.mobile-landing .orby-marketing__in-progress-reveal {
 }
 
 html.mobile-landing .orby-marketing__in-progress-panel {
-  padding-top: max(0px, env(safe-area-inset-top, 0px));
+  padding-top: calc(
+    max(0px, env(safe-area-inset-top, 0px)) + var(--orby-marketing-gap-big)
+  );
 }
 
 /* ── CTA — full-width lime band, content-height ── */

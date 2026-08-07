@@ -9,7 +9,7 @@
 .orby-marketing__section--in-progress {
   overflow-x: clip;
   overflow-y: visible;
-  padding: 0;
+  /* Bottom seam set in 10-in-progress.css (matches --orby-marketing-gap-big). */
 }
 
 /* Turntable intro → first feature: keep original section pad, not the 192px big gap */

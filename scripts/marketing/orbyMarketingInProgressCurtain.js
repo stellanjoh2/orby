@@ -9,8 +9,10 @@ import { prefersReducedMotion } from '../ui/modalReveal.js';
  */
 export function initInProgressCurtainReveal(root) {
   const stage = root?.querySelector('[data-orby-marketing-in-progress-reveal]');
-  const section = stage?.querySelector('.orby-marketing__section--in-progress');
-  if (!stage || !section) return () => {};
+  const sections = stage
+    ? [...stage.querySelectorAll('.orby-marketing__section--in-progress')]
+    : [];
+  if (!stage || !sections.length) return () => {};
 
   if (prefersReducedMotion()) {
     stage.classList.add('is-revealed');
@@ -22,16 +24,22 @@ export function initInProgressCurtainReveal(root) {
     return () => stage.classList.remove('is-revealed');
   }
 
+  const visible = new Set();
   const observer = new IntersectionObserver(
-    ([entry]) => {
-      stage.classList.toggle('is-revealed', entry.isIntersecting);
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) visible.add(entry.target);
+        else visible.delete(entry.target);
+      }
+      stage.classList.toggle('is-revealed', visible.size > 0);
     },
     { root: null, rootMargin: '0px', threshold: 0.12 },
   );
-  observer.observe(section);
+  sections.forEach((section) => observer.observe(section));
 
   return () => {
     observer.disconnect();
+    visible.clear();
     stage.classList.remove('is-revealed');
   };
 }
