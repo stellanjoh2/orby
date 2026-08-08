@@ -397,17 +397,17 @@
           }
         },
         {
-          "id": "orby-marketing-in-progress-quicktrace",
+          "id": "orby-marketing-in-progress-gridlock",
           "eyebrow": "In progress",
-          "title": "QuickTrace — Apply HUD elements to your footage",
+          "title": "Gridlock — Apply HUD elements to your footage",
           "titleLines": [
-            "QuickTrace — Apply HUD elements to your footage"
+            "Gridlock — Apply HUD elements to your footage"
           ],
-          "lede": "QuickTrace is an After Effects plugin that applies motion-reactive surveillance HUD elements to any footage — boxes, rings, and connectors that light up wherever movement hits. Drop it on a layer, scrub, and dial in that sci-fi tracking look.",
+          "lede": "Gridlock is an After Effects plugin that applies motion-reactive surveillance HUD elements to any footage — boxes, rings, and connectors that light up wherever movement hits. Drop it on a layer, scrub, and dial in that sci-fi tracking look.",
           "layout": "media-left",
           "cta": {
             "label": "Request preview",
-            "href": "mailto:orby-admin@proton.me?subject=QuickTrace%20early%20access"
+            "href": "mailto:orby-admin@proton.me?subject=Gridlock%20early%20access"
           }
         }
       ]
