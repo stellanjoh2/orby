@@ -91,7 +91,7 @@
     --orby-intro-scale-right: 1;
     --orby-intro-right-nudge: calc(350px - 500px * var(--orby-cta-ultra-ramp));
     --orby-cta-hummingbird-offset-x: calc(100px * var(--orby-ultra-wide-factor));
-    --orby-cta-hummingbird-offset-y: calc(200px * var(--orby-ultra-wide-factor));
+    --orby-cta-hummingbird-offset-y: calc(300px * var(--orby-ultra-wide-factor));
     --orby-cta-asset-max-h: min(
       100dvh,
       calc(

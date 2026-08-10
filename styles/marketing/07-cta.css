@@ -23,7 +23,7 @@
   --orby-intro-right-nudge: clamp(100px, 26vw, 350px);
   --orby-cta-hummingbird-offset-x: 100px;
   /* Positive = up; applied via top (not transform calc — avoids dropped transform). */
-  --orby-cta-hummingbird-offset-y: 200px;
+  --orby-cta-hummingbird-offset-y: 300px;
   --orby-intro-scale-right: min(1, calc(88dvh / 1041));
   --orby-cta-asset-max-h: min(88dvh, 1150px);
 }
@@ -41,14 +41,14 @@
   --orby-intro-edge-inset: clamp(0.5rem, 14vw, 6rem);
   --orby-intro-right-nudge: clamp(100px, 26vw, 350px);
   --orby-cta-asset-max-h: min(88dvh, 1150px);
-  --orby-cta-hummingbird-offset-y: 200px;
+  --orby-cta-hummingbird-offset-y: 300px;
 }
 
-/* Right — intro-asset-right-cta.png (hummingbird, mirrored for CTA); 200px up @ 2560 */
+/* Right — intro-asset-right-cta.png (hummingbird, mirrored for CTA); 300px up @ 2560 */
 .orby-marketing__section--cta .orby-marketing__intro-asset--right {
   position: absolute;
   z-index: 3;
-  top: calc(50% - var(--orby-cta-hummingbird-offset-y, 200px));
+  top: calc(50% - var(--orby-cta-hummingbird-offset-y, 300px));
   bottom: auto;
   right: calc(
     var(--orby-intro-edge-inset) - var(--orby-intro-right-nudge, 350px) +
@@ -429,7 +429,7 @@
       calc(350px * var(--orby-cta-narrow-scale))
     );
     --orby-cta-hummingbird-offset-x: calc(100px * var(--orby-cta-narrow-scale));
-    --orby-cta-hummingbird-offset-y: calc(200px * var(--orby-cta-narrow-scale));
+    --orby-cta-hummingbird-offset-y: calc(300px * var(--orby-cta-narrow-scale));
     --orby-cta-asset-shift-x: calc(8% * var(--orby-cta-narrow-scale));
     --orby-intro-scale-right: min(
       1,
