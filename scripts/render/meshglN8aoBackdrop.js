@@ -7,6 +7,24 @@
 /** Raw beauty depth at or above this is treated as sky (cleared far plane). */
 export const N8AO_SKY_DEPTH_THRESHOLD = 0.9995;
 
+/**
+ * Beauty depth closer than glass disc depth minus this bias → mesh AO wins.
+ * Must match beauty depth encoding (MeshDepthMaterial), not a color-channel proxy.
+ */
+export const N8AO_GLASS_DEPTH_BIAS = 0.00002;
+
+/**
+ * @param {number} glassDisc 0 or 1
+ * @param {number} beautyDepth
+ * @param {number} glassDepth
+ * @returns {number} 0 = mesh AO, 1 = glass composite
+ */
+export function resolveGlassCompositeWeight(glassDisc, beautyDepth, glassDepth) {
+  if (!glassDisc) return 0;
+  if (beautyDepth < glassDepth - N8AO_GLASS_DEPTH_BIAS) return 0;
+  return 1;
+}
+
 /** Reflective studio surfaces — glass mask (R) + RenderPass plate in composite. */
 export const N8AO_EXCLUDED_MESH_USER_DATA_KEYS = ['meshglBaseGlassReflector'];
 
@@ -317,6 +335,7 @@ export function withN8aoExcludedMeshRenderHooksPaused(scene, fn) {
  * @param {[number, number, number] | null} [beautyRgb]
  * @param {number} [glassAoFloor]
  * @param {number} [catcherMask] G channel (≥0.5 = HDRI AO catcher)
+ * @param {number} [glassDepth] B channel — disc depth at pixel (defaults to rawDepth)
  * @returns {[number, number, number]}
  */
 export function compositeAoWithBackdrop(
@@ -328,9 +347,11 @@ export function compositeAoWithBackdrop(
   beautyRgb = null,
   glassAoFloor = 0.2,
   catcherMask = 0,
+  glassDepth = rawDepth,
 ) {
   const geometry = rawDepth < threshold ? 1 : 0;
-  const glass = glassMask >= 0.5 ? 1 : 0;
+  const glassDisc = glassMask >= 0.5 ? 1 : 0;
+  const glassWeight = resolveGlassCompositeWeight(glassDisc, rawDepth, glassDepth);
   const catcher = catcherMask >= 0.5 ? 1 : 0;
   const luma = (rgb) => rgb[0] * 0.299 + rgb[1] * 0.587 + rgb[2] * 0.114;
 
@@ -342,14 +363,15 @@ export function compositeAoWithBackdrop(
     backdropRgb[2] * (1 - aoWeight) + aoRgb[2] * aoWeight,
   ];
 
-  if (glass === 1 && beautyRgb) {
+  if (glassWeight > 0 && beautyRgb) {
     const beautyLum = Math.max(luma(beautyRgb), 0.05);
     const aoLum = luma(aoRgb);
     const aoFactor = Math.min(1, Math.max(glassAoFloor, aoLum / beautyLum));
     const overlay = backdropRgb.map((backdrop, i) =>
       Math.max(0, backdrop - beautyRgb[i]),
     );
-    rgb = beautyRgb.map((b, i) => b * aoFactor + overlay[i]);
+    const glassRgb = beautyRgb.map((b, i) => b * aoFactor + overlay[i]);
+    rgb = rgb.map((g, i) => g * (1 - glassWeight) + glassRgb[i] * glassWeight);
   }
 
   return rgb;

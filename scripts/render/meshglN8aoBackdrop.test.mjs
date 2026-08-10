@@ -11,11 +11,13 @@ import {
   N8AO_CATCHER_MESH_USER_DATA_KEYS,
   N8AO_DEPTH_IGNORED_USER_DATA_KEYS,
   N8AO_EXCLUDED_MESH_USER_DATA_KEYS,
+  N8AO_GLASS_DEPTH_BIAS,
   N8AO_GUARDED_SOURCE_FILES,
   N8AO_SKY_DEPTH_THRESHOLD,
   compositeAoWithBackdrop,
   isN8aoCatcherMesh,
   isN8aoDepthIgnoredMesh,
+  resolveGlassCompositeWeight,
 } from './meshglN8aoBackdrop.js';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -57,8 +59,53 @@ describe('N8AO backdrop composite math', () => {
     const beauty = [0.8, 0.75, 0.7];
     const ao = [0.4, 0.375, 0.35];
     assert.deepEqual(
-      compositeAoWithBackdrop(backdrop, ao, 0.42, N8AO_SKY_DEPTH_THRESHOLD, 1, beauty),
+      compositeAoWithBackdrop(
+        backdrop,
+        ao,
+        0.42,
+        N8AO_SKY_DEPTH_THRESHOLD,
+        1,
+        beauty,
+        0.2,
+        0,
+        0.42,
+      ),
       [0.4, 0.375, 0.35],
+    );
+  });
+
+  it('keeps full mesh AO where the foot occludes the glass disc silhouette', () => {
+    const backdrop = [0.8, 0.75, 0.7];
+    const beauty = [0.8, 0.75, 0.7];
+    const ao = [0.2, 0.15, 0.1];
+    const meshDepth = 0.3;
+    const glassDepth = 0.5;
+    assert.equal(resolveGlassCompositeWeight(1, meshDepth, glassDepth), 0);
+    assert.deepEqual(
+      compositeAoWithBackdrop(
+        backdrop,
+        ao,
+        meshDepth,
+        N8AO_SKY_DEPTH_THRESHOLD,
+        1,
+        beauty,
+        0.2,
+        0,
+        glassDepth,
+      ),
+      ao,
+    );
+  });
+
+  it('uses glass composite only when beauty depth matches the disc plane', () => {
+    const backdrop = [0.8, 0.75, 0.7];
+    const beauty = [0.8, 0.75, 0.7];
+    const ao = [0.2, 0.15, 0.1];
+    const glassDepth = 0.42;
+    assert.equal(resolveGlassCompositeWeight(1, glassDepth, glassDepth), 1);
+    assert.equal(
+      resolveGlassCompositeWeight(1, glassDepth - N8AO_GLASS_DEPTH_BIAS * 2, glassDepth),
+      0,
     );
   });
 
@@ -152,6 +199,10 @@ describe('N8AO backdrop composite math', () => {
     assert.match(shader, /aoLum \/ beautyLum/);
     assert.match(shader, /geometry \* \(1\.0 - catcher\)/);
     assert.match(shader, /maskSample\.g/);
+    assert.match(shader, /uniform highp sampler2D tGlassDepth;/);
+    assert.match(shader, /glassDepthBias/);
+    assert.match(shader, /meshInFront/);
+    assert.match(shader, /glassDisc \* \(1\.0 - meshInFront\)/);
   });
 });
 
@@ -212,6 +263,10 @@ describe('N8AO + HDRI source invariants', () => {
     assert.match(pass, /_aoResultRT/);
     assert.match(pass, /invalidateViewCache/);
     assert.match(pass, /needsN8aoViewRecompute/);
+    assert.match(pass, /_createGlassMaskRenderTarget/);
+    assert.match(pass, /_glassSilhouetteMaterial/);
+    assert.match(pass, /tGlassDepth\.value/);
+    assert.match(pass, /glassDepthBias\.value/);
     assert.doesNotMatch(pass, /withN8aoExcludedMeshesHidden/);
     assert.match(pass, /tBeauty\.value/);
     assert.match(pass, /_restoreBackdropPass\.render\(renderer, readBuffer, writeBuffer\)/);

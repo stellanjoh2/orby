@@ -12,10 +12,13 @@ export const N8aoBackdropRestoreShader = {
     tBeauty: { value: null },
     tSceneDepth: { value: null },
     tGlassMask: { value: null },
+    tGlassDepth: { value: null },
     /** Raw depth below this is treated as geometry (not cleared sky). */
     skyDepthThreshold: { value: 0.9995 },
     /** Min glass darkening factor — scales with AO intensity; never crushes to literal black. */
     glassAoFloor: { value: 0.2 },
+    /** Mesh wins over glass composite when beautyDepth < glassDepth - bias. */
+    glassDepthBias: { value: 0.00002 },
   },
   vertexShader: CopyShader.vertexShader,
   fragmentShader: /* glsl */ `
@@ -23,16 +26,22 @@ export const N8aoBackdropRestoreShader = {
     uniform sampler2D tBackdrop;
     uniform sampler2D tBeauty;
     uniform highp sampler2D tSceneDepth;
+    uniform highp sampler2D tGlassDepth;
     uniform sampler2D tGlassMask;
     uniform float skyDepthThreshold;
     uniform float glassAoFloor;
+    uniform float glassDepthBias;
     varying vec2 vUv;
 
     void main() {
       float depth = texture2D(tSceneDepth, vUv).r;
       float geometry = 1.0 - step(skyDepthThreshold, depth);
       vec4 maskSample = texture2D(tGlassMask, vUv);
-      float glass = step(0.5, maskSample.r);
+      float glassDisc = step(0.5, maskSample.r);
+      float glassDepth = texture2D(tGlassDepth, vUv).r;
+      // Mesh at or in front of the glass plane keeps full N8AO — never blend reflection composite on feet.
+      float meshInFront = step(depth, glassDepth - glassDepthBias);
+      float glassWeight = glassDisc * (1.0 - meshInFront);
       float catcher = step(0.5, maskSample.g);
       vec3 ao = texture2D(tAO, vUv).rgb;
       vec3 backdrop = texture2D(tBackdrop, vUv).rgb;
@@ -51,7 +60,7 @@ export const N8aoBackdropRestoreShader = {
       vec3 overlay = max(backdrop - beauty, vec3(0.0));
       vec3 glassColor = beauty * aoFactor + overlay;
 
-      gl_FragColor = vec4(mix(geomMix, glassColor, glass), 1.0);
+      gl_FragColor = vec4(mix(geomMix, glassColor, glassWeight), 1.0);
     }
   `,
 };
