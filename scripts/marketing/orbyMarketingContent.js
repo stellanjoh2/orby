@@ -581,7 +581,7 @@ export const MARKETING_SECTIONS = [
     projects: [
       {
         id: 'orby-marketing-in-progress-rfrct',
-        eyebrow: 'In progress',
+        eyebrow: 'Other projects',
         title: 'Rfrct — Distort type and visuals in the browser',
         lede:
           'Rfrct is a free browser tool for distorting type and building audio-reactive visuals — made for events, VJs, and anyone who just wants to make something cool or tear a design apart. Bend letters through glass, push them through waves, stack multiple files and see how weird you can get. Currently in development.',
@@ -595,10 +595,10 @@ export const MARKETING_SECTIONS = [
       },
       {
         id: 'orby-marketing-in-progress-gridlock',
-        eyebrow: 'In progress',
+        eyebrow: 'Other projects',
         title: 'Gridlock — Apply HUD elements to your footage',
         lede:
-          'Gridlock is a free After Effects plugin that applies motion-reactive surveillance HUD elements to any footage — boxes, rings, and connectors that light up wherever movement hits. Drop it on a layer, scrub, and dial in that sci-fi tracking look.',
+          'Gridlock is a free After Effects plugin that applies motion-reactive surveillance HUD elements to any footage — boxes, rings, and connectors that light up wherever movement hits. Drop it on a layer, scrub, and dial in that sci-fi tracking look. Currently in development.',
         layout: 'media-left',
         videoSrc: './assets/marketing/Gridlock.mp4',
         imageAlt: 'Gridlock After Effects plugin — HUD elements on footage',

@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-08-07T15:16:10.993Z",
+    "generatedAt": "2026-08-13T08:06:54.153Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -384,12 +384,12 @@
       "projects": [
         {
           "id": "orby-marketing-in-progress-rfrct",
-          "eyebrow": "In progress",
+          "eyebrow": "Other projects",
           "title": "Rfrct — Distort type and visuals in the browser",
           "titleLines": [
             "Rfrct — Distort type and visuals in the browser"
           ],
-          "lede": "Rfrct is a browser tool for distorting type and building audio-reactive visuals — made for events, VJs, and anyone who just wants to make something cool or tear a design apart. Bend letters through glass, push them through waves, stack multiple files and see how weird you can get. Currently in development.",
+          "lede": "Rfrct is a free browser tool for distorting type and building audio-reactive visuals — made for events, VJs, and anyone who just wants to make something cool or tear a design apart. Bend letters through glass, push them through waves, stack multiple files and see how weird you can get. Currently in development.",
           "layout": "media-right",
           "cta": {
             "label": "Request preview",
@@ -398,12 +398,12 @@
         },
         {
           "id": "orby-marketing-in-progress-gridlock",
-          "eyebrow": "In progress",
+          "eyebrow": "Other projects",
           "title": "Gridlock — Apply HUD elements to your footage",
           "titleLines": [
             "Gridlock — Apply HUD elements to your footage"
           ],
-          "lede": "Gridlock is an After Effects plugin that applies motion-reactive surveillance HUD elements to any footage — boxes, rings, and connectors that light up wherever movement hits. Drop it on a layer, scrub, and dial in that sci-fi tracking look.",
+          "lede": "Gridlock is a free After Effects plugin that applies motion-reactive surveillance HUD elements to any footage — boxes, rings, and connectors that light up wherever movement hits. Drop it on a layer, scrub, and dial in that sci-fi tracking look. Currently in development.",
           "layout": "media-left",
           "cta": {
             "label": "Request preview",
