@@ -47,7 +47,7 @@ export function creativeGbaCellSize(_patternScale) {
 export const GBA_BG_HEX = parseInt(APP_BACKGROUND.slice(1), 16);
 
 /**
- * Mesh prepass — vivid GBA cel form before 15-bit high-color snap.
+ * Mesh prepass — keep import albedo, cel-shade form only. 15-bit snap is the color pass.
  */
 export const GBA_PREP_FRAGMENT = /* glsl */ `
 varying vec3 vWorldNormal;
@@ -93,25 +93,8 @@ void main() {
   form = pow(clamp(form, 0.0, 1.0), 1.04);
   form = smoothstep(0.03, 0.93, form);
 
-  const vec3 GBA_LUMA = vec3(0.2126, 0.7152, 0.0722);
-  float srcLum = max(dot(baseCol, GBA_LUMA), 1e-4);
-  float shadeLum = mix(0.44, 1.0, form);
-  vec3 lit = baseCol * (shadeLum / srcLum);
-
-  float lum = dot(lit, GBA_LUMA);
-  lit = mix(vec3(lum), lit, 1.12);
-
-  float shadowAmt = pow(1.0 - form, 1.28);
-  vec3 n = baseCol / srcLum;
-  vec3 shadowAccent = vec3(0.22, 0.12, 0.45); // indigo — GBA LCD shadow cast
-  if (n.r > n.g + 0.1 && n.r > n.b + 0.08) {
-    shadowAccent = vec3(0.45, 0.08, 0.18);
-  } else if (n.g > n.r + 0.06) {
-    shadowAccent = vec3(0.06, 0.28, 0.12);
-  } else if (n.b > n.r + 0.06) {
-    shadowAccent = vec3(0.08, 0.14, 0.42);
-  }
-  lit = mix(lit, mix(lit, shadowAccent, 0.46), shadowAmt);
+  float shade = mix(0.55, 1.0, form);
+  vec3 lit = baseCol * shade;
 
   gl_FragColor = vec4(clamp(lit, vec3(0.0), vec3(1.0)), uOpacity * mapAlpha);
 }
@@ -127,8 +110,6 @@ uniform vec3 uBgColor;
 ${FLAT_POST_MASTER_HUE_GLSL}
 ${FLAT_POST_EMPTY_CELL_GLSL}
 
-const vec3 GBA_LUMA = vec3(0.2126, 0.7152, 0.0722);
-
 float gbaBayer2(ivec2 cell) {
   int x = int(mod(float(cell.x), 2.0));
   int y = int(mod(float(cell.y), 2.0));
@@ -140,7 +121,8 @@ float gbaBayer2(ivec2 cell) {
 }
 
 vec3 snapGba15Bit(vec3 rgb, float dither) {
-  float lum = dot(rgb, GBA_LUMA);
+  float peak = max(rgb.r, max(rgb.g, rgb.b));
+  rgb *= 1.0 / max(peak, 1.0);
   float lumBias = (dither - 0.5) * 0.08;
   vec3 biased = rgb + vec3(lumBias);
   return clamp(floor(biased * 31.0 + 0.5) / 31.0, 0.0, 1.0);

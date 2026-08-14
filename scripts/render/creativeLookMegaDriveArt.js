@@ -47,7 +47,7 @@ export function creativeMegaDriveCellSize(_patternScale) {
 export const MD_BG_HEX = parseInt(APP_BACKGROUND.slice(1), 16);
 
 /**
- * Mesh prepass — colormap × cel form before 9-bit VDP snap.
+ * Mesh prepass — keep import albedo, cel-shade form only. 9-bit VDP snap is the color pass.
  */
 export const MD_PREP_FRAGMENT = /* glsl */ `
 varying vec3 vWorldNormal;
@@ -93,20 +93,8 @@ void main() {
   form = pow(clamp(form, 0.0, 1.0), 1.06);
   form = smoothstep(0.03, 0.92, form);
 
-  const vec3 MD_LUMA = vec3(0.2126, 0.7152, 0.0722);
-  float srcLum = max(dot(baseCol, MD_LUMA), 1e-4);
-  float shadeLum = mix(0.42, 1.0, form);
-  vec3 lit = baseCol * (shadeLum / srcLum);
-
-  float shadowAmt = pow(1.0 - form, 1.3);
-  vec3 n = baseCol / srcLum;
-  vec3 shadowAccent = vec3(0.0, 0.0, 0.533); // deep blue — common MD shadow
-  if (n.r > n.g + 0.1 && n.r > n.b + 0.08) {
-    shadowAccent = vec3(0.573, 0.0, 0.0); // #920000-ish maroon
-  } else if (n.g > n.r + 0.06) {
-    shadowAccent = vec3(0.0, 0.286, 0.0); // forest
-  }
-  lit = mix(lit, mix(lit, shadowAccent, 0.48), shadowAmt);
+  float shade = mix(0.55, 1.0, form);
+  vec3 lit = baseCol * shade;
 
   gl_FragColor = vec4(clamp(lit, vec3(0.0), vec3(1.0)), uOpacity * mapAlpha);
 }
@@ -122,8 +110,6 @@ uniform vec3 uBgColor;
 ${FLAT_POST_MASTER_HUE_GLSL}
 ${FLAT_POST_EMPTY_CELL_GLSL}
 
-const vec3 MD_LUMA = vec3(0.2126, 0.7152, 0.0722);
-
 float mdBayer2(ivec2 cell) {
   int x = int(mod(float(cell.x), 2.0));
   int y = int(mod(float(cell.y), 2.0));
@@ -135,7 +121,8 @@ float mdBayer2(ivec2 cell) {
 }
 
 vec3 snapMegaDriveChannel(vec3 rgb, float dither) {
-  float lum = dot(rgb, MD_LUMA);
+  float peak = max(rgb.r, max(rgb.g, rgb.b));
+  rgb *= 1.0 / max(peak, 1.0);
   float lumBias = (dither - 0.5) * 0.09;
   vec3 biased = rgb + vec3(lumBias);
   return clamp(floor(biased * 7.0 + 0.5) / 7.0, 0.0, 1.0);

@@ -3846,7 +3846,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         ...gradeUniforms,
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: flatPostPrepFrag(GBA_PREP_FRAGMENT),
+      fragmentShader: lookFragNoShadow(GBA_PREP_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'gba-pixel';
@@ -3894,7 +3894,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         ...gradeUniforms,
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: flatPostPrepFrag(MD_PREP_FRAGMENT),
+      fragmentShader: lookFragNoShadow(MD_PREP_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'megadrive-pixel';
