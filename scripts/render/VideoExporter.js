@@ -55,6 +55,10 @@ import { isTransparentCropToAsset } from './imageExportFraming.js';
 import { repairInteractiveViewportAfterCapture } from './capture/repairInteractiveViewportAfterCapture.js';
 import { coerceRendererLogicalSize } from './drawingBufferSize.js';
 import { getSupportedVideoRecorderFormat } from './videoRecorderFormat.js';
+import {
+  hideStudioGroundGridInScene,
+  restoreStudioGroundGridInScene,
+} from './transformGizmoLayers.js';
 
 export class VideoExporter {
   constructor({
@@ -938,6 +942,7 @@ export class VideoExporter {
       composer: this.composer,
       width: targetWidth,
       height: targetHeight,
+      getGroundGrid: () => this.imageExporter?.composerLifecycle?.getGroundGrid?.(),
       renderFrame: () => {
         this._renderComposerFrameForCapture({
           transparent: true,
@@ -988,8 +993,16 @@ export class VideoExporter {
     this.scene.background = null;
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.setClearAlpha(0);
+    const groundGridSnapshot = hideStudioGroundGridInScene(
+      this.scene,
+      this.imageExporter?.composerLifecycle?.getGroundGrid?.(),
+    );
 
-    return { originalBackgroundSphereVisible, originalPassClearAlpha };
+    return {
+      originalBackgroundSphereVisible,
+      originalPassClearAlpha,
+      groundGridSnapshot,
+    };
   }
 
   _restoreTransparentFrameSetup(snapshot) {
@@ -1001,6 +1014,7 @@ export class VideoExporter {
     for (const entry of snapshot.originalPassClearAlpha || []) {
       if (entry?.pass) entry.pass.clearAlpha = entry.clearAlpha;
     }
+    restoreStudioGroundGridInScene(snapshot.groundGridSnapshot);
   }
 
   _applyVideoExportSize(width, height, aspectRatio = '16:9') {

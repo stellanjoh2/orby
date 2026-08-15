@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import { getComposerOutputRenderTarget } from '../composerOutputBuffer.js';
+import {
+  hideStudioGroundGridInScene,
+  restoreStudioGroundGridInScene,
+} from '../transformGizmoLayers.js';
 
 /**
  * Hide HDRI backdrop + zero clear alpha for transparent raster capture.
@@ -11,6 +15,7 @@ import { getComposerOutputRenderTarget } from '../composerOutputBuffer.js';
  *   composer?: import('three/examples/jsm/postprocessing/EffectComposer.js').EffectComposer,
  *   backgroundController?: import('../BackgroundController.js').BackgroundController,
  *   postPipeline?: { renderPass?: { clearAlpha?: number } },
+ *   getGroundGrid?: () => import('three').Object3D | null | undefined,
  * }} deps
  */
 export function applyTransparentCaptureSetup(deps) {
@@ -52,6 +57,10 @@ export function applyTransparentCaptureSetup(deps) {
   const originalClearAlpha = renderer.getClearAlpha();
   renderer.setClearColor(0x000000, 0);
   renderer.setClearAlpha(0);
+  const groundGridSnapshot = hideStudioGroundGridInScene(
+    scene,
+    deps.getGroundGrid?.(),
+  );
 
   return {
     passClearAlphas,
@@ -61,6 +70,7 @@ export function applyTransparentCaptureSetup(deps) {
     originalBackground,
     originalClearColor,
     originalClearAlpha,
+    groundGridSnapshot,
   };
 }
 
@@ -94,6 +104,7 @@ export function restoreTransparentCaptureSetup(deps, snapshot) {
   scene.background = snapshot.originalBackground;
   renderer.setClearColor(snapshot.originalClearColor, snapshot.originalClearAlpha);
   renderer.setClearAlpha(snapshot.originalClearAlpha);
+  restoreStudioGroundGridInScene(snapshot.groundGridSnapshot);
   // Re-bind solid/gradient/image from controller — do not leave a stale transparent clear.
   backgroundController?.refreshAppearance?.();
 }
@@ -254,6 +265,7 @@ export function extractCroppedTransparentCanvas(topDownRgba, fullW, fullH, cropI
  *   height: number,
  *   renderFrame: () => void,
  *   finishGpu?: () => void,
+ *   getGroundGrid?: () => import('three').Object3D | null | undefined,
  * }} deps
  * @returns {Uint8ClampedArray}
  */
@@ -267,100 +279,106 @@ export function readTransparentMergedTopDownRgba(deps) {
     height,
     renderFrame,
     finishGpu,
+    getGroundGrid,
   } = deps;
 
-  if (!composer) {
-    renderFrame();
-    finishGpu?.();
-    const canvas = renderer.domElement;
-    const ctx = canvas.getContext('2d');
-    const imageData = ctx.getImageData(0, 0, width, height);
-    return new Uint8ClampedArray(imageData.data);
-  }
-
-  const previousRenderToScreen = composer.renderToScreen;
-  composer.renderToScreen = false;
-  let postPixels = null;
+  const groundGridSnapshot = hideStudioGroundGridInScene(scene, getGroundGrid?.());
   try {
-    renderFrame();
-    finishGpu?.();
+    if (!composer) {
+      renderFrame();
+      finishGpu?.();
+      const canvas = renderer.domElement;
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, width, height);
+      return new Uint8ClampedArray(imageData.data);
+    }
 
-    const byteRT = new THREE.WebGLRenderTarget(width, height, {
+    const previousRenderToScreen = composer.renderToScreen;
+    composer.renderToScreen = false;
+    let postPixels = null;
+    try {
+      renderFrame();
+      finishGpu?.();
+
+      const byteRT = new THREE.WebGLRenderTarget(width, height, {
+        type: THREE.UnsignedByteType,
+        format: THREE.RGBAFormat,
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+        depthBuffer: false,
+        stencilBuffer: false,
+      });
+      try {
+        postPixels = new Uint8Array(width * height * 4);
+        composer.copyPass.render(
+          renderer,
+          byteRT,
+          getComposerOutputRenderTarget(composer),
+          0,
+          false,
+        );
+        renderer.readRenderTargetPixels(byteRT, 0, 0, width, height, postPixels);
+      } finally {
+        byteRT.dispose();
+      }
+    } finally {
+      composer.renderToScreen = previousRenderToScreen;
+    }
+
+    const alphaRT = new THREE.WebGLRenderTarget(width, height, {
       type: THREE.UnsignedByteType,
       format: THREE.RGBAFormat,
       minFilter: THREE.LinearFilter,
       magFilter: THREE.LinearFilter,
-      depthBuffer: false,
+      depthBuffer: true,
       stencilBuffer: false,
+      samples: renderer.capabilities?.isWebGL2 ? 4 : 0,
     });
+
+    let alphaPixels = null;
     try {
-      postPixels = new Uint8Array(width * height * 4);
-      composer.copyPass.render(
-        renderer,
-        byteRT,
-        getComposerOutputRenderTarget(composer),
-        0,
-        false,
-      );
-      renderer.readRenderTargetPixels(byteRT, 0, 0, width, height, postPixels);
+      renderer.setRenderTarget(alphaRT);
+      renderer.setClearColor(0x000000, 0);
+      renderer.setClearAlpha(0);
+      renderer.clear();
+      renderer.render(scene, camera);
+      renderer.setRenderTarget(null);
+
+      alphaPixels = new Uint8Array(width * height * 4);
+      renderer.readRenderTargetPixels(alphaRT, 0, 0, width, height, alphaPixels);
     } finally {
-      byteRT.dispose();
+      alphaRT.dispose();
     }
-  } finally {
-    composer.renderToScreen = previousRenderToScreen;
-  }
 
-  const alphaRT = new THREE.WebGLRenderTarget(width, height, {
-    type: THREE.UnsignedByteType,
-    format: THREE.RGBAFormat,
-    minFilter: THREE.LinearFilter,
-    magFilter: THREE.LinearFilter,
-    depthBuffer: true,
-    stencilBuffer: false,
-    samples: renderer.capabilities?.isWebGL2 ? 4 : 0,
-  });
-
-  let alphaPixels = null;
-  try {
-    renderer.setRenderTarget(alphaRT);
-    renderer.setClearColor(0x000000, 0);
-    renderer.setClearAlpha(0);
-    renderer.clear();
-    renderer.render(scene, camera);
-    renderer.setRenderTarget(null);
-
-    alphaPixels = new Uint8Array(width * height * 4);
-    renderer.readRenderTargetPixels(alphaRT, 0, 0, width, height, alphaPixels);
-  } finally {
-    alphaRT.dispose();
-  }
-
-  const merged = new Uint8ClampedArray(width * height * 4);
-  for (let i = 0; i < merged.length; i += 4) {
-    const a = alphaPixels[i + 3];
-    merged[i + 3] = a;
-    if (a === 0) {
-      merged[i] = 0;
-      merged[i + 1] = 0;
-      merged[i + 2] = 0;
-    } else if (a < 255) {
-      merged[i] = alphaPixels[i];
-      merged[i + 1] = alphaPixels[i + 1];
-      merged[i + 2] = alphaPixels[i + 2];
-    } else {
-      merged[i] = postPixels[i];
-      merged[i + 1] = postPixels[i + 1];
-      merged[i + 2] = postPixels[i + 2];
+    const merged = new Uint8ClampedArray(width * height * 4);
+    for (let i = 0; i < merged.length; i += 4) {
+      const a = alphaPixels[i + 3];
+      merged[i + 3] = a;
+      if (a === 0) {
+        merged[i] = 0;
+        merged[i + 1] = 0;
+        merged[i + 2] = 0;
+      } else if (a < 255) {
+        merged[i] = alphaPixels[i];
+        merged[i + 1] = alphaPixels[i + 1];
+        merged[i + 2] = alphaPixels[i + 2];
+      } else {
+        merged[i] = postPixels[i];
+        merged[i + 1] = postPixels[i + 1];
+        merged[i + 2] = postPixels[i + 2];
+      }
     }
-  }
 
-  const topDown = new Uint8ClampedArray(width * height * 4);
-  const rowStride = width * 4;
-  for (let y = 0; y < height; y += 1) {
-    const srcRow = (height - 1 - y) * rowStride;
-    const dstRow = y * rowStride;
-    topDown.set(merged.subarray(srcRow, srcRow + rowStride), dstRow);
-  }
+    const topDown = new Uint8ClampedArray(width * height * 4);
+    const rowStride = width * 4;
+    for (let y = 0; y < height; y += 1) {
+      const srcRow = (height - 1 - y) * rowStride;
+      const dstRow = y * rowStride;
+      topDown.set(merged.subarray(srcRow, srcRow + rowStride), dstRow);
+    }
 
-  return topDown;
+    return topDown;
+  } finally {
+    restoreStudioGroundGridInScene(groundGridSnapshot);
+  }
 }

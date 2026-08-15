@@ -935,6 +935,8 @@ export class GroundController {
     this.grid = new LineSegments2(geometry, material);
     this.grid.frustumCulled = false;
     this.grid.userData.skipBokehDepth = true;
+    // Match STUDIO_GROUND_GRID_USERDATA_KEY — exporters hide this helper without toggling the UI.
+    this.grid.userData.orbyStudioGroundGrid = true;
     this.gridMaterials = [material];
     this._syncGridMaterialDepthState();
     this._syncGridLineMaterial();

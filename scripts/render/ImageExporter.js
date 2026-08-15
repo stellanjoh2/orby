@@ -881,6 +881,7 @@ export class ImageExporter {
           composer: this.composer,
           backgroundController: this.backgroundController,
           postPipeline: this.postPipeline,
+          getGroundGrid: () => this.composerLifecycle?.getGroundGrid?.(),
         };
         const transparentSnap = applyTransparentCaptureSetup(transparentDeps);
         try {
@@ -892,6 +893,7 @@ export class ImageExporter {
             composer: this.composer,
             width: synced.width,
             height: synced.height,
+            getGroundGrid: () => this.composerLifecycle?.getGroundGrid?.(),
             renderFrame: () => session.renderFrame({ transparent: true }),
             finishGpu: () => {
               if (gl && typeof gl.finish === 'function') {
@@ -937,6 +939,7 @@ export class ImageExporter {
         composer: this.composer,
         backgroundController: this.backgroundController,
         postPipeline: this.postPipeline,
+        getGroundGrid: () => this.composerLifecycle?.getGroundGrid?.(),
       };
       const transparentSnap = applyTransparentCaptureSetup(transparentDeps);
       try {
@@ -948,6 +951,7 @@ export class ImageExporter {
           composer: this.composer,
           width,
           height,
+          getGroundGrid: () => this.composerLifecycle?.getGroundGrid?.(),
           renderFrame: () => session.renderFrame({ transparent: true }),
           finishGpu: () => {
             if (gl && typeof gl.finish === 'function') {
@@ -1158,6 +1162,7 @@ export class ImageExporter {
           composer: this.composer,
           width: exportW,
           height: exportH,
+          getGroundGrid: () => this.composerLifecycle?.getGroundGrid?.(),
           renderFrame: () => {
             if (this.composer) {
               this.composer.render();
@@ -1446,6 +1451,8 @@ export class ImageExporter {
       originalHdriBackgroundEnabled: this.backgroundController?.getHdriBackgroundEnabled() ?? false,
       originalAutoClear: this.renderer.autoClear,
       originalEnvironment: this.scene.environment,
+      groundGrid: this.composerLifecycle?.getGroundGrid?.() ?? null,
+      originalGroundGridVisible: this.composerLifecycle?.getGroundGrid?.()?.visible ?? null,
     };
   }
 
@@ -1471,6 +1478,8 @@ export class ImageExporter {
     this.renderer.setClearColor(0x000000, 0); // Black with 0 alpha = transparent
     this.renderer.setClearAlpha(0);
     this.scene.background = null;
+    const grid = this.composerLifecycle?.getGroundGrid?.();
+    if (grid) grid.visible = false;
   }
 
   /**
@@ -2196,6 +2205,9 @@ export class ImageExporter {
     const backgroundSphere = this.backgroundController?.getBackgroundSphere();
     if (backgroundSphere) {
       backgroundSphere.visible = state.originalBackgroundSphereVisible;
+    }
+    if (state.groundGrid && state.originalGroundGridVisible !== null) {
+      state.groundGrid.visible = state.originalGroundGridVisible;
     }
     this.renderer.setPixelRatio(state.originalPixelRatio);
     this.renderer.setSize(state.originalSize.x, state.originalSize.y, false);

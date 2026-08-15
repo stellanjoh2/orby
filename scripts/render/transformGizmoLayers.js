@@ -65,6 +65,9 @@ export function renderTransformGizmoOverlay({ renderer, camera, gizmos }) {
   resetRendererFullViewport(renderer);
 }
 
+/** Marks the studio ground grid so exporters can hide it without toggling the viewport control. */
+export const STUDIO_GROUND_GRID_USERDATA_KEY = 'orbyStudioGroundGrid';
+
 /**
  * Studio ground grid is a helper — composite after post so AO, bloom, DoF, grading, etc. stay off it.
  * @param {import('three').Object3D | null | undefined} grid
@@ -72,6 +75,45 @@ export function renderTransformGizmoOverlay({ renderer, camera, gizmos }) {
  */
 export function shouldOverlayGroundGrid(grid) {
   return grid?.visible === true;
+}
+
+/**
+ * Hide tagged studio ground-grid objects for the exporter. Viewport toggle is left as-is.
+ * Pass `extraGrid` (GroundController.grid) so untagged live instances are still omitted.
+ * @param {import('three').Object3D | null | undefined} scene
+ * @param {import('three').Object3D | null | undefined} [extraGrid]
+ * @returns {Array<{ object: import('three').Object3D, visible: boolean }>}
+ */
+export function hideStudioGroundGridInScene(scene, extraGrid) {
+  /** @type {Array<{ object: import('three').Object3D, visible: boolean }>} */
+  const snapshot = [];
+  const hide = (obj) => {
+    if (!obj || obj.visible === false) return;
+    snapshot.push({ object: obj, visible: true });
+    obj.visible = false;
+  };
+  const visit = (obj) => {
+    if (!obj) return;
+    if (obj.userData?.[STUDIO_GROUND_GRID_USERDATA_KEY] === true) {
+      hide(obj);
+    }
+    const children = obj.children;
+    if (!children?.length) return;
+    for (const child of children) visit(child);
+  };
+  visit(scene);
+  hide(extraGrid);
+  return snapshot;
+}
+
+/**
+ * @param {Array<{ object: import('three').Object3D, visible: boolean }> | null | undefined} snapshot
+ */
+export function restoreStudioGroundGridInScene(snapshot) {
+  if (!snapshot?.length) return;
+  for (const { object, visible } of snapshot) {
+    object.visible = visible;
+  }
 }
 
 /**

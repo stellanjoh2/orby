@@ -184,13 +184,14 @@ export class ComposerLifecycle {
   /**
    * Shared composer render — live viewport, PNG export, and video capture use the same pass
    * sequence so Shader Lab viewport bloom cannot drift from export.
-   * @param {{ transparent?: boolean, beforeRender?: () => void, overlayTransformGizmos?: boolean, overlayLightIndicators?: boolean }} [opts]
+   * @param {{ transparent?: boolean, beforeRender?: () => void, overlayTransformGizmos?: boolean, overlayLightIndicators?: boolean, overlayGroundGrid?: boolean }} [opts]
    */
   _runComposerWithCreativeLookPrep({
     transparent = false,
     beforeRender,
     overlayTransformGizmos = false,
     overlayLightIndicators = false,
+    overlayGroundGrid = false,
   } = {}) {
     if (!this.composer) return;
     beforeRender?.();
@@ -239,8 +240,9 @@ export class ComposerLifecycle {
         hideLightIndicatorOverlaysForPass(lightIndicatorRoots);
     }
     const grid = this.getGroundGrid?.();
-    const overlayGrid = shouldOverlayGroundGrid(grid);
-    if (overlayGrid) {
+    const gridVisible = shouldOverlayGroundGrid(grid);
+    const overlayGrid = overlayGroundGrid && gridVisible;
+    if (gridVisible) {
       this._gridPassVisibility = hideGroundGridForPass(grid);
     }
     if (watercolour) {
@@ -314,7 +316,7 @@ export class ComposerLifecycle {
         this._gizmoPassVisibility = null;
         this._renderTransformGizmoOverlay();
       }
-      if (this._gridPassVisibility) {
+      if (overlayGrid && this._gridPassVisibility) {
         restoreGroundGridFromPass(this._gridPassVisibility);
         this._gridPassVisibility = null;
         this._renderGroundGridOverlay();
@@ -395,7 +397,7 @@ export class ComposerLifecycle {
 
   /** Ground grid on top of post stack — crisp helper lines, not AO / bloom / DoF / grading. */
   _renderGroundGridOverlay() {
-    // Offline capture composites grid on the byte readback RT (captureReadback.js).
+    // Export skips overlayGroundGrid; keep this off the composer RT when renderToScreen is false.
     if (this.composer?.renderToScreen === false) return;
     const wireframeMeshes = this.getWireframeOverlayMeshes?.() ?? [];
     // X-ray wireframe (only-visible-faces off): skip scene depth so the grid is not punched out
@@ -439,6 +441,7 @@ export class ComposerLifecycle {
       beforeRender: () => this.beforeComposerRender?.(),
       overlayTransformGizmos: true,
       overlayLightIndicators: true,
+      overlayGroundGrid: true,
     });
   }
 
@@ -451,8 +454,9 @@ export class ComposerLifecycle {
   }
 
   /**
-   * PNG export — same pass sequence as the live loop; resets viewport before and after render
-   * so passes that shrink the GL viewport (bloom, N8AO, podium blur) cannot leave dead edge pixels.
+   * PNG export — same pass sequence as the live loop except studio helpers (gizmos, lights, grid).
+   * Resets viewport before and after render so passes that shrink the GL viewport (bloom, N8AO,
+   * podium blur) cannot leave dead edge pixels.
    * @param {{ transparent?: boolean }} [opts] — skip opaque background clear when exporting alpha.
    */
   renderComposerPassForExport({ transparent = false } = {}) {

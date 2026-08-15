@@ -38,14 +38,13 @@ export function resolveCaptureGridLineWidthPx(
 }
 
 /**
- * Export readback composites the grid after the post stack (same as the live viewport overlay).
+ * Studio ground grid is a viewport helper — never bake it into PNG/JPEG/video export.
  * @param {{
  *   getGroundGrid?: () => import('three').Object3D | null | undefined,
- * }} deps
+ * }} [_deps]
  */
-export function shouldCompositeGroundGridForCapture(deps) {
-  const grid = deps.getGroundGrid?.();
-  return grid?.visible === true;
+export function shouldCompositeGroundGridForCapture(_deps) {
+  return false;
 }
 
 /** @deprecated Use {@link shouldCompositeGroundGridForCapture} */
@@ -64,14 +63,12 @@ export function shouldCompositeWireframeForCapture(deps) {
 }
 
 /**
- * Byte readback RT needs a depth buffer when grid or visible-faces wireframe will depth-test.
+ * Byte readback RT needs a depth buffer when visible-faces wireframe will depth-test.
  * @param {{
- *   getGroundGrid?: () => import('three').Object3D | null | undefined,
  *   getWireframeOverlayMeshes?: () => import('three').Mesh[] | null | undefined,
  * }} deps
  */
 export function captureByteTargetNeedsDepthBuffer(deps) {
-  if (shouldCompositeGroundGridForCapture(deps)) return true;
   return wireframeMeshesWantDepthTest(deps.getWireframeOverlayMeshes?.());
 }
 

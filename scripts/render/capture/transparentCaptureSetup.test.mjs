@@ -23,7 +23,12 @@ function mockDeps({ renderPassClearAlpha = 1 } = {}) {
     setClearColor() {},
     setClearAlpha() {},
   };
-  const scene = { background: null };
+  const grid = {
+    visible: true,
+    userData: { orbyStudioGroundGrid: true },
+    children: [],
+  };
+  const scene = { background: null, children: [grid] };
   let refreshed = 0;
   const backgroundController = {
     getBackgroundSphere: () => null,
@@ -34,6 +39,7 @@ function mockDeps({ renderPassClearAlpha = 1 } = {}) {
   return {
     deps: { renderer, scene, composer, postPipeline, backgroundController },
     renderPass,
+    grid,
     get refreshed() {
       return refreshed;
     },
@@ -50,6 +56,25 @@ describe('transparent capture setup', () => {
     restoreTransparentCaptureSetup(ctx.deps, snap);
     assert.equal(ctx.renderPass.clearAlpha, 1);
     assert.ok(ctx.refreshed >= 1, 'refreshAppearance after restore');
+  });
+
+  it('hides the studio ground grid for transparent capture and restores it', () => {
+    const ctx = mockDeps();
+    assert.equal(ctx.grid.visible, true);
+    const snap = applyTransparentCaptureSetup(ctx.deps);
+    assert.equal(ctx.grid.visible, false);
+    restoreTransparentCaptureSetup(ctx.deps, snap);
+    assert.equal(ctx.grid.visible, true);
+  });
+
+  it('hides an untagged live grid passed via getGroundGrid', () => {
+    const ctx = mockDeps();
+    const liveGrid = { visible: true, userData: {}, children: [] };
+    ctx.deps.getGroundGrid = () => liveGrid;
+    const snap = applyTransparentCaptureSetup(ctx.deps);
+    assert.equal(liveGrid.visible, false);
+    restoreTransparentCaptureSetup(ctx.deps, snap);
+    assert.equal(liveGrid.visible, true);
   });
 
   it('restores null RenderPass clearAlpha when that was the original', () => {

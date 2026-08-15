@@ -17,7 +17,6 @@ import {
   resolvePostStackOverlayRenderTarget,
 } from '../composerOutputBuffer.js';
 import {
-  compositeAsciiGroundGridOnByteTarget,
   resolveCaptureGridLineWidthPx,
   resolveCaptureWireframeLineWidthPx,
   shouldCompositeGroundGridForCapture,
@@ -95,12 +94,12 @@ describe('ground grid capture composite', () => {
     assert.equal(resolveCaptureGridLineWidthPx(1, 2, 2, 2, 2), 4);
   });
 
-  it('requires visible grid regardless of post preset', () => {
+  it('never composites the studio ground grid into export', () => {
     assert.equal(
       shouldCompositeGroundGridForCapture({
         getGroundGrid: () => ({ visible: true }),
       }),
-      true,
+      false,
     );
     assert.equal(
       shouldCompositeGroundGridForCapture({

@@ -7,9 +7,7 @@ import { ensureExportCapturePixelRatio } from './forceExportCaptureFramebuffer.j
 import { pinRenderTargetPhysicalViewport } from '../resetRendererFullViewport.js';
 import {
   captureByteTargetNeedsDepthBuffer,
-  compositeAsciiGroundGridOnByteTarget,
   compositeWireframeOnByteTarget,
-  shouldCompositeGroundGridForCapture,
   shouldCompositeWireframeForCapture,
 } from './capturePostStackOverlays.js';
 
@@ -135,10 +133,6 @@ function readComposerPixelsOnce(deps, requestedW, requestedH) {
   const outputRT = getComposerOutputRenderTarget(composer);
   const readW = Math.max(1, outputRT?.width ?? requestedW);
   const readH = Math.max(1, outputRT?.height ?? requestedH);
-  const compositeGrid =
-    deps.camera
-    && deps.scene
-    && shouldCompositeGroundGridForCapture(deps);
   const compositeWireframe =
     deps.camera
     && deps.scene
@@ -150,16 +144,13 @@ function readComposerPixelsOnce(deps, requestedW, requestedH) {
     format: THREE.RGBAFormat,
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
-    // Depth needed so grid / visible-faces wireframe can depth-test against scene meshes.
+    // Depth needed so visible-faces wireframe can depth-test against scene meshes.
     depthBuffer: needsDepthBuffer,
     stencilBuffer: false,
   });
 
   try {
     composer.copyPass.render(renderer, byteRT, outputRT, 0, false);
-    if (compositeGrid) {
-      compositeAsciiGroundGridOnByteTarget(deps, byteRT);
-    }
     if (compositeWireframe) {
       compositeWireframeOnByteTarget(deps, byteRT);
     }
