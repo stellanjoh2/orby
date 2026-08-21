@@ -271,6 +271,18 @@
                       <button type="button" data-bg-image-fit="contain" class="export-option-btn">Contain</button>
                       <button type="button" data-bg-image-fit="fill" class="export-option-btn">Fill</button>
                     </div>
+                    <label class="slider-line" id="backgroundImageBlurRow" hidden>
+                      <span data-tooltip="Soften the background image">Blur</span>
+                      <input
+                        id="backgroundImageBlur"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value="0"
+                      />
+                      <span class="value" data-output="backgroundImageBlur">0.00</span>
+                    </label>
                   </div>
                 </div>
               </div>

@@ -82,6 +82,7 @@ export const SLIDER_DEFAULT_PATHS = {
   backgroundGradientAngle: 'backgroundGradient.angle',
   backgroundGradientCenterX: 'backgroundGradient.centerX',
   backgroundGradientCenterY: 'backgroundGradient.centerY',
+  backgroundImageBlur: 'backgroundImage.blur',
   cameraFov: 'camera.fov',
   fisheyeHorizontalFOV: 'fisheye.horizontalFOVDeg',
   fisheyeStrength: 'fisheye.strength',

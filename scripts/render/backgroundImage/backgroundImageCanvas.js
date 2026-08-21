@@ -65,6 +65,31 @@ export function downscaleImageSource(image, maxEdge = MAX_BACKGROUND_IMAGE_SOURC
 }
 
 /**
+ * ImageBitmap ignores UNPACK_FLIP_Y — draw to a canvas so Three.js flipY works
+ * and the photo matches HTML/CSS orientation.
+ * @param {CanvasImageSource | null | undefined} image
+ * @returns {CanvasImageSource | null}
+ */
+export function toTextureFriendlyImageSource(image) {
+  if (!image) return null;
+  if (typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap) {
+    const { width, height } = getImageSourceSize(image);
+    if (!width || !height) {
+      image.close?.();
+      return null;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.drawImage(image, 0, 0, width, height);
+    image.close?.();
+    return canvas;
+  }
+  return image;
+}
+
+/**
  * Draw a user image into a viewport-sized canvas (object-fit semantics).
  *
  * @param {CanvasRenderingContext2D} ctx
@@ -152,7 +177,7 @@ export async function loadBackgroundImageElement(
         bitmap.close?.();
         bitmap = resized;
       }
-      return bitmap;
+      return toTextureFriendlyImageSource(bitmap);
     } catch {
       // Fall through to HTMLImageElement path.
     }

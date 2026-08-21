@@ -247,6 +247,7 @@ export class UIManager {
       this.eventBus,
       this.stateStore,
       this,
+      this.helpers,
     );
     this.lensControls = new LensControls(this.eventBus, this.stateStore, this, this.helpers);
     this.viewPresetsControls = new ViewPresetsControls(this.eventBus, this.stateStore, this);
@@ -744,6 +745,7 @@ export class UIManager {
       backgroundImageEnabled: q('#backgroundImageEnabled'),
       backgroundImageFileInput: q('#backgroundImageFileInput'),
       backgroundImageSelectBtn: q('#backgroundImageSelectBtn'),
+      backgroundImageBlur: q('#backgroundImageBlur'),
       cameraFov: q('#cameraFov'),
       lensSensor: q('#lensSensor'),
       isometricEnabled: q('#isometricEnabled'),

@@ -6,7 +6,8 @@
   white-space: nowrap;
 }
 
-#backgroundImageFitPanel[hidden] {
+#backgroundImageFitPanel[hidden],
+#backgroundImageBlurRow[hidden] {
   display: none !important;
 }
 

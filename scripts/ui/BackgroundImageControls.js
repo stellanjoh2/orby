@@ -19,17 +19,20 @@ export class BackgroundImageControls {
    * @param {import('../EventBus.js').EventBus} eventBus
    * @param {import('../StateStore.js').StateStore} stateStore
    * @param {import('../UIManager.js').UIManager} ui
+   * @param {import('./UIHelpers.js').UIHelpers} [helpers]
    */
-  constructor(eventBus, stateStore, ui) {
+  constructor(eventBus, stateStore, ui, helpers) {
     this.eventBus = eventBus;
     this.stateStore = stateStore;
     this.ui = ui;
+    this.helpers = helpers;
     this.fitButtons = [];
     this._mounted = false;
   }
 
   bind() {
     this.fitPanelEl = document.getElementById('backgroundImageFitPanel');
+    this.blurRowEl = document.getElementById('backgroundImageBlurRow');
     this.fitButtons = Array.from(document.querySelectorAll('[data-bg-image-fit]'));
     if (!this.ui.inputs.backgroundImageEnabled) return;
 
@@ -68,6 +71,12 @@ export class BackgroundImageControls {
         this._commit({ fit });
       });
     });
+
+    this.ui.inputs.backgroundImageBlur?.addEventListener('input', (event) => {
+      const blur = parseFloat(event.target.value);
+      this.helpers?.updateValueLabel?.('backgroundImageBlur', blur, 'decimal');
+      this._commit({ blur });
+    });
   }
 
   _commit(patch) {
@@ -99,8 +108,12 @@ export class BackgroundImageControls {
       selectBtn.title = hasAsset ? fileName : '';
     }
 
+    const detailVisible = imageOn && hasAsset;
     if (this.fitPanelEl) {
-      this.fitPanelEl.hidden = !imageOn || !hasAsset;
+      this.fitPanelEl.hidden = !detailVisible;
+    }
+    if (this.blurRowEl) {
+      this.blurRowEl.hidden = !detailVisible;
     }
 
     this.fitButtons.forEach((button) => {
@@ -108,9 +121,15 @@ export class BackgroundImageControls {
       button.classList.toggle('active', active);
     });
 
+    if (this.ui.inputs.backgroundImageBlur) {
+      this.helpers?.syncRangeFromState?.(this.ui.inputs.backgroundImageBlur, imageConfig.blur);
+      this.helpers?.updateValueLabel?.('backgroundImageBlur', imageConfig.blur, 'decimal');
+    }
+
     const detailDisabled = !imageOn || !fallbackActive;
     this.ui.setControlDisabled('backgroundImageEnabled', !fallbackActive);
     this.ui.setControlDisabled('backgroundImageSelectBtn', detailDisabled);
+    this.ui.setControlDisabled('backgroundImageBlur', detailDisabled || !hasAsset);
     this.fitButtons.forEach((button) => {
       button.disabled = detailDisabled || !hasAsset;
       button.classList.toggle('is-disabled', detailDisabled || !hasAsset);

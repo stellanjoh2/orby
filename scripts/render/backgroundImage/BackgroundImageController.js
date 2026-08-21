@@ -1,13 +1,17 @@
 import * as THREE from 'three';
-import { loadBackgroundImageElement } from './backgroundImageCanvas.js';
 import {
+  getImageSourceSize,
+  loadBackgroundImageElement,
+  toTextureFriendlyImageSource,
+} from './backgroundImageCanvas.js';
+import {
+  backgroundImageBlurRadiusPx,
   DEFAULT_BACKGROUND_IMAGE,
   getBackgroundImageFallbackColor,
   MAX_BACKGROUND_IMAGE_SOURCE_EDGE,
   normalizeBackgroundImage,
 } from './backgroundImageDefaults.js';
 import { syncBackgroundImageTextureFit } from './backgroundImageFit.js';
-import { getImageSourceSize } from './backgroundImageCanvas.js';
 
 export { loadBackgroundImageElement };
 
@@ -15,7 +19,7 @@ const _clearColor = new THREE.Color();
 
 /**
  * GPU texture background when the HDRI backdrop is hidden.
- * No canvas compositing — static image stays on the GPU after upload.
+ * Fit is UV-only; blur is a one-shot canvas filter of the source (not per-frame).
  */
 export class BackgroundImageController {
   /**
@@ -35,7 +39,12 @@ export class BackgroundImageController {
     this._source = null;
     /** @type {THREE.Texture | null} */
     this._texture = null;
+    /** @type {HTMLCanvasElement | null} */
+    this._blurCanvas = null;
+    /** @type {CanvasRenderingContext2D | null} */
+    this._blurCtx = null;
     this._fitCacheKey = '';
+    this._blurCacheKey = '';
     this._lastClearHex = '';
   }
 
@@ -46,11 +55,9 @@ export class BackgroundImageController {
     texture.generateMipmaps = false;
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
-    // ImageBitmap uploads don't follow UNPACK_FLIP_Y like HTMLImage/canvas —
-    // match THREE.ImageBitmapLoader (flipY false) or images appear upside down.
-    texture.flipY = !(
-      typeof ImageBitmap !== 'undefined' && this._source instanceof ImageBitmap
-    );
+    // Canvas / HTMLImage honor UNPACK_FLIP_Y. ImageBitmap is converted first because
+    // Three.js r167 ignores flipY for ImageBitmap (images would appear upside down).
+    texture.flipY = true;
   }
 
   /** @param {Partial<import('./backgroundImageDefaults.js').BackgroundImageConfig>} patch @param {{ skipRefresh?: boolean }} [options] */
@@ -66,6 +73,9 @@ export class BackgroundImageController {
     if (prev.fit !== this.config.fit || prev.enabled !== this.config.enabled) {
       this._fitCacheKey = '';
     }
+    if (prev.blur !== this.config.blur) {
+      this._blurCacheKey = '';
+    }
     if (!skipRefresh) {
       this.backgroundController?.refreshAppearance?.();
     }
@@ -78,8 +88,9 @@ export class BackgroundImageController {
 
   /** @param {CanvasImageSource | null} image @param {{ skipRefresh?: boolean }} [options] */
   setImage(image, { skipRefresh = false } = {}) {
-    this._source = image;
+    this._source = toTextureFriendlyImageSource(image);
     this._fitCacheKey = '';
+    this._blurCacheKey = '';
     if (this._texture) {
       this._texture.dispose();
       this._texture = null;
@@ -120,6 +131,10 @@ export class BackgroundImageController {
     if (this.scene.background !== texture) {
       this.scene.background = texture;
     }
+    // Three r167 treats backgroundBlurriness as env-map PMREM — must stay 0 for 2D images.
+    if ('backgroundBlurriness' in this.scene) {
+      this.scene.backgroundBlurriness = 0;
+    }
 
     const clearHex = this.getFallbackColor();
     if (this._lastClearHex !== clearHex) {
@@ -137,13 +152,58 @@ export class BackgroundImageController {
 
   /** @returns {THREE.Texture | null} */
   _ensureTexture() {
-    if (!this._source) return null;
+    const display = this._getDisplaySource();
+    if (!display) return null;
     if (!this._texture) {
-      this._texture = new THREE.Texture(this._source);
+      this._texture = new THREE.Texture(display);
       this._configureTexture(this._texture);
+      this._texture.needsUpdate = true;
+      return this._texture;
+    }
+    if (this._texture.image !== display) {
+      this._texture.image = display;
       this._texture.needsUpdate = true;
     }
     return this._texture;
+  }
+
+  /** @returns {CanvasImageSource | null} */
+  _getDisplaySource() {
+    if (!this._source) return null;
+    const blur = this.config.blur;
+    const { width: iw, height: ih } = getImageSourceSize(this._source);
+    const cacheKey = `${blur}:${iw}x${ih}`;
+    if (blur <= 0) {
+      this._blurCacheKey = cacheKey;
+      return this._source;
+    }
+    if (cacheKey === this._blurCacheKey && this._blurCanvas) {
+      return this._blurCanvas;
+    }
+
+    const radius = backgroundImageBlurRadiusPx(blur, iw, ih);
+    if (!iw || !ih || radius <= 0) {
+      this._blurCacheKey = cacheKey;
+      return this._source;
+    }
+
+    if (!this._blurCanvas) {
+      this._blurCanvas = document.createElement('canvas');
+      this._blurCtx = this._blurCanvas.getContext('2d', { alpha: false });
+    }
+    if (this._blurCanvas.width !== iw || this._blurCanvas.height !== ih) {
+      this._blurCanvas.width = iw;
+      this._blurCanvas.height = ih;
+    }
+    const ctx = this._blurCtx;
+    ctx.filter = `blur(${radius}px)`;
+    ctx.drawImage(this._source, 0, 0, iw, ih);
+    ctx.filter = 'none';
+    this._blurCacheKey = cacheKey;
+    if (this._texture) {
+      this._texture.needsUpdate = true;
+    }
+    return this._blurCanvas;
   }
 
   _syncFit(texture) {
@@ -184,6 +244,8 @@ export class BackgroundImageController {
     this._texture?.dispose?.();
     this._texture = null;
     this._source = null;
+    this._blurCanvas = null;
+    this._blurCtx = null;
   }
 }
 

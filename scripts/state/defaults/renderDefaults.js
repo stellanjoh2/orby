@@ -72,6 +72,7 @@ export function createRenderDefaults() {
     backgroundImage: {
       enabled: false,
       fit: 'cover',
+      blur: 0,
       asset: null,
     },
     lookFilterPreset: 'none',
