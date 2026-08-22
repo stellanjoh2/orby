@@ -429,6 +429,30 @@ export function creativeLookTransmissionTuningFromState(creativeLook) {
   };
 }
 
+/**
+ * Import KHR volumes (amber / resin): cull inward shell faces and add extra
+ * transmission roughness so geometry seen through the glass softens.
+ * Does not change material.side — the shader discard handles inner facets.
+ *
+ * @param {import('three').MeshPhysicalMaterial} material
+ * @param {{ refractionBlur?: number, solidMesh?: boolean }} [opts]
+ */
+export function applyImportPhysicalTransmissionMeshPatch(material, opts = {}) {
+  if (!material?.isMeshPhysicalMaterial) return;
+  const blur = THREE.MathUtils.clamp(Number(opts.refractionBlur) || 0, 0, 1);
+  const solidMesh = opts.solidMesh !== false;
+  const viewBlur = THREE.MathUtils.lerp(0.08, 0.64, blur);
+  const solidMinRoughness = solidMesh
+    ? THREE.MathUtils.lerp(0.14, 0.55, blur)
+    : 0;
+  attachCreativeLookTransmissionShaderPatch(material, {
+    viewBlur,
+    solidMeshGlass: solidMesh,
+    solidMinRoughness,
+    dispersionOn: false,
+  });
+}
+
 /** True when Shader Lab glass transmission controls should show in the shelf. */
 export function creativeLookTransmissionControlsVisible(state) {
   if (!state?.creativeLook?.enabled) return false;

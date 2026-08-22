@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {
   applyCreativeLookPhysicalTransmissionTuning,
+  applyImportPhysicalTransmissionMeshPatch,
   creativeLookTransmissionControlsVisible,
   creativeLookTransmissionTuningFromState,
   isPhysicalTransmissionCreativeLookPreset,
@@ -82,6 +83,14 @@ vec4 transmitted = getIBLVolumeRefraction(
   assert.match(patched, /uOrbyTransmissionViewBlur/);
   assert.match(patched, /uOrbySolidMeshMinTransRoughness/);
   assert.match(patched, /orbyShellFacing/);
+});
+
+test('applyImportPhysicalTransmissionMeshPatch enables solid-mesh transmission blur', () => {
+  const mat = new THREE.MeshPhysicalMaterial({ roughness: 0.08, transmission: 1 });
+  applyImportPhysicalTransmissionMeshPatch(mat, { refractionBlur: 0.4, solidMesh: true });
+  assert.equal(mat.userData.orbyTransmissionPatch?.solidMeshGlass, true);
+  assert.ok(mat.userData.orbyTransmissionPatch?.viewBlur > 0.08);
+  assert.ok(mat.userData.orbyTransmissionPatch?.solidMinRoughness > 0.14);
 });
 
 test('applyCreativeLookPhysicalTransmissionTuning uses roughness + forceSinglePass on r167', () => {
