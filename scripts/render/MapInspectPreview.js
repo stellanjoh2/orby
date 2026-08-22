@@ -150,7 +150,6 @@ export class MapInspectPreview {
         side,
         transparent,
         opacity,
-        ...deformOpts,
       });
     }
 
@@ -160,7 +159,6 @@ export class MapInspectPreview {
       side,
       transparent,
       opacity,
-      ...deformOpts,
     });
   }
 }

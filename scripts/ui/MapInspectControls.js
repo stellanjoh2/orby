@@ -169,6 +169,7 @@ export class MapInspectControls {
     });
     this.eventBus.on('scene:model-cleared', () => this.reset());
     this.eventBus.on('mesh:shading', () => this._unpinPreview());
+    this.eventBus.on('mesh:material-color-override', () => this._unpinPreview());
   }
 
   /**

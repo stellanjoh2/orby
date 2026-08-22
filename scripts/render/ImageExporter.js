@@ -2155,7 +2155,6 @@ export class ImageExporter {
         silMat = new THREE.MeshBasicMaterial({
           color: 0x000000,
           side: THREE.DoubleSide,
-          skinning: !!child.isSkinnedMesh,
           depthWrite: true,
         });
         silhouetteMaterialCache.set(key, silMat);

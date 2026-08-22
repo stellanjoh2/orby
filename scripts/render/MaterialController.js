@@ -75,6 +75,8 @@ import {
 import {
   applyHeuristicPhysicalGlassPresentation,
   applyImportPhysicalGlassPresentation,
+  isImportGlassProtectedFromObjectSliders,
+  resolveImportGlassBaseline,
   resolvePhysicalGlassUserParams,
 } from './importPhysicalGlassPresentation.js';
 import {
@@ -139,6 +141,7 @@ import {
   readSpecGlossImportMetadata,
 } from './gltfSpecGlossConversion.js';
 import { resolveMaterialBrightnessMetalnessClamp } from './materialBrightnessMetalnessClamp.js';
+import { resolveColorOverrideAlbedoSlots } from './materialColorOverrideAlbedo.js';
 import {
   applyBlendMapAlphaCutout,
   clearBlendMapAlphaProfileCache,
@@ -684,6 +687,22 @@ export class MaterialController {
     );
   }
 
+  /**
+   * Named windows + KHR/physical glass. Object brightness / metal / roughness
+   * overwrite refraction blur and darken authored amber if these are not skipped.
+   */
+  _isProtectedGlassMaterial(m) {
+    return isImportGlassProtectedFromObjectSliders(m);
+  }
+
+  _isProtectedGlassMesh(mesh, m) {
+    if (this.isWindowMesh(mesh)) return true;
+    const source = m ?? mesh?.material;
+    if (!source) return false;
+    const mats = Array.isArray(source) ? source : [source];
+    return mats.some((mat) => this._isProtectedGlassMaterial(mat));
+  }
+
   /** True when the loaded model uses KHR_materials_transmission (import baseline). */
   modelHasGltfTransmissionMaterials(object) {
     if (!object) return false;
@@ -809,7 +828,11 @@ export class MaterialController {
     const glassReflection = Number.isFinite(Number(rawRef))
       ? Math.min(4, Math.max(0, Number(rawRef)))
       : 2;
-    return { glassOpacity, glassBody, glassTintHex, glassReflection };
+    const rawBlur = adv?.glassRefractionBlur;
+    const glassRefractionBlur = Number.isFinite(Number(rawBlur))
+      ? Math.min(1, Math.max(0, Number(rawBlur)))
+      : 0.08;
+    return { glassOpacity, glassBody, glassTintHex, glassReflection, glassRefractionBlur };
   }
 
   /** Advanced → Physical glass transmission (KHR imports + heuristic windows). */
@@ -832,7 +855,10 @@ export class MaterialController {
       return this._applyImportGltfPhysicalGlassPresentation(m, opts);
     }
 
-    const b = m.userData?.orbyGltfImportBaseline;
+    const b = resolveImportGlassBaseline(
+      opts.baseline ?? m.userData?.orbyGltfImportBaseline,
+      opts.importBaseline,
+    );
     const glassOpacity = opts.glassOpacity ?? this._glassPresentationFromState().glassOpacity;
     const glassBody = opts.glassBody ?? this._glassPresentationFromState().glassBody;
     const glassTintHex = opts.glassTintHex ?? this._glassPresentationFromState().glassTintHex;
@@ -903,7 +929,10 @@ export class MaterialController {
       (src) => this._upgradeStandardMaterialToPhysical(src),
       params,
       {
-        baseline: m.userData?.orbyGltfImportBaseline ?? null,
+        baseline: resolveImportGlassBaseline(
+          opts.baseline ?? m.userData?.orbyGltfImportBaseline,
+          opts.importBaseline,
+        ),
         frontFacesOnly: this._physicalGlassFrontFacesOnly(),
       },
     );
@@ -1206,6 +1235,7 @@ export class MaterialController {
         mat.color.copy(adjustedColor);
         this._applyUserEmissiveOrRestoreImport(mat, origMat, adjustedColor, userEm, modelHasEmissive);
         this._syncTransparentFlagsFromImport(mat, origMat);
+        this._applyOverrideAlbedoOnMaterial(mat, origMat);
         mat.needsUpdate = true;
       };
 
@@ -1426,6 +1456,12 @@ export class MaterialController {
    */
   _applyShadedMetalRoughness(target, importMat) {
     if (!target) return;
+    if (
+      this._isProtectedGlassMaterial(target) ||
+      this._isProtectedGlassMaterial(importMat)
+    ) {
+      return;
+    }
     const globalM = Number.isFinite(this.materialSettings.metalness)
       ? this.materialSettings.metalness
       : IMPORT_MATERIAL_MR_MULTIPLIER;
@@ -1760,7 +1796,10 @@ export class MaterialController {
           this._materialHadImportTransmission(live) ||
           this._materialHasImportTransmission(live)
         ) {
-          this._assignImportGltfGlassPresentation(object, live, glass);
+          this._assignImportGltfGlassPresentation(object, live, {
+            ...glass,
+            importBaseline: imp?.userData?.orbyGltfImportBaseline,
+          });
         }
       }
     });
@@ -1806,7 +1845,10 @@ export class MaterialController {
               && (Number(live.transmission) > 1e-4 || !!live.transmissionMap));
         }
         if (drifted) {
-          this._assignImportGltfGlassPresentation(object, live, glass);
+          this._assignImportGltfGlassPresentation(object, live, {
+            ...glass,
+            importBaseline: imp?.userData?.orbyGltfImportBaseline,
+          });
         }
       }
     });
@@ -2232,7 +2274,7 @@ export class MaterialController {
     const glass = { glassTintHex, bodyDarken, bodyOpacity };
 
     this._forEachImportMeshMaterial(object, (mesh, m) => {
-      if (!this.isWindowMesh(mesh)) return;
+      if (!this.isWindowMesh(mesh) && !this._isProtectedGlassMaterial(m)) return;
       if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return;
 
       if (mode !== 'default') return;
@@ -2243,6 +2285,9 @@ export class MaterialController {
           glassOpacity,
           glassBody,
           glassTintHex,
+          glassRefractionBlur: Number.isFinite(Number(adv?.glassRefractionBlur))
+            ? Math.min(1, Math.max(0, Number(adv.glassRefractionBlur)))
+            : 0.08,
         });
         return;
       }
@@ -2610,11 +2655,8 @@ export class MaterialController {
    * @returns {THREE.MeshStandardMaterial|THREE.MeshPhysicalMaterial}
    */
   _promoteBasicToStandardForShaded(basicMat, modelHasEmissive) {
-    const baseColor = basicMat.color
-      ? basicMat.color.clone()
-      : new THREE.Color('#ffffff');
     const adjustedColor = this._diffuseColorWithBrightness(
-      baseColor,
+      this._resolveShadingDiffuseTintForShading(basicMat),
       undefined,
       undefined,
       basicMat,
@@ -2650,6 +2692,7 @@ export class MaterialController {
       this.materialSettings.emissive || 0.0,
       modelHasEmissive,
     );
+    this._applyOverrideAlbedoOnMaterial(standard, basicMat);
     standard.wireframe = false;
     standard.needsUpdate = true;
 
@@ -2675,13 +2718,12 @@ export class MaterialController {
     const modelHasEmissive = this._modelHasAnyEmissiveBaseline();
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
-      
-      const isGlass = this.isWindowMesh(child);
-      // Window meshes keep import glass until Shader Lab replaces them (opaque stylized presets).
-      if (isGlass && this._shaderLabBypassesGlassPresentation()) return;
-      
+
       const original = this.originalMaterials.get(child);
       if (!original) return;
+      const isGlass = this._isProtectedGlassMesh(child, original);
+      // Window / KHR glass keep import presentation until Shader Lab replaces them.
+      if (isGlass && this._shaderLabBypassesGlassPresentation()) return;
 
       const disposeIfTransient = () => {
         const material = child.material;
@@ -2787,6 +2829,7 @@ export class MaterialController {
             depthWrite: mat?.depthWrite !== false,
             side: mat?.side ?? THREE.FrontSide,
           });
+          this._applyOverrideAlbedoOnMaterial(basic, mat);
           
           // If original material had emissive, add it to the color for MeshBasicMaterial
           // (since MeshBasicMaterial doesn't have separate emissive, we blend it into color)
@@ -2822,6 +2865,9 @@ export class MaterialController {
             }
           }
           let cloned = mat.clone ? mat.clone() : mat;
+          if (cloned && mat?.userData?.orbyGltfImportBaseline) {
+            cloned.userData.orbyGltfImportBaseline = mat.userData.orbyGltfImportBaseline;
+          }
           this._syncTransparentFlagsFromImport(cloned, mat);
           if (mat?.userData?.orbyFbxSlotMaps) {
             cloned = this._finalizeFbxSlotShadedClone(cloned, mat);
@@ -2866,6 +2912,7 @@ export class MaterialController {
               cloned.color.copy(adjustedColor);
               this._applyShadedMetalRoughness(cloned, mat);
             }
+            this._applyOverrideAlbedoOnMaterial(cloned, mat);
             this._applyUserEmissiveOrRestoreImport(
               cloned,
               mat,
@@ -2905,7 +2952,7 @@ export class MaterialController {
         };
         
         // Check if this is a glass mesh (before we potentially replace the material)
-        const isGlass = this.isWindowMesh(child);
+        const isGlass = this._isProtectedGlassMesh(child, original);
         
         if (Array.isArray(original)) {
           const materials = original.map((mat) => createShadedMaterial(mat, isGlass));
@@ -4643,6 +4690,7 @@ export class MaterialController {
    */
   _softCapTexturedBrightnessAlbedo(color, importMat) {
     if (!color?.isColor || !importMat) return;
+    if (this._shouldUseMaterialColorOverride(importMat)) return;
     const hasAlbedo =
       !!importMat.map?.isTexture || !!importMat.userData?.orbyFbxSlotMaps;
     if (!hasAlbedo) return;
@@ -4737,7 +4785,7 @@ export class MaterialController {
     }
 
     const adjustedColor = this._diffuseColorWithBrightness(
-      this._importDiffuseTintForShading(importMat),
+      this._resolveShadingDiffuseTintForShading(importMat),
       undefined,
       undefined,
       importMat,
@@ -4753,6 +4801,7 @@ export class MaterialController {
           this._lastHdriBlurriness,
         );
     cloned.userData.orbyFbxSlotMaps = true;
+    this._applyOverrideAlbedoOnMaterial(cloned, importMat);
     cloned.needsUpdate = true;
     return cloned;
   }
@@ -4798,6 +4847,23 @@ export class MaterialController {
       return new THREE.Color(this.materialSettings.overrideColor ?? '#ffffff');
     }
     return this._importDiffuseTintForShading(importMat);
+  }
+
+  /**
+   * Drop opaque albedo when Override colour is on. Transparent / BLEND decals
+   * keep their map so they tint instead of becoming a solid slab.
+   * @param {import('three').Material | null | undefined} target
+   * @param {import('three').Material | null | undefined} importMat
+   */
+  _applyOverrideAlbedoOnMaterial(target, importMat) {
+    if (!target) return;
+    const slots = resolveColorOverrideAlbedoSlots(
+      importMat,
+      this._shouldUseMaterialColorOverride(importMat),
+    );
+    if ('map' in target) target.map = slots.map;
+    if ('alphaMap' in target) target.alphaMap = slots.alphaMap;
+    if ('vertexColors' in target) target.vertexColors = slots.vertexColors;
   }
 
   _diffuseColorWithBrightness(
@@ -4896,9 +4962,13 @@ export class MaterialController {
         const original = this.originalMaterials.get(child);
         const material = child.material;
         
-        // Skip glass materials - they should not be affected by brightness/metalness/roughness sliders
-        const isGlass = this.isWindowMesh(child);
-        if (isGlass) return;
+        // Skip glass / KHR transmission — brightness + Object roughness fight refraction blur.
+        if (
+          this._isProtectedGlassMesh(child, material) ||
+          this._isProtectedGlassMesh(child, original)
+        ) {
+          return;
+        }
         
         if (this.currentShading === 'clay' && this._isClayMesh(child)) {
           const patchClayMat = (mat) => {
@@ -4926,12 +4996,14 @@ export class MaterialController {
             material.forEach((mat, idx) => {
               if (mat?.userData?.orbyCreativeLook) return;
               if (mat && mat.isMeshBasicMaterial) {
+                const origMat = Array.isArray(original) ? original[idx] : original;
                 const adjustedColor = this._diffuseColorWithBrightness(
                   getOriginalColor(original, idx),
                   undefined,
                   0,
                 );
                 mat.color.copy(adjustedColor);
+                this._applyOverrideAlbedoOnMaterial(mat, origMat);
                 mat.needsUpdate = true;
               }
             });
@@ -4943,6 +5015,7 @@ export class MaterialController {
               0,
             );
             material.color.copy(adjustedColor);
+            this._applyOverrideAlbedoOnMaterial(material, original);
             material.needsUpdate = true;
           }
         } else if (
@@ -5015,6 +5088,7 @@ export class MaterialController {
                   modelHasEmissive,
                 );
                 this._syncTransparentFlagsFromImport(m, origMat);
+                this._applyOverrideAlbedoOnMaterial(m, origMat);
                 if (tSub > SUBSURFACE_EPS && m.isMeshPhysicalMaterial) {
                   delete m.userData.orbySubsurface;
                   this._applySubsurfacePhysicalParams(m, tSub);
@@ -5030,6 +5104,7 @@ export class MaterialController {
                   origMat,
                 );
                 mat.color.copy(adjustedColor);
+                this._applyOverrideAlbedoOnMaterial(mat, origMat);
                 mat.needsUpdate = true;
               }
             });
@@ -5084,6 +5159,7 @@ export class MaterialController {
               modelHasEmissive,
             );
             this._syncTransparentFlagsFromImport(mat, original);
+            this._applyOverrideAlbedoOnMaterial(mat, original);
             if (tSub > SUBSURFACE_EPS && mat.isMeshPhysicalMaterial) {
               delete mat.userData.orbySubsurface;
               this._applySubsurfacePhysicalParams(mat, tSub);
@@ -5101,6 +5177,7 @@ export class MaterialController {
               original,
             );
             material.color.copy(adjustedColor);
+            this._applyOverrideAlbedoOnMaterial(material, original);
             material.needsUpdate = true;
           }
         }
@@ -5407,12 +5484,10 @@ export class MaterialController {
     return material;
   }
 
-  _createWireframeBasicMaterial({ color, onlyVisibleFaces, thickness, opacity, skinning = true, morphTargets = true, pixelRatio = 1 }) {
+  _createWireframeBasicMaterial({ color, onlyVisibleFaces, thickness, opacity, pixelRatio = 1 }) {
     const material = new THREE.MeshBasicMaterial({
       color: new THREE.Color(color),
       wireframe: true,
-      skinning,
-      morphTargets,
       depthTest: onlyVisibleFaces,
       depthWrite: false,
       transparent: opacity < 1 || !onlyVisibleFaces,
@@ -5531,8 +5606,6 @@ export class MaterialController {
             onlyVisibleFaces,
             thickness,
             opacity,
-            skinning: skinned,
-            morphTargets: morph,
             pixelRatio: viewport.pixelRatio,
           });
 
@@ -5865,6 +5938,12 @@ export class MaterialController {
     const original = this.originalMaterials.get(child);
     if (!original) return false;
     const origMat = Array.isArray(original) ? original[matIndex] : original;
+    if (
+      this._isProtectedGlassMesh(child, material) ||
+      this._isProtectedGlassMaterial(origMat)
+    ) {
+      return false;
+    }
     const prevRoughness = material.roughness;
     if (origMat?.userData?.orbyFbxSlotMaps) {
       material.roughness = effectiveRoughnessWithHdriBlur(
