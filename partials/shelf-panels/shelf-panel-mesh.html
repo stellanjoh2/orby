@@ -236,7 +236,7 @@
                       id="materialColorOverrideToggleRow"
                       hidden
                     >
-                      <span data-tooltip="Replace diffuse tint — still multiplies albedo maps when present">Override colour</span>
+                      <span data-tooltip="Replace opaque albedo with a solid colour. Transparent / decal maps stay as a tint">Override colour</span>
                       <label class="effect-toggle">
                         <input type="checkbox" id="materialColorOverride" />
                         <span class="effect-indicator" aria-hidden="true"></span>
@@ -1039,13 +1039,24 @@
                       <span class="sr-only">Stabilize Layered Transparency</span>
                     </label>
                   </div>
-                  <details class="advanced-import-details">
-                    <summary>
-                      <span class="block-title-name">
-                        <span>Rare Fixes — Transmission &amp; Glass</span>
-                        <span class="dev-badge" data-tooltip="This feature is still under development" aria-hidden="true"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
-                      </span>
-                    </summary>
+                  <div class="slider-line slider-line--toggle-only">
+                    <span class="block-title-name">
+                      <span
+                        data-tooltip="Extra transmission and glass controls. Turn on to reveal Physical Glass, flip normals, and front-faces-only."
+                        >Rare Fixes — Transmission &amp; Glass</span>
+                      <span class="dev-badge" data-tooltip="This feature is still under development" aria-hidden="true"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
+                    </span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="rareFixesGlassOpen" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show rare transmission and glass fixes</span>
+                    </label>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="rare-fixes-glass"
+                    aria-hidden="true"
+                  >
                     <div class="slider-line slider-line--toggle-only">
                       <span
                         data-tooltip="KHR transmission + named window glass use MeshPhysicalMaterial.transmission (real refraction). Reflections come from PBR roughness and the HDRI — not fake BLEND opacity. Needs Render Backdrop. Costs more GPU than Auto glass."
@@ -1076,9 +1087,9 @@
                         <span class="sr-only">Glass front faces only</span>
                       </label>
                     </div>
-                  </details>
+                  </div>
                   <div id="advancedGlassControls" class="advanced-glass-controls" hidden>
-                    <p class="panel-hint advanced-glass-hint">When windows / glass are detected from mesh or material names:</p>
+                    <p class="panel-hint advanced-glass-hint">When glTF transmission or named windows / glass are detected:</p>
                     <label class="slider-line">
                       <span
                         data-tooltip="Physical glass: scales transmission strength. BLEND glass (Auto): opacity for detected windows."
@@ -1092,6 +1103,20 @@
                         value="0.45"
                       />
                       <span class="value" data-output="glassOpacity">0.45</span>
+                    </label>
+                    <label class="slider-line">
+                      <span
+                        data-tooltip="How soft the background looks through physical glass. Three.js blurs transmission with roughness — 0 is sharp, 1 is frosted."
+                        >Refraction blur</span>
+                      <input
+                        id="glassRefractionBlur"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value="0.08"
+                      />
+                      <span class="value" data-output="glassRefractionBlur">0.08</span>
                     </label>
                     <label class="slider-line">
                       <span
@@ -1660,7 +1685,7 @@
                   </div>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.1038 · 2026-08-21 15:34:30 UTC</div>
+              <div class="info-version-tag">v0.5.1039 · 2026-08-22 16:03:50 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
