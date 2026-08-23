@@ -566,7 +566,7 @@ export class FontExtrudeController {
   /**
    * Replace the active scene model with a font-generated mesh (same path as SVG import).
    * @param {THREE.Group} group
-   * @param {{ skipConfirm?: boolean }} [options]
+   * @param {{ skipConfirm?: boolean, skipToast?: boolean }} [options]
    */
   async addToScene(group, options = {}) {
     const scene = this.getScene();
@@ -636,7 +636,9 @@ export class FontExtrudeController {
 
       this.eventBus.emit('font:generated', { group });
       scene.eventBus.emit('scene:model-load-complete', { success: true, source: 'font' });
-      scene.ui.showToast('Text generated', 3200, { notification: false });
+      if (!options.skipToast) {
+        scene.ui.showToast('Text generated', 3200, { notification: false });
+      }
       return group;
     } finally {
       scene.ui.endLoadSpinner();

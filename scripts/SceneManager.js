@@ -2577,7 +2577,7 @@ export class SceneManager {
 
   /**
    * Apply a user-picked image to FBX mesh materials (Map Slots UI; optional material target).
-   * @param {{ slot: string, file: File, materialKey?: string }} payload
+   * @param {{ slot: string, file: File, materialKey?: string, silent?: boolean }} payload
    */
   async applyFbxMapSlot(payload = {}) {
     const slot = payload?.slot;
@@ -2598,11 +2598,15 @@ export class SceneManager {
       });
       this.clearMapInspectPreview();
       this.eventBus.emit('scene:fbx-map-applied', { slot, name: file.name, materialKey });
-      this.ui?.showToast?.(`Texture applied — ${file.name}`, 3200, { notification: false });
+      if (!payload.silent) {
+        this.ui?.showToast?.(`Texture applied — ${file.name}`, 3200, { notification: false });
+      }
     } catch (err) {
       console.error('FBX map slot load failed', err);
       URL.revokeObjectURL(url);
-      this.ui?.showToast?.('Could not load texture');
+      if (!payload.silent) {
+        this.ui?.showToast?.('Could not load texture');
+      }
     }
   }
 
@@ -2729,8 +2733,12 @@ export class SceneManager {
       this.materialController.modelHasAlphaRelevantMaterials(this.currentModel);
     const hasHeuristicGlass =
       hasAlphaMaterials && this.materialController.modelHasHeuristicGlass(this.currentModel);
+    const hasGltfTransmission =
+      this.materialController.modelHasGltfTransmissionMaterials(this.currentModel);
     this.eventBus.emit('ui:advanced-alpha-visible', { visible: hasAlphaMaterials });
-    this.eventBus.emit('ui:advanced-glass-visible', { visible: hasHeuristicGlass });
+    this.eventBus.emit('ui:advanced-glass-visible', {
+      visible: hasHeuristicGlass || hasGltfTransmission,
+    });
   }
 
   setSvgExtrudeDepth(depth, options = {}) {

@@ -69,7 +69,7 @@ export function creativeDitherNeutralCellSize(patternScale) {
 }
 
 /**
- * Mesh prepass — smooth lit colormap for neutral ordered dither (no retro palette crush).
+ * Mesh prepass — keep import albedo luminance, gentle form light (no metal-diffuse kill).
  */
 export const DITHER_NEUTRAL_PREP_FRAGMENT = /* glsl */ `
 varying vec3 vWorldNormal;
@@ -106,23 +106,15 @@ void main() {
   float ndh = max(dot(N, H), 0.0);
   float ndv = max(dot(N, V), 0.0);
 
-  float diffFloor = mix(0.22, 0.45, rough);
-  float diffCeil = mix(0.88, 1.05, 1.0 - rough * 0.35);
-  float diffuse = mix(diffFloor, diffCeil, ndl) * (1.0 - metal * 0.92);
+  float shade = mix(0.58, 1.0, ndl) * mix(0.90, 1.0, ndv);
+  vec3 lit = baseCol * shade;
 
   float specPow = mix(96.0, 6.0, rough);
-  float spec = pow(ndh, specPow) * mix(0.12, 0.95, 1.0 - rough * 0.6);
-  spec *= mix(0.15, 1.0, metal);
-
-  float rim = pow(1.0 - ndv, mix(2.4, 5.5, rough));
-  rim *= mix(0.06, 0.42, metal) * mix(0.5, 1.0, 1.0 - rough);
-
-  vec3 dielectric = baseCol * diffuse;
+  float spec = pow(ndh, specPow) * mix(0.05, 0.28, metal) * mix(0.55, 1.0, 1.0 - rough);
   vec3 specTint = mix(vec3(0.92, 0.94, 0.98), baseCol, metal);
-  vec3 lit = dielectric + specTint * (spec + rim);
-  lit *= mix(0.82, 1.0, ndv);
-  lit = clamp(lit, vec3(0.0), vec3(1.0));
+  lit += specTint * spec;
 
+  lit = clamp(lit, vec3(0.0), vec3(1.0));
   gl_FragColor = vec4(lit, uOpacity * mapAlpha);
 }
 `;
@@ -236,13 +228,13 @@ vec3 ditherCrush(vec3 rgb, float bayer, float intensity) {
 
   float srcLum = max(dot(rgb, DITHER_LUMA), 1e-4);
   float lum = srcLum;
-  lum = pow(lum, mix(1.0, 2.45, t));
-  lum = (lum - 0.5) * mix(1.0, 3.35, t) + 0.5;
+  lum = pow(lum, mix(1.0, 1.65, t));
+  lum = (lum - 0.5) * mix(1.0, 1.85, t) + 0.5;
   lum = clamp(lum, 0.0, 1.0);
 
-  float shadowTier = mix(0.11, 0.05, t);
-  float midTier = mix(0.50, 0.38, t);
-  float highTier = mix(0.84, 0.96, t);
+  float shadowTier = mix(0.22, 0.14, t);
+  float midTier = mix(0.58, 0.48, t);
+  float highTier = mix(0.90, 0.96, t);
 
   float band = floor(lum * 3.0 + bayer * 0.96 - 0.02);
   band = clamp(band, 0.0, 2.0);
@@ -399,8 +391,8 @@ vec3 ditherCrush(vec3 rgb, float bayer, float intensity) {
   float crush = clamp(intensity / 2.0, 0.0, 1.0);
 
   float lum = dot(rgb, DITHER_LUMA);
-  lum = pow(clamp(lum, 0.0, 1.0), mix(1.0, 2.55, crush));
-  lum = (lum - 0.5) * mix(1.0, 3.0, crush) + 0.5;
+  lum = pow(clamp(lum, 0.0, 1.0), mix(1.0, 1.7, crush));
+  lum = (lum - 0.5) * mix(1.0, 1.75, crush) + 0.5;
   lum = clamp(lum, 0.0, 1.0);
 
   float srcLum = max(dot(rgb, DITHER_LUMA), 1e-4);
@@ -459,15 +451,15 @@ void main() {
 
   float t = clamp(uIntensity / 2.0, 0.0, 1.0);
 
-  float lum = clamp(srcLuma * mix(1.42, 1.0, t) + mix(0.10, 0.0, t), 0.0, 1.0);
-  lum = mix(lum, sqrt(lum), mix(0.52, 0.0, t));
-  lum = pow(lum, mix(0.80, 1.85, t));
-  lum = (lum - 0.5) * mix(1.0, 2.35, t) + 0.5;
+  float lum = clamp(srcLuma * mix(1.42, 1.08, t) + mix(0.10, 0.04, t), 0.0, 1.0);
+  lum = mix(lum, sqrt(lum), mix(0.52, 0.18, t));
+  lum = pow(lum, mix(0.80, 1.35, t));
+  lum = (lum - 0.5) * mix(1.0, 1.6, t) + 0.5;
   lum = clamp(lum, 0.0, 1.0);
 
   float depthT = lum;
-  depthT = pow(depthT, mix(1.15, 1.7, t));
-  depthT = (depthT - 0.5) * mix(1.3, 2.15, t) + 0.5;
+  depthT = pow(depthT, mix(1.15, 1.35, t));
+  depthT = (depthT - 0.5) * mix(1.3, 1.55, t) + 0.5;
   depthT = clamp(depthT, 0.0, 1.0);
   depthT = depthT * depthT * (3.0 - 2.0 * depthT);
 
@@ -480,7 +472,7 @@ void main() {
   vec3 dotCol = applyFlatPostMasterHue(cellColor.rgb);
   dotCol *= mix(1.62, 1.0, t);
   float dotLum = max(dot(dotCol, DITHER_LUMA), 1e-4);
-  float minDotLum = mix(0.68, 0.12, t);
+  float minDotLum = mix(0.68, 0.28, t);
   dotCol = clamp(dotCol * max(minDotLum / dotLum, 1.0), 0.0, 1.0);
   dotCol *= mix(0.90, 1.08, depthT);
   dotCol = clamp(dotCol, 0.0, 1.0);

@@ -126,7 +126,7 @@ export function createNesPaletteTexture() {
 export const NES_BG_HEX = parseInt(APP_BACKGROUND.slice(1), 16);
 
 /**
- * Mesh prepass — colormap × cel form; PPU shadow accents before 2C02 palette snap.
+ * Mesh prepass — keep import albedo, cel-shade form + PPU shadow accents. Palette snap is the color pass.
  */
 export const NES_PREP_FRAGMENT = /* glsl */ `
 varying vec3 vWorldNormal;
@@ -174,8 +174,8 @@ void main() {
 
   const vec3 NES_LUMA = vec3(0.2126, 0.7152, 0.0722);
   float srcLum = max(dot(baseCol, NES_LUMA), 1e-4);
-  float shadeLum = mix(0.42, 1.0, form);
-  vec3 lit = baseCol * (shadeLum / srcLum);
+  float shade = mix(0.42, 1.0, form);
+  vec3 lit = baseCol * shade;
 
   float shadowAmt = pow(1.0 - form, 1.32);
   vec3 n = baseCol / srcLum;
@@ -189,7 +189,8 @@ void main() {
   }
   lit = mix(lit, mix(lit, shadowAccent, 0.5), shadowAmt);
 
-  gl_FragColor = vec4(clamp(lit, vec3(0.0), vec3(1.0)), uOpacity * mapAlpha);
+  lit = clamp(lit, vec3(0.0), vec3(1.0));
+  gl_FragColor = vec4(lit, uOpacity * mapAlpha);
 }
 `;
 
@@ -234,6 +235,8 @@ float nesPalSat(vec3 c) {
 
 vec3 quantizeNes(vec3 rgb, float dither) {
   rgb = applyFlatPostMasterHue(rgb);
+  float peak = max(rgb.r, max(rgb.g, rgb.b));
+  rgb *= 1.0 / max(peak, 1.0);
   float srcLum = nesPalLuma(rgb);
   float srcSat = nesPalSat(rgb);
   float targetLum = clamp(srcLum + (dither - 0.5) * 0.1, 0.0, 1.0);

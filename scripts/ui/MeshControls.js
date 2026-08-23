@@ -322,6 +322,11 @@ export class MeshControls {
       this.stateStore.set('advanced.physicalGlassTransmission', !!event.target.checked);
       this.eventBus.emit('mesh:transparency-fix');
     });
+    this.ui.inputs.rareFixesGlassOpen?.addEventListener('change', (event) => {
+      const open = !!event.target.checked;
+      this.ui.setEffectFoldoutOpen('rare-fixes-glass', open);
+      this.stateStore.set('advanced.rareFixesGlassOpen', open);
+    });
 
     this.ui.inputs.glassOpacity?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
@@ -332,6 +337,17 @@ export class MeshControls {
     });
     if (this.ui.inputs.glassOpacity) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.glassOpacity);
+    }
+
+    this.ui.inputs.glassRefractionBlur?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      const clamped = Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0.08;
+      this.helpers.updateValueLabel('glassRefractionBlur', clamped, 'decimal');
+      this.stateStore.set('advanced.glassRefractionBlur', clamped);
+      this.eventBus.emit('mesh:glass-appearance');
+    });
+    if (this.ui.inputs.glassRefractionBlur) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.glassRefractionBlur);
     }
 
     this.ui.inputs.glassReflection?.addEventListener('input', (event) => {
@@ -1441,6 +1457,9 @@ export class MeshControls {
     if (this.ui.inputs.glassOpacity) {
       this.ui.setControlDisabled('glassOpacity', !opacityEnabled);
     }
+    if (this.ui.inputs.glassRefractionBlur) {
+      this.ui.setControlDisabled('glassRefractionBlur', !visible);
+    }
     if (this.ui.inputs.glassReflection) {
       this.ui.setControlDisabled('glassReflection', !visible);
     }
@@ -1698,6 +1717,9 @@ export class MeshControls {
       this.ui.inputs.physicalGlassTransmission.checked =
         !!state.advanced?.physicalGlassTransmission;
     }
+    if (this.ui.inputs.rareFixesGlassOpen) {
+      this.ui.inputs.rareFixesGlassOpen.checked = !!state.advanced?.rareFixesGlassOpen;
+    }
     if (this.ui.inputs.glassOpacity) {
       const raw = Number(state.advanced?.glassOpacity ?? 0.45);
       const o = Number.isFinite(raw) ? Math.min(1, Math.max(0.02, raw)) : 0.45;
@@ -1705,6 +1727,15 @@ export class MeshControls {
       if (!active) {
         this.ui.inputs.glassOpacity.value = o;
         this.helpers.updateValueLabel('glassOpacity', o, 'decimal');
+      }
+    }
+    if (this.ui.inputs.glassRefractionBlur) {
+      const raw = Number(state.advanced?.glassRefractionBlur ?? 0.08);
+      const b = Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : 0.08;
+      const active = document.activeElement === this.ui.inputs.glassRefractionBlur;
+      if (!active) {
+        this.ui.inputs.glassRefractionBlur.value = b;
+        this.helpers.updateValueLabel('glassRefractionBlur', b, 'decimal');
       }
     }
     if (this.ui.inputs.glassReflection) {

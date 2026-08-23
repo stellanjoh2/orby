@@ -55,6 +55,11 @@ export function createMaterialDefaults() {
       /** 0 = import-like; 1 = crush glTF transmission + darken (less see-through). */
       glassBody: 0,
       /**
+       * Physical glass: transmission blur via MeshPhysicalMaterial.roughness.
+       * 0 = sharp refraction, 1 = frosted. Default stays a little soft.
+       */
+      glassRefractionBlur: 0.08,
+      /**
        * When true, promotes mistaken near-opaque BLEND shells to solid draws and uses alpha-hash only
        * when cutout maps / real layering need it. Turn off if hair/cloth looks too grainy.
        */
@@ -68,6 +73,8 @@ export function createMaterialDefaults() {
        * (PBR env reflections via roughness/specular — not BLEND opacity or planar Reflector).
        */
       physicalGlassTransmission: false,
+      /** UI-only — Object → Advanced rare glass foldout. */
+      rareFixesGlassOpen: false,
       /**
        * UV Checker overlay — tiles a checker map across mesh UVs so 3D artists can spot stretching
        * and seam issues at a glance. Renders as a translucent clone of the model so original

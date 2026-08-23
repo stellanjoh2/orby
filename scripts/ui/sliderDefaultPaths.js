@@ -15,6 +15,7 @@ export const SLIDER_DEFAULT_PATHS = {
   glassOpacity: 'advanced.glassOpacity',
   glassReflection: 'advanced.glassReflection',
   glassBody: 'advanced.glassBody',
+  glassRefractionBlur: 'advanced.glassRefractionBlur',
   subsurfaceTranslucency: 'subsurface.translucency',
   creativeLookShaderAnimationSpeed: 'creativeLook.shaderAnimationSpeed',
   creativeLookPatternScale: 'creativeLook.patternScale',

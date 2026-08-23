@@ -6271,9 +6271,10 @@ a.about-highlight:focus-visible {
   cursor: pointer;
   color: var(--text-dim);
   margin-bottom: 0;
+  /* list-item keeps the disclosure marker. flex/grid on <summary> steals
+     clicks from controls inside <details> (Chromium / WebKit). */
+  display: list-item;
   list-style-position: outside;
-  display: flex;
-  align-items: center;
 }
 
 .advanced-import-details[open] summary {

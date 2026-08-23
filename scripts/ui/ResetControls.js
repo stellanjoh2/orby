@@ -141,6 +141,7 @@ const RESET_DIRTY_PATHS = {
     'advanced.reverseNormals', 'advanced.transparencyFix',
     'advanced.glassOpacity', 'advanced.glassReflection',
     'advanced.glassTint', 'advanced.glassBody',
+    'advanced.glassRefractionBlur',
     'advanced.blendSortingMitigation',
     'advanced.flipGlassNormalMapY', 'advanced.glassFrontFacesOnly',
     'advanced.physicalGlassTransmission',

@@ -38,3 +38,9 @@ test('GBA and Mega Drive skip stacked PBR wrap so albedo reaches the color snap'
   assert.doesNotMatch(materialsSrc, /flatPostPrepFrag\(GBA_PREP_FRAGMENT\)/);
   assert.doesNotMatch(materialsSrc, /flatPostPrepFrag\(MD_PREP_FRAGMENT\)/);
 });
+
+test('screen-pixel clamp(lit) output is rewritten so material brightness injects', () => {
+  assert.ok(
+    materialsSrc.includes('vec4\\(clamp\\((\\w+), vec3\\(0\\.0\\), vec3\\(1\\.0\\)\\)'),
+  );
+});

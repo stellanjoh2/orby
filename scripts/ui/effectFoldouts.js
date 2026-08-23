@@ -82,6 +82,7 @@ export function applyMeshFoldouts(state, setOpen) {
   setOpen('uv-checker', !!state.advanced?.uvChecker);
   setOpen('normal-view', !!state.advanced?.normalView);
   setOpen('object-info', !!state.advanced?.objectInfoOpen);
+  setOpen('rare-fixes-glass', !!state.advanced?.rareFixesGlassOpen);
   setOpen(
     'svg-color-override',
     !!state.svgExtrude?.enabled && !!state.svgExtrude?.colorOverride,

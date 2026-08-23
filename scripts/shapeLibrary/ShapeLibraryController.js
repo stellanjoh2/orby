@@ -30,16 +30,17 @@ export class ShapeLibraryController {
 
   /**
    * @param {string} shapeId
+   * @param {{ skipConfirm?: boolean, skipToast?: boolean }} [options]
    * @returns {Promise<boolean>} true when a shape was loaded
    */
-  async insertShape(shapeId) {
+  async insertShape(shapeId, options = {}) {
     const entry = findBakeableShapeLibraryEntry(shapeId);
     if (!entry) return false;
 
     const scene = this.getScene?.();
     if (!scene) return false;
 
-    if (scene.currentModel) {
+    if (scene.currentModel && !options.skipConfirm) {
       const confirmed = await this._confirmReplace();
       if (!confirmed) return false;
     }
@@ -52,7 +53,7 @@ export class ShapeLibraryController {
       }
     }
 
-    const loadTask = this._loadShapeIntoScene(scene, entry);
+    const loadTask = this._loadShapeIntoScene(scene, entry, options);
     this._loadPromise = loadTask;
     try {
       await loadTask;
@@ -66,7 +67,7 @@ export class ShapeLibraryController {
    * @param {import('../SceneManager.js').SceneManager} scene
    * @param {import('./shapeLibraryCatalog.js').ShapeLibraryEntry} entry
    */
-  async _loadShapeIntoScene(scene, entry) {
+  async _loadShapeIntoScene(scene, entry, options = {}) {
     const label = entry.label ?? 'Library shape';
 
     scene.ui.setLoadSpinnerStatusPrefix?.('Loading');
@@ -127,7 +128,9 @@ export class ShapeLibraryController {
       scene.svgExtrudeImporter = null;
       scene.updateStatsUI(null, asset.object, asset.gltfMetadata);
 
-      scene.ui.showToast('Shape added to scene', 3200, { notification: false });
+      if (!options.skipToast) {
+        scene.ui.showToast('Shape added to scene', 3200, { notification: false });
+      }
       this.eventBus.emit('shape-library:inserted', { id: entry.id });
       scene.eventBus.emit('scene:model-load-complete', { success: true, source: 'shape-library' });
     } catch (error) {

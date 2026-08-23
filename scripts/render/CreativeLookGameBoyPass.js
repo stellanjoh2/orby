@@ -18,7 +18,7 @@ void main() {
 `;
 
 /**
- * Screen-space DMG crush — 160×144 macro pixels, 4 CGB-tuned green shades.
+ * Screen-space DMG crush — 160×144 macro pixels, 4 original greenscale shades.
  */
 export class CreativeLookGameBoyPass {
   /** @param {import('three').WebGLRenderer} renderer */

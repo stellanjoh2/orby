@@ -1757,6 +1757,27 @@ export class FontExtrudeUI {
   }
 
   /**
+   * Rebuild the 3D text mesh after .orby / paste restore (font already loaded).
+   * @returns {Promise<{ success: boolean, reason?: string }>}
+   */
+  async regenerateFromRestoredSettings() {
+    const fontState = this.stateStore.getState()?.fontExtrude || {};
+    const text = this.els.text?.value ?? fontState.sourceText ?? '';
+    if (!String(text).trim()) {
+      return { success: false, reason: 'no-text' };
+    }
+    if (!this.controller.font) {
+      return { success: false, reason: 'no-font' };
+    }
+    const group = await this.controller.generateMesh(text, this.getOptions());
+    const added = await this.controller.addToScene(group, {
+      skipConfirm: true,
+      skipToast: true,
+    });
+    return { success: !!added };
+  }
+
+  /**
    * Start `queryLocalFonts()` in the same turn as a click/focus so the browser can show its prompt.
    */
   _primeLocalFontAccess() {

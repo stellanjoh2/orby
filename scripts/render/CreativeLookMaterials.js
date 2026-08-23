@@ -910,7 +910,13 @@ function creativeLookFinalColorChain(colorVar, alphaExpr = 'uOpacity', shadowTin
 }
 
 function injectCreativeLookFinalColorChain(combined, shadowTint = true, skipLiftCrush = false) {
-  return combined.replace(
+  const withSimpleOut = combined.replace(
+    /gl_FragColor = vec4\(clamp\((\w+), vec3\(0\.0\), vec3\(1\.0\)\), ([^)]+)\);/g,
+    (_, colorVar, alphaExpr) =>
+      `  ${colorVar} = clamp(${colorVar}, vec3(0.0), vec3(1.0));
+  gl_FragColor = vec4(${colorVar}, ${alphaExpr.trim()});`,
+  );
+  return withSimpleOut.replace(
     /gl_FragColor = vec4\((\w+), ([^)]+)\);/g,
     (_, colorVar, alphaExpr) =>
       creativeLookFinalColorChain(colorVar, alphaExpr.trim(), shadowTint, skipLiftCrush),
@@ -3822,7 +3828,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         ...gradeUniforms,
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: flatPostPrepFrag(GB_PREP_FRAGMENT),
+      fragmentShader: lookFragNoShadow(GB_PREP_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'gameboy-pixel';
@@ -3870,7 +3876,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         ...gradeUniforms,
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: flatPostPrepFrag(NES_PREP_FRAGMENT),
+      fragmentShader: lookFragNoShadow(NES_PREP_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'nes-pixel';

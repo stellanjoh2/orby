@@ -26,11 +26,23 @@ import { deepClone } from '../utils/deepClone.js';
 import { downloadBlob } from '../utils/downloadBlob.js';
 import { normalizeModifiersState } from '../state/defaults/modifierDefaults.js';
 import { serializeExportSettings } from './exportSettingsPersistence.js';
+import { fileFromEmbeddedAsset } from '../utils/binaryAsset.js';
 import {
-  arrayBufferToBase64,
-  base64ToUint8Array,
-  fileFromEmbeddedAsset,
-} from '../utils/binaryAsset.js';
+  applyShapeLibraryUserData,
+  embedShapeLibraryAsset,
+  embeddedAssetToFile,
+  fileToEmbeddedAsset,
+  isOrbyScenePayload,
+  normalizeShapeLibraryState,
+  orbyDownloadBaseName,
+  orbyFontAssetName,
+  ORBY_ASSET_KIND_FONT,
+  ORBY_ASSET_KIND_SHAPE,
+} from './orbySceneArchive.js';
+import {
+  embedFbxMapAssignments,
+  embedFbxSidecars,
+} from './orbyFbxMapAssets.js';
 
 /**
  * SceneSettingsManager
@@ -203,32 +215,168 @@ export class SceneSettingsManager {
     return 'Invalid pasted scene settings';
   }
 
+  async _collectOrbyAsset() {
+    const scene = window.orby?.scene;
+    const sourceFile = await this.getCurrentFile();
+    if (sourceFile) {
+      return fileToEmbeddedAsset(sourceFile);
+    }
+
+    const model = scene?.currentModel;
+    if (model?.userData?.orbyShapeLibrary && model.userData.orbyShapeLibraryId) {
+      const asset = await embedShapeLibraryAsset(model.userData.orbyShapeLibraryId);
+      if (asset) return asset;
+    }
+
+    if (model?.userData?.orbyFontGenerated || model?.userData?.orbyFontExtrude) {
+      const text = this.stateStore.getState()?.fontExtrude?.sourceText;
+      return {
+        kind: ORBY_ASSET_KIND_FONT,
+        name: orbyFontAssetName(text),
+      };
+    }
+
+    return null;
+  }
+
+  async _collectFbxExtras() {
+    const scene = window.orby?.scene;
+    if (!scene?.currentModel) return { fbxSidecars: [], fbxMapAssignments: [] };
+    const [fbxSidecars, fbxMapAssignments] = await Promise.all([
+      embedFbxSidecars(scene._fbxImportBundle),
+      embedFbxMapAssignments(scene.currentModel, scene.materialController?.originalMaterials),
+    ]);
+    return { fbxSidecars, fbxMapAssignments };
+  }
+
+  _waitForModelLoad(timeoutMs = 12000) {
+    return new Promise((resolve) => {
+      let done = false;
+      const handler = (result) => {
+        if (done) return;
+        done = true;
+        this.eventBus.off('scene:model-load-complete', handler);
+        resolve(result || { success: false });
+      };
+      this.eventBus.on('scene:model-load-complete', handler);
+      setTimeout(() => {
+        if (done) return;
+        done = true;
+        this.eventBus.off('scene:model-load-complete', handler);
+        resolve({ success: false, timeout: true });
+      }, timeoutMs);
+    });
+  }
+
+  async _loadEmbeddedMeshFile(file) {
+    const loadComplete = this._waitForModelLoad();
+    this.eventBus.emit('file:selected', file);
+    return loadComplete;
+  }
+
+  async _restoreOrbyMesh(asset) {
+    if (asset?.kind === ORBY_ASSET_KIND_FONT) {
+      return { success: true, deferFontGenerate: true };
+    }
+
+    if (asset?.kind === ORBY_ASSET_KIND_SHAPE) {
+      try {
+        const inserted = await this.uiHelper?.insertShapeLibraryShape?.(asset.shapeId);
+        if (inserted) return { success: true };
+      } catch {
+        /* catalog fetch failed — try embedded GLB */
+      }
+      const embeddedFile = embeddedAssetToFile(asset, asset.name || 'shape.glb');
+      if (!embeddedFile) return { success: false };
+      const result = await this._loadEmbeddedMeshFile(embeddedFile);
+      if (result?.success) {
+        applyShapeLibraryUserData(window.orby?.scene?.currentModel, asset.shapeId);
+      }
+      return result;
+    }
+
+    const embeddedFile = embeddedAssetToFile(asset, asset?.name || 'model.glb');
+    if (!embeddedFile) {
+      return { success: false };
+    }
+    return this._loadEmbeddedMeshFile(embeddedFile);
+  }
+
+  async _restoreFbxMaps(payload) {
+    const scene = window.orby?.scene;
+    if (!scene) return;
+
+    const sidecars = Array.isArray(payload.fbxSidecars) ? payload.fbxSidecars : [];
+    const assignments = Array.isArray(payload.fbxMapAssignments)
+      ? payload.fbxMapAssignments
+      : [];
+    if (!sidecars.length && !assignments.length) return;
+    if (!scene.stateStore.getState()?.fbxMapSlots?.enabled) {
+      scene.stateStore.set('fbxMapSlots.enabled', true);
+    }
+    if (sidecars.length) {
+      const files = sidecars
+        .map((asset) => {
+          const file = fileFromEmbeddedAsset(asset, asset?.name || 'texture.png');
+          if (!file) return null;
+          return { file, path: asset.path || file.name };
+        })
+        .filter(Boolean);
+      scene._fbxImportBundle = files;
+      if (files.length) {
+        await scene.autoAssignFbxTexturesFromBundle(files);
+      }
+    }
+
+    for (const item of assignments) {
+      const file = fileFromEmbeddedAsset(item, item?.name || 'texture.png');
+      if (!file || !item.slot) continue;
+      await scene.applyFbxMapSlot({
+        slot: item.slot,
+        file,
+        materialKey: item.materialKey,
+        silent: true,
+      });
+    }
+  }
+
+  async _regenerateFontMeshFromSettings() {
+    const result = await this.uiHelper?.regenerateFontExtrudeMesh?.();
+    if (result?.success) return { success: true };
+    if (result?.reason === 'no-font') {
+      return {
+        success: false,
+        message: 'Font could not be restored — allow system fonts or re-load the .ttf',
+      };
+    }
+    if (result?.reason === 'no-text') {
+      return { success: false, message: 'Saved Type Creator scene has no text to rebuild' };
+    }
+    return { success: false, message: 'Failed to rebuild Type Creator mesh from .orby file' };
+  }
+
   async saveOrbyToFile() {
     try {
       const sceneSettings = await this.buildSceneSettingsPayload();
-      const sourceFile = await this.getCurrentFile();
-      if (!sourceFile) {
+      const asset = await this._collectOrbyAsset();
+      if (!asset) {
         return { success: false, message: 'Load a mesh before saving .orby' };
       }
 
-      const fileBuffer = await sourceFile.arrayBuffer();
+      const { fbxSidecars, fbxMapAssignments } = await this._collectFbxExtras();
       const orbyPayload = {
         type: 'orby-scene',
         schemaVersion: SCENE_SETTINGS_SCHEMA_VERSION,
         createdAt: new Date().toISOString(),
         sceneSettings,
-        asset: {
-          name: sourceFile.name || 'model',
-          type: sourceFile.type || '',
-          lastModified: sourceFile.lastModified || Date.now(),
-          dataBase64: arrayBufferToBase64(fileBuffer),
-        },
+        asset,
       };
+      if (fbxSidecars.length) orbyPayload.fbxSidecars = fbxSidecars;
+      if (fbxMapAssignments.length) orbyPayload.fbxMapAssignments = fbxMapAssignments;
 
       const text = JSON.stringify(orbyPayload);
       const blob = new Blob([text], { type: 'application/json' });
-      const baseName = (sourceFile.name || 'scene').replace(/\.[^/.]+$/, '');
-      const fileName = `${baseName}.orby`;
+      const fileName = `${orbyDownloadBaseName(asset)}.orby`;
       downloadBlob(blob, fileName);
       return { success: true, message: '.orby scene saved' };
     } catch (error) {
@@ -244,43 +392,17 @@ export class SceneSettingsManager {
       }
       const text = await file.text();
       const payload = JSON.parse(text);
-      if (payload?.type !== 'orby-scene' || !payload?.asset?.dataBase64 || !payload?.sceneSettings) {
+      if (!isOrbyScenePayload(payload)) {
         return { success: false, message: 'Invalid .orby file' };
       }
-      const bytes = base64ToUint8Array(payload.asset.dataBase64);
-      const embeddedFile = new File(
-        [bytes],
-        payload.asset.name || 'model.glb',
-        {
-          type: payload.asset.type || 'application/octet-stream',
-          lastModified: payload.asset.lastModified || Date.now(),
-        },
-      );
 
       // Always start from a clean baseline so no stale settings leak from current scene.
       this.stateStore.reset();
       this.eventBus.emit('app:reset');
-
-      const loadComplete = new Promise((resolve) => {
-        let done = false;
-        const handler = (result) => {
-          if (done) return;
-          done = true;
-          this.eventBus.off('scene:model-load-complete', handler);
-          resolve(result || { success: false });
-        };
-        this.eventBus.on('scene:model-load-complete', handler);
-        setTimeout(() => {
-          if (done) return;
-          done = true;
-          this.eventBus.off('scene:model-load-complete', handler);
-          resolve({ success: false, timeout: true });
-        }, 12000);
-      });
       this.eventBus.emit('scene:orby-import-start');
-      this.eventBus.emit('file:selected', embeddedFile);
-      const modelLoadResult = await loadComplete;
-      if (!modelLoadResult?.success) {
+
+      const meshResult = await this._restoreOrbyMesh(payload.asset);
+      if (!meshResult?.success) {
         return { success: false, message: 'Failed to load mesh from .orby file' };
       }
 
@@ -294,6 +416,14 @@ export class SceneSettingsManager {
       if (!sceneLoadResult.success) {
         return sceneLoadResult;
       }
+
+      if (meshResult.deferFontGenerate) {
+        const fontResult = await this._regenerateFontMeshFromSettings();
+        if (!fontResult.success) return fontResult;
+        this.eventBus.emit('scene:settings-restored');
+      }
+
+      await this._restoreFbxMaps(payload);
       return { success: true, message: '.orby scene loaded' };
     } catch (error) {
       console.error('Error loading .orby scene:', error);
@@ -680,7 +810,8 @@ export class SceneSettingsManager {
         payload.advanced?.glassOpacity !== undefined ||
         payload.advanced?.glassReflection !== undefined ||
         payload.advanced?.glassTint !== undefined ||
-        payload.advanced?.glassBody !== undefined
+        payload.advanced?.glassBody !== undefined ||
+        payload.advanced?.glassRefractionBlur !== undefined
       ) {
         if (payload.advanced?.glassOpacity !== undefined) {
           const o = Number(payload.advanced.glassOpacity);
@@ -704,6 +835,15 @@ export class SceneSettingsManager {
           const b = Number(payload.advanced.glassBody);
           if (Number.isFinite(b)) {
             this.stateStore.set('advanced.glassBody', Math.min(1, Math.max(0, b)));
+          }
+        }
+        if (payload.advanced?.glassRefractionBlur !== undefined) {
+          const blur = Number(payload.advanced.glassRefractionBlur);
+          if (Number.isFinite(blur)) {
+            this.stateStore.set(
+              'advanced.glassRefractionBlur',
+              Math.min(1, Math.max(0, blur)),
+            );
           }
         }
         this.eventBus.emit('mesh:glass-appearance');
@@ -784,6 +924,9 @@ export class SceneSettingsManager {
       if (payload.fontExtrude) {
         const d = this.stateStore.getDefaults().fontExtrude;
         this.stateStore.set('fontExtrude', { ...d, ...payload.fontExtrude });
+      }
+      if (payload.shapeLibrary !== undefined) {
+        this.stateStore.set('shapeLibrary', normalizeShapeLibraryState(payload.shapeLibrary));
       }
       if (payload.animation) {
         const d = this.stateStore.getDefaults().animation;
@@ -1282,12 +1425,18 @@ export class SceneSettingsManager {
             this.stateStore.set('gobo.scaleSpace', 'ui');
           }
           if (gobo.rotation !== undefined) this.stateStore.set('gobo.rotation', gobo.rotation);
+          if (gobo.softnessQuality !== undefined) {
+            this.stateStore.set('gobo.softnessQuality', gobo.softnessQuality);
+          }
         });
         if (gobo.texture !== undefined) {
           this.eventBus.emit('lights:gobo-texture', gobo.texture);
         }
         if (gobo.softness !== undefined) {
           this.eventBus.emit('lights:gobo-softness', gobo.softness);
+        }
+        if (gobo.softnessQuality !== undefined) {
+          this.eventBus.emit('lights:gobo-softness-quality', gobo.softnessQuality);
         }
         if (gobo.scale !== undefined) {
           this.eventBus.emit('lights:gobo-scale', this.stateStore.getState().gobo?.scale);
@@ -1344,6 +1493,12 @@ export class SceneSettingsManager {
         }
         // Restore camera position and target (orbit angle)
         if (payload.camera.position || payload.camera.target) {
+          if (payload.camera.position) {
+            this.stateStore.set('camera.position', payload.camera.position);
+          }
+          if (payload.camera.target) {
+            this.stateStore.set('camera.target', payload.camera.target);
+          }
           this.eventBus.emit('camera:set-state', {
             position: payload.camera.position,
             target: payload.camera.target,

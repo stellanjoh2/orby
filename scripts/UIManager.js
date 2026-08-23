@@ -307,6 +307,13 @@ export class UIManager {
           window.orby?.scene?.loadCustomBackgroundImage?.(file),
         restoreFontExtrudeSettings: (fontExtrude) =>
           this.fontExtrudeUI?.restoreFromSettings?.(fontExtrude),
+        regenerateFontExtrudeMesh: () =>
+          this.fontExtrudeUI?.regenerateFromRestoredSettings?.(),
+        insertShapeLibraryShape: (shapeId) =>
+          this.shapeLibraryController?.insertShape?.(shapeId, {
+            skipConfirm: true,
+            skipToast: true,
+          }),
         serializeExportSettings: () => serializeExportSettings(this.exportSettings),
         restoreExportSettings: (saved) => this.restoreExportSettings(saved),
       },
@@ -560,7 +567,9 @@ export class UIManager {
       flipGlassNormalMapY: q('#flipGlassNormalMapY'),
       glassFrontFacesOnly: q('#glassFrontFacesOnly'),
       physicalGlassTransmission: q('#physicalGlassTransmission'),
+      rareFixesGlassOpen: q('#rareFixesGlassOpen'),
       glassOpacity: q('#glassOpacity'),
+      glassRefractionBlur: q('#glassRefractionBlur'),
       glassReflection: q('#glassReflection'),
       glassTint: q('#glassTint'),
       glassBody: q('#glassBody'),

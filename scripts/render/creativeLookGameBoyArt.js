@@ -72,7 +72,7 @@ export function creativeGameBoyCellSize(_patternScale) {
 export const GB_BG_HEX = parseInt(APP_BACKGROUND.slice(1), 16);
 
 /**
- * Mesh prepass — colormap × cel form; luma drives the 4-shade post pass (DMG ignores hue).
+ * Mesh prepass — keep import albedo, cel-shade form only. Luma snap is the 4-shade pass.
  */
 export const GB_PREP_FRAGMENT = /* glsl */ `
 varying vec3 vWorldNormal;
@@ -118,12 +118,10 @@ void main() {
   form = pow(clamp(form, 0.0, 1.0), 1.05);
   form = smoothstep(0.03, 0.92, form);
 
-  const vec3 GB_LUMA = vec3(0.2126, 0.7152, 0.0722);
-  float srcLum = max(dot(baseCol, GB_LUMA), 1e-4);
-  float shadeLum = mix(0.4, 1.0, form);
-  vec3 lit = baseCol * (shadeLum / srcLum);
-
-  gl_FragColor = vec4(clamp(lit, vec3(0.0), vec3(1.0)), uOpacity * mapAlpha);
+  float shade = mix(0.4, 1.0, form);
+  vec3 lit = baseCol * shade;
+  lit = clamp(lit, vec3(0.0), vec3(1.0));
+  gl_FragColor = vec4(lit, uOpacity * mapAlpha);
 }
 `;
 
@@ -164,10 +162,12 @@ float gbBayer2(ivec2 cell) {
 }
 
 vec3 quantizeGameBoy(vec3 rgb, float dither) {
-  rgb = applyFlatPostMasterHue(rgb);
+  float peak = max(rgb.r, max(rgb.g, rgb.b));
+  rgb *= 1.0 / max(peak, 1.0);
   float lum = dot(rgb, GB_LUMA);
   float biased = clamp(lum + (dither - 0.5) * 0.13, 0.0, 1.0);
-  float tier = biased * 3.0;
+  // BGP 0 = lightest — high luma must not snap to shade 3 (darkest).
+  float tier = (1.0 - biased) * 3.0;
   int lo = clamp(int(floor(tier)), 0, 2);
   int hi = lo + 1;
   float frac = tier - float(lo);
