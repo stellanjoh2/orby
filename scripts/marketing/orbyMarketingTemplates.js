@@ -205,9 +205,11 @@ function renderFigure(section, revealDir) {
 
 function renderInProgressCta(project) {
   if (!project.ctaLabel || !project.ctaHref) return '';
+  const isExternal = /^https?:\/\//i.test(project.ctaHref);
   return `<div class="orby-marketing__split-cta">
       ${orbyMagicButtonMonoLinkHtml(escapeMarketingButtonLabel(project.ctaLabel), escapeMarketingHtml(project.ctaHref), {
         extraClass: 'orby-marketing__cta',
+        attrs: isExternal ? 'target="_blank" rel="noopener noreferrer"' : '',
       })}
     </div>`;
 }

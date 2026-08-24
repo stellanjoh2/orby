@@ -605,6 +605,18 @@ export const MARKETING_SECTIONS = [
         ctaLabel: 'Request preview',
         ctaHref: 'mailto:orby-admin@proton.me?subject=Gridlock%20early%20access',
       },
+      {
+        id: 'orby-marketing-in-progress-mozayk',
+        eyebrow: 'Other projects',
+        title: 'Mozayk — Create grid-based visuals in the browser',
+        lede:
+          'Mozayk is a free browser tool for building abstract grid mosaics — generate random layouts, import photos or video, then scramble, restyle, and export the result. Shape palettes, colour, overlays, and a timeline, then ship stills or animation.',
+        layout: 'media-right',
+        videoSrc: './assets/marketing/mozayk-promo.mp4',
+        imageAlt: 'Mozayk mosaic generator — grid-based visuals in the browser',
+        ctaLabel: 'Try it out',
+        ctaHref: 'https://stellanjoh2.github.io/mozayk/',
+      },
     ],
   },
 ];
