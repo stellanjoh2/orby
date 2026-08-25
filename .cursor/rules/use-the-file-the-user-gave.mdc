@@ -1,0 +1,35 @@
+---
+description: When the user gives or names an asset, use that file — never redraw, trace, or substitute a stock path
+alwaysApply: true
+---
+
+# Use the file the user gave
+
+**Official user policy.** An attached image, a named file (`X-logo.svg`), or “the SVG in the same folder” is the source of truth. Do not treat it as a visual reference to recreate.
+
+This exists because an agent ignored a provided X logo, drew a stock path, then kept “fixing” the fake mark instead of using the file.
+
+## Do
+
+1. **Search first** — workspace, `assets/`, the folder of any attached file, and the exact filename they used (`X-logo.svg`, not a cousin you invent).
+2. **Ship their file** — copy into the project if needed; wire CSS/HTML/JS to that path.
+3. **Keep the format they gave** — SVG stays SVG. Do not rasterize to PNG “for the mask” unless they ask.
+4. **If it looks wrong** — stop redrawing. Re-read *their* file (viewBox, fill, aspect). CSS mask stretch is a layout bug, not a reason to replace the artwork.
+
+## Don't
+
+- Trace, redraw, or inline a path from Simple Icons / brand-toolkit memory
+- Treat an attached screenshot/PNG as “what it should look like” while shipping a different SVG
+- Convert SVG → PNG or PNG → hand-drawn SVG to match neighboring icons
+- Invent `X_Logo_Black.svg` when they said `X-logo.svg`
+- Keep iterating on a substitute after they said it looks warped
+
+## Format / mask only when required
+
+Color for a CSS mask (`currentColor`) may require a fill tweak **on their file**. Do not change geometry, viewBox, or aspect. If their file cannot be used as-is, say why and ask — do not silently replace it.
+
+## Manual verify
+
+1. The URL or `src` / `mask-image` points at **their** filename.
+2. No extra generated logo path/PNG you created.
+3. Aspect matches the source viewBox (use `mask-size: contain` / inline SVG `meet` — do not stretch a non-square mark into a square).

@@ -304,7 +304,6 @@ export function initOrbyMarketingPage(options = {}) {
     if (isMobileLanding()) {
       root.querySelectorAll('.orby-marketing__section').forEach((section) => {
         if (section.dataset.orbyMarketingRevealed === '1') return;
-        if (section.classList.contains('orby-marketing__section--in-progress')) return;
         section.classList.add('orby-marketing__section--in-view');
         void revealModule.preloadSectionMedia(section).then(() => {
           revealModule.revealMarketingSection(section);
@@ -333,7 +332,6 @@ export function initOrbyMarketingPage(options = {}) {
     );
     root.querySelectorAll('.orby-marketing__section').forEach((section) => {
       if (section.dataset.orbyMarketingRevealed === '1') return;
-      if (section.classList.contains('orby-marketing__section--in-progress')) return;
       const observer = isMegaRevealSection(section) ? megaRevealObserver : revealObserver;
       observer.observe(section);
     });
@@ -452,11 +450,6 @@ export function initOrbyMarketingPage(options = {}) {
       section.classList.add('orby-marketing__section--pending');
     });
     reveals.prepareMarketingSections(root);
-
-    root.querySelectorAll('.orby-marketing__section--in-progress').forEach((inProgressSection) => {
-      reveals.showInProgressStatic(inProgressSection);
-      void reveals.preloadSectionMedia(inProgressSection);
-    });
 
     const marketingVideo = await import('./orbyMarketingVideo.js');
     marketingVideo.initMarketingVideos(root);

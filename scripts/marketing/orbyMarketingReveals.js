@@ -75,6 +75,15 @@ function isSplitSection(sectionEl) {
   return sectionEl?.classList.contains('orby-marketing__section--split');
 }
 
+function isInProgressSection(sectionEl) {
+  return sectionEl?.classList.contains('orby-marketing__section--in-progress');
+}
+
+/** Feature splits + Other projects — same copy/media reveal choreography. */
+function isSplitLikeSection(sectionEl) {
+  return isSplitSection(sectionEl) || isInProgressSection(sectionEl);
+}
+
 function isFaqSection(sectionEl) {
   return sectionEl?.classList.contains('orby-marketing__section--faq');
 }
@@ -192,10 +201,8 @@ function shouldPreloadMarketingElement(el) {
 export function preloadSectionMedia(sectionEl) {
   if (!sectionEl) return Promise.resolve();
   loadSectionMarketingVideos(sectionEl);
-  const isInProgress = sectionEl.classList.contains('orby-marketing__section--in-progress');
   sectionEl.querySelectorAll('video').forEach((video) => {
-    // In Progress is warmed at mount while off-screen — load only; play via IO.
-    if (!isInProgress) playMarketingVideo(video);
+    playMarketingVideo(video);
   });
   const media = [
     ...sectionEl.querySelectorAll(
@@ -925,7 +932,7 @@ function prepareSection(sectionEl) {
     prepareMegaSection(sectionEl);
     return;
   }
-  if (isSplitSection(sectionEl)) {
+  if (isSplitLikeSection(sectionEl)) {
     prepareSplitSection(sectionEl);
     return;
   }
@@ -1012,48 +1019,10 @@ function revealStandardSection(sectionEl, tl) {
 }
 
 /**
- * In Progress — no scroll-in stagger; content stays vertically centered under the lime CTA.
- * @param {HTMLElement} sectionEl
- */
-export function showInProgressStatic(sectionEl) {
-  if (!sectionEl || sectionEl.dataset.orbyMarketingRevealed === '1') return;
-  sectionEl.dataset.orbyMarketingRevealed = '1';
-  sectionEl.classList.remove('orby-marketing__section--pending');
-  sectionEl.classList.add('orby-marketing__section--revealed');
-
-  sectionEl
-    .querySelectorAll(
-      '.orby-marketing__figure-media, .orby-marketing__showcase-img, .orby-marketing__pro-card-img, .orby-marketing__pro-card-video, .orby-marketing__png-marquee-img',
-    )
-    .forEach((el) => {
-      el.classList.add('is-loaded');
-      // Do not play here — section is usually off-screen at mount. Early play can
-      // strip the poster and leave a black plate; IntersectionObserver starts play.
-      if (el instanceof HTMLVideoElement) {
-        ensureMarketingVideoLoaded(el);
-      }
-    });
-
-  sectionEl.querySelectorAll('[data-orby-marketing-reveal="media"]').forEach((mask) => {
-    setMediaPlaceholderOpacity(mask, 0);
-    const creditEl = mask.querySelector('[data-orby-marketing-figure-credit]');
-    if (creditEl) gsap.set(creditEl, { opacity: 1, y: 0 });
-  });
-
-  gsap.set(sectionEl.querySelectorAll('*'), {
-    clearProps: 'opacity,transform,clipPath,y,x,scale,filter',
-  });
-}
-
-/**
  * @param {HTMLElement} sectionEl
  */
 export function revealMarketingSection(sectionEl) {
   if (!sectionEl || sectionEl.dataset.orbyMarketingRevealed === '1') return;
-  if (sectionEl.classList.contains('orby-marketing__section--in-progress')) {
-    showInProgressStatic(sectionEl);
-    return;
-  }
   sectionEl.dataset.orbyMarketingRevealed = '1';
 
   if (useInstantMarketingReveal()) {
@@ -1113,7 +1082,7 @@ export function revealMarketingSection(sectionEl) {
 
   if (isMegaMarketingSection(sectionEl)) {
     revealMegaSection(sectionEl, tl);
-  } else if (isSplitSection(sectionEl)) {
+  } else if (isSplitLikeSection(sectionEl)) {
     revealSplitSection(sectionEl, tl);
   } else if (isProSection(sectionEl)) {
     revealProSection(sectionEl, tl);
@@ -1132,7 +1101,6 @@ export function revealMarketingSection(sectionEl) {
 export function prepareMarketingSections(root) {
   if (!root || useInstantMarketingReveal()) return;
   root.querySelectorAll('.orby-marketing__section').forEach((section) => {
-    if (section.classList.contains('orby-marketing__section--in-progress')) return;
     prepareSection(section);
   });
 }

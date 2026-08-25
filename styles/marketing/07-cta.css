@@ -211,8 +211,8 @@
   --orby-footer-edge-x: calc(112px * var(--orby-marketing-gutter-scale));
   --orby-footer-brand-height: calc(58.4px * var(--drop-hero-wide-factor) * 0.88);
   --orby-footer-social-reserve: calc(
-    var(--orby-footer-edge-x) + 2 * var(--orby-footer-social-height) +
-      var(--orby-footer-social-gap) + 1.5rem
+    var(--orby-footer-edge-x) + 3 * var(--orby-footer-social-height) +
+      2 * var(--orby-footer-social-gap) + 1.5rem
   );
   position: absolute;
   z-index: 10;
@@ -356,6 +356,13 @@
 .orby-marketing__footer-social-icon--instagram {
   -webkit-mask-image: url('../../assets/icons/Instagram_Glyph_Black.svg');
   mask-image: url('../../assets/icons/Instagram_Glyph_Black.svg');
+}
+
+.orby-marketing__footer-social-icon--x {
+  -webkit-mask-image: url('../../assets/icons/X-logo.svg');
+  mask-image: url('../../assets/icons/X-logo.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
 }
 
 .orby-marketing__footer-social-icon--github {

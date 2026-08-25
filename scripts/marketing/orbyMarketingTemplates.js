@@ -598,6 +598,9 @@ function renderCtaSection(section) {
 const FOOTER_INSTAGRAM_ICON =
   '<span class="orby-marketing__footer-social-icon orby-marketing__footer-social-icon--instagram" aria-hidden="true"></span>';
 
+const FOOTER_X_ICON =
+  '<span class="orby-marketing__footer-social-icon orby-marketing__footer-social-icon--x" aria-hidden="true"></span>';
+
 const FOOTER_GITHUB_ICON =
   '<span class="orby-marketing__footer-social-icon orby-marketing__footer-social-icon--github" aria-hidden="true"></span>';
 
@@ -612,6 +615,7 @@ const FOOTER_GITHUB_ICON =
  * @property {string} brandHref
  * @property {string} githubHref
  * @property {string} instagramHref
+ * @property {string} xHref
  * @property {string} licenseHref
  */
 
@@ -630,6 +634,7 @@ export function getMarketingFooterFields(section) {
     brandHref: section.footerBrandHref?.trim() || './brand/',
     githubHref: section.footerGithubHref?.trim() || 'https://github.com/stellanjoh2/orby',
     instagramHref: section.footerInstagramHref?.trim() || '',
+    xHref: section.footerXHref?.trim() || '',
     licenseHref: section.footerLicenseHref?.trim() || './LICENSE',
   };
 }
@@ -667,6 +672,7 @@ export function resolveMarketingSiteNavFields(section, base = './') {
     brandHref: prefixMarketingSiteHref(fields.brandHref, base),
     githubHref: fields.githubHref,
     instagramHref: fields.instagramHref,
+    xHref: fields.xHref,
     licenseHref: prefixMarketingSiteHref(fields.licenseHref, base),
   };
 }
@@ -830,6 +836,9 @@ function renderFooterMeta(section, options = {}) {
   const socialLinks = [
     fields.instagramHref
       ? `<a class="orby-marketing__footer-social-link" href="${escapeMarketingHtml(fields.instagramHref)}" target="_blank" rel="noopener noreferrer" aria-label="Instagram">${FOOTER_INSTAGRAM_ICON}</a>`
+      : '',
+    fields.xHref
+      ? `<a class="orby-marketing__footer-social-link" href="${escapeMarketingHtml(fields.xHref)}" target="_blank" rel="noopener noreferrer" aria-label="X">${FOOTER_X_ICON}</a>`
       : '',
     `<a class="orby-marketing__footer-social-link" href="${escapeMarketingHtml(fields.githubHref)}" target="_blank" rel="noopener noreferrer" aria-label="GitHub">${FOOTER_GITHUB_ICON}</a>`,
   ]

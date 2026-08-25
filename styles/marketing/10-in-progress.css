@@ -80,16 +80,6 @@
   width: 100%;
 }
 
-.orby-marketing__section--in-progress .orby-marketing__eyebrow,
-.orby-marketing__section--in-progress .orby-marketing__title,
-.orby-marketing__section--in-progress .orby-marketing__lede,
-.orby-marketing__section--in-progress .orby-magic-btn--mono,
-.orby-marketing__section--in-progress .orby-marketing__figure-media {
-  opacity: 1;
-  transform: none;
-  filter: none;
-}
-
 .orby-marketing__in-progress-panel .orby-marketing__footer-bar--on-white {
   --brand-text: var(--orby-marketing-on-white-ink);
   z-index: 3;
