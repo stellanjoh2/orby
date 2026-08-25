@@ -20,6 +20,23 @@ function escapeMarketingButtonLabel(label) {
   return escapeMarketingHtml(formatMarketingButtonLabel(label));
 }
 
+/**
+ * Product lockup: Name™ — rest. Uses Mattone’s trademark glyph (U+2122).
+ * @param {string} title
+ * @param {string[]} [gradientPhrases]
+ */
+function renderInProgressTitleHtml(title, gradientPhrases) {
+  const raw = String(title ?? '');
+  const separator = ' — ';
+  const dashIndex = raw.indexOf(separator);
+  if (dashIndex <= 0) {
+    return renderMarketingBodyHtml(raw, gradientPhrases);
+  }
+  const name = raw.slice(0, dashIndex);
+  const rest = raw.slice(dashIndex);
+  return `${escapeMarketingHtml(name)}<span class="orby-marketing__tm" aria-hidden="true">\u2122</span>${renderMarketingBodyHtml(rest, gradientPhrases)}`;
+}
+
 function renderBulletList(items) {
   if (!items?.length) return '';
   return `<ul class="orby-marketing__list">${items
@@ -231,7 +248,7 @@ function renderInProgressProject(project, { isLast }) {
           <div class="orby-marketing__split-copy">
             <div class="orby-marketing__split-copy-inner">
               <p class="orby-marketing__eyebrow">${escapeMarketingHtml(project.eyebrow)}</p>
-              <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(project.id)}-title"><span class="orby-marketing__title-line">${renderMarketingBodyHtml(project.title, project.gradientPhrases)}</span></h2>
+              <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(project.id)}-title"><span class="orby-marketing__title-line">${renderInProgressTitleHtml(project.title, project.gradientPhrases)}</span></h2>
               <p class="orby-marketing__lede">${escapeMarketingHtml(project.lede)}</p>
               ${renderInProgressCta(project)}
             </div>

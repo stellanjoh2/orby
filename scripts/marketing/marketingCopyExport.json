@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-08-24T17:00:11.295Z",
+    "generatedAt": "2026-08-25T11:30:58.341Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -389,7 +389,7 @@
           "titleLines": [
             "Rfrct — Distort type and visuals in the browser"
           ],
-          "lede": "Rfrct is a free browser tool for distorting type and building audio-reactive visuals — made for events, VJs, and anyone who just wants to make something cool or tear a design apart. Bend letters through glass, push them through waves, stack multiple files and see how weird you can get. Currently in development.",
+          "lede": "Rfrct™ is a free browser tool for distorting type and building audio-reactive visuals — made for events, VJs, and anyone who wants to tear a design apart. Bend letters through glass, push them through waves, and see how weird you can get. Currently in development.",
           "layout": "media-right",
           "cta": {
             "label": "Request preview",
@@ -403,7 +403,7 @@
           "titleLines": [
             "Gridlock — Apply HUD elements to your footage"
           ],
-          "lede": "Gridlock is a free After Effects plugin that applies motion-reactive surveillance HUD elements to any footage — boxes, rings, and connectors that light up wherever movement hits. Drop it on a layer, scrub, and dial in that sci-fi tracking look. Currently in development.",
+          "lede": "Gridlock™ is a free After Effects plugin that applies motion-reactive surveillance HUD elements to any footage — boxes, rings, and connectors that light up wherever movement hits. Drop it on a layer, scrub, and dial in that sci-fi tracking look. Currently in development.",
           "layout": "media-left",
           "cta": {
             "label": "Request preview",
@@ -413,14 +413,14 @@
         {
           "id": "orby-marketing-in-progress-mozayk",
           "eyebrow": "Other projects",
-          "title": "Mozayk — Create grid-based visuals in the browser",
+          "title": "Mozayk — Complex visuals, made easy",
           "titleLines": [
-            "Mozayk — Create grid-based visuals in the browser"
+            "Mozayk — Complex visuals, made easy"
           ],
-          "lede": "Mozayk is a free browser tool for building abstract grid mosaics — generate random layouts, import photos or video, then scramble, restyle, and export the result. Shape palettes, colour, overlays, and a timeline, then ship stills or animation.",
+          "lede": "Mozayk™ is a free mosaic generator for random abstract visuals — start on a blank canvas, generate a clean layout, or import a photo or video. Scramble, restyle, and export. Shape palettes, colour, overlays, and a timeline, then ship stills or a short animation.",
           "layout": "media-right",
           "cta": {
-            "label": "Try it out",
+            "label": "Launch application",
             "href": "https://stellanjoh2.github.io/mozayk/"
           }
         }

@@ -118,6 +118,17 @@
   color: var(--orby-marketing-on-white-ink);
 }
 
+.orby-marketing__section--in-progress .orby-marketing__tm {
+  font-family: var(--brand-font-headline);
+  font-size: 1em;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: 0;
+  line-height: 1;
+  vertical-align: baseline;
+  margin-left: 0.06em;
+}
+
 .orby-marketing__section--in-progress .orby-marketing__lede {
   color: color-mix(in srgb, var(--orby-marketing-on-white-ink) 88%, transparent);
 }
