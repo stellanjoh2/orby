@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { getComposerOutputRenderTarget } from '../composerOutputBuffer.js';
+import { blitComposerOutputToByteTarget } from './capturePostStackOverlays.js';
 import {
   hideStudioGroundGridInScene,
   restoreStudioGroundGridInScene,
@@ -266,6 +267,13 @@ export function extractCroppedTransparentCanvas(topDownRgba, fullW, fullH, cropI
  *   renderFrame: () => void,
  *   finishGpu?: () => void,
  *   getGroundGrid?: () => import('three').Object3D | null | undefined,
+ *   getWireframeOverlayMeshes?: () => import('three').Mesh[] | null | undefined,
+ *   getWireframeThickness?: () => number,
+ *   getExportViewportReference?: () => object | null,
+ *   getStudioPixelRatio?: () => number,
+ *   getPreviewPixelRatio?: () => number,
+ *   getDisplayPixelRatio?: () => number,
+ *   exportScale?: number,
  * }} deps
  * @returns {Uint8ClampedArray}
  */
@@ -300,23 +308,14 @@ export function readTransparentMergedTopDownRgba(deps) {
       renderFrame();
       finishGpu?.();
 
-      const byteRT = new THREE.WebGLRenderTarget(width, height, {
-        type: THREE.UnsignedByteType,
-        format: THREE.RGBAFormat,
-        minFilter: THREE.LinearFilter,
-        magFilter: THREE.LinearFilter,
-        depthBuffer: false,
-        stencilBuffer: false,
-      });
+      const byteRT = blitComposerOutputToByteTarget(
+        deps,
+        getComposerOutputRenderTarget(composer),
+        width,
+        height,
+      );
       try {
         postPixels = new Uint8Array(width * height * 4);
-        composer.copyPass.render(
-          renderer,
-          byteRT,
-          getComposerOutputRenderTarget(composer),
-          0,
-          false,
-        );
         renderer.readRenderTargetPixels(byteRT, 0, 0, width, height, postPixels);
       } finally {
         byteRT.dispose();
@@ -336,6 +335,13 @@ export function readTransparentMergedTopDownRgba(deps) {
     });
 
     let alphaPixels = null;
+    const overlayMeshes = deps.getWireframeOverlayMeshes?.() ?? [];
+    const overlaySnap = [];
+    for (const mesh of overlayMeshes) {
+      if (!mesh) continue;
+      overlaySnap.push({ mesh, visible: mesh.visible });
+      mesh.visible = false;
+    }
     try {
       renderer.setRenderTarget(alphaRT);
       renderer.setClearColor(0x000000, 0);
@@ -347,6 +353,9 @@ export function readTransparentMergedTopDownRgba(deps) {
       alphaPixels = new Uint8Array(width * height * 4);
       renderer.readRenderTargetPixels(alphaRT, 0, 0, width, height, alphaPixels);
     } finally {
+      for (const { mesh, visible } of overlaySnap) {
+        mesh.visible = visible;
+      }
       alphaRT.dispose();
     }
 

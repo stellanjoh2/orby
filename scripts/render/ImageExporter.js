@@ -576,6 +576,39 @@ export class ImageExporter {
   }
 
   /**
+   * Post-stack overlay getters for capture readback (wireframe linewidth + composite).
+   * @param {number} [exportScale=1]
+   */
+  _capturePostStackOverlayDeps(exportScale = 1) {
+    return {
+      getGroundGrid: () => this.composerLifecycle?.getGroundGrid?.(),
+      getWireframeOverlayMeshes: () =>
+        this.composerLifecycle?.getWireframeOverlayMeshes?.(),
+      getWireframeThickness: () => {
+        const thickness = this.getRenderState?.()?.wireframe?.thickness;
+        return Number.isFinite(thickness) ? thickness : undefined;
+      },
+      getExportViewportReference: () => this._exportViewportReference,
+      getCreativeLookAsciiActive: () =>
+        this.composerLifecycle?.getCreativeLookAsciiActive?.(),
+      getGridLineWidth: () => {
+        const w = this.getRenderState?.()?.gridLineWidth;
+        return Number.isFinite(w) ? w : 1;
+      },
+      getGroundWireColor: () => this.getRenderState?.()?.groundWireColor,
+      getGroundWireOpacity: () => this.getRenderState?.()?.groundWireOpacity,
+      getStudioPixelRatio: () =>
+        resolveRenderQualityTier(this.getRenderState?.()?.renderQuality).maxPixelRatio,
+      getPreviewPixelRatio: () => {
+        const tier = resolveRenderQualityTier(this.getRenderState?.()?.renderQuality);
+        return Math.min(window.devicePixelRatio || 1, tier.maxPixelRatio);
+      },
+      getDisplayPixelRatio: () => window.devicePixelRatio || 1,
+      exportScale,
+    };
+  }
+
+  /**
    * Read composer output at exact capture size (strict by default).
    * @returns {{ pixels: Uint8Array, width: number, height: number } | null}
    */
@@ -614,6 +647,7 @@ export class ImageExporter {
         composer,
         width,
         height,
+        ...this._capturePostStackOverlayDeps(opts.exportScale ?? 1),
         getGradientRgba: () => gradientCtrl.getCaptureGradientRgba(),
         finishGpu: () => {
           const gl = this.renderer.getContext();
@@ -643,30 +677,7 @@ export class ImageExporter {
         composer,
         camera: this.camera,
         scene: this.scene,
-        getGroundGrid: () => this.composerLifecycle?.getGroundGrid?.(),
-        getWireframeOverlayMeshes: () =>
-          this.composerLifecycle?.getWireframeOverlayMeshes?.(),
-        getWireframeThickness: () => {
-          const thickness = this.getRenderState?.()?.wireframe?.thickness;
-          return Number.isFinite(thickness) ? thickness : undefined;
-        },
-        getExportViewportReference: () => this._exportViewportReference,
-        getCreativeLookAsciiActive: () =>
-          this.composerLifecycle?.getCreativeLookAsciiActive?.(),
-        getGridLineWidth: () => {
-          const w = this.getRenderState?.()?.gridLineWidth;
-          return Number.isFinite(w) ? w : 1;
-        },
-        getGroundWireColor: () => this.getRenderState?.()?.groundWireColor,
-        getGroundWireOpacity: () => this.getRenderState?.()?.groundWireOpacity,
-        getStudioPixelRatio: () =>
-          resolveRenderQualityTier(this.getRenderState?.()?.renderQuality).maxPixelRatio,
-        getPreviewPixelRatio: () => {
-          const tier = resolveRenderQualityTier(this.getRenderState?.()?.renderQuality);
-          return Math.min(window.devicePixelRatio || 1, tier.maxPixelRatio);
-        },
-        getDisplayPixelRatio: () => window.devicePixelRatio || 1,
-        exportScale: opts.exportScale ?? 1,
+        ...this._capturePostStackOverlayDeps(opts.exportScale ?? 1),
         ensureComposerMatchesDrawingBuffer: (o) =>
           this._ensureComposerMatchesDrawingBuffer(o),
       },
@@ -893,7 +904,7 @@ export class ImageExporter {
             composer: this.composer,
             width: synced.width,
             height: synced.height,
-            getGroundGrid: () => this.composerLifecycle?.getGroundGrid?.(),
+            ...this._capturePostStackOverlayDeps(size),
             renderFrame: () => session.renderFrame({ transparent: true }),
             finishGpu: () => {
               if (gl && typeof gl.finish === 'function') {
@@ -951,7 +962,7 @@ export class ImageExporter {
           composer: this.composer,
           width,
           height,
-          getGroundGrid: () => this.composerLifecycle?.getGroundGrid?.(),
+          ...this._capturePostStackOverlayDeps(size),
           renderFrame: () => session.renderFrame({ transparent: true }),
           finishGpu: () => {
             if (gl && typeof gl.finish === 'function') {
@@ -1162,7 +1173,7 @@ export class ImageExporter {
           composer: this.composer,
           width: exportW,
           height: exportH,
-          getGroundGrid: () => this.composerLifecycle?.getGroundGrid?.(),
+          ...this._capturePostStackOverlayDeps(size),
           renderFrame: () => {
             if (this.composer) {
               this.composer.render();

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { getComposerOutputRenderTarget } from '../composerOutputBuffer.js';
 import { ensureExportCapturePixelRatio } from './forceExportCaptureFramebuffer.js';
 import { pinRenderTargetPhysicalViewport } from '../resetRendererFullViewport.js';
+import { blitComposerOutputToByteTarget } from './capturePostStackOverlays.js';
 
 /** @param {import('three').WebGLRenderer} renderer @param {number} width @param {number} height */
 export function pinRenderTargetViewport(renderer, width, height) {
@@ -73,6 +74,13 @@ export function mergeGradientUnderPostRgba(
  *   height: number,
  *   getGradientRgba: () => Uint8ClampedArray | null,
  *   finishGpu?: () => void,
+ *   getWireframeOverlayMeshes?: () => import('three').Mesh[] | null | undefined,
+ *   getWireframeThickness?: () => number,
+ *   getExportViewportReference?: () => object | null,
+ *   getStudioPixelRatio?: () => number,
+ *   getPreviewPixelRatio?: () => number,
+ *   getDisplayPixelRatio?: () => number,
+ *   exportScale?: number,
  * }} deps
  * @returns {Uint8ClampedArray}
  */
@@ -99,23 +107,14 @@ export function readGradientMergedFromComposerOutput(deps) {
   composer.renderToScreen = false;
   let postPixels = null;
   try {
-    const byteRT = new THREE.WebGLRenderTarget(width, height, {
-      type: THREE.UnsignedByteType,
-      format: THREE.RGBAFormat,
-      minFilter: THREE.LinearFilter,
-      magFilter: THREE.LinearFilter,
-      depthBuffer: false,
-      stencilBuffer: false,
-    });
+    const byteRT = blitComposerOutputToByteTarget(
+      deps,
+      getComposerOutputRenderTarget(composer),
+      width,
+      height,
+    );
     try {
       postPixels = new Uint8Array(width * height * 4);
-      composer.copyPass.render(
-        renderer,
-        byteRT,
-        getComposerOutputRenderTarget(composer),
-        0,
-        false,
-      );
       renderer.readRenderTargetPixels(byteRT, 0, 0, width, height, postPixels);
     } finally {
       byteRT.dispose();

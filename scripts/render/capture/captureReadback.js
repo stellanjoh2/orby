@@ -1,15 +1,10 @@
-import * as THREE from 'three';
 import { getComposerOutputRenderTarget } from '../composerOutputBuffer.js';
 import { getDrawingBufferPixels } from '../drawingBufferSize.js';
 import { fullViewportLogicalSize } from '../fullViewportLogicalSize.js';
 import { LOG_CAPTURE_DEBUG } from '../../constants.js';
 import { ensureExportCapturePixelRatio } from './forceExportCaptureFramebuffer.js';
 import { pinRenderTargetPhysicalViewport } from '../resetRendererFullViewport.js';
-import {
-  captureByteTargetNeedsDepthBuffer,
-  compositeWireframeOnByteTarget,
-  shouldCompositeWireframeForCapture,
-} from './capturePostStackOverlays.js';
+import { blitComposerOutputToByteTarget } from './capturePostStackOverlays.js';
 
 /**
  * Thrown when composer readback size ≠ requested capture size after one retry.
@@ -133,27 +128,9 @@ function readComposerPixelsOnce(deps, requestedW, requestedH) {
   const outputRT = getComposerOutputRenderTarget(composer);
   const readW = Math.max(1, outputRT?.width ?? requestedW);
   const readH = Math.max(1, outputRT?.height ?? requestedH);
-  const compositeWireframe =
-    deps.camera
-    && deps.scene
-    && shouldCompositeWireframeForCapture(deps);
-  const needsDepthBuffer = captureByteTargetNeedsDepthBuffer(deps);
-
-  const byteRT = new THREE.WebGLRenderTarget(readW, readH, {
-    type: THREE.UnsignedByteType,
-    format: THREE.RGBAFormat,
-    minFilter: THREE.LinearFilter,
-    magFilter: THREE.LinearFilter,
-    // Depth needed so visible-faces wireframe can depth-test against scene meshes.
-    depthBuffer: needsDepthBuffer,
-    stencilBuffer: false,
-  });
+  const byteRT = blitComposerOutputToByteTarget(deps, outputRT, readW, readH);
 
   try {
-    composer.copyPass.render(renderer, byteRT, outputRT, 0, false);
-    if (compositeWireframe) {
-      compositeWireframeOnByteTarget(deps, byteRT);
-    }
     const pixels = new Uint8Array(readW * readH * 4);
     renderer.readRenderTargetPixels(byteRT, 0, 0, readW, readH, pixels);
     return { pixels, width: readW, height: readH };

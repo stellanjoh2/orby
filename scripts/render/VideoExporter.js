@@ -942,7 +942,9 @@ export class VideoExporter {
       composer: this.composer,
       width: targetWidth,
       height: targetHeight,
-      getGroundGrid: () => this.imageExporter?.composerLifecycle?.getGroundGrid?.(),
+      ...(this.imageExporter?._capturePostStackOverlayDeps?.() ?? {
+        getGroundGrid: () => this.imageExporter?.composerLifecycle?.getGroundGrid?.(),
+      }),
       renderFrame: () => {
         this._renderComposerFrameForCapture({
           transparent: true,

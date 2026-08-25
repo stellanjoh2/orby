@@ -17,9 +17,11 @@ import {
   resolvePostStackOverlayRenderTarget,
 } from '../composerOutputBuffer.js';
 import {
+  captureByteTargetNeedsDepthBuffer,
   resolveCaptureGridLineWidthPx,
   resolveCaptureWireframeLineWidthPx,
   shouldCompositeGroundGridForCapture,
+  shouldCompositeWireframeForCapture,
 } from './capturePostStackOverlays.js';
 
 describe('artistic paper backdrop keying', () => {
@@ -75,6 +77,48 @@ describe('wireframe capture composite', () => {
     assert.equal(
       lineWidthPx,
       resolveCaptureWireframeLineWidthPx(thickness, 2, 2, 2, 2),
+    );
+  });
+
+  it('composites visible overlay meshes into capture readback', () => {
+    assert.equal(
+      shouldCompositeWireframeForCapture({
+        getWireframeOverlayMeshes: () => [{ visible: true }],
+      }),
+      true,
+    );
+    assert.equal(
+      shouldCompositeWireframeForCapture({
+        getWireframeOverlayMeshes: () => [{ visible: false }],
+      }),
+      false,
+    );
+    assert.equal(
+      shouldCompositeWireframeForCapture({
+        getWireframeOverlayMeshes: () => [],
+      }),
+      false,
+    );
+  });
+
+  it('visible-faces wireframe needs a depth buffer on the byte target', () => {
+    assert.equal(
+      captureByteTargetNeedsDepthBuffer({
+        getWireframeOverlayMeshes: () => [{
+          isMesh: true,
+          material: { depthTest: true },
+        }],
+      }),
+      true,
+    );
+    assert.equal(
+      captureByteTargetNeedsDepthBuffer({
+        getWireframeOverlayMeshes: () => [{
+          isMesh: true,
+          material: { depthTest: false },
+        }],
+      }),
+      false,
     );
   });
 });

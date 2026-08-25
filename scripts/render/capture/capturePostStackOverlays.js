@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { resolveViewportGridLineWidthPx, resolveViewportWireframeLineWidthPx, DEFAULT_WIREFRAME_LINE_WIDTH } from '../../constants.js';
 import { renderGroundGridOverlay } from '../transformGizmoLayers.js';
 import {
@@ -70,6 +71,47 @@ export function shouldCompositeWireframeForCapture(deps) {
  */
 export function captureByteTargetNeedsDepthBuffer(deps) {
   return wireframeMeshesWantDepthTest(deps.getWireframeOverlayMeshes?.());
+}
+
+/**
+ * Copy composer output to an unsigned-byte RT, then composite post-stack wireframe.
+ * Line2 overlays do not survive half-float composer targets — this is the export path
+ * that matches the live viewport overlay. Caller must dispose the returned target.
+ *
+ * @param {{
+ *   renderer: import('three').WebGLRenderer,
+ *   composer: import('three/examples/jsm/postprocessing/EffectComposer.js').EffectComposer,
+ *   camera?: import('three').Camera,
+ *   scene?: import('three').Scene | null,
+ *   getWireframeOverlayMeshes?: () => import('three').Mesh[] | null | undefined,
+ *   getWireframeThickness?: () => number,
+ *   getExportViewportReference?: () => object | null,
+ *   getStudioPixelRatio?: () => number,
+ *   getPreviewPixelRatio?: () => number,
+ *   getDisplayPixelRatio?: () => number,
+ *   exportScale?: number,
+ * }} deps
+ * @param {import('three').WebGLRenderTarget | null | undefined} outputRT
+ * @param {number} readW
+ * @param {number} readH
+ * @returns {import('three').WebGLRenderTarget}
+ */
+export function blitComposerOutputToByteTarget(deps, outputRT, readW, readH) {
+  const { renderer, composer } = deps;
+  const byteRT = new THREE.WebGLRenderTarget(readW, readH, {
+    type: THREE.UnsignedByteType,
+    format: THREE.RGBAFormat,
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
+    // Depth needed so visible-faces wireframe can depth-test against scene meshes.
+    depthBuffer: captureByteTargetNeedsDepthBuffer(deps),
+    stencilBuffer: false,
+  });
+  composer.copyPass.render(renderer, byteRT, outputRT, 0, false);
+  if (deps.camera && deps.scene && shouldCompositeWireframeForCapture(deps)) {
+    compositeWireframeOnByteTarget(deps, byteRT);
+  }
+  return byteRT;
 }
 
 /**
