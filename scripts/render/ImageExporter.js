@@ -30,6 +30,11 @@ import {
 import { prepareCaptureFeatures, restoreCaptureFeatures } from './capture/captureFeatureHooks.js';
 import { downloadExportCanvas } from './capture/encodeExportBlob.js';
 import {
+  isSolidStudioBackdropActive,
+  resolveSolidStudioBackdropColor,
+} from './backgroundFallback.js';
+import { readSolidMergedFromComposerOutput } from './capture/captureSolidComposite.js';
+import {
   applyTransparentCaptureSetup,
   extractCroppedTransparentCanvas,
   readTransparentMergedTopDownRgba,
@@ -115,6 +120,8 @@ export class ImageExporter {
     this._maxExportPixelArea = null;
     /** @type {(() => void) | null} — SceneManager re-applies HDRI + backdrop after capture. */
     this.reapplyStudioAfterCapture = null;
+    /** @type {(() => void) | null} — re-apply Studio Color before offline capture clear. */
+    this.pinStudioBackgroundForCapture = null;
     /** @type {(() => number) | null} */
     this.getHdriRotationDegrees = null;
     /**
@@ -622,6 +629,11 @@ export class ImageExporter {
     const useGradientComposite =
       gradientCtrl?.shouldCompositeGradientOnReadback?.() === true
       && opts.transparent !== true;
+    const renderState = this.getRenderState?.() ?? {};
+    const useSolidComposite =
+      !useGradientComposite
+      && opts.transparent !== true
+      && isSolidStudioBackdropActive(renderState);
 
     if (useGradientComposite) {
       const width = Math.max(1, Math.round(fallbackWidth));
@@ -658,6 +670,32 @@ export class ImageExporter {
       });
       if (logDebug) {
         console.debug('[Orby capture] gradient CPU composite', { width, height });
+      }
+      return { pixels: merged, width, height, topDown: true };
+    }
+
+    if (useSolidComposite) {
+      const width = Math.max(1, Math.round(fallbackWidth));
+      const height = Math.max(1, Math.round(fallbackHeight));
+      const solidHex = resolveSolidStudioBackdropColor(renderState);
+      const merged = readSolidMergedFromComposerOutput({
+        renderer: this.renderer,
+        scene: this.scene,
+        camera: this.camera,
+        composer,
+        width,
+        height,
+        solidHex,
+        ...this._capturePostStackOverlayDeps(opts.exportScale ?? 1),
+        finishGpu: () => {
+          const gl = this.renderer.getContext();
+          if (gl && typeof gl.finish === 'function') {
+            gl.finish();
+          }
+        },
+      });
+      if (logDebug) {
+        console.debug('[Orby capture] solid CPU composite', { width, height, solidHex });
       }
       return { pixels: merged, width, height, topDown: true };
     }
@@ -841,6 +879,7 @@ export class ImageExporter {
       getHdriRotationDegrees: this.getHdriRotationDegrees,
       setSuppressResizeForExport: this.setSuppressResizeForExport ?? undefined,
       onAfterRestore: this.reapplyStudioAfterCapture,
+      pinStudioBackgroundForCapture: this.pinStudioBackgroundForCapture ?? undefined,
     };
   }
 

@@ -88,3 +88,23 @@ test('resolveStudioBackdropForBeauty does not keep texture when HDRI backdrop is
   assert.equal(backdrop.useGpuGradientBlit, false);
   assert.equal(backdrop.clearColor, null);
 });
+
+test('resolveStudioBackdropForBeauty keeps pure black Studio Color (#000000)', () => {
+  const backdrop = resolve(
+    {
+      usesFallbackBackdrop: () => true,
+      solidEnabled: true,
+      getColor: () => '#000000',
+      imageController: {
+        isActive: () => false,
+      },
+    },
+    {
+      isActive: () => false,
+      shouldGpuBlitGradient: () => false,
+    },
+  );
+  assert.equal(backdrop.usesFallbackBackdrop, true);
+  assert.equal(backdrop.clearColor, '#000000');
+  assert.notEqual(backdrop.clearColor, '#080808');
+});

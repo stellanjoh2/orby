@@ -26,6 +26,8 @@ let scrimFadeTimer = null;
 let scrimFadeListener = null;
 let shelfReleaseTimer = null;
 let dropzoneHideFallbackTimer = null;
+/** Offline PNG/video capture — never swap Studio Color for Orby black transition clear. */
+let studioBackdropExportBypass = false;
 
 function isDropzoneHiding() {
   return dropzoneHideInFlight;
@@ -62,7 +64,21 @@ function prefersReducedMotion() {
   );
 }
 
+/**
+ * While true, {@link isStudioBackdropTransitionLocked} stays false so capture/export
+ * keeps the user's Studio Color (including pure `#000000`) instead of `TRANSITION_BACKDROP`.
+ * @param {boolean} active
+ */
+export function setStudioBackdropExportBypass(active) {
+  studioBackdropExportBypass = active === true;
+}
+
+export function isStudioBackdropExportBypass() {
+  return studioBackdropExportBypass;
+}
+
 export function isStudioBackdropTransitionLocked() {
+  if (studioBackdropExportBypass) return false;
   return (
     studioRevealArmed
     || isDropzoneHiding()

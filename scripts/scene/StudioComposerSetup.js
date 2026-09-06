@@ -211,6 +211,17 @@ export function setupStudioComposer(scene) {
         );
       }
     };
+    scene.imageExporter.pinStudioBackgroundForCapture = () => {
+      const hex = scene.stateStore?.getState()?.background;
+      if (hex) {
+        scene.syncStudioBackgroundColor(hex);
+      } else {
+        scene.flushStudioViewportBackdrop?.();
+      }
+      if (scene.postPipeline?.renderPass?.clearAlpha === 0) {
+        scene.postPipeline.renderPass.clearAlpha = 1;
+      }
+    };
     scene.imageExporter.setSuppressResizeForExport = (active) => {
       scene._suppressResizeForExport = active === true;
     };

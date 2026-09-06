@@ -4,6 +4,7 @@ import { createCaptureContext } from './captureContext.js';
 import { CaptureFeatureSession } from './captureFeatureHooks.js';
 import { logCaptureDebug } from './captureReadback.js';
 import { repairInteractiveViewportAfterCapture } from './repairInteractiveViewportAfterCapture.js';
+import { setStudioBackdropExportBypass } from '../../ui/orbyPageTransition.js';
 
 /**
  * @typedef {import('./captureContext.js').CaptureSize} CaptureSize
@@ -28,6 +29,7 @@ import { repairInteractiveViewportAfterCapture } from './repairInteractiveViewpo
  * @property {(value: boolean) => void} [setSuppressResizeForExport]
  * @property {() => number} [getHdriRotationDegrees]
  * @property {() => void} [onAfterRestore]
+ * @property {() => void} [pinStudioBackgroundForCapture] — re-apply Studio Color; ignore transition Orby black
  */
 
 /**
@@ -61,7 +63,15 @@ export class OfflineCaptureSession {
 
   begin() {
     if (this._snapshot) return;
-    const { setSuppressResizeForExport } = this.deps;
+    const { setSuppressResizeForExport, pinStudioBackgroundForCapture, postPipeline } =
+      this.deps;
+    // Still PNG export starts a load spinner; never let transition lock paint Orby black
+    // into the capture clear while Studio Color is `#000000` (or any user pick).
+    setStudioBackdropExportBypass(true);
+    if (postPipeline?.renderPass && postPipeline.renderPass.clearAlpha === 0) {
+      postPipeline.renderPass.clearAlpha = 1;
+    }
+    pinStudioBackgroundForCapture?.();
     if (typeof setSuppressResizeForExport === 'function') {
       setSuppressResizeForExport(true);
       this._suppressResizeWasSet = true;
@@ -221,6 +231,8 @@ export class OfflineCaptureSession {
       this._suppressResizeWasSet = false;
     }
 
+    setStudioBackdropExportBypass(false);
+
     this._snapshot = null;
     this._captureSize = null;
     onAfterRestore?.();
@@ -258,6 +270,11 @@ export async function runOfflineCaptureSession(deps, work) {
   try {
     return await work(session);
   } finally {
-    session.restore();
+    try {
+      session.restore();
+    } finally {
+      // Always release — even if restore threw mid-way.
+      setStudioBackdropExportBypass(false);
+    }
   }
 }

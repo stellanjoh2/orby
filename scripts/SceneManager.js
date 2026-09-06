@@ -32,6 +32,7 @@ import {
 } from './constants.js';
 import {
   isStudioBackdropTransitionLocked,
+  setStudioBackdropExportBypass,
   TRANSITION_BACKDROP,
 } from './ui/orbyPageTransition.js';
 import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
@@ -4309,6 +4310,8 @@ export class SceneManager {
     // Still-image export uses the lightweight bottom-left load spinner (not the full black video
     // export overlay). Pin the last live frame first — offline capture resizes/clears the
     // drawing buffer (preserveDrawingBuffer: false) and would otherwise flash black.
+    // Bypass before the spinner: load-spinner sync can re-lock transition Orby black onto the clear.
+    setStudioBackdropExportBypass(true);
     this.pinViewportCaptureFreeze();
     this._suppressResizeForExport = true;
     this.ui?.setLoadSpinnerStatusPrefix?.(`Capturing .${formatId.toUpperCase()}`);
@@ -4380,6 +4383,8 @@ export class SceneManager {
       this.imageExporter.setExportViewportReference?.(null);
       this.ui?.endLoadSpinner?.();
       this._suppressResizeForExport = false;
+      setStudioBackdropExportBypass(false);
+      this.flushStudioViewportBackdrop?.();
       this.handleResize();
       // Drop freeze after the next paint so the restored live buffer is on screen.
       requestAnimationFrame(() => {
