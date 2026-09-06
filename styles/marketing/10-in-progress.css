@@ -42,7 +42,8 @@
     max(0px, env(safe-area-inset-top, 0px)) + var(--orby-marketing-section-radius) +
       var(--orby-marketing-gap-big)
   );
-  padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
+  /* In-flow footer carries bottom inset via margin (panel stays white underneath). */
+  padding-bottom: 0;
 }
 
 .orby-marketing__section--in-progress {
@@ -63,13 +64,10 @@
 }
 
 /*
- * Last project: feature gap above the absolute footer, plus footer chrome clearance.
+ * Last project → in-flow footer. Same 192px seam as between feature cards.
  */
 .orby-marketing__section--in-progress-last {
-  padding-bottom: calc(
-    var(--orby-marketing-gap-big) + 3.25rem + var(--orby-footer-lift, 36px) +
-      var(--orby-footer-brand-height, 51px) + var(--orby-marketing-footer-meta-size, 14px) * 1.45
-  );
+  padding-bottom: var(--orby-marketing-gap-big);
 }
 
 .orby-marketing__in-progress-reveal.is-revealed .orby-marketing__section--in-progress {
@@ -82,9 +80,21 @@
 
 .orby-marketing__in-progress-panel .orby-marketing__footer-bar--on-white {
   --brand-text: var(--orby-marketing-on-white-ink);
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
   z-index: 3;
   color: var(--orby-marketing-on-white-ink);
   pointer-events: auto;
+  /* Former absolute `bottom` inset — white panel shows through (keep brand at bottom: 0). */
+  margin-bottom: calc(
+    var(--orby-footer-lift, 36px) +
+      max(
+        calc(1.25rem * var(--orby-marketing-scale, 1)),
+        env(safe-area-inset-bottom, 0px)
+      )
+  );
 }
 
 .orby-marketing__in-progress-reveal:not(.is-revealed) .orby-marketing__footer-bar--on-white {
@@ -219,26 +229,18 @@
 
 @media (prefers-reduced-motion: reduce) {
   .orby-marketing__section--in-progress {
-    padding: 0 0 var(--orby-marketing-gap-big);
     pointer-events: auto;
   }
 
   .orby-marketing__in-progress-panel .orby-marketing__footer-bar--on-white {
-    position: relative;
-    bottom: auto;
-    margin-top: var(--orby-marketing-gap-big);
     pointer-events: auto;
   }
 }
 
 html.orby-marketing-reduced .orby-marketing__section--in-progress {
-  padding: 0 0 var(--orby-marketing-gap-big);
   pointer-events: auto;
 }
 
 html.orby-marketing-reduced .orby-marketing__in-progress-panel .orby-marketing__footer-bar--on-white {
-  position: relative;
-  bottom: auto;
-  margin-top: var(--orby-marketing-gap-big);
   pointer-events: auto;
 }

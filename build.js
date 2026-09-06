@@ -8,6 +8,7 @@ import { injectAllSubpageSiteNav } from './scripts/marketing/injectSubpageSiteNa
 import { readStitchedIndexHtml } from './scripts/stitchIndexHtml.mjs';
 import { stampStitchedHtmlBanner } from './scripts/stitchIndexInclude.js';
 import { verifyProductionBuild } from './scripts/verifyProductionEnv.mjs';
+import { shouldCopyAssetToDist } from './scripts/marketing/marketingBuildAssetFilter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -287,8 +288,11 @@ if (existsSync(join(__dirname, 'support'))) {
   }
 }
 
-// Copy assets
-cpSync('assets', join(distDir, 'assets'), { recursive: true });
+// Copy assets — skip raw HDRIs + unused marketing sources (see marketingBuildAssetFilter.js).
+cpSync('assets', join(distDir, 'assets'), {
+  recursive: true,
+  filter: shouldCopyAssetToDist,
+});
 if (existsSync(join(__dirname, 'scripts', 'vendor'))) {
   cpSync(join(__dirname, 'scripts', 'vendor'), join(distDir, 'scripts', 'vendor'), {
     recursive: true,

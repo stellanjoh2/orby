@@ -1142,6 +1142,7 @@ html.mobile-landing .orby-marketing__in-progress-panel .orby-marketing__footer-b
   left: auto;
   right: auto;
   bottom: auto;
+  margin-bottom: 0;
   padding-inline: var(--orby-home-padding-x);
 }
 
