@@ -624,7 +624,7 @@ export const MARKETING_SECTIONS = [
         eyebrow: 'Other projects',
         title: 'LX01 — Text in, cyborg out',
         lede:
-          'LX01™ is a free browser speech synthesizer for robotic voices — type a line, pick from four voice engines, or dial in a classic reciter preset. Vocode, crush, and reshape. Tune formants, EQ, and pronunciation, then ship clean speech or a fully vocoded take.',
+          'LX01™ is a free browser speech synthesizer for robotic voices — type a line, pick from four voice engines, or dial in a classic reciter preset. Vocode, crush, and reshape. Tune formants, EQ, and pronunciation, then ship synthetic speech or a fully vocoded take.',
         layout: 'media-left',
         videoSrc: './assets/marketing/lx01-promo.mp4',
         imageAlt: 'LX01 speech synthesizer — robotic voice vocoder',
