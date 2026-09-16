@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-08-25T11:30:58.341Z",
+    "generatedAt": "2026-09-16T14:20:07.958Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -422,6 +422,20 @@
           "cta": {
             "label": "Launch application",
             "href": "https://stellanjoh2.github.io/mozayk/"
+          }
+        },
+        {
+          "id": "orby-marketing-in-progress-lx01",
+          "eyebrow": "Other projects",
+          "title": "LX01 — Text in, robot out",
+          "titleLines": [
+            "LX01 — Text in, robot out"
+          ],
+          "lede": "LX01™ is a free browser speech synthesizer for robotic voices — type a line, pick from four voice engines, or dial in a classic reciter preset. Vocode, crush, and reshape. Tune formants, EQ, and pronunciation, then ship clean speech or a fully vocoded take.",
+          "layout": "media-left",
+          "cta": {
+            "label": "Launch application",
+            "href": "https://stellanjoh2.github.io/Cyborg/"
           }
         }
       ]

@@ -619,6 +619,18 @@ export const MARKETING_SECTIONS = [
         ctaLabel: 'Launch application',
         ctaHref: 'https://stellanjoh2.github.io/mozayk/',
       },
+      {
+        id: 'orby-marketing-in-progress-lx01',
+        eyebrow: 'Other projects',
+        title: 'LX01 — Text in, robot out',
+        lede:
+          'LX01™ is a free browser speech synthesizer for robotic voices — type a line, pick from four voice engines, or dial in a classic reciter preset. Vocode, crush, and reshape. Tune formants, EQ, and pronunciation, then ship clean speech or a fully vocoded take.',
+        layout: 'media-left',
+        videoSrc: './assets/marketing/lx01-promo.mp4',
+        imageAlt: 'LX01 speech synthesizer — robotic voice vocoder',
+        ctaLabel: 'Launch application',
+        ctaHref: 'https://stellanjoh2.github.io/Cyborg/',
+      },
     ],
   },
 ];
