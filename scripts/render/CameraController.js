@@ -1263,7 +1263,12 @@ export class CameraController {
     }
     this._prePreviewViewportControls = null;
     this._previewViewportLockActive = false;
+    // Same pair as endExportCameraDrive: orbit solve resets camera.up to world Y,
+    // then tilt re-rolls. Skipping _applyTilt leaves a untilted axis until the next nudge.
     this._updateOrbitControls();
+    if (this.autoOrbitMode === 'off') {
+      this._applyTilt();
+    }
     this._lockOrbitSolve();
   }
 
