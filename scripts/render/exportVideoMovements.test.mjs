@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  hasExportVideoMovement,
   normalizeExportCameraSpinSettings,
   normalizeExportObjectSpinSettings,
+  normalizeExportVideoMovements,
   resolveExportCameraMovementDurationSec,
   resolveExportCameraMovementLinearT,
   resolveExportDurationSec,
@@ -123,5 +125,39 @@ describe('export mesh animation timing', () => {
       ),
       3.2,
     );
+  });
+});
+
+describe('hasExportVideoMovement', () => {
+  it('allows static camera when GLB animation is included', () => {
+    const settings = {
+      turntable: false,
+      orbit: false,
+      meshAnimationsInclude: true,
+    };
+    const movements = normalizeExportVideoMovements(settings);
+    assert.equal(hasExportVideoMovement(movements, settings), true);
+    assert.equal(hasExportVideoMovement(movements, settings, 1), true);
+    assert.equal(hasExportVideoMovement(movements, settings, 0), false);
+  });
+
+  it('still requires motion when GLB animation is off', () => {
+    const settings = {
+      turntable: false,
+      orbit: false,
+      meshAnimationsInclude: false,
+    };
+    const movements = normalizeExportVideoMovements(settings);
+    assert.equal(hasExportVideoMovement(movements, settings), false);
+  });
+
+  it('allows turntable with rotation even without mesh anim', () => {
+    const settings = {
+      turntable: true,
+      objectSpins: 1,
+      meshAnimationsInclude: false,
+    };
+    const movements = normalizeExportVideoMovements(settings);
+    assert.equal(hasExportVideoMovement(movements, settings), true);
   });
 });

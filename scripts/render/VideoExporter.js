@@ -91,6 +91,8 @@ export class VideoExporter {
     beginExportFovDrive = () => {},
     applyExportFovDriveFrame = () => {},
     endExportFovDrive = () => {},
+    beginExportSessionFramingGuard = () => {},
+    endExportSessionFramingGuard = () => {},
     beginExportAnimationDrive = () => {},
     applyExportAnimationDriveFrame = () => {},
     endExportAnimationDrive = () => {},
@@ -143,6 +145,8 @@ export class VideoExporter {
     this.beginExportFovDrive = beginExportFovDrive;
     this.applyExportFovDriveFrame = applyExportFovDriveFrame;
     this.endExportFovDrive = endExportFovDrive;
+    this.beginExportSessionFramingGuard = beginExportSessionFramingGuard;
+    this.endExportSessionFramingGuard = endExportSessionFramingGuard;
     this.beginExportAnimationDrive = beginExportAnimationDrive;
     this.applyExportAnimationDriveFrame = applyExportAnimationDriveFrame;
     this.endExportAnimationDrive = endExportAnimationDrive;
@@ -210,12 +214,12 @@ export class VideoExporter {
     if (!this.getCurrentModel?.()) {
       return null;
     }
+    const clipCount = this.getAnimationClipCount?.() ?? 0;
     const movements = normalizeExportVideoMovements(settings);
-    if (!hasExportVideoMovement(movements, settings)) {
+    if (!hasExportVideoMovement(movements, settings, clipCount)) {
       return null;
     }
     const allowedDurations = [5, 10, 15];
-    const clipCount = this.getAnimationClipCount?.() ?? 0;
     const meshAnimation = normalizeExportMeshAnimationSettings(settings, clipCount);
     const clipDuration = meshAnimation.include
       ? this.getAnimationClipDuration?.(meshAnimation.clipIndex) ?? 0
@@ -425,6 +429,7 @@ export class VideoExporter {
   }
 
   _beginExportSession({ movements, meshAnimation }) {
+    this.beginExportSessionFramingGuard?.();
     if (needsExportCameraDrive(movements)) {
       this.beginExportCameraDrive?.();
     }
@@ -518,6 +523,9 @@ export class VideoExporter {
     this._captureFeatureSession = null;
 
     this.handleResize?.();
+
+    // Last: after buffer/resize teardown — put the camera back on the encode-start shot.
+    this.endExportSessionFramingGuard?.();
   }
 
   async _downloadSequenceAsZip({
@@ -1401,7 +1409,7 @@ export class VideoExporter {
   async capturePreviewFrame(settings = {}, opts = {}) {
     const params = this._resolveVideoExportParams(settings);
     if (!params) {
-      this.ui?.showToast?.('Load a mesh and enable at least one movement');
+      this.ui?.showToast?.('Load a mesh and enable a movement or GLB animation');
       return null;
     }
 
@@ -1617,7 +1625,7 @@ export class VideoExporter {
       if (!this.getCurrentModel?.()) {
         this.ui?.showToast?.('Load a mesh before exporting video');
       } else {
-        this.ui?.showToast?.('Enable at least one movement to export');
+        this.ui?.showToast?.('Enable a movement or GLB animation to export');
       }
       return;
     }

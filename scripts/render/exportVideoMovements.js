@@ -202,10 +202,21 @@ export function normalizeExportCameraSpinSettings(settings = {}) {
   return buildExportSpinSettings(legacy);
 }
 
-/** @param {ReturnType<typeof normalizeExportVideoMovements>} movements @param {Record<string, unknown>} [settings] */
-export function hasExportVideoMovement(movements, settings = {}) {
+/**
+ * True when export has something to capture over time: camera/object motion,
+ * export HDRI spin, or an included GLB clip (static camera + mesh anim is valid).
+ * @param {ReturnType<typeof normalizeExportVideoMovements>} movements
+ * @param {Record<string, unknown>} [settings]
+ * @param {number} [clipCount] — when set, GLB include only counts if clips exist
+ */
+export function hasExportVideoMovement(movements, settings = {}, clipCount) {
   const objectSpin = normalizeExportObjectSpinSettings(settings);
   const cameraSpin = normalizeExportCameraSpinSettings(settings);
+  const hdri = normalizeExportHdriRotationSettings(settings);
+  const meshAnim =
+    clipCount === undefined
+      ? settings.meshAnimationsInclude === true
+      : normalizeExportMeshAnimationSettings(settings, clipCount).include;
   return !!(
     (movements?.turntable && objectSpin.rotationDegrees > 0)
     || (movements?.orbit && cameraSpin.rotationDegrees > 0)
@@ -215,6 +226,8 @@ export function hasExportVideoMovement(movements, settings = {}) {
     || movements?.tiltRight
     || needsExportFovDrive(movements)
     || needsExportPitchDrive(movements)
+    || hdri.degrees > 0
+    || meshAnim
   );
 }
 

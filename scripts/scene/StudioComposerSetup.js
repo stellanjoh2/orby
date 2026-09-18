@@ -288,6 +288,10 @@ export function setupStudioComposer(scene) {
       applyExportFovDriveFrame: (t, fovOffset) =>
         scene.cameraController?.applyExportFovDriveFrame?.(t, fovOffset),
       endExportFovDrive: (options) => scene.cameraController?.endExportFovDrive?.(options),
+      beginExportSessionFramingGuard: () =>
+        scene.cameraController?.beginExportSessionFramingGuard?.(),
+      endExportSessionFramingGuard: () =>
+        scene.cameraController?.endExportSessionFramingGuard?.(),
       beginExportAnimationDrive: (opts) => scene.animationController?.beginExportDrive?.(opts),
       applyExportAnimationDriveFrame: (frameIndex, fps) =>
         scene.animationController?.applyExportDriveFrame?.(frameIndex, fps),

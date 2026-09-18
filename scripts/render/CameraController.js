@@ -180,6 +180,8 @@ export class CameraController {
 
     /** Session-only export framing bookmark (position, target, tilt). */
     this._exportFramingBookmark = null;
+    /** Pre-encode framing so teardown always returns the viewport to the shot you started with. */
+    this._exportSessionFraming = null;
 
     /** Export movement preview — orbit locked without timed camera drive (e.g. turntable-only). */
     this._previewViewportLockActive = false;
@@ -1153,6 +1155,52 @@ export class CameraController {
     return this._exportFramingBookmark;
   }
 
+  /**
+   * Apply absolute position/target/tilt. Re-asserts pose after orbit update —
+   * near-pole shots can otherwise drift when OrbitControls reclamps spherical.
+   * @param {{ position: THREE.Vector3, target: THREE.Vector3, tilt: number }} sn
+   * @param {{ persist?: boolean }} [options]
+   */
+  _applyFramingPoseSnapshot(sn, { persist = false } = {}) {
+    if (!sn || !this.controls) return false;
+    this._cancelFocusAnimation();
+    this._suppressPoseEvents = true;
+    this.camera.position.copy(sn.position);
+    this.controls.target.copy(sn.target);
+    this.currentTilt = sn.tilt;
+    if (this.controls.sphericalDelta) {
+      this.controls.sphericalDelta.set(0, 0, 0);
+    }
+    this._unlockOrbitSolve();
+    this._updateOrbitControls();
+    this.camera.position.copy(sn.position);
+    this.controls.target.copy(sn.target);
+    this._applyTilt();
+    this._lockOrbitSolve();
+    this._suppressPoseEvents = false;
+    this._emitPoseChanged({ persist });
+    return true;
+  }
+
+  /** Snapshot live framing at encode start (separate from the user Save Camera bookmark). */
+  beginExportSessionFramingGuard() {
+    if (!this.controls) return false;
+    this._exportSessionFraming = {
+      position: this.camera.position.clone(),
+      target: this.controls.target.clone(),
+      tilt: this.currentTilt,
+    };
+    return true;
+  }
+
+  /** Restore encode-start framing after drives / buffer teardown. */
+  endExportSessionFramingGuard() {
+    const sn = this._exportSessionFraming;
+    this._exportSessionFraming = null;
+    if (!sn) return false;
+    return this._applyFramingPoseSnapshot(sn, { persist: true });
+  }
+
   /** Restore session export framing bookmark. Re-snapshots export drives when active. */
   restoreExportFramingBookmark() {
     const sn = this._exportFramingBookmark;
@@ -1167,20 +1215,7 @@ export class CameraController {
       this.endExportFovDrive({ revertToStart: false });
     }
 
-    this._cancelFocusAnimation();
-    this._suppressPoseEvents = true;
-    this.camera.position.copy(sn.position);
-    this.controls.target.copy(sn.target);
-    this.currentTilt = sn.tilt;
-    if (this.controls.sphericalDelta) {
-      this.controls.sphericalDelta.set(0, 0, 0);
-    }
-    this._unlockOrbitSolve();
-    this._updateOrbitControls();
-    this._applyTilt();
-    this._lockOrbitSolve();
-    this._suppressPoseEvents = false;
-    this._emitPoseChanged({ persist: true });
+    this._applyFramingPoseSnapshot(sn, { persist: true });
 
     if (wasCameraDrive) {
       this.beginExportCameraDrive();
