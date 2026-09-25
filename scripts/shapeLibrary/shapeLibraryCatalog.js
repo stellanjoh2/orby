@@ -15,9 +15,9 @@ export const SHAPE_LIBRARY_TARGET_MAX_DIMENSION =
 /** Object → Material defaults when inserting a shape-library GLB (absolute sliders, not import multipliers). */
 export const SHAPE_LIBRARY_DEFAULT_METALNESS = 1;
 export const SHAPE_LIBRARY_DEFAULT_ROUGHNESS = 0.2;
-/** Bundled GLB base color — used when colour override is enabled. */
+/** Bundled GLB base color. Object → Material Colour paints the shape directly. */
 export const SHAPE_LIBRARY_DEFAULT_COLOR = '#ffffff';
-/** Shape-library inserts use baked GLB albedo until the user enables colour override. */
+/** Shape-library meshes have no texture to replace, so Override colour stays off. */
 export const SHAPE_LIBRARY_DEFAULT_COLOR_OVERRIDE = false;
 
 /** @typedef {{ id: string, glbUrl: string, sourceId: string, label: string, empty?: boolean }} ShapeLibraryEntry */

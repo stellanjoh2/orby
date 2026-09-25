@@ -1561,6 +1561,8 @@ export class MeshControls {
     section.hidden = !eligible;
     if (!eligible) return;
 
+    // Shape library and untextured imports: Colour is the material colour.
+    // Textured imports: Override colour, off until the user enables it.
     const directColor = shapeLib || !hasAlbedo;
     const overrideOn = directColor || !!material.colorOverride;
 

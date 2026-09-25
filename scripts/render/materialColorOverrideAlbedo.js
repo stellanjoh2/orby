@@ -26,6 +26,34 @@ export function importMaterialUsesAlphaAlbedo(importMat) {
 }
 
 /**
+ * Object → Material Colour swatch.
+ * Shape-library meshes have no albedo map: the swatch is their material colour, and
+ * Override colour does not apply. Textured imports wait for that toggle.
+ * Font / SVG extrude keep their own pickers.
+ *
+ * @param {{
+ *   extrudeOwnsColor?: boolean,
+ *   shapeLibrary?: boolean,
+ *   colorOverride?: boolean,
+ *   hasAlbedoMap?: boolean,
+ *   colorOverrideEligible?: boolean,
+ * }} opts
+ */
+export function shouldApplyMaterialColorSwatch({
+  extrudeOwnsColor = false,
+  shapeLibrary = false,
+  colorOverride = false,
+  hasAlbedoMap = false,
+  colorOverrideEligible = false,
+} = {}) {
+  if (extrudeOwnsColor) return false;
+  if (shapeLibrary) return true;
+  if (colorOverride) return true;
+  if (!hasAlbedoMap && colorOverrideEligible) return true;
+  return false;
+}
+
+/**
  * @param {import('three').Material | null | undefined} importMat
  * @param {boolean} overrideOn
  * @returns {{ map: import('three').Texture | null, alphaMap: import('three').Texture | null, vertexColors: boolean }}

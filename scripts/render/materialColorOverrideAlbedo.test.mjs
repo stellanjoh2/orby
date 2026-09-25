@@ -4,7 +4,58 @@ import * as THREE from 'three';
 import {
   importMaterialUsesAlphaAlbedo,
   resolveColorOverrideAlbedoSlots,
+  shouldApplyMaterialColorSwatch,
 } from './materialColorOverrideAlbedo.js';
+
+describe('shouldApplyMaterialColorSwatch', () => {
+  it('paints a shape-library mesh from Colour without Override colour', () => {
+    assert.equal(
+      shouldApplyMaterialColorSwatch({
+        shapeLibrary: true,
+        colorOverride: false,
+        hasAlbedoMap: false,
+      }),
+      true,
+    );
+  });
+
+  it('leaves font and SVG extrude colours on their own pickers', () => {
+    assert.equal(
+      shouldApplyMaterialColorSwatch({
+        extrudeOwnsColor: true,
+        shapeLibrary: true,
+        colorOverride: true,
+      }),
+      false,
+    );
+  });
+
+  it('tints an untextured import from the swatch and waits for the toggle on albedo maps', () => {
+    assert.equal(
+      shouldApplyMaterialColorSwatch({
+        colorOverride: false,
+        hasAlbedoMap: false,
+        colorOverrideEligible: true,
+      }),
+      true,
+    );
+    assert.equal(
+      shouldApplyMaterialColorSwatch({
+        colorOverride: false,
+        hasAlbedoMap: true,
+        colorOverrideEligible: false,
+      }),
+      false,
+    );
+    assert.equal(
+      shouldApplyMaterialColorSwatch({
+        colorOverride: true,
+        hasAlbedoMap: true,
+      }),
+      true,
+    );
+  });
+});
 
 describe('resolveColorOverrideAlbedoSlots', () => {
   it('keeps albedo and vertex colors when override is off', () => {

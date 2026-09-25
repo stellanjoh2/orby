@@ -141,7 +141,10 @@ import {
   readSpecGlossImportMetadata,
 } from './gltfSpecGlossConversion.js';
 import { resolveMaterialBrightnessMetalnessClamp } from './materialBrightnessMetalnessClamp.js';
-import { resolveColorOverrideAlbedoSlots } from './materialColorOverrideAlbedo.js';
+import {
+  resolveColorOverrideAlbedoSlots,
+  shouldApplyMaterialColorSwatch,
+} from './materialColorOverrideAlbedo.js';
 import {
   applyBlendMapAlphaCutout,
   clearBlendMapAlphaProfileCache,
@@ -1355,12 +1358,15 @@ export class MaterialController {
     return hasMaps;
   }
 
-  /** Shape library primitives and untextured imports get a direct Material colour control. */
+  /**
+   * Override colour is for imported meshes. Shape-library primitives are not candidates —
+   * their Colour swatch is the material colour. Untextured imports get a direct swatch too.
+   */
   _modelColorOverrideEligible(object) {
     if (!object) return false;
     // Font / SVG file extrude own face+side colours in Extrude settings — mute Material colour.
     if (isFontExtrudeModel(object) || isSvgFileExtrudeModel(object)) return false;
-    if (object.userData?.orbyShapeLibrary) return true;
+    if (object.userData?.orbyShapeLibrary) return false;
     return !this._modelHasImportAlbedoMaps(object);
   }
 
@@ -4824,22 +4830,15 @@ export class MaterialController {
 
   _shouldUseMaterialColorOverride(importMat) {
     if (!this.currentModel || !importMat) return false;
-    // Type Creator face/extrude + SVG file colours must survive brightness / MR updates.
-    if (isFontExtrudeModel(this.currentModel) || isSvgFileExtrudeModel(this.currentModel)) {
-      return false;
-    }
-    if (this.currentModel.userData?.orbyShapeLibrary) {
-      return this.materialSettings.colorOverride === true;
-    }
-    if (this.materialSettings.colorOverride) return true;
-    if (
-      !importMat.map?.isTexture &&
-      !importMat.userData?.orbyFbxSlotMaps &&
-      this._modelColorOverrideEligible(this.currentModel)
-    ) {
-      return true;
-    }
-    return false;
+    return shouldApplyMaterialColorSwatch({
+      extrudeOwnsColor:
+        isFontExtrudeModel(this.currentModel) || isSvgFileExtrudeModel(this.currentModel),
+      shapeLibrary: !!this.currentModel.userData?.orbyShapeLibrary,
+      colorOverride: this.materialSettings.colorOverride === true,
+      hasAlbedoMap:
+        !!importMat.map?.isTexture || !!importMat.userData?.orbyFbxSlotMaps,
+      colorOverrideEligible: this._modelColorOverrideEligible(this.currentModel),
+    });
   }
 
   _resolveShadingDiffuseTintForShading(importMat) {
