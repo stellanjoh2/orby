@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-09-16T14:28:57.850Z",
+    "generatedAt": "2026-10-02T12:53:57.809Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -125,6 +125,7 @@
       "imageCredit": {
         "title": "Lemur on a Rock",
         "artist": "@cyber_fox",
+        "artistHref": "https://www.meshy.ai/sv/@cyber_fox",
         "sourceLabel": "Meshy",
         "sourceHref": "https://www.meshy.ai/sv/3d-models/Lemur-on-a-Rock-v2-019ccee8-c882-758d-b3d9-0941c257dd65"
       }
@@ -182,6 +183,7 @@
       "imageCredit": {
         "title": "Female Head Anatomy",
         "artist": "leofinearts",
+        "artistHref": "https://sketchfab.com/leofinearts",
         "sourceLabel": "Sketchfab",
         "sourceHref": "https://sketchfab.com/3d-models/female-head-anatomy-0516c68f0da747beaed75a0d762d0e8c"
       }
@@ -220,7 +222,9 @@
       ],
       "cta": null,
       "imageCredit": {
-        "title": "Goblin character",
+        "title": "Samanka the Pocket-Picker",
+        "artist": "PICKTURA",
+        "artistHref": "https://www.meshy.ai/sv/@PICKTURA",
         "sourceLabel": "Meshy",
         "sourceHref": "https://www.meshy.ai/"
       }
@@ -238,9 +242,11 @@
       "bullets": null,
       "cta": null,
       "marqueeAlts": [
-        "New Balance Classic 574 sneaker product cutout",
-        "Decorative painted skull cutout",
-        "Loggerhead sea turtle cutout"
+        "Medieval cottage cutout",
+        "Goblin girl character cutout",
+        "Jeep Wrangler Adventure Rubicon cutout",
+        "Backpack product cutout",
+        "3D letter B cutout"
       ]
     },
     {

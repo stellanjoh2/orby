@@ -61,7 +61,7 @@ html.mobile-landing #orby-marketing {
   /* PNG marquee — symbol 36svh; cutouts ~15% smaller so they sit inside the mark */
   --orby-marketing-png-marquee-max-h: 36svh;
   --orby-marketing-png-marquee-img-max-h: calc(var(--orby-marketing-png-marquee-max-h) * 0.85);
-  --orby-marketing-png-marquee-gap: clamp(2.06rem, 11vw, 3.44rem);
+  --orby-marketing-png-marquee-gap: clamp(1.65rem, 8.8vw, 2.75rem);
   /* Body copy — ~15% tighter line height on mobile */
   --orby-marketing-feature-lede-line: 1.36;
   --orby-marketing-feature-list-line: 1.3175;

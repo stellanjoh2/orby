@@ -64,7 +64,15 @@ export function shouldCopyAssetToDist(src) {
   if (marketingMatch) {
     const rel = marketingMatch[1];
     if (!rel) return true;
+    // Unused legacy stills under showcase/ stay out of dist; keep runtime-referenced files.
     if (rel === 'showcase' || rel.startsWith('showcase/')) {
+      if (
+        rel === 'showcase/showcase-backpack.jpg' ||
+        rel === 'showcase/goblin-girl.jpg' ||
+        rel === 'showcase/showcase-cottage.jpg'
+      ) {
+        return true;
+      }
       return false;
     }
     if (MARKETING_BUILD_EXCLUDE.has(rel)) {

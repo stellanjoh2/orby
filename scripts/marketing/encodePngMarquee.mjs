@@ -11,9 +11,11 @@ const MAX_HEIGHT = 1600;
 const WEBP_QUALITY = 82;
 
 const FILES = [
-  'new-balance-574.png',
-  'skull-salazar.png',
-  'loggerhead-turtle.png',
+  'featureloop-cottage.png',
+  'featureloop-goblingirl.png',
+  'featureloop-jeep.png',
+  'featureloop-letterB.png',
+  'featureloop-backpack.png',
 ];
 
 for (const name of FILES) {

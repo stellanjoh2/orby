@@ -55,6 +55,7 @@
  * @typedef {Object} MarketingImageCredit
  * @property {string} title — artwork title
  * @property {string} [artist] — creator name or handle
+ * @property {string} [artistHref] — profile or portfolio URL for the artist
  * @property {string} sourceLabel — source name (e.g. Meshy); linked when sourceHref is set
  * @property {string} [sourceHref] — page where the asset was downloaded
  */
@@ -152,6 +153,7 @@ export const MARKETING_SECTIONS = [
     imageCredit: {
       title: 'Lemur on a Rock',
       artist: '@cyber_fox',
+      artistHref: 'https://www.meshy.ai/sv/@cyber_fox',
       sourceLabel: 'Meshy',
       sourceHref:
         'https://www.meshy.ai/sv/3d-models/Lemur-on-a-Rock-v2-019ccee8-c882-758d-b3d9-0941c257dd65',
@@ -177,6 +179,7 @@ export const MARKETING_SECTIONS = [
         imageCredit: {
           title: 'Jeep Wrangler Adventure Rubicon',
           artist: 'www.vecarz.com',
+          artistHref: 'https://www.vecarz.com/',
           sourceLabel: 'Sketchfab',
           sourceHref:
             'https://sketchfab.com/3d-models/jeep-wrangler-adventure-rubicon-wwwvecarzcom-aae5b65c544d40a4b8eaf95d907e67cd',
@@ -188,6 +191,7 @@ export const MARKETING_SECTIONS = [
         imageCredit: {
           title: 'Jeep Wrangler Adventure Rubicon',
           artist: 'www.vecarz.com',
+          artistHref: 'https://www.vecarz.com/',
           sourceLabel: 'Sketchfab',
           sourceHref:
             'https://sketchfab.com/3d-models/jeep-wrangler-adventure-rubicon-wwwvecarzcom-aae5b65c544d40a4b8eaf95d907e67cd',
@@ -199,6 +203,7 @@ export const MARKETING_SECTIONS = [
         imageCredit: {
           title: 'Jeep Wrangler Adventure Rubicon',
           artist: 'www.vecarz.com',
+          artistHref: 'https://www.vecarz.com/',
           sourceLabel: 'Sketchfab',
           sourceHref:
             'https://sketchfab.com/3d-models/jeep-wrangler-adventure-rubicon-wwwvecarzcom-aae5b65c544d40a4b8eaf95d907e67cd',
@@ -215,11 +220,56 @@ export const MARKETING_SECTIONS = [
       "Product visualization, automotive, architecture, game assets, scanned meshes — whatever you're working with, Orby treats it like a hero. Cinematic post-processing, HDR environments, ACES filmic tone mapping, and color grading that makes real-time look anything but.",
     gallery: [
       {
+        src: './assets/marketing/orby-marketing-promo3.jpg',
+        alt: '2018 Porsche 911 Carrera GTS hero render in Orby',
+        imageCredit: {
+          title: '2018 Porsche 911',
+          artist: 'Outlaw Games',
+          artistHref: 'https://sketchfab.com/Outlaw_Games',
+          sourceLabel: 'Sketchfab',
+          sourceHref:
+            'https://sketchfab.com/3d-models/2018-porsche-911-04f556e0a2aa425185dcee7f7f1e2ff1',
+        },
+      },
+      {
+        src: './assets/marketing/showcase/showcase-backpack.jpg',
+        alt: 'Backpack product hero render in Orby',
+        imageCredit: {
+          title: 'Backpack',
+          artist: 'DailyArt (D.art)',
+          artistHref: 'https://sketchfab.com/D.art',
+          sourceLabel: 'Sketchfab',
+          sourceHref:
+            'https://sketchfab.com/3d-models/backpack-4732564eec0542ed8b1855f381e64127',
+        },
+      },
+      {
+        src: './assets/marketing/showcase/showcase-cottage.jpg',
+        alt: 'Medieval cottage hero render in Orby',
+        imageCredit: {
+          title: 'Medieval cottage',
+          sourceLabel: 'Meshy',
+          sourceHref: 'https://www.meshy.ai/',
+        },
+      },
+      {
+        src: './assets/marketing/showcase/goblin-girl.jpg',
+        alt: 'Samanka the Pocket-Picker hero render in Orby',
+        imageCredit: {
+          title: 'Samanka the Pocket-Picker',
+          artist: 'PICKTURA',
+          artistHref: 'https://www.meshy.ai/sv/@PICKTURA',
+          sourceLabel: 'Meshy',
+          sourceHref: 'https://www.meshy.ai/',
+        },
+      },
+      {
         src: './assets/marketing/orby-marketing-promo1.jpg',
         alt: 'Racing spaceships hero render — three-quarter view in Orby',
         imageCredit: {
           title: 'Racing spaceships',
           artist: 'pebegou',
+          artistHref: 'https://www.fab.com/sellers/pebegou',
           sourceLabel: 'Fab',
           sourceHref:
             'https://www.fab.com/listings/1b2f7565-c9ad-433e-9a19-96c6687a55cd',
@@ -231,20 +281,10 @@ export const MARKETING_SECTIONS = [
         imageCredit: {
           title: 'Racing spaceships',
           artist: 'pebegou',
+          artistHref: 'https://www.fab.com/sellers/pebegou',
           sourceLabel: 'Fab',
           sourceHref:
             'https://www.fab.com/listings/1b2f7565-c9ad-433e-9a19-96c6687a55cd',
-        },
-      },
-      {
-        src: './assets/marketing/orby-marketing-promo3.jpg',
-        alt: '2018 Porsche 911 Carrera GTS hero render in Orby',
-        imageCredit: {
-          title: '2018 Porsche 911',
-          artist: 'Outlaw Games',
-          sourceLabel: 'Sketchfab',
-          sourceHref:
-            'https://sketchfab.com/3d-models/2018-porsche-911-04f556e0a2aa425185dcee7f7f1e2ff1',
         },
       },
     ],
@@ -267,6 +307,7 @@ export const MARKETING_SECTIONS = [
     imageCredit: {
       title: 'Female Head Anatomy',
       artist: 'leofinearts',
+      artistHref: 'https://sketchfab.com/leofinearts',
       sourceLabel: 'Sketchfab',
       sourceHref:
         'https://sketchfab.com/3d-models/female-head-anatomy-0516c68f0da747beaed75a0d762d0e8c',
@@ -305,7 +346,9 @@ export const MARKETING_SECTIONS = [
     imageSrc: './assets/marketing/orby-feature-sendit.jpg',
     imageAlt: 'Export stills, video, and sequences from Orby',
     imageCredit: {
-      title: 'Goblin character',
+      title: 'Samanka the Pocket-Picker',
+      artist: 'PICKTURA',
+      artistHref: 'https://www.meshy.ai/sv/@PICKTURA',
       sourceLabel: 'Meshy',
       sourceHref: 'https://www.meshy.ai/',
     },
@@ -320,16 +363,24 @@ export const MARKETING_SECTIONS = [
     /* Real RGBA PNGs required — paths in assets/marketing/png-loop/ (see README there). */
     marquee: [
       {
-        src: './assets/marketing/png-loop/new-balance-574.png',
-        alt: 'New Balance Classic 574 sneaker product cutout',
+        src: './assets/marketing/png-loop/featureloop-cottage.png',
+        alt: 'Medieval cottage cutout',
       },
       {
-        src: './assets/marketing/png-loop/skull-salazar.png?v=3',
-        alt: 'Decorative painted skull cutout',
+        src: './assets/marketing/png-loop/featureloop-goblingirl.png',
+        alt: 'Goblin girl character cutout',
       },
       {
-        src: './assets/marketing/png-loop/loggerhead-turtle.png',
-        alt: 'Loggerhead sea turtle cutout',
+        src: './assets/marketing/png-loop/featureloop-jeep.png',
+        alt: 'Jeep Wrangler Adventure Rubicon cutout',
+      },
+      {
+        src: './assets/marketing/png-loop/featureloop-backpack.png',
+        alt: 'Backpack product cutout',
+      },
+      {
+        src: './assets/marketing/png-loop/featureloop-letterB.png',
+        alt: '3D letter B cutout',
       },
     ],
   },
@@ -352,6 +403,7 @@ export const MARKETING_SECTIONS = [
         imageCredit: {
           title: 'Cyberpunk Car',
           artist: 'SamTheCaribbean',
+          artistHref: 'https://sketchfab.com/SamTheCaribbean',
           sourceLabel: 'Sketchfab',
           sourceHref:
             'https://sketchfab.com/3d-models/cyberpunk-car-040f40e20e9344f5bd368e4db3d3b2ac',
@@ -476,6 +528,7 @@ export const MARKETING_SECTIONS = [
         imageCredit: {
           title: 'Space Station 3',
           artist: 're1monsen',
+          artistHref: 'https://sketchfab.com/re1monsen',
           sourceLabel: 'Sketchfab',
           sourceHref:
             'https://sketchfab.com/3d-models/space-station-3-a7a6ad10261149cab31aa394bfcf8940',

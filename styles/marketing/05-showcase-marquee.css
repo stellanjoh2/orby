@@ -297,21 +297,21 @@ html.orby-marketing-reduced .orby-marketing__section--revealed .orby-marketing__
   pointer-events: auto;
 }
 
-.orby-marketing__figure-credit .orby-marketing__media-credit-link:hover {
-  text-decoration-color: currentColor;
+.orby-marketing__figure-credit .orby-marketing__media-credit-link:hover,
+.orby-marketing__figure-credit .orby-marketing__media-credit-link:focus-visible {
+  color: var(--orby-lime, #c4ff00);
+  text-decoration-color: var(--orby-lime, #c4ff00);
 }
 
 .orby-marketing__figure-credit .orby-marketing__media-credit-link:focus-visible {
-  outline: 2px solid var(--brand-primary, #c4ff00);
+  outline: 2px solid var(--brand-primary, var(--orby-lime, #c4ff00));
   outline-offset: 2px;
   border-radius: 2px;
 }
 
-/* Showcase — white underline only; global a { color: text-link } is hard to read on photos */
+/* Showcase — white at rest; Orby green on hover (global a { color: text-link } is hard to read on photos) */
 .orby-marketing__showcase-credit .orby-marketing__media-credit-link,
-.orby-marketing__showcase-credit .orby-marketing__media-credit-link:visited,
-.orby-marketing__showcase-credit .orby-marketing__media-credit-link:hover,
-.orby-marketing__showcase-credit .orby-marketing__media-credit-link:focus-visible {
+.orby-marketing__showcase-credit .orby-marketing__media-credit-link:visited {
   color: #fff;
   text-decoration: underline;
   text-underline-offset: 0.14em;
@@ -322,11 +322,12 @@ html.orby-marketing-reduced .orby-marketing__section--revealed .orby-marketing__
 
 .orby-marketing__showcase-credit .orby-marketing__media-credit-link:hover,
 .orby-marketing__showcase-credit .orby-marketing__media-credit-link:focus-visible {
-  text-decoration-color: #fff;
+  color: var(--orby-lime, #c4ff00);
+  text-decoration-color: var(--orby-lime, #c4ff00);
 }
 
 .orby-marketing__showcase-credit .orby-marketing__media-credit-link:focus-visible {
-  outline: 2px solid color-mix(in srgb, #fff 65%, transparent);
+  outline: 2px solid var(--orby-lime, #c4ff00);
   outline-offset: 2px;
   border-radius: 2px;
 }

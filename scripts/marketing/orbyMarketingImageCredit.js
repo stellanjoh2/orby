@@ -77,7 +77,14 @@ export function formatMarketingImageCreditHtml(credit) {
   if (!credit?.title && !credit?.artist && !credit?.sourceLabel) return '';
   const parts = [];
   if (credit.title) parts.push(escapeMarketingHtml(credit.title));
-  if (credit.artist) parts.push(escapeMarketingHtml(credit.artist));
+  if (credit.artist) {
+    const artistLabel = escapeMarketingHtml(credit.artist);
+    parts.push(
+      credit.artistHref
+        ? `<a class="orby-marketing__media-credit-link" href="${escapeMarketingHtml(credit.artistHref)}" target="_blank" rel="noopener noreferrer">${artistLabel}</a>`
+        : artistLabel,
+    );
+  }
   let body = parts.join(' · ');
   if (credit.sourceLabel) {
     const label = escapeMarketingHtml(credit.sourceLabel);
