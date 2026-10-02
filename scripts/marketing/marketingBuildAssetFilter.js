@@ -64,8 +64,10 @@ export function shouldCopyAssetToDist(src) {
   if (marketingMatch) {
     const rel = marketingMatch[1];
     if (!rel) return true;
-    // Unused legacy stills under showcase/ stay out of dist; keep runtime-referenced files.
-    if (rel === 'showcase' || rel.startsWith('showcase/')) {
+    // Showcase dir must be allowed so fs.cpSync visits children. Legacy stills stay out;
+    // only runtime-referenced JPGs (see orbyMarketingContent showcase gallery) copy.
+    if (rel === 'showcase') return true;
+    if (rel.startsWith('showcase/')) {
       if (
         rel === 'showcase/showcase-backpack.jpg' ||
         rel === 'showcase/goblin-girl.jpg' ||
