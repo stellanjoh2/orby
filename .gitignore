@@ -54,3 +54,11 @@ sphere.obj
 
 # Note: HDRI files in assets/hdris/ are kept in repo but are NOT included in MIT license
 # See ASSETS_LICENSE.md for details
+
+# Full-res featureloop masters (local only; delivery lives in png-loop/)
+/assets/marketing/featureloop-backpack.png
+/assets/marketing/featureloop-cottage.png
+/assets/marketing/featureloop-jeep.png
+/assets/marketing/featureloop-letterB.png
+/assets/marketing/featureloop-goblingirl.png
+/assets/marketing/featureloop-newbalance574.png
