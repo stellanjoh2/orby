@@ -22,7 +22,7 @@
  *                                Production should list every app that posts here.
  *
  * Abuse protection:
- *   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN — 1 req/min, 4 req/h per IP (all apps).
+ *   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN — 1 req/min, 6 req/h per IP (all apps).
  *   TURNSTILE_SECRET_KEY — required only for apps with requireTurnstile: true (Orby).
  */
 
@@ -104,7 +104,7 @@ function getRateLimiters() {
   ratelimitPair = {
     hourly: new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(4, '1 h'),
+      limiter: Ratelimit.slidingWindow(6, '1 h'),
       prefix: 'bug-report:h',
     }),
     burst: new Ratelimit({
