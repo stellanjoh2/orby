@@ -1,6 +1,13 @@
 /**
- * Vercel serverless: POST JSON { category, severity, message, honeypot?, turnstileToken? }
- * Email subject line is short: "Orby Issue - Moderate - Rendering" (severity + category labels).
+ * Shared issue inbox for Orby, UltraPilled, and later apps.
+ *
+ * POST JSON {
+ *   app?: 'orby' | 'ultrapilled',  // default orby (keeps existing clients working)
+ *   category, severity, message,
+ *   honeypot?, turnstileToken?, source?
+ * }
+ *
+ * Email subject: "{App} Issue - Moderate - Rendering"
  *
  * CORS: If orby.studio (or another origin) gets preflight errors on preview URLs,
  * open Vercel → Project → Settings → Deployment Protection → OPTIONS Allowlist
@@ -9,16 +16,14 @@
  *
  * Env (Vercel → Settings → Environment Variables):
  *   RESEND_API_KEY       — from resend.com
- *   BUG_REPORT_TO        — recipient inbox (e.g. orby-admin@proton.me); must match Vercel env in production
- *   RESEND_FROM          — e.g. "Orby <onboarding@resend.dev>" (test) or a verified domain sender
- *   BUG_REPORT_ALLOWED_ORIGINS — optional, comma-separated exact origins (e.g. https://orby.studio,http://localhost:5173).
- *                                Recommended in production: list only your real site (and local dev if needed).
- *                                If unset, any browser Origin matching /^https?:\\/\\// is echoed (permissive; fine for dev).
+ *   BUG_REPORT_TO        — recipient inbox (e.g. orby-admin@proton.me)
+ *   RESEND_FROM          — verified sender (users never see this)
+ *   BUG_REPORT_ALLOWED_ORIGINS — comma-separated exact origins.
+ *                                Production should list every app that posts here.
  *
- * Abuse protection (recommended for production):
- *   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN — from upstash.com; per-IP sliding windows: 1 req/min, 4 req/h.
- *   TURNSTILE_SECRET_KEY — Cloudflare Turnstile secret; requires site key in built HTML (orby-turnstile-site-key meta).
- *                          When set, turnstileToken is required and verified. When unset, captcha is skipped.
+ * Abuse protection:
+ *   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN — 1 req/min, 4 req/h per IP (all apps).
+ *   TURNSTILE_SECRET_KEY — required only for apps with requireTurnstile: true (Orby).
  */
 
 import { Ratelimit } from '@upstash/ratelimit';
@@ -26,31 +31,8 @@ import { Redis } from '@upstash/redis';
 
 const RESEND_URL = 'https://api.resend.com/emails';
 const TURNSTILE_VERIFY = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
-const CATEGORIES = new Set([
-  'crash',
-  'rendering',
-  'loaded-mesh-materials',
-  'ui',
-  'export',
-  'performance',
-  'other',
-]);
 
-/** Serious → low; must match bug modal option values */
 const SEVERITIES = new Set(['blocker', 'major', 'moderate', 'minor', 'cosmetic']);
-
-/** Must match bug modal category values → short inbox labels */
-const CATEGORY_LABELS = {
-  crash: 'Crash',
-  rendering: 'Rendering',
-  'loaded-mesh-materials': 'Mesh / materials',
-  ui: 'UI',
-  export: 'Export',
-  performance: 'Performance',
-  other: 'Other',
-};
-
-/** Must match bug modal severity values */
 const SEVERITY_LABELS = {
   blocker: 'Blocker',
   major: 'Major',
@@ -59,7 +41,43 @@ const SEVERITY_LABELS = {
   cosmetic: 'Low',
 };
 
-/** Matches client BugReportController (`MIN_BUG_MESSAGE_WORDS` + word split) */
+/** Register an app here to accept its reports. Inbox stays BUG_REPORT_TO. */
+const APPS = {
+  orby: {
+    label: 'Orby',
+    requireTurnstile: true,
+    categories: {
+      crash: 'Crash',
+      rendering: 'Rendering',
+      'loaded-mesh-materials': 'Mesh / materials',
+      ui: 'UI',
+      export: 'Export',
+      performance: 'Performance',
+      other: 'Other',
+    },
+  },
+  ultrapilled: {
+    label: 'UltraPilled',
+    requireTurnstile: false,
+    categories: {
+      crash: 'Crash',
+      rendering: 'Rendering',
+      physics: 'Physics',
+      ui: 'UI',
+      export: 'Export',
+      media: 'Media',
+      other: 'Other',
+    },
+  },
+};
+
+const PRODUCTION_ORIGINS = [
+  'https://orby.studio',
+  'https://www.orby.studio',
+  'https://ultrapilled.com',
+  'https://www.ultrapilled.com',
+];
+
 const MIN_BUG_MESSAGE_WORDS = 5;
 
 function isValidBugReportMessageBody(message) {
@@ -87,12 +105,12 @@ function getRateLimiters() {
     hourly: new Ratelimit({
       redis,
       limiter: Ratelimit.slidingWindow(4, '1 h'),
-      prefix: 'orby-bug:h',
+      prefix: 'bug-report:h',
     }),
     burst: new Ratelimit({
       redis,
       limiter: Ratelimit.slidingWindow(1, '1 m'),
-      prefix: 'orby-bug:m',
+      prefix: 'bug-report:m',
     }),
   };
   return ratelimitPair;
@@ -103,12 +121,11 @@ function corsHeaders(origin, req) {
     process.env.BUG_REPORT_ALLOWED_ORIGINS?.split(',')
       .map((s) => s.trim())
       .filter(Boolean) ?? null;
-  const productionDefaults = ['https://orby.studio', 'https://www.orby.studio'];
   let allowOrigin = '*';
   if (allow?.length) {
     allowOrigin = allow.includes(origin || '') ? origin : allow[0];
   } else if (process.env.VERCEL_ENV === 'production') {
-    allowOrigin = productionDefaults.includes(origin || '') ? origin : productionDefaults[0];
+    allowOrigin = PRODUCTION_ORIGINS.includes(origin || '') ? origin : PRODUCTION_ORIGINS[0];
   } else if (origin && /^https?:\/\//i.test(origin)) {
     allowOrigin = origin;
   }
@@ -132,7 +149,6 @@ function clampStr(s, max) {
   return t.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
 }
 
-/** Best-effort parse of Resend JSON error body for operator-visible detail */
 function parseResendErrorDetail(raw) {
   if (typeof raw !== 'string' || !raw.trim()) return '';
   try {
@@ -158,11 +174,6 @@ function clientIp(req) {
   return 'unknown';
 }
 
-/**
- * @param {string} token
- * @param {string} secret
- * @param {string} ip
- */
 async function verifyTurnstile(token, secret, ip) {
   const body = new URLSearchParams();
   body.set('secret', secret);
@@ -183,6 +194,13 @@ async function verifyTurnstile(token, secret, ip) {
   if (!res.ok) return false;
   const data = await res.json().catch(() => null);
   return data?.success === true;
+}
+
+function resolveApp(body) {
+  const id = clampStr(body.app, 32).toLowerCase() || 'orby';
+  const spec = APPS[id];
+  if (!spec) return null;
+  return { id, ...spec };
 }
 
 export default async function handler(req, res) {
@@ -241,19 +259,26 @@ export default async function handler(req, res) {
     return res.status(204).end();
   }
 
+  const app = resolveApp(body);
   const category = clampStr(body.category, 40);
   const severity = clampStr(body.severity, 24);
   const message = clampStr(body.message, 8000);
+  const source = clampStr(body.source, 40);
 
-  if (!CATEGORIES.has(category) || !SEVERITIES.has(severity) || !isValidBugReportMessageBody(message)) {
+  if (
+    !app ||
+    !Object.prototype.hasOwnProperty.call(app.categories, category) ||
+    !SEVERITIES.has(severity) ||
+    !isValidBugReportMessageBody(message)
+  ) {
     return res.status(400).json({ error: 'Invalid payload' });
   }
 
-  const catLabel = CATEGORY_LABELS[category] ?? category;
+  const catLabel = app.categories[category];
   const sevLabel = SEVERITY_LABELS[severity] ?? severity;
 
   const turnstileSecret = process.env.TURNSTILE_SECRET_KEY?.trim();
-  if (turnstileSecret) {
+  if (turnstileSecret && app.requireTurnstile) {
     const token = typeof body.turnstileToken === 'string' ? body.turnstileToken.trim() : '';
     if (!token) {
       return res.status(400).json({ error: 'Security check required', code: 'turnstile_required' });
@@ -265,18 +290,24 @@ export default async function handler(req, res) {
   }
 
   const ua = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '';
+  const originLine = typeof origin === 'string' && origin ? origin : 'n/a';
   const text = [
+    `App: ${app.label}`,
     `Severity: ${sevLabel}`,
     `Category: ${catLabel}`,
+    source ? `Source: ${source}` : null,
     '',
     message,
     '',
     '---',
+    `Origin: ${originLine}`,
     `User-Agent: ${ua}`,
     `Time: ${new Date().toISOString()}`,
-  ].join('\n');
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
 
-  const emailSubject = `Orby Issue - ${sevLabel} - ${catLabel}`;
+  const emailSubject = `${app.label} Issue - ${sevLabel} - ${catLabel}`;
 
   let resendRes;
   try {
