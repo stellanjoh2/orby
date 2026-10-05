@@ -124,7 +124,9 @@
   --ui-accent-action-font-size: 0.8rem;
   /* Settings shelf: control row labels (Brightness, Color, …) */
   --shelf-label-font-size: 14px;
-  /* Lime section headlines (.block-title) and compact preset grids (Lens, ISO, …) */
+  /* Card section titles (.block-title: Display, Material, …) — 16px @ 2560 */
+  --shelf-block-title-font-size: 16px;
+  /* Compact uppercase sub-heads + preset grids (export / font-extrude section titles) */
   --shelf-headline-font-size: 12px;
   /* Native selects + custom combobox triggers (shelf pills, support forms) */
   --orby-dropdown-height: 24px;
@@ -209,8 +211,11 @@ html:not(.mobile-landing) body.dropzone-visible {
 }
 
 /*
- * Studio UI density — designed @ 2560×1440; scale shelf + settings chrome on smaller
- * desktops so 1080p feels like the 2560 layout (dropzone keeps its own hero factor).
+ * Studio UI density — designed @ 2560×1440.
+ * Below: shrink so 1080p matches the 2560 layout feel.
+ * Above: grow with viewport (→ 1.5 @ 3840×2160) — was capped at 1 so 4K stayed
+ * 2560-px sized and read very thin. Height still gates ultrawide short screens.
+ * Dropzone keeps its own hero factor.
  */
 html:not(.mobile-landing) {
   --orby-studio-ref-width: 160rem; /* 2560px */
@@ -218,7 +223,7 @@ html:not(.mobile-landing) {
   --studio-ui-scale: clamp(
     0.72,
     min(100vw / var(--orby-studio-ref-width), 100dvh / var(--orby-studio-ref-height)),
-    1
+    var(--orby-ultra-wide-max-factor, 1.5)
   );
   --shelf-inset: calc(48px * var(--studio-ui-scale));
   --viewport-chrome-inset-x: var(--shelf-inset);
@@ -227,6 +232,7 @@ html:not(.mobile-landing) {
   --ui-frosted-blur: calc(15px * var(--studio-ui-scale));
   --app-settings-chrome-radius: calc(18px * var(--studio-ui-scale));
   --shelf-label-font-size: calc(14px * var(--studio-ui-scale));
+  --shelf-block-title-font-size: calc(16px * var(--studio-ui-scale));
   --shelf-headline-font-size: calc(12px * var(--studio-ui-scale));
   --shelf-tab-title-font-size: calc(28px * var(--studio-ui-scale));
   --ui-accent-action-font-size: calc(0.8rem * var(--studio-ui-scale));
@@ -4481,6 +4487,9 @@ html:not(.mobile-landing) .shelf {
   --shelf-slider-stack-gap: calc(0.4rem * var(--studio-ui-scale) + var(--shelf-vertical-extra));
   --shelf-slider-size: calc(12px * var(--studio-ui-scale));
   --shelf-slider-size-muted: calc(10px * var(--studio-ui-scale));
+  /* Value / color-chip column — was fixed 2.5rem so chips stayed 2560-px while shelf grew */
+  --shelf-row-value-col: calc(2.5rem * var(--studio-ui-scale));
+  --slider-value-col: var(--shelf-row-value-col);
   width: calc(380px * var(--studio-ui-scale));
 }
 
@@ -4507,10 +4516,13 @@ html:not(.mobile-landing) .shelf .panel-block {
 
 html:not(.mobile-landing) .shelf .color-chip {
   height: calc(18px * var(--studio-ui-scale));
+  /* Fill scaled value column — width token alone was crushed by max-width:100% on fixed 2.5rem */
+  width: 100%;
+  max-width: var(--color-chip-w);
 }
 
 html:not(.mobile-landing) .shelf input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
-  width: calc(var(--color-chip-w) + 8px * var(--studio-ui-scale));
+  width: min(100%, calc(var(--color-chip-w) + 8px * var(--studio-ui-scale)));
 }
 
 html:not(.mobile-landing) .shelf .rotation-notch {
@@ -4670,6 +4682,25 @@ html:not(.mobile-landing) .shelf .panel-header-title {
   margin: 0.95rem 0 var(--shelf-section-gap) 0;
 }
 
+/*
+ * Hardcoded rem/px shelf copy that skipped --studio-ui-scale (stayed 2560-px at 3840).
+ * × scale is 1 @ 2560 — no visual change at the reference size.
+ */
+html:not(.mobile-landing) .shelf .panel-hint.map-slots-hint,
+html:not(.mobile-landing) .shelf .panel-hint.advanced-import-hint,
+html:not(.mobile-landing) .shelf .panel-hint.advanced-glass-hint {
+  font-size: calc(0.78rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .shortcut-note,
+html:not(.mobile-landing) .shelf .shortcut-keys kbd {
+  font-size: calc(0.75rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .topology-warnings-tab {
+  font-size: calc(0.76rem * var(--studio-ui-scale));
+}
+
 html:not(.mobile-landing) .shelf .hdri-grid {
   gap: var(--shelf-hdri-grid-gap-y) var(--shelf-hdri-grid-gap-x);
   margin-bottom: var(--shelf-section-gap);
@@ -4788,6 +4819,51 @@ html:not(.mobile-landing) .shelf .export-option-btn {
 
 html:not(.mobile-landing) .shelf .export-button-group {
   gap: calc(var(--shelf-pill-grid-gap) * var(--studio-ui-scale));
+}
+
+/* Camera View / Lens presets — rem min-height/padding were stuck at 2560-px */
+html:not(.mobile-landing) .shelf .view-preset-grid,
+html:not(.mobile-landing) .shelf .lens-preset-grid {
+  gap: calc(0.4rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .lens-preset-btn {
+  min-height: calc(2.65rem * var(--studio-ui-scale));
+  padding: calc(0.38rem * var(--studio-ui-scale)) calc(0.25rem * var(--studio-ui-scale));
+  border-radius: calc(6px * var(--studio-ui-scale));
+  gap: calc(0.12rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .iso-controls-stack {
+  gap: calc(0.4rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .iso-preset-btn {
+  min-height: calc(3.35rem * var(--studio-ui-scale));
+  padding: calc(0.42rem * var(--studio-ui-scale)) calc(0.45rem * var(--studio-ui-scale))
+    calc(0.38rem * var(--studio-ui-scale));
+  border-radius: calc(6px * var(--studio-ui-scale));
+}
+
+/* Export capture preview — 20rem cap left a gutter once the shelf grew past 2560 */
+html:not(.mobile-landing) .shelf .export-capture-preview-thumb-frame {
+  max-width: 100%;
+}
+
+html:not(.mobile-landing) .shelf .export-capture-preview-thumb img {
+  max-height: calc(11.25rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .export-capture-preview-thumb-empty {
+  font-size: calc(0.72rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .export-capture-preview-thumb-empty i {
+  font-size: calc(1.6rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .export-capture-preview-thumb-label {
+  font-size: calc(0.72rem * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .shelf .info-version-tag {
@@ -5581,7 +5657,7 @@ a.about-highlight:focus-visible {
  * Vertical rhythm: --shelf-section-gap (28px ref) — never --shelf-section-inset.
  */
 .block-title {
-  font-size: 16px;
+  font-size: var(--shelf-block-title-font-size);
   text-transform: none;
   letter-spacing: 0;
   color: var(--accent);
@@ -5591,7 +5667,7 @@ a.about-highlight:focus-visible {
 
 /* In-panel sub-section headings (Export video, Font/SVG extrude) — below card titles */
 .block-title:is(.export-section-title, .font-extrude-section-title) {
-  font-size: 12px;
+  font-size: var(--shelf-headline-font-size);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 500;
@@ -9173,6 +9249,25 @@ html.orby-home-scroll:not(.mobile-landing) .viewport-load-spinner {
   transform: translateY(0);
 }
 
+/*
+ * Tooltips append to body (not .shelf) — scale with studio density so 3840 stays
+ * readable. ×1 @ 2560 leaves the reference size unchanged.
+ */
+html:not(.mobile-landing) .tooltip {
+  font-size: calc(0.75rem * var(--studio-ui-scale));
+  padding: calc(0.5rem * var(--studio-ui-scale)) calc(0.75rem * var(--studio-ui-scale));
+  border-radius: calc(6px * var(--studio-ui-scale));
+  max-width: calc(300px * var(--studio-ui-scale));
+  box-shadow: 0 calc(4px * var(--studio-ui-scale)) calc(12px * var(--studio-ui-scale))
+    rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(calc(8px * var(--studio-ui-scale)));
+}
+
+html:not(.mobile-landing) .tooltip.tooltip--viewport {
+  font-size: calc(1.125rem * var(--studio-ui-scale));
+  padding: calc(0.45rem * var(--studio-ui-scale)) calc(0.95rem * var(--studio-ui-scale));
+}
+
 /* Viewport bone/joint hover — mono white-on-black pill, instant show (no enter delay) */
 .tooltip.tooltip--viewport {
   font-family: 'Geist Mono', 'SF Mono', ui-monospace, 'Menlo', 'Courier New', monospace;
@@ -11076,6 +11171,38 @@ body.ui-hidden .shelf {
 
 #orby-font-picker-portal .font-extrude-family-panel.is-open {
   display: flex;
+}
+
+/*
+ * Font picker lives outside .shelf — inherit studio type scale so previews
+ * match shelf density (×1 @ 2560, ×1.5 @ 3840).
+ */
+html:not(.mobile-landing) #orby-font-picker-portal .font-extrude-family-panel {
+  font-size: calc(1rem * var(--studio-ui-scale));
+  border-radius: calc(var(--app-settings-chrome-radius));
+}
+
+html:not(.mobile-landing) #orby-font-picker-portal .font-extrude-family-panel-head {
+  padding: calc(0.65rem * var(--studio-ui-scale)) calc(0.75rem * var(--studio-ui-scale))
+    calc(0.45rem * var(--studio-ui-scale));
+  gap: calc(0.5rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) #orby-font-picker-portal .font-extrude-family-search {
+  font-size: calc(0.85rem * var(--studio-ui-scale));
+  min-height: calc(2.25rem * var(--studio-ui-scale));
+  padding: calc(0.45rem * var(--studio-ui-scale)) calc(0.65rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) #orby-font-picker-portal .font-extrude-family-option {
+  padding: calc(0.42rem * var(--studio-ui-scale)) calc(0.65rem * var(--studio-ui-scale))
+    calc(0.42rem * var(--studio-ui-scale)) calc(0.5rem * var(--studio-ui-scale));
+  gap: calc(0.4rem * var(--studio-ui-scale));
+  --font-extrude-family-check-col: calc(1.25rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) #orby-font-picker-portal .font-extrude-family-option-label {
+  font-size: calc(1.05rem * var(--studio-ui-scale));
 }
 
 .font-extrude-family-panel-head {

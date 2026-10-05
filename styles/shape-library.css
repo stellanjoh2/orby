@@ -293,9 +293,24 @@ html:not(.mobile-landing) body.ui-hidden .shape-library-panel:not([hidden]) {
 }
 
 html:not(.mobile-landing) .shape-library-panel__chrome {
+  /* 760px @ 2560 → grow with studio scale (was fixed, looked tiny @ 3840) */
+  width: min(
+    calc(760px * var(--studio-ui-scale)),
+    calc(100vw - 2 * var(--shelf-inset, 48px) - 2.4rem * var(--studio-ui-scale))
+  );
   max-height: calc(100vh - 96px * var(--studio-ui-scale));
   backdrop-filter: blur(var(--ui-frosted-blur));
   -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
   padding: calc(16px + 3.2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
   gap: calc(10px + 2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
+  border-radius: var(--app-settings-chrome-radius);
+}
+
+html:not(.mobile-landing) .shape-library-panel__title,
+html:not(.mobile-landing) .shape-library-tile__soon {
+  font-size: calc(0.72rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shape-library-tile {
+  border-radius: calc(12px * var(--studio-ui-scale));
 }
