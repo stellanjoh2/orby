@@ -22,6 +22,7 @@ import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
+  MATERIAL_EMISSIVE_SLIDER_MAX,
   DEFAULT_BACKDROP_METALNESS,
   DEFAULT_BACKDROP_ROUGHNESS,
   DEFAULT_BASE_GLASS_BLUR,
@@ -132,6 +133,7 @@ import {
   sanitizeSvgExtrudeColorDepths,
   sanitizeSvgExtrudeColorOffsets,
   sanitizeSvgExtrudeColorReplacements,
+  sanitizeSvgExtrudeColorEmissiveBoosts,
   normalizeSvgExtrudeHexColor,
 } from './scene/SvgExtrudeSceneOps.js';
 import {
@@ -3504,13 +3506,49 @@ export class SceneManager {
     const depths = { ...(svg.colorDepths || {}) };
     const offsets = { ...(svg.colorOffsets || {}) };
     const replacements = { ...(svg.colorReplacements || {}) };
+    const boosts = { ...(svg.colorEmissiveBoosts || {}) };
     delete depths[color];
     delete offsets[color];
     delete replacements[color];
+    delete boosts[color];
     // Recolor first (state cleared) so the depth/offset rebuilds restore the base fill.
     this.setSvgExtrudeColorReplacements(replacements, { updateState: true });
+    this.setSvgExtrudeColorEmissiveBoosts(boosts, { updateState: true });
     this.setSvgExtrudeColorDepths(depths, { updateState: true });
     this.setSvgExtrudeColorOffsets(offsets, { updateState: true });
+  }
+
+  setSvgExtrudeColorEmissiveBoosts(colorEmissiveBoosts = {}, options = {}) {
+    const { updateState = true } = options;
+    if (!this.currentModel || !this.isSvgExtrudeModel) return;
+    const sanitized = sanitizeSvgExtrudeColorEmissiveBoosts(
+      colorEmissiveBoosts,
+      this.stateStore,
+      MATERIAL_EMISSIVE_SLIDER_MAX,
+    );
+    if (updateState) {
+      this.stateStore.set('svgExtrude.colorEmissiveBoosts', sanitized);
+    }
+    this.materialController?.updateMaterials?.();
+    this.requestRender?.();
+  }
+
+  /**
+   * @param {{ color?: string, boost?: number }} [payload]
+   */
+  setSvgExtrudeColorEmissiveBoost({ color, boost } = {}) {
+    if (!color) return;
+    const state = this.stateStore.getState();
+    const palette = state.svgExtrude?.availableColors || [];
+    if (!palette.includes(color)) return;
+    const existing = { ...(state.svgExtrude?.colorEmissiveBoosts || {}) };
+    const numeric = Number(boost);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      delete existing[color];
+    } else {
+      existing[color] = Math.max(0, Math.min(MATERIAL_EMISSIVE_SLIDER_MAX, numeric));
+    }
+    this.setSvgExtrudeColorEmissiveBoosts(existing, { updateState: true });
   }
 
   setSvgExtrudeColorReplacement({ color, replacement, commit = true } = {}) {

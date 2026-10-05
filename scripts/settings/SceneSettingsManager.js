@@ -108,6 +108,7 @@ export class SceneSettingsManager {
       colorDepths: svg.colorDepths,
       colorOffsets: svg.colorOffsets,
       colorReplacements: svg.colorReplacements,
+      colorEmissiveBoosts: svg.colorEmissiveBoosts,
       flipDirection: svg.flipDirection,
       colorOverride: svg.colorOverride,
       overrideColor: svg.overrideColor,
@@ -714,6 +715,16 @@ export class SceneSettingsManager {
       if (payload.svgExtrude?.colorReplacements !== undefined) {
         this.stateStore.set('svgExtrude.colorReplacements', payload.svgExtrude.colorReplacements || {});
         this.eventBus.emit('mesh:svg-extrude-color-replacements', payload.svgExtrude.colorReplacements || {});
+      }
+      if (payload.svgExtrude?.colorEmissiveBoosts !== undefined) {
+        this.stateStore.set(
+          'svgExtrude.colorEmissiveBoosts',
+          payload.svgExtrude.colorEmissiveBoosts || {},
+        );
+        this.eventBus.emit(
+          'mesh:svg-extrude-color-emissive-boosts',
+          payload.svgExtrude.colorEmissiveBoosts || {},
+        );
       }
       if (payload.svgExtrude?.flipDirection !== undefined) {
         const enabled = !!payload.svgExtrude.flipDirection;

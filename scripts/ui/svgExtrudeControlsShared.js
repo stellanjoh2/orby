@@ -17,6 +17,7 @@ import {
   MAX_EXTRUDE_NORMAL_ANGLE_DEG,
   normalizeSvgOverrideHex,
 } from '../import/extrudeDefaults.js';
+import { MATERIAL_EMISSIVE_SLIDER_MAX } from '../constants.js';
 import {
   clampExtrudeHardEdgeAngleDeg,
   MAX_EXTRUDE_HARD_EDGE_ANGLE_DEG,
@@ -1256,6 +1257,179 @@ export function bindSvgExtrudeControls(ctx) {
     btn.blur();
     eventBus.emit('mesh:svg-extrude-color-reset', { color });
   });
+
+  /** Live DOM lookup — avoid stale refs if shelf panels are re-stitched. */
+  const emissiveEls = () => ({
+    row: document.getElementById('svgExtrudeEmissiveBoostRow'),
+    picker: document.getElementById('svgExtrudeEmissiveColorPicker'),
+    btn: document.getElementById('svgExtrudeEmissiveColorBtn'),
+    menu: document.getElementById('svgExtrudeEmissiveColorMenu'),
+    colorInput: document.getElementById('svgExtrudeEmissiveColor'),
+  });
+
+  const EMISSIVE_MENU_PORTAL_ID = 'orby-svg-emissive-color-portal';
+
+  const ensureEmissiveMenuPortal = (menu) => {
+    let portal = document.getElementById(EMISSIVE_MENU_PORTAL_ID);
+    if (!portal) {
+      portal = document.createElement('div');
+      portal.id = EMISSIVE_MENU_PORTAL_ID;
+      document.body.appendChild(portal);
+    }
+    if (menu.parentElement !== portal) portal.appendChild(menu);
+    return portal;
+  };
+
+  const restoreEmissiveMenuHome = (menu, picker) => {
+    if (!menu || !picker || menu.parentElement === picker) return;
+    picker.appendChild(menu);
+  };
+
+  let emissiveMenuOpen = false;
+  let emissiveOutsideBound = false;
+
+  const positionEmissiveColorMenu = () => {
+    const { btn, menu } = emissiveEls();
+    if (!menu || !btn || !emissiveMenuOpen) return;
+    const rect = btn.getBoundingClientRect();
+    const menuWidth = Math.max(rect.width, 148);
+    let left = rect.left;
+    let top = rect.bottom + 4;
+    const maxLeft = window.innerWidth - menuWidth - 8;
+    if (left > maxLeft) left = Math.max(8, maxLeft);
+    const estimatedHeight = Math.max(menu.scrollHeight || 0, 40);
+    if (top + estimatedHeight > window.innerHeight - 8 && rect.top > estimatedHeight + 8) {
+      top = rect.top - estimatedHeight - 4;
+    }
+    menu.style.top = `${Math.round(top)}px`;
+    menu.style.left = `${Math.round(left)}px`;
+    menu.style.minWidth = `${Math.round(menuWidth)}px`;
+  };
+
+  const onEmissiveDocClick = (event) => {
+    if (!emissiveMenuOpen) return;
+    const { btn, menu, picker } = emissiveEls();
+    const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+    if (path.includes(btn) || path.includes(menu) || (picker && path.includes(picker))) return;
+    const t = event.target;
+    if (t instanceof Node && (btn?.contains(t) || menu?.contains(t) || picker?.contains(t))) return;
+    closeEmissiveColorMenu();
+  };
+
+  const onEmissiveDocKey = (event) => {
+    if (event.key === 'Escape') closeEmissiveColorMenu();
+  };
+
+  const unbindEmissiveOutside = () => {
+    if (!emissiveOutsideBound) return;
+    document.removeEventListener('click', onEmissiveDocClick, true);
+    document.removeEventListener('keydown', onEmissiveDocKey, true);
+    window.removeEventListener('resize', closeEmissiveColorMenu);
+    document.querySelector('.panels')?.removeEventListener('scroll', closeEmissiveColorMenu);
+    emissiveOutsideBound = false;
+  };
+
+  const closeEmissiveColorMenu = () => {
+    const { btn, menu, picker } = emissiveEls();
+    emissiveMenuOpen = false;
+    if (menu) {
+      menu.hidden = true;
+      menu.style.top = '';
+      menu.style.left = '';
+      menu.style.minWidth = '';
+      restoreEmissiveMenuHome(menu, picker);
+    }
+    btn?.setAttribute('aria-expanded', 'false');
+    unbindEmissiveOutside();
+  };
+
+  const openEmissiveColorMenu = () => {
+    const { btn, menu, picker } = emissiveEls();
+    if (!menu || !btn || btn.disabled) return;
+    syncSvgExtrudeEmissiveBoostControls(ctx, stateStore.getState(), { requireEnabled: true });
+    // Re-query after sync (menu may have been rebuilt).
+    const live = emissiveEls();
+    if (!live.menu || !live.btn) return;
+    ensureEmissiveMenuPortal(live.menu);
+    live.menu.hidden = false;
+    live.btn.setAttribute('aria-expanded', 'true');
+    emissiveMenuOpen = true;
+    positionEmissiveColorMenu();
+    if (!emissiveOutsideBound) {
+      // Attach after this click finishes — same pattern as FontFamilyPicker.
+      queueMicrotask(() => {
+        if (!emissiveMenuOpen || emissiveOutsideBound) return;
+        document.addEventListener('click', onEmissiveDocClick, true);
+        document.addEventListener('keydown', onEmissiveDocKey, true);
+        window.addEventListener('resize', closeEmissiveColorMenu);
+        document
+          .querySelector('.panels')
+          ?.addEventListener('scroll', closeEmissiveColorMenu, { passive: true });
+        emissiveOutsideBound = true;
+      });
+    }
+  };
+
+  const toggleEmissiveColorMenu = () => {
+    if (emissiveMenuOpen) closeEmissiveColorMenu();
+    else openEmissiveColorMenu();
+  };
+
+  // Bind once on the live button / menu (FontExtrude also calls bindSvgExtrudeControls).
+  const emissiveRow = inputs.emissiveBoostRow || document.getElementById('svgExtrudeEmissiveBoostRow');
+  if (emissiveRow && !emissiveRow.dataset.emissiveColorBound) {
+    emissiveRow.dataset.emissiveColorBound = '1';
+    const btn = document.getElementById('svgExtrudeEmissiveColorBtn');
+    btn?.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleEmissiveColorMenu();
+    });
+
+    // Options live in the portaled menu — listen on document for option picks.
+    document.addEventListener('click', (event) => {
+      const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+      const option =
+        path.find(
+          (n) =>
+            n instanceof HTMLElement
+            && n.classList?.contains('svg-extrude-emissive-color__option')
+            && n.dataset?.color,
+        )
+        || (event.target instanceof Element
+          ? event.target.closest?.('.svg-extrude-emissive-color__option[data-color]')
+          : null);
+      if (!option) return;
+      const menu = document.getElementById('svgExtrudeEmissiveColorMenu');
+      if (!menu || !menu.contains(option)) return;
+      const color = option.dataset.color;
+      const colorInput = document.getElementById('svgExtrudeEmissiveColor');
+      if (!color || !colorInput) return;
+      ui.uiSounds?.playSelect?.();
+      colorInput.value = color;
+      closeEmissiveColorMenu();
+      syncSvgExtrudeEmissiveBoostControls(ctx, stateStore.getState(), { requireEnabled: true });
+    });
+  }
+
+  inputs.emissiveBoost?.addEventListener('input', (event) => {
+    const color = inputs.emissiveColor?.value;
+    if (!color) return;
+    const value = parseFloat(event.target.value);
+    const clamped = Number.isFinite(value)
+      ? Math.max(0, Math.min(MATERIAL_EMISSIVE_SLIDER_MAX, value))
+      : 0;
+    writeRangeValue(event.target, clamped);
+    helpers.updateValueLabel(inputs.emissiveBoostOutputKey, clamped, 'decimal');
+    const currentBoosts = {
+      ...(stateStore.getState().svgExtrude?.colorEmissiveBoosts || {}),
+    };
+    if (clamped <= 0) delete currentBoosts[color];
+    else currentBoosts[color] = clamped;
+    stateStore.set('svgExtrude.colorEmissiveBoosts', currentBoosts);
+    eventBus.emit('mesh:svg-extrude-color-emissive-boost', { color, boost: clamped });
+  });
+  if (inputs.emissiveBoost) helpers.enableSliderKeyboardStepping(inputs.emissiveBoost);
 }
 
 function syncExtrudeBevelControlInputs(ctx, svg, canEdit) {
@@ -1385,6 +1559,108 @@ export function syncSvgExtrudeControls(ctx, state, options = {}) {
     }
     ui.setControlDisabled(inputs.overrideExtrudeColor, !(canEdit && overrideEnabled));
   }
+
+  syncSvgExtrudeEmissiveBoostControls(ctx, state, options);
+}
+
+/**
+ * Compact per-color emissive boost row (select + slider above Color Override).
+ * @param {Object} ctx
+ * @param {Object} state
+ * @param {{ requireEnabled?: boolean }} [options]
+ */
+export function syncSvgExtrudeEmissiveBoostControls(ctx, state, options = {}) {
+  const { inputs, helpers, ui } = ctx;
+  const { requireEnabled = true } = options;
+  // Prefer live DOM — shelf stitch / portal moves can stale ctx.inputs refs.
+  const row =
+    document.getElementById('svgExtrudeEmissiveBoostRow') || inputs.emissiveBoostRow;
+  const colorInput =
+    document.getElementById('svgExtrudeEmissiveColor') || inputs.emissiveColor;
+  const menu =
+    document.getElementById('svgExtrudeEmissiveColorMenu') || inputs.emissiveColorMenu;
+  const btn =
+    document.getElementById('svgExtrudeEmissiveColorBtn') || inputs.emissiveColorBtn;
+  const swatchEl =
+    document.getElementById('svgExtrudeEmissiveColorSwatch') || inputs.emissiveColorSwatch;
+  const labelEl =
+    document.getElementById('svgExtrudeEmissiveColorLabel') || inputs.emissiveColorLabel;
+  const boostInput =
+    document.getElementById('svgExtrudeEmissiveBoost') || inputs.emissiveBoost;
+  if (!row || !colorInput || !boostInput) return;
+
+  const svg = state.svgExtrude || {};
+  const enabled = requireEnabled ? !!svg.enabled : true;
+  const palette = Array.isArray(svg.availableColors) ? svg.availableColors : [];
+  const replacements = svg.colorReplacements || {};
+  const show = enabled && palette.length > 1;
+  row.hidden = !show;
+  if (!show) {
+    if (menu) menu.hidden = true;
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+    return;
+  }
+
+  const displayHex = (color) =>
+    normalizeColorForPicker(replacements[color])
+    || normalizeColorForPicker(color)
+    || '#000000';
+
+  const paletteKey = `${palette.join('|')}::${Object.entries(replacements)
+    .map(([k, v]) => `${k}=${v}`)
+    .join('|')}`;
+  if (colorInput.dataset.paletteKey !== paletteKey) {
+    const prev = colorInput.value;
+    if (menu) {
+      menu.innerHTML = palette
+        .map((color, index) => {
+          const hex = String(color).toUpperCase();
+          const swatch = displayHex(color);
+          return `<li role="none">
+  <button type="button" class="svg-extrude-emissive-color__option" role="option" data-color="${color}" title="${hex}" aria-label="Color ${index + 1} (${hex})">
+    <span class="svg-extrude-emissive-color__swatch" style="background:${swatch}" aria-hidden="true"></span>
+    <span>Color ${index + 1}</span>
+  </button>
+</li>`;
+        })
+        .join('');
+    }
+    colorInput.dataset.paletteKey = paletteKey;
+    if (prev && palette.includes(prev)) colorInput.value = prev;
+    else colorInput.value = palette[0] || '';
+  } else if (!palette.includes(colorInput.value)) {
+    colorInput.value = palette[0] || '';
+  }
+
+  const selected = colorInput.value;
+  const selectedIndex = Math.max(0, palette.indexOf(selected));
+  if (swatchEl) swatchEl.style.background = displayHex(selected);
+  if (labelEl) labelEl.textContent = `Color ${selectedIndex + 1}`;
+  if (btn) {
+    const hex = String(selected || '').toUpperCase();
+    btn.title = hex ? `Color ${selectedIndex + 1} (${hex})` : 'Emissive boost color';
+  }
+  menu?.querySelectorAll('.svg-extrude-emissive-color__option').forEach((option) => {
+    option.classList.toggle('is-selected', option.dataset.color === selected);
+    option.setAttribute('aria-selected', option.dataset.color === selected ? 'true' : 'false');
+  });
+
+  const boosts = svg.colorEmissiveBoosts || {};
+  const raw = Number(boosts[selected]);
+  const boost = Number.isFinite(raw)
+    ? Math.max(0, Math.min(MATERIAL_EMISSIVE_SLIDER_MAX, raw))
+    : 0;
+  const canEdit = enabled;
+  if (btn) {
+    btn.disabled = !canEdit;
+    btn.classList.toggle('is-disabled-handle', !canEdit);
+  }
+  ui.setControlDisabled('svgExtrudeEmissiveBoost', !canEdit);
+  if (document.activeElement !== boostInput && helpers.syncRangeFromState(boostInput, boost)) {
+    helpers.updateValueLabel(inputs.emissiveBoostOutputKey, boost, 'decimal');
+  } else if (document.activeElement !== boostInput && !helpers.shouldSkipRangeSyncWrite(boostInput)) {
+    helpers.updateValueLabel(inputs.emissiveBoostOutputKey, boost, 'decimal');
+  }
 }
 
 /**
@@ -1406,6 +1682,7 @@ export function renderSvgColorDepthControls(container, state, ui) {
   const overrides = state.svgExtrude?.colorDepths || {};
   const offsets = state.svgExtrude?.colorOffsets || {};
   const replacements = state.svgExtrude?.colorReplacements || {};
+  const emissiveBoosts = state.svgExtrude?.colorEmissiveBoosts || {};
   const overrideEnabled = !!state.svgExtrude?.colorOverride;
   const globalDepth = Number(state.svgExtrude?.depth ?? DEFAULT_EXTRUDE_DEPTH);
 
@@ -1440,7 +1717,7 @@ export function renderSvgColorDepthControls(container, state, ui) {
 
   const buildFillReset = (color, index, isDirty) =>
     isDirty
-      ? `<button type="button" class="svg-fill-reset" data-kind="reset" data-color="${color}" aria-label="Reset fill ${index + 1}" title="Reset depth, position & color for fill ${index + 1}"><i class="fa-solid fa-rotate-left"></i></button>`
+      ? `<button type="button" class="svg-fill-reset" data-kind="reset" data-color="${color}" aria-label="Reset fill ${index + 1}" title="Reset depth, position, color & emissive for fill ${index + 1}"><i class="fa-solid fa-rotate-left"></i></button>`
       : '';
 
   const rows = palette
@@ -1451,10 +1728,16 @@ export function renderSvgColorDepthControls(container, state, ui) {
       const safeDepth = Math.max(0.01, Math.min(2.0, depth));
       const offset = Number.isFinite(Number(offsets[color])) ? Number(offsets[color]) : 0;
       const safeOffset = Math.max(-1.0, Math.min(1.0, offset));
+      const boostRaw = Number(emissiveBoosts[color]);
+      const hasBoost =
+        emissiveBoosts[color] !== undefined
+        && Number.isFinite(boostRaw)
+        && boostRaw > 0;
       const isDirty =
         overrides[color] !== undefined ||
         offsets[color] !== undefined ||
-        replacements[color] !== undefined;
+        replacements[color] !== undefined ||
+        hasBoost;
       // Rows use <div> (not <label>) so the embedded color picker doesn't become the
       // row's implicit labeled control and hijack clicks on the depth/position text.
       return `

@@ -87,6 +87,8 @@ export const SCENE_CONTROL_MANIFEST = [
   { event: 'mesh:svg-extrude-color-offset', apply: 'setSvgExtrudeColorOffset' },
   { event: 'mesh:svg-extrude-color-replacements', apply: 'setSvgExtrudeColorReplacements' },
   { event: 'mesh:svg-extrude-color-replacement', apply: 'setSvgExtrudeColorReplacement' },
+  { event: 'mesh:svg-extrude-color-emissive-boosts', apply: 'setSvgExtrudeColorEmissiveBoosts' },
+  { event: 'mesh:svg-extrude-color-emissive-boost', apply: 'setSvgExtrudeColorEmissiveBoost' },
   {
     event: 'mesh:svg-extrude-color-reset',
     apply: 'resetSvgExtrudeColor',

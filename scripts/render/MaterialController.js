@@ -180,6 +180,7 @@ import {
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   IMPORT_MATERIAL_MR_MULTIPLIER,
+  MATERIAL_EMISSIVE_SLIDER_MAX,
   MATERIAL_TEXTURED_BRIGHTNESS_HDR_PEAK,
   materialBrightnessEffectiveScale,
   materialBrightnessLitEnvMultiplier,
@@ -1087,15 +1088,41 @@ export class MaterialController {
    *   glow using the brightness-adjusted diffuse color (so the slider remains useful for plain models).
    * Slider at 0: keep file emissive + map so glTF emissive textures are not wiped by updateMaterials / setShading.
    */
-  _applyUserEmissiveOrRestoreImport(target, importMat, adjustedColor, userEmissive, modelHasEmissive = false) {
+  /**
+   * Per-fill SVG emissive boost (Object → Emissive stays global; this adds on top).
+   * Font / non-SVG models always return 0.
+   * @param {THREE.Object3D | null | undefined} mesh
+   */
+  _resolveSvgColorEmissiveBoost(mesh) {
+    if (!mesh || !isSvgFileExtrudeModel(this.currentModel)) return 0;
+    const key = mesh.userData?.orbySvgGroupedColor;
+    if (typeof key !== 'string' || !key) return 0;
+    const raw = Number(this.stateStore?.getState()?.svgExtrude?.colorEmissiveBoosts?.[key]);
+    if (!Number.isFinite(raw) || raw <= 0) return 0;
+    return Math.max(0, Math.min(MATERIAL_EMISSIVE_SLIDER_MAX, raw));
+  }
+
+  _applyUserEmissiveOrRestoreImport(
+    target,
+    importMat,
+    adjustedColor,
+    userEmissive,
+    modelHasEmissive = false,
+    emissiveBoost = 0,
+  ) {
     const slider = userEmissive > 0 ? userEmissive : 0;
+    const boost = Number.isFinite(emissiveBoost) && emissiveBoost > 0 ? emissiveBoost : 0;
 
     // Font / SVG file extrude are studio-authored — never treat polluted snapshots as file emissive.
     // (prepareMesh used to alias live materials as originals, so Mesh→Emissive could never clear.)
     if (this._isStudioExtrudeColorModel()) {
-      if (slider > 0) {
-        target.emissive.copy(adjustedColor).multiplyScalar(slider);
-        target.emissiveIntensity = slider;
+      const effective = Math.max(
+        0,
+        Math.min(MATERIAL_EMISSIVE_SLIDER_MAX, slider + boost),
+      );
+      if (effective > 0) {
+        target.emissive.copy(adjustedColor).multiplyScalar(effective);
+        target.emissiveIntensity = effective;
       } else {
         target.emissive.set(0, 0, 0);
         target.emissiveIntensity = 0;
@@ -1236,7 +1263,14 @@ export class MaterialController {
           origMat,
         );
         mat.color.copy(adjustedColor);
-        this._applyUserEmissiveOrRestoreImport(mat, origMat, adjustedColor, userEm, modelHasEmissive);
+        this._applyUserEmissiveOrRestoreImport(
+          mat,
+          origMat,
+          adjustedColor,
+          userEm,
+          modelHasEmissive,
+          this._resolveSvgColorEmissiveBoost(child),
+        );
         this._syncTransparentFlagsFromImport(mat, origMat);
         this._applyOverrideAlbedoOnMaterial(mat, origMat);
         mat.needsUpdate = true;
@@ -5032,6 +5066,7 @@ export class MaterialController {
             const importMat = Array.isArray(orig) ? orig[idx] : orig;
             return this._resolveShadingDiffuseTintForShading(importMat);
           };
+          const svgColorEmissiveBoost = this._resolveSvgColorEmissiveBoost(child);
 
           if (Array.isArray(material) && Array.isArray(original)) {
             material.forEach((mat, idx) => {
@@ -5053,6 +5088,7 @@ export class MaterialController {
                       m.color,
                       this.materialSettings.emissive || 0.0,
                       modelHasEmissive,
+                      svgColorEmissiveBoost,
                     );
                     this._syncEmissiveBlendMaterial(m);
                   }
@@ -5085,6 +5121,7 @@ export class MaterialController {
                   adjustedColor,
                   this.materialSettings.emissive || 0.0,
                   modelHasEmissive,
+                  svgColorEmissiveBoost,
                 );
                 this._syncTransparentFlagsFromImport(m, origMat);
                 this._applyOverrideAlbedoOnMaterial(m, origMat);
@@ -5123,6 +5160,7 @@ export class MaterialController {
                   material.color,
                   this.materialSettings.emissive || 0.0,
                   modelHasEmissive,
+                  svgColorEmissiveBoost,
                 );
                 this._syncEmissiveBlendMaterial(material);
               }
@@ -5156,6 +5194,7 @@ export class MaterialController {
               adjustedColor,
               this.materialSettings.emissive || 0.0,
               modelHasEmissive,
+              svgColorEmissiveBoost,
             );
             this._syncTransparentFlagsFromImport(mat, original);
             this._applyOverrideAlbedoOnMaterial(mat, original);

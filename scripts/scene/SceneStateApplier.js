@@ -344,6 +344,11 @@ function createStateApplySteps() {
         if (state.svgExtrude?.colorReplacements !== undefined) {
           s.setSvgExtrudeColorReplacements(state.svgExtrude.colorReplacements, { updateState: false });
         }
+        if (state.svgExtrude?.colorEmissiveBoosts !== undefined) {
+          s.setSvgExtrudeColorEmissiveBoosts(state.svgExtrude.colorEmissiveBoosts, {
+            updateState: false,
+          });
+        }
         if (state.svgExtrude?.flipDirection !== undefined) {
           s.setSvgExtrudeFlipDirection(state.svgExtrude.flipDirection, { updateState: false });
         }

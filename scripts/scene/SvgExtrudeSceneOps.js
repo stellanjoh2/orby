@@ -271,3 +271,26 @@ export function sanitizeSvgExtrudeColorReplacements(colorReplacements, stateStor
   });
   return sanitized;
 }
+
+/**
+ * Keep only boosts whose key is a current palette color and whose value is > 0.
+ * @param {Record<string, unknown>} colorEmissiveBoosts
+ * @param {import('../StateStore.js').StateStore} stateStore
+ * @param {number} [maxBoost]
+ */
+export function sanitizeSvgExtrudeColorEmissiveBoosts(
+  colorEmissiveBoosts,
+  stateStore,
+  maxBoost = 4,
+) {
+  const availableColors = stateStore.getState()?.svgExtrude?.availableColors || [];
+  const sanitized = {};
+  const max = Number.isFinite(maxBoost) && maxBoost > 0 ? maxBoost : 4;
+  Object.entries(colorEmissiveBoosts || {}).forEach(([color, value]) => {
+    if (!availableColors.includes(color)) return;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric <= 0) return;
+    sanitized[color] = Math.max(0, Math.min(max, numeric));
+  });
+  return sanitized;
+}
