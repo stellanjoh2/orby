@@ -3,6 +3,10 @@
  * Frame + --orby-ultra-wide-factor live in orby-ultra-wide-home.css (:root).
  * Site frame fixed @ 160rem (2560px), centered — mirror of 2560 layout, not full-bleed.
  * Type / spacing scale 1:1 from the 2560 peak (factor 1 → 1.5). ≤2560 unchanged.
+ *
+ * Must load after 01-tokens (see orby-marketing.css trailing @import). Site-nav also
+ * links this early for scroll-nav chrome; without the trailing import, #orby-marketing
+ * token overrides lose to 01-tokens and stay at the 2560 peak.
  */
 
 @media (min-width: 2561px) {
@@ -91,7 +95,8 @@
     --orby-intro-scale-right: 1;
     --orby-intro-right-nudge: calc(350px - 500px * var(--orby-cta-ultra-ramp));
     --orby-cta-hummingbird-offset-x: calc(100px * var(--orby-ultra-wide-factor));
-    --orby-cta-hummingbird-offset-y: calc(300px * var(--orby-ultra-wide-factor));
+    /* Keep 2560 optical Y (300px up) — ×factor pulled the bird above the text block */
+    --orby-cta-hummingbird-offset-y: 300px;
     --orby-cta-asset-max-h: min(
       100dvh,
       calc(
@@ -155,24 +160,22 @@
   }
 
   /*
-   * Keep section CTAs (e.g. "Load Sample Object", "Request Preview") at the
-   * same vertical scale as the 3840 nav "Browse Files" magic pill.
+   * Section CTAs + lime CTA pair — same vertical scale as 3840 nav "Browse Files".
+   * .cta-actions was stroke-only; Other projects (.split-cta) already sized → mismatch.
    */
-  #orby-marketing .orby-marketing__split-cta .orby-magic-btn {
+  #orby-marketing .orby-marketing__split-cta .orby-magic-btn,
+  #orby-marketing .orby-marketing__cta-actions .orby-magic-btn {
     min-height: calc(var(--orby-magic-btn-min-height, 4rem) * var(--orby-ultra-wide-factor) * 0.88);
     font-size: var(--orby-marketing-support-size);
     --orby-magic-btn-stroke: calc(1.5px * var(--orby-marketing-magic-btn-stroke-scale));
   }
 
-  #orby-marketing .orby-marketing__split-cta .orby-magic-btn .orby-magic-btn__inner {
+  #orby-marketing .orby-marketing__split-cta .orby-magic-btn .orby-magic-btn__inner,
+  #orby-marketing .orby-marketing__cta-actions .orby-magic-btn .orby-magic-btn__inner {
     padding: calc(
         var(--orby-magic-btn-pad-block, 1.5rem) * var(--orby-ultra-wide-factor) * 0.88
       )
       calc(var(--orby-magic-btn-pad-inline, 1.75rem) * var(--orby-ultra-wide-factor));
     gap: calc(var(--orby-magic-btn-inner-gap, 0.5rem) * var(--orby-ultra-wide-factor));
-  }
-
-  #orby-marketing .orby-marketing__cta-actions .orby-magic-btn.orby-magic-btn--on-lime {
-    --orby-magic-btn-stroke: calc(1.5px * var(--orby-marketing-magic-btn-stroke-scale));
   }
 }

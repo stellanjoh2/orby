@@ -18,4 +18,11 @@
 /* 09-scroll-cue — loaded in index.html <head> before dropzone scroll */
 @import url('./marketing/10-in-progress.css');
 @import url('./marketing/15-mobile.css');
+/*
+ * Ultra-wide must follow 01-tokens. ensureSiteNavStyles() also links 14-ultra-wide
+ * before this file for scroll-nav chrome; without this trailing import, token
+ * overrides (headline 68→102, ledes, etc.) lose to 01-tokens and stay at the
+ * 2560 peak while Other projects keeps its direct font-size rule.
+ */
+@import url('./marketing/14-ultra-wide.css');
 /* Site nav CSS loads via ensureSiteNavStyles() before orby-marketing.css — not bundled here. */

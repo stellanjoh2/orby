@@ -1,5 +1,7 @@
 /**
  * Shared site nav stylesheets — homepage lazy-loads before marketing CSS; subpages link in HTML.
+ * 14-ultra-wide is also trailing-imported by orby-marketing.css so #orby-marketing token
+ * overrides win over 01-tokens (site-nav loads this file first for scroll-nav chrome).
  */
 
 const SITE_NAV_STYLE_HREFS = [
