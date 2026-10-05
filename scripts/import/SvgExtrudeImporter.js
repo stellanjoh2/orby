@@ -52,7 +52,7 @@ export class SvgExtrudeImporter {
     this.currentColorDepths = {};
     this.currentColorOffsets = {};
     this.currentColorPalette = [];
-    this.currentFlipDirection = false;
+    this.currentFlipDirection = true;
     this.currentBevelAmount = DEFAULT_EXTRUDE_BEVEL_AMOUNT;
     /** @type {'low' | 'medium' | 'high' | 'ultra'} */
     this.currentDetail = 'high';

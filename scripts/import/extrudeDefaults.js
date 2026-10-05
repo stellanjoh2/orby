@@ -42,7 +42,8 @@ export const DEFAULT_SVG_EXTRUDE_STATE = {
   colorReplacements: {},
   /** Per-fill emissive boost keyed by grouped palette hex (adds on top of Object → Emissive). */
   colorEmissiveBoosts: {},
-  flipDirection: false,
+  /** When true, depth grows toward the default camera (+Z half-offset). */
+  flipDirection: true,
   colorOverride: false,
   overrideColor: DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
   /** Side walls when Color Override two-tone is active (defaults to face override). */
@@ -73,7 +74,7 @@ export function resolveSvgExtrudeDefaults(source = {}) {
     colorOffsets: { ...(svg.colorOffsets || {}) },
     colorReplacements: { ...(svg.colorReplacements || {}) },
     colorEmissiveBoosts: { ...(svg.colorEmissiveBoosts || {}) },
-    flipDirection: !!svg.flipDirection,
+    flipDirection: !!(svg.flipDirection ?? DEFAULT_SVG_EXTRUDE_STATE.flipDirection),
     colorOverride: !!svg.colorOverride,
     overrideColor: svg.overrideColor ?? DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
     overrideExtrudeColor:

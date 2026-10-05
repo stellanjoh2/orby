@@ -48,7 +48,7 @@ function ensureLightbox() {
         <i class="fa-solid fa-xmark" aria-hidden="true"></i>
       </button>
       <video class="orby-marketing__video-lightbox-video" controls playsinline preload="metadata" hidden></video>
-      <iframe class="orby-marketing__video-lightbox-iframe" title="Launch trailer" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen hidden></iframe>
+      <iframe class="orby-marketing__video-lightbox-iframe" title="Launch trailer" allow="autoplay; fullscreen; picture-in-picture" hidden></iframe>
     </div>
   `;
   document.body.appendChild(root);

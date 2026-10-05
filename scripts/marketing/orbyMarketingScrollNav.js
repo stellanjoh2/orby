@@ -4,9 +4,58 @@
 import { MARKETING_SECTIONS } from './orbyMarketingContent.js';
 import { ensureMobileLandingClass, isMobileLanding } from '../orbyMobileLanding.js';
 import { isOrbyMobileLearnRoute, orbyMobileGateUrl } from '../orbyMobileAppRoute.js';
+import {
+  ORBY_STUDIO_FILE_ACCEPT,
+  ORBY_STUDIO_HANDOFF_QUERY,
+  stageStudioFileHandoff,
+} from '../orbyStudioHandoff.js';
+import { blockTabletStudioAccess } from '../orbyTabletGate.js';
 import { ensureSiteNavStyles } from './orbySiteNavStyles.js';
 import { renderSiteNav } from './orbyMarketingTemplates.js';
 import { subscribeMarketingScroll } from './orbyMarketingScrollDispatcher.js';
+
+const SUBPAGE_FILE_INPUT_ID = 'orby-subpage-file-input';
+
+/**
+ * Open the system file picker on a static subpage (user gesture), stage the file,
+ * then open the desktop studio home. Mobile landing goes to the mobile gate instead.
+ * @param {string} homeHref
+ */
+function browseFilesFromSubpage(homeHref) {
+  if (blockTabletStudioAccess()) return;
+  if (isMobileLanding()) {
+    window.location.assign(`${orbyMobileGateUrl()}/`);
+    return;
+  }
+
+  let input = document.getElementById(SUBPAGE_FILE_INPUT_ID);
+  if (!(input instanceof HTMLInputElement)) {
+    input = document.createElement('input');
+    input.type = 'file';
+    input.id = SUBPAGE_FILE_INPUT_ID;
+    input.accept = ORBY_STUDIO_FILE_ACCEPT;
+    input.hidden = true;
+    input.tabIndex = -1;
+    document.body.appendChild(input);
+  }
+
+  input.value = '';
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    try {
+      await stageStudioFileHandoff(file);
+      const home = new URL(homeHref, window.location.href);
+      home.searchParams.set(ORBY_STUDIO_HANDOFF_QUERY, '1');
+      window.location.assign(home.href);
+    } catch (err) {
+      console.error('[Orby] Subpage browse handoff failed', err);
+    }
+  };
+  input.click();
+}
 
 /** Hero strip — nav stays hidden on first paint; pin visible once revealed until scroll down. */
 const PAGE_TOP_Y = 48;
@@ -308,8 +357,9 @@ function initSiteNavNow(options) {
         window.location.assign(`${orbyMobileGateUrl()}/`);
         return;
       }
-      if (mode === 'subpage' && isMobileLanding()) {
-        window.location.assign('/?browse=1');
+      if (mode === 'subpage') {
+        // Subpages have no #browseButton — pick here (user gesture), then hand off.
+        browseFilesFromSubpage(homeHref);
         return;
       }
       document.getElementById('browseButton')?.click();

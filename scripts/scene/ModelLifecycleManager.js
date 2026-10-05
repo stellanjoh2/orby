@@ -8,6 +8,7 @@ import {
   DEFAULT_EXTRUDE_DEPTH,
   DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
   DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
+  DEFAULT_SVG_EXTRUDE_STATE,
 } from '../import/extrudeDefaults.js';
 import { normalizeExtrudeDetail } from '../import/extrudeDetail.js';
 import { isFontExtrudeRevealModel } from './FontTextRevealController.js';
@@ -122,7 +123,7 @@ export class ModelLifecycleManager {
       s.stateStore.set('svgExtrude.colorOffsets', {});
       s.stateStore.set('svgExtrude.colorReplacements', {});
       s.stateStore.set('svgExtrude.colorEmissiveBoosts', {});
-      s.stateStore.set('svgExtrude.flipDirection', false);
+      s.stateStore.set('svgExtrude.flipDirection', DEFAULT_SVG_EXTRUDE_STATE.flipDirection);
       return;
     }
     const nextDepth =

@@ -18,6 +18,7 @@ import { ORBY_DEV_BUILD } from './orbyDevBuild.js';
 import { isTabletDevice } from './orbyMobileLanding.js';
 import { blockTabletStudioAccess } from './orbyTabletGate.js';
 import { isSafariBrowser, isSupportedOrbyBrowser } from './browserDetection.js';
+import { ORBY_STUDIO_HANDOFF_QUERY, takeStudioFileHandoff } from './orbyStudioHandoff.js';
 
 /** Helps mobile browsers/iOS tint the toolbar and status chrome (--orby-black). */
 function setMobileSplashChromeMetaTags() {
@@ -42,20 +43,6 @@ if (ensureMobileLandingClass()) {
     );
   }
   setMobileSplashChromeMetaTags();
-  try {
-    const q = new URLSearchParams(window.location.search);
-    if (q.get('browse') === '1') {
-      q.delete('browse');
-      const next = q.toString();
-      const url = `${window.location.pathname}${next ? `?${next}` : ''}${window.location.hash}`;
-      window.history.replaceState(null, '', url);
-      requestAnimationFrame(() => {
-        document.getElementById('browseButton')?.click();
-      });
-    }
-  } catch {
-    /* URL blocked */
-  }
 }
 
 // Idempotent; head boot scripts run before styles.css.
@@ -109,6 +96,28 @@ async function boot() {
   const stateStore = new StateStore();
   const ui = new UIManager(eventBus, stateStore);
   ui.initShell();
+
+  try {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get(ORBY_STUDIO_HANDOFF_QUERY) === '1') {
+      q.delete(ORBY_STUDIO_HANDOFF_QUERY);
+      const next = q.toString();
+      const url = `${window.location.pathname}${next ? `?${next}` : ''}${window.location.hash}`;
+      window.history.replaceState(null, '', url);
+      const file = await takeStudioFileHandoff();
+      if (file) {
+        eventBus.emit('file:selected', file);
+      }
+    } else if (q.get('browse') === '1') {
+      // Deep link from older subpage nav — land on dropzone; picker needs a fresh click.
+      q.delete('browse');
+      const next = q.toString();
+      const url = `${window.location.pathname}${next ? `?${next}` : ''}${window.location.hash}`;
+      window.history.replaceState(null, '', url);
+    }
+  } catch {
+    /* URL / IDB blocked */
+  }
 
   if (isTabletDevice()) {
     document.documentElement.classList.add('orby-tablet-blocked');

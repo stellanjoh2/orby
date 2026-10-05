@@ -8,6 +8,7 @@ import { STLLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/j
 import { USDLoader } from 'https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/loaders/USDLoader.js';
 import { SvgExtrudeImporter } from '../import/SvgExtrudeImporter.js';
 import { BvhImporter } from '../import/BvhImporter.js';
+import { DEFAULT_SVG_EXTRUDE_STATE } from '../import/extrudeDefaults.js';
 import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
 import { normalizeImportScale } from '../import/normalizeImportScale.js';
 import { registerKHRMaterialsPbrSpecularGlossiness } from './gltfKHRSpecularGlossinessPlugin.js';
@@ -288,7 +289,9 @@ export class ModelLoader {
     const normalAngleDeg = options.svgExtrudeNormalAngle;
     const colorDepths = options.svgExtrudeColorDepths || {};
     const colorOffsets = options.svgExtrudeColorOffsets || {};
-    const flipDirection = !!options.svgExtrudeFlipDirection;
+    const flipDirection = !!(
+      options.svgExtrudeFlipDirection ?? DEFAULT_SVG_EXTRUDE_STATE.flipDirection
+    );
     const bevelAmount = options.svgExtrudeBevelAmount;
     const detail = options.svgExtrudeDetail;
     const hardEdgeAngleDeg = options.svgExtrudeHardEdgeAngle;
