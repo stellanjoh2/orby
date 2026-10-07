@@ -1,0 +1,115 @@
+/* Viewport right-click context menu — frosted Orby chrome */
+
+.orby-context-menu {
+  position: fixed;
+  z-index: 10055;
+  min-width: calc(11.5rem * var(--studio-ui-scale, 1));
+  max-width: min(18rem, calc(100vw - 16px));
+  padding: calc(0.28rem * var(--studio-ui-scale, 1));
+  margin: 0;
+  border: none;
+  border-radius: calc(10px * var(--studio-ui-scale, 1));
+  background: var(--ui-frosted-bg, rgba(8, 8, 8, 0.82));
+  backdrop-filter: blur(var(--ui-frosted-blur, 15px));
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur, 15px));
+  box-shadow:
+    0 calc(8px * var(--studio-ui-scale, 1)) calc(28px * var(--studio-ui-scale, 1))
+      rgba(0, 0, 0, 0.45),
+    0 0 0 1px color-mix(in srgb, var(--brand-primary, var(--orby-lime)) 12%, transparent);
+  color: var(--text, #f5f1ff);
+  font-family: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: calc(14px * var(--studio-ui-scale, 1));
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  transform-origin: top left;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.orby-context-menu[hidden] {
+  display: none !important;
+}
+
+.orby-context-menu__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.orby-context-menu__item {
+  margin: 0;
+  padding: 0;
+}
+
+.orby-context-menu__btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(0.75rem * var(--studio-ui-scale, 1));
+  width: 100%;
+  margin: 0;
+  padding: calc(0.48rem * var(--studio-ui-scale, 1)) calc(0.62rem * var(--studio-ui-scale, 1));
+  border: none;
+  border-radius: calc(7px * var(--studio-ui-scale, 1));
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.orby-context-menu__label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.orby-context-menu__check {
+  flex: 0 0 auto;
+  width: 0.45em;
+  height: 0.45em;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--text, #f5f1ff) 28%, transparent);
+}
+
+.orby-context-menu__btn.is-checked .orby-context-menu__check {
+  background: var(--brand-primary, var(--orby-lime));
+  box-shadow: none;
+}
+
+.orby-context-menu__btn:hover,
+.orby-context-menu__btn:focus-visible {
+  background: var(--accent-muted, color-mix(in srgb, var(--brand-primary, var(--orby-lime)) 18%, transparent));
+  color: var(--brand-primary, var(--orby-lime));
+  outline: none;
+  box-shadow: inset 3px 0 0 0 var(--brand-primary, var(--orby-lime));
+}
+
+.orby-context-menu__btn:hover .orby-context-menu__check,
+.orby-context-menu__btn:focus-visible .orby-context-menu__check {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--brand-primary, var(--orby-lime)) 55%, transparent);
+}
+
+.orby-context-menu__btn.is-checked:hover .orby-context-menu__check,
+.orby-context-menu__btn.is-checked:focus-visible .orby-context-menu__check {
+  background: var(--brand-primary, var(--orby-lime));
+  box-shadow: none;
+}
+
+.orby-context-menu__btn:active {
+  background: color-mix(in srgb, var(--brand-primary, var(--orby-lime)) 28%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orby-context-menu__btn {
+    transition: none;
+  }
+}

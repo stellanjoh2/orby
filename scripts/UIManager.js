@@ -49,6 +49,7 @@ import { LensControls } from './ui/LensControls.js';
 import { ViewPresetsControls } from './ui/ViewPresetsControls.js';
 import { IsometricControls } from './ui/IsometricControls.js';
 import { GlobalControls } from './ui/GlobalControls.js';
+import { ViewportContextMenu } from './ui/ViewportContextMenu.js';
 import { initInfoPanelNavGuard, openInfoSectionTarget } from './ui/infoSections.js';
 import { ensureInfoPanelProseLoaded } from './ui/loadInfoPanelProse.js';
 import { AnimationControls } from './ui/AnimationControls.js';
@@ -258,6 +259,8 @@ export class UIManager {
       this.helpers,
     );
     this.globalControls = new GlobalControls(this.eventBus, this.stateStore, this, this.helpers);
+    this.viewportContextMenu = new ViewportContextMenu(this.eventBus, this.stateStore, this);
+    this.viewportContextMenu.bind();
     this.fontExtrudeUI = new FontExtrudeUI(
       this.eventBus,
       this.stateStore,

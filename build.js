@@ -308,6 +308,7 @@ const SHELF_STYLE_PARTIALS = [
   'background-gradient.css',
   'background-image.css',
   'shape-library.css',
+  'viewport-context-menu.css',
 ];
 for (const name of SHELF_STYLE_PARTIALS) {
   const src = join(__dirname, 'styles', name);

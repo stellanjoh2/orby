@@ -2020,9 +2020,8 @@ export class CameraController {
     };
 
     this.contextMenuHandler = (event) => {
-      if (event.altKey || event.shiftKey) {
-        event.preventDefault();
-      }
+      // Always suppress the browser menu on the viewport (Orby context menu / pan / Alt·Shift rig).
+      event.preventDefault();
     };
 
     this.canvas.addEventListener('mousedown', this.mousedownHandler);
