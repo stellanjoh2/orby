@@ -492,6 +492,9 @@ export class SceneSettingsManager {
         if (payload.material.brightness !== undefined) {
           this.eventBus.emit('mesh:material-brightness', payload.material.brightness);
         }
+        if (payload.material.saturation !== undefined) {
+          this.eventBus.emit('mesh:material-saturation', payload.material.saturation);
+        }
         if (payload.material.metalness !== undefined) {
           this.eventBus.emit('mesh:material-metalness', payload.material.metalness);
         }

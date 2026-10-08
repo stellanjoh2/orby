@@ -737,7 +737,7 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
  *   }>,
  * }} state
  */
-export function resetRevealGlyphPose(state) {
+export function resetRevealGlyphPose(state, options = {}) {
   const { group, restPosition, restRotationX, restRotationY, restRotationZ, restScale, meshMaterials } = state;
   group.position.copy(restPosition);
   group.rotation.x = restRotationX;
@@ -750,5 +750,9 @@ export function resetRevealGlyphPose(state) {
     mat.transparent = transparent;
     mat.needsUpdate = true;
   }
-  restoreRevealGlyphEmissive(state);
+  // Asset handoff must not rewrite emissive — rest captures can be stale vs this
+  // mesh's own Material settings, which makes the unfocused text go darker.
+  if (options.skipEmissive !== true) {
+    restoreRevealGlyphEmissive(state);
+  }
 }

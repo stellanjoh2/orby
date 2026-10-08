@@ -7,6 +7,44 @@ import * as THREE from 'three';
 /** World-space lift from the studio floor grid for generated font meshes. */
 export const FONT_STUDIO_GRID_CLEARANCE = 0.04;
 
+const _box = new THREE.Box3();
+const _mat = new THREE.Matrix4();
+const _center = new THREE.Vector3();
+
+/**
+ * Axis-aligned bounds of `object` in `root`'s local space.
+ * Unlike world AABB + worldToLocal(corner), this stays correct when `root` is rotated.
+ * @param {THREE.Object3D} root
+ * @param {THREE.Object3D} object
+ * @returns {THREE.Box3 | null}
+ */
+export function computeBoundsInRootLocal(root, object) {
+  if (!root || !object) return null;
+  object.updateMatrixWorld(true);
+  root.updateMatrixWorld(true);
+  const rootInverse = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const boxLocal = new THREE.Box3();
+  let has = false;
+
+  object.traverse((child) => {
+    if (!child.isMesh || !child.geometry) return;
+    const geom = child.geometry;
+    if (!geom.boundingBox) geom.computeBoundingBox();
+    if (!geom.boundingBox || geom.boundingBox.isEmpty()) return;
+    _box.copy(geom.boundingBox);
+    _mat.multiplyMatrices(rootInverse, child.matrixWorld);
+    _box.applyMatrix4(_mat);
+    if (!has) {
+      boxLocal.copy(_box);
+      has = true;
+    } else {
+      boxLocal.union(_box);
+    }
+  });
+
+  return has && !boxLocal.isEmpty() ? boxLocal : null;
+}
+
 /**
  * Move generated font geometry so its block is centered on X/Z and sits above the grid.
  * Unlike {@link centerModelGeometryOnRoot}, the bbox bottom — not center — lands at `gridClearance`.
@@ -23,22 +61,15 @@ export function centerFontModelGeometryOnRoot(modelRoot, model, options = {}) {
     ? options.gridClearance
     : FONT_STUDIO_GRID_CLEARANCE;
 
-  model.updateMatrixWorld(true);
-  modelRoot.updateMatrixWorld(true);
-
-  const box = new THREE.Box3().setFromObject(model);
-  if (box.isEmpty()) return null;
+  const boxLocal = computeBoundsInRootLocal(modelRoot, model);
+  if (!boxLocal) return null;
 
   const modelBefore = model.position.clone();
-  const centerWorldBefore = box.getCenter(new THREE.Vector3());
-  const minWorldBefore = box.min.clone();
-  const centerInRoot = modelRoot.worldToLocal(centerWorldBefore.clone());
-  const minInRoot = modelRoot.worldToLocal(minWorldBefore.clone());
-
+  boxLocal.getCenter(_center);
   const offsetInRoot = new THREE.Vector3(
-    centerInRoot.x,
-    minInRoot.y - gridClearance,
-    centerInRoot.z,
+    _center.x,
+    boxLocal.min.y - gridClearance,
+    _center.z,
   );
 
   model.position.sub(offsetInRoot);
@@ -62,17 +93,12 @@ export function centerFontModelGeometryOnRoot(modelRoot, model, options = {}) {
 export function centerModelGeometryOnRoot(modelRoot, model) {
   if (!modelRoot || !model) return null;
 
-  model.updateMatrixWorld(true);
-  modelRoot.updateMatrixWorld(true);
-
-  const box = new THREE.Box3().setFromObject(model);
-  if (box.isEmpty()) return null;
+  const boxLocal = computeBoundsInRootLocal(modelRoot, model);
+  if (!boxLocal) return null;
 
   const modelBefore = model.position.clone();
-  const centerWorldBefore = box.getCenter(new THREE.Vector3());
-  const offsetInRoot = modelRoot.worldToLocal(centerWorldBefore.clone());
-
-  model.position.sub(offsetInRoot);
+  boxLocal.getCenter(_center);
+  model.position.sub(_center);
   model.updateMatrixWorld(true);
   modelRoot.updateMatrixWorld(true);
 
@@ -103,6 +129,42 @@ export function captureAndApplyCenterPivot(modelRoot, model) {
   const centerWorldBefore = box.getCenter(new THREE.Vector3());
 
   const localDelta = centerModelGeometryOnRoot(modelRoot, model);
+  if (!localDelta) return null;
+
+  const boxAfter = new THREE.Box3().setFromObject(model);
+  const centerWorldAfter = boxAfter.getCenter(new THREE.Vector3());
+  const worldDelta = centerWorldBefore.sub(centerWorldAfter);
+  modelRoot.position.add(worldDelta);
+  modelRoot.updateMatrixWorld(true);
+
+  return {
+    modelDelta: localDelta.modelDelta,
+    rootDelta: modelRoot.position.clone().sub(rootBefore),
+  };
+}
+
+/**
+ * Font pivot recenter that keeps the ink in the same world place.
+ * Use on multi-object select — {@link centerFontModelGeometryOnRoot} alone jumps the text.
+ *
+ * @param {THREE.Object3D} modelRoot
+ * @param {THREE.Object3D} model
+ * @param {{ gridClearance?: number }} [options]
+ * @returns {CenterPivotDelta | null}
+ */
+export function captureAndApplyCenterFontPivot(modelRoot, model, options = {}) {
+  if (!modelRoot || !model) return null;
+
+  model.updateMatrixWorld(true);
+  modelRoot.updateMatrixWorld(true);
+
+  const box = new THREE.Box3().setFromObject(model);
+  if (box.isEmpty()) return null;
+
+  const rootBefore = modelRoot.position.clone();
+  const centerWorldBefore = box.getCenter(new THREE.Vector3());
+
+  const localDelta = centerFontModelGeometryOnRoot(modelRoot, model, options);
   if (!localDelta) return null;
 
   const boxAfter = new THREE.Box3().setFromObject(model);

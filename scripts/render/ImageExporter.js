@@ -43,6 +43,7 @@ import {
   cropTransparentTopDownRgbaToCanvas as cropTransparentTopDownRgbaToCanvasFn,
 } from './capture/TransparentCapture.js';
 import { isTransparentCropToAsset } from './imageExportFraming.js';
+import { resolveExportCropWorldBox } from './imageExportCropBounds.js';
 import {
   pinAsciiReferenceForCapture,
   unpinAsciiReferenceForCapture,
@@ -96,6 +97,11 @@ export class ImageExporter {
     getRenderState,
     /** @type {import('./capture/captureArtisticLookPrep.js').ArtisticLookCaptureDeps | undefined} */
     creativeLookCaptureDeps,
+    /**
+     * Visible multi-object roots for crop-to-asset framing.
+     * @type {(() => import('three').Object3D[]) | undefined}
+     */
+    getExportCropRoots,
   } = {}) {
     this.renderer = renderer;
     this.scene = scene;
@@ -114,6 +120,7 @@ export class ImageExporter {
     this.environmentController = environmentController;
     this.getRenderState = getRenderState;
     this.creativeLookCaptureDeps = creativeLookCaptureDeps;
+    this.getExportCropRoots = getExportCropRoots;
     /** Pure image-data → SVG pipeline (silhouette / color / pixel-grid tracing). */
     this.svgVectorizer = new SvgVectorizer();
     /** @type {number | null} — learned max w×h the browser actually allocates for export. */
@@ -1536,14 +1543,16 @@ export class ImageExporter {
    * Calculate crop region based on mesh bounds in screen space
    */
   _calculateCropRegion(currentModel, cameraController, originalSize, size = 2, exportDensity) {
-    const bounds = cameraController?.getModelBounds();
-    if (!bounds) {
-      return null;
+    const roots = this.getExportCropRoots?.() ?? null;
+    let box = resolveExportCropWorldBox(roots, currentModel);
+    if (!box) {
+      // Stale camera bounds as last resort when roots/meshes are unavailable.
+      const bounds = cameraController?.getModelBounds();
+      if (!bounds?.box || bounds.box.isEmpty()) {
+        return null;
+      }
+      box = bounds.box.clone();
     }
-
-    // Get mesh bounding box in world space
-    const box = new THREE.Box3();
-    box.setFromObject(currentModel);
 
     // Project bounding box corners to screen space
     const corners = [

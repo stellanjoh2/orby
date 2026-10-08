@@ -1,6 +1,7 @@
 import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
+  DEFAULT_MATERIAL_SATURATION,
   ORBY_BLACK,
   ORBY_LIME,
 } from '../../constants.js';
@@ -15,6 +16,7 @@ export function createMaterialDefaults() {
   return {
     material: {
       brightness: DEFAULT_MATERIAL_BRIGHTNESS,
+      saturation: DEFAULT_MATERIAL_SATURATION,
       metalness: 0.0,
       roughness: DEFAULT_MATERIAL_ROUGHNESS,
       emissive: 0.0,

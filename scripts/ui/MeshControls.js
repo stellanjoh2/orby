@@ -4,6 +4,7 @@
  */
 import {
   DEFAULT_MATERIAL_ROUGHNESS,
+  DEFAULT_MATERIAL_SATURATION,
   DEFAULT_WIREFRAME_LINE_WIDTH,
   DEFAULT_WIREFRAME_OPACITY,
   getMaterialMrResetDefaults,
@@ -1645,6 +1646,14 @@ export class MeshControls {
         this.ui.inputs.materialBrightness,
         'materialBrightness',
         brightness,
+      );
+    }
+    if (this.ui.inputs.materialSaturation) {
+      const saturation = state.material?.saturation ?? DEFAULT_MATERIAL_SATURATION;
+      this._syncMaterialRangeSlider(
+        this.ui.inputs.materialSaturation,
+        'materialSaturation',
+        saturation,
       );
     }
     if (this.ui.inputs.materialMetalness) {

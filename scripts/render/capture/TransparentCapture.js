@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { getComposerOutputRenderTarget } from '../composerOutputBuffer.js';
 import { blitComposerOutputToByteTarget } from './capturePostStackOverlays.js';
+import { pinRenderTargetPhysicalViewport } from '../resetRendererFullViewport.js';
 import {
   hideStudioGroundGridInScene,
   restoreStudioGroundGridInScene,
@@ -344,6 +345,9 @@ export function readTransparentMergedTopDownRgba(deps) {
     }
     try {
       renderer.setRenderTarget(alphaRT);
+      // Pin after setRenderTarget — a stale sub-viewport (GL origin) flips to a tiny
+      // top-left silhouette after the top-down readback.
+      pinRenderTargetPhysicalViewport(renderer, width, height);
       renderer.setClearColor(0x000000, 0);
       renderer.setClearAlpha(0);
       renderer.clear();

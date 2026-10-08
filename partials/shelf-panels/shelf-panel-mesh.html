@@ -195,6 +195,18 @@
                     <span class="value" data-output="materialBrightness">1.0</span>
                   </label>
                   <label class="slider-line">
+                    <span data-tooltip="Per-object colour saturation — 1.0 matches the file (independent of Camera &amp; FX Saturation)">Saturation</span>
+                    <input
+                      id="materialSaturation"
+                      type="range"
+                      min="0"
+                      max="2"
+                      step="0.01"
+                      value="1.0"
+                    />
+                    <span class="value" data-output="materialSaturation">1.00</span>
+                  </label>
+                  <label class="slider-line">
                     <span data-tooltip="Scales each material's authored metalness — 1.0 matches the file">Metalness</span>
                     <input
                       id="materialMetalness"
@@ -1669,19 +1681,9 @@
                 <div class="block-title">Scene</div>
                 <div class="export-controls">
                   <div class="scene-controls">
-                    <button id="loadMeshButton" class="accent-action-btn" data-tooltip="Load a new 3D model file">
+                    <button id="loadMeshButton" class="accent-action-btn" data-tooltip="Import a 3D model — replace the scene or add beside the current object">
                       <i class="fa-solid fa-wand-magic-sparkles"></i>
                       Import Object
-                    </button>
-                    <button
-                      type="button"
-                      id="importAnotherObjectButton"
-                      class="accent-action-btn"
-                      data-tooltip="Add another model beside this one. Object settings are kept per asset."
-                      disabled
-                    >
-                      <i class="fa-solid fa-plus" aria-hidden="true"></i>
-                      Import Another Object
                     </button>
                     <button
                       type="button"
@@ -1734,7 +1736,7 @@
                   </div>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.1063 · 2026-10-08 15:35:21 UTC</div>
+              <div class="info-version-tag">v0.5.1065 · 2026-10-08 23:29:26 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>

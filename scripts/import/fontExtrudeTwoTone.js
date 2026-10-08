@@ -44,6 +44,27 @@ export function fontExtrudeTwoToneActive(fillHex, extrudeHex) {
 }
 
 /**
+ * Whether Type Creator uses a separate extrude/side color.
+ * Legacy stamps without `extrudeColorEnabled` infer from differing face/side hexes.
+ * @param {{ extrudeColorEnabled?: boolean, fillColor?: string, extrudeColor?: string } | null | undefined} fontState
+ */
+export function isFontExtrudeExtrudeColorEnabled(fontState) {
+  if (fontState?.extrudeColorEnabled != null) return !!fontState.extrudeColorEnabled;
+  return fontExtrudeTwoToneActive(fontState?.fillColor, fontState?.extrudeColor);
+}
+
+/**
+ * Effective side-wall color: face color while the Extrude color toggle is off.
+ * @param {{ extrudeColorEnabled?: boolean, fillColor?: string, extrudeColor?: string } | null | undefined} fontState
+ * @param {string} [fillHex]
+ */
+export function resolveFontExtrudeSideColor(fontState, fillHex) {
+  const fill = normalizeFontExtrudeHex(fillHex ?? fontState?.fillColor);
+  if (!isFontExtrudeExtrudeColorEnabled(fontState)) return fill;
+  return normalizeFontExtrudeHex(fontState?.extrudeColor ?? fill);
+}
+
+/**
  * @param {THREE.BufferGeometry} geometry — non-indexed extrude mesh (post box UVs).
  * @returns {THREE.BufferGeometry}
  */

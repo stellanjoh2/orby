@@ -56,12 +56,20 @@ export class FontTextConstantController {
     this._revealController = controller;
   }
 
+  /** Same ownership rules as FontTextRevealController._fontExtrudeSlice. */
+  _fontExtrudeSlice() {
+    return this._revealController?._fontExtrudeSlice?.()
+      || this.stateStore?.peekState?.()?.fontExtrude
+      || this.stateStore?.getState()?.fontExtrude
+      || {};
+  }
+
   getType() {
-    return normalizeFontConstantType(this.stateStore?.getState()?.fontExtrude?.constantType);
+    return normalizeFontConstantType(this._fontExtrudeSlice()?.constantType);
   }
 
   getIntensity() {
-    const raw = this.stateStore?.getState()?.fontExtrude?.constantIntensity;
+    const raw = this._fontExtrudeSlice()?.constantIntensity;
     return clampFontConstantIntensityForType(
       this.getType(),
       raw ?? DEFAULT_FONT_CONSTANT_INTENSITY,
@@ -69,12 +77,12 @@ export class FontTextConstantController {
   }
 
   getSpeedSec() {
-    const raw = this.stateStore?.getState()?.fontExtrude?.constantSpeedSec;
+    const raw = this._fontExtrudeSlice()?.constantSpeedSec;
     return clampFontConstantSpeedSec(raw ?? DEFAULT_FONT_CONSTANT_SPEED_SEC);
   }
 
   getSpread() {
-    const raw = this.stateStore?.getState()?.fontExtrude?.constantSpread;
+    const raw = this._fontExtrudeSlice()?.constantSpread;
     return clampFontConstantSpread(raw ?? DEFAULT_FONT_CONSTANT_SPREAD);
   }
 
@@ -83,7 +91,7 @@ export class FontTextConstantController {
   }
 
   isPauseAll() {
-    return this.stateStore?.getState()?.fontExtrude?.pauseAllAnimations === true;
+    return this._fontExtrudeSlice()?.pauseAllAnimations === true;
   }
 
   isEnabled() {

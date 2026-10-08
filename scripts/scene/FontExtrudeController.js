@@ -1,6 +1,9 @@
 import * as opentype from 'opentype';
 import { FontExtrudeImporter, normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
-import { fontExtrudeTwoToneActive } from '../import/fontExtrudeTwoTone.js';
+import {
+  fontExtrudeTwoToneActive,
+  resolveFontExtrudeSideColor,
+} from '../import/fontExtrudeTwoTone.js';
 import { normalizeImportScale } from '../import/normalizeImportScale.js';
 import { opentypePathHasArea } from '../import/opentypePathToShape.js';
 import {
@@ -26,6 +29,11 @@ import {
 } from '../import/extrudeDefaults.js';
 import { deepClone } from '../utils/deepClone.js';
 import { DEFAULT_FONT_BEVEL_TYPE } from '../import/extrudeBevel.js';
+import {
+  buildFontExtrudeMaterialBaseline,
+  commitFontAssetDocument,
+  stampFontExtrudeAssetSettings,
+} from './fontExtrudeAssetState.js';
 import {
   clearSvgExtrudeLegacyForFontGeneration,
   shouldClearSvgExtrudeLegacyForFontGeneration,
@@ -511,9 +519,11 @@ export class FontExtrudeController {
     const appendBeside = !!options.appendToScene && !!scene?.currentModel;
     if (appendBeside) {
       // Fresh importer so the object already in the scene keeps its own.
-      // Skip the SVG reset — that writes the live store and would restyle the current mesh.
+      // Skip the SVG store reset — that would restyle the current mesh — but still
+      // build this newcomer from font defaults so it does not inherit the peer's
+      // svgExtrude override / surfaces / per-color maps.
       this.fontExtrudeImporter = new FontExtrudeImporter();
-      this._appendUsesFontBaseline = shouldClearSvgExtrudeLegacyForFontGeneration(scene);
+      this._appendUsesFontBaseline = true;
     } else if (scene && shouldClearSvgExtrudeLegacyForFontGeneration(scene)) {
       clearSvgExtrudeLegacyForFontGeneration(this.stateStore, this.eventBus);
       this.fontExtrudeImporter = new FontExtrudeImporter();
@@ -542,7 +552,8 @@ export class FontExtrudeController {
       options.fillColor ?? fontState.fillColor ?? DEFAULT_PREVIEW_FILL,
     );
     const extrudeColor = normalizeGlyphFillHex(
-      options.extrudeColor ?? fontState.extrudeColor ?? fillColor,
+      options.extrudeColor
+        ?? resolveFontExtrudeSideColor(fontState, fillColor),
     );
     const group = this.fontExtrudeImporter.buildFromLayout(layout, {
       sourceName: this.fontLabel || 'Text',
@@ -579,9 +590,30 @@ export class FontExtrudeController {
    * @param {THREE.Group} group
    * @param {{ skipConfirm?: boolean, skipToast?: boolean, append?: boolean }} [options]
    */
+  /** @param {import('../SceneManager.js').SceneManager | null | undefined} scene */
+  _sceneHasFontText(scene) {
+    if (scene?.currentModel?.userData?.orbyFontGenerated) return true;
+    const assets = scene?.sceneObjects?.assets;
+    if (!Array.isArray(assets)) return false;
+    return assets.some(
+      (asset) =>
+        !!(asset?.mesh?.userData?.orbyFontGenerated || asset?.mesh?.userData?.orbyFontExtrude),
+    );
+  }
+
   async addToScene(group, options = {}) {
     const scene = this.getScene();
     if (!scene) return null;
+
+    // Temporary hard stop — multi-font isolation is not reliable yet.
+    if (options.append && this._sceneHasFontText(scene)) {
+      scene.ui?.showToast?.(
+        'Multiple 3D texts are temporarily unavailable — replace the current text instead',
+        4200,
+        { notification: false },
+      );
+      return null;
+    }
 
     if (options.append && scene.currentModel && scene.sceneObjects) {
       return this._appendGeneratedText(scene, group, options);
@@ -613,12 +645,9 @@ export class FontExtrudeController {
       scene.ui.updateTitle(assetName);
       scene.ui.updateTopBarDetail(`${assetName} — Idle`);
 
-      const fillColor = normalizeGlyphFillHex(
-        this.stateStore.getState()?.fontExtrude?.fillColor ?? DEFAULT_PREVIEW_FILL,
-      );
-      const extrudeColor = normalizeGlyphFillHex(
-        this.stateStore.getState()?.fontExtrude?.extrudeColor ?? fillColor,
-      );
+      const fontState = this.stateStore.getState()?.fontExtrude;
+      const fillColor = normalizeGlyphFillHex(fontState?.fillColor ?? DEFAULT_PREVIEW_FILL);
+      const extrudeColor = resolveFontExtrudeSideColor(fontState, fillColor);
       this.stateStore.set('svgExtrude.availableColors', [fillColor]);
       normalizeImportScale(group);
       scene.modelLifecycle.setModel(group, []);
@@ -646,7 +675,28 @@ export class FontExtrudeController {
       });
       scene.svgExtrudeImporter = this.fontExtrudeImporter;
       scene.isSvgExtrudeModel = true;
+      // New text must not inherit a prior import's metalness/PBR authoring flags.
+      const fontMaterial = buildFontExtrudeMaterialBaseline();
+      this.stateStore.set('material', fontMaterial);
+      scene.materialController?.focusModel?.(group, {
+        material: fontMaterial,
+        clay: this.stateStore.getState()?.clay,
+        wireframe: this.stateStore.getState()?.wireframe,
+        fresnel: this.stateStore.getState()?.fresnel,
+        creativeLook: this.stateStore.getState()?.creativeLook,
+        advanced: this.stateStore.getState()?.advanced,
+      });
+      scene.materialController?.updateMaterials?.();
       scene.applyFontExtrudeColors?.(fillColor, extrudeColor);
+      commitFontAssetDocument(group, this.stateStore.getState());
+      // Park Type Creator settings on the first asset before the user drafts another text.
+      if (scene.sceneObjects && !scene.sceneObjects.assets.length) {
+        scene.sceneObjects.ensureActiveRegistered();
+      } else {
+        scene.sceneObjects?.commitActive?.();
+      }
+      // Asset keeps this importer; draft the next Generate on a fresh instance.
+      this._detachFontImporterForNextGenerate();
       scene.updateStatsUI(null, group, scene.currentAssetMetadata);
 
       this.eventBus.emit('font:generated', { group });
@@ -668,15 +718,13 @@ export class FontExtrudeController {
    */
   async _appendGeneratedText(scene, group, options = {}) {
     const assetName = this.fontLabel || 'Generated Text';
-    const fillColor = normalizeGlyphFillHex(
-      this.stateStore.getState()?.fontExtrude?.fillColor ?? DEFAULT_PREVIEW_FILL,
-    );
-    const extrudeColor = normalizeGlyphFillHex(
-      this.stateStore.getState()?.fontExtrude?.extrudeColor ?? fillColor,
-    );
     const live = this.stateStore.getState();
+    const fillColor = normalizeGlyphFillHex(live?.fontExtrude?.fillColor ?? DEFAULT_PREVIEW_FILL);
+    const extrudeColor = resolveFontExtrudeSideColor(live?.fontExtrude, fillColor);
     const overlay = {
       fontExtrude: deepClone(live.fontExtrude),
+      // Each appended text starts with clean Mesh MR — not the peer's metalness.
+      material: buildFontExtrudeMaterialBaseline(),
     };
     if (this._appendUsesFontBaseline) {
       overlay.svgExtrude = buildFontExtrudeSvgExtrudeBaseline({
@@ -707,6 +755,16 @@ export class FontExtrudeController {
       await scene.syncViewportSize();
       scene.startRenderLoop();
       normalizeImportScale(group);
+      // Stamp identity before attach so commit/capture during spawn cannot park
+      // peer draft colors onto this mesh (or the previous one).
+      if (overlay.fontExtrude) {
+        overlay.fontExtrude.fillColor = fillColor;
+        overlay.fontExtrude.extrudeColor = extrudeColor;
+      }
+      stampFontExtrudeAssetSettings(group, {
+        fontExtrude: overlay.fontExtrude,
+        svgExtrude: overlay.svgExtrude,
+      });
       await scene.modelLifecycle.attachAdditionalAsset(
         {
           object: group,
@@ -740,11 +798,42 @@ export class FontExtrudeController {
         },
       );
       scene.applyFontExtrudeColors?.(fillColor, extrudeColor);
+      commitFontAssetDocument(group, this.stateStore.getState());
+      scene.sceneObjects?.commitActive?.();
+      // Asset record already holds this importer; next Generate must not reuse it.
+      this._detachFontImporterForNextGenerate();
       this.eventBus.emit('font:generated', { group });
       return group;
     } finally {
       scene.ui.endLoadSpinner();
     }
+  }
+
+  /**
+   * After a mesh is parked on an asset, hand that importer to the asset only.
+   * The controller gets a settings-matched empty importer for the next Generate.
+   */
+  _detachFontImporterForNextGenerate() {
+    const committed = this.fontExtrudeImporter;
+    if (!committed) {
+      this.fontExtrudeImporter = new FontExtrudeImporter();
+      return;
+    }
+    const next = new FontExtrudeImporter();
+    next.currentDepth = committed.currentDepth;
+    next.currentNormalAngleDeg = committed.currentNormalAngleDeg;
+    next.currentHardEdgeAngleDeg = committed.currentHardEdgeAngleDeg;
+    next.currentColorDepths = { ...(committed.currentColorDepths || {}) };
+    next.currentColorOffsets = { ...(committed.currentColorOffsets || {}) };
+    next.currentFillColor = committed.currentFillColor;
+    next.currentExtrudeColor = committed.currentExtrudeColor;
+    next.currentColorPalette = [...(committed.currentColorPalette || [])];
+    next.currentFlipDirection = committed.currentFlipDirection;
+    next.currentBevelAmount = committed.currentBevelAmount;
+    next.currentBevelType = committed.currentBevelType;
+    next._detailLevel = committed._detailLevel;
+    next._layoutFontSize = committed._layoutFontSize;
+    this.fontExtrudeImporter = next;
   }
 
   /**

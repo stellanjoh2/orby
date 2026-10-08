@@ -276,14 +276,30 @@ export function computeLineInkAlignOffset(bounds, align, refWidth) {
   return -bounds.minX;
 }
 
+const _boundsInvMatrix = new THREE.Matrix4();
+
 /**
+ * Ink bounds for align/tracking. Prefer `spaceRoot` local space (the font mesh) —
+ * world-space bounds shift after centerFont / per-asset pivots and double-apply
+ * the center align offset on the next bind/select.
+ *
  * @param {Array<import('./fontTextRevealTypes.js').RevealGlyphState>} glyphStates
  * @param {number[] | null} lineIndices
  * @param {number[]} lineGlyphCounts
+ * @param {import('three').Object3D | null | undefined} [spaceRoot]
  */
-export function computeTypographyLineBoundsFromRest(glyphStates, lineIndices, lineGlyphCounts) {
+export function computeTypographyLineBoundsFromRest(
+  glyphStates,
+  lineIndices,
+  lineGlyphCounts,
+  spaceRoot = null,
+) {
   /** @type {Map<number, { minX: number, maxX: number, width: number }>} */
   const boundsByLine = new Map();
+  if (spaceRoot) spaceRoot.updateMatrixWorld(true);
+  const useLocal = !!spaceRoot;
+  if (useLocal) _boundsInvMatrix.copy(spaceRoot.matrixWorld).invert();
+
   for (let i = 0; i < glyphStates.length; i += 1) {
     const lineIndex = lineIndices?.[i] ?? 0;
     const { group } = glyphStates[i];
@@ -291,6 +307,7 @@ export function computeTypographyLineBoundsFromRest(glyphStates, lineIndices, li
     group.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(group);
     if (box.isEmpty()) continue;
+    if (useLocal) box.applyMatrix4(_boundsInvMatrix);
     const existing = boundsByLine.get(lineIndex);
     if (!existing) {
       boundsByLine.set(lineIndex, { minX: box.min.x, maxX: box.max.x, width: 0 });
@@ -354,6 +371,7 @@ export function computeTypographyAlignLineShift(
  *   lineRestYBaselines?: Map<number, number>,
  *   layoutBounds?: Map<number, { minX: number, maxX: number, width: number }>,
  *   paragraphWidth?: number,
+ *   spaceRoot?: import('three').Object3D | null,
  * }} options
  */
 export function applyTrackingAnimatorToGlyphStates(glyphStates, options) {
@@ -384,6 +402,7 @@ export function applyTrackingAnimatorToGlyphStates(glyphStates, options) {
       glyphStates,
       options.lineIndices,
       options.lineGlyphCounts,
+      options.spaceRoot ?? null,
     );
     boundsByLine = measured.boundsByLine;
     paragraphWidth = measured.paragraphWidth;

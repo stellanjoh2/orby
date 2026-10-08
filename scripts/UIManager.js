@@ -539,6 +539,7 @@ export class UIManager {
       anamorphicBloomStreakTint: q('#anamorphicBloomStreakTint'),
       anamorphicBloomQuality: q('#anamorphicBloomQuality'),
       materialBrightness: q('#materialBrightness'),
+      materialSaturation: q('#materialSaturation'),
       materialMetalness: q('#materialMetalness'),
       materialRoughness: q('#materialRoughness'),
       materialEmissive: q('#materialEmissive'),

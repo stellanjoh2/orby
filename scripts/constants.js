@@ -203,6 +203,9 @@ export const DEFAULT_BACKDROP_METALNESS = 0.02;
 export const DEFAULT_BACKDROP_ROUGHNESS = 0.9;
 /** Object → Material brightness UI default — 1.0 maps to effective ×2 (former ~2.0 look). */
 export const DEFAULT_MATERIAL_BRIGHTNESS = 1.0;
+/** Object → Material saturation UI default — 1.0 = authored chroma (independent of Camera & FX). */
+export const DEFAULT_MATERIAL_SATURATION = 1.0;
+export const MATERIAL_SATURATION_UI_MAX = 2;
 /** UI slider max — effective range stays 0–5 via {@link materialBrightnessEffectiveScale}. */
 export const MATERIAL_BRIGHTNESS_UI_MAX = 2.5;
 /** UI value → albedo / shader multiplier (v3 scene JSON stores UI, not effective). */

@@ -7,6 +7,7 @@ import { grainIntensityStoredToUi } from '../constants.js';
  */
 export const SLIDER_DEFAULT_PATHS = {
   materialBrightness: 'material.brightness',
+  materialSaturation: 'material.saturation',
   materialMetalness: 'material.metalness',
   materialRoughness: 'material.roughness',
   materialEmissive: 'material.emissive',

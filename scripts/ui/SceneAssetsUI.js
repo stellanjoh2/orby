@@ -1,7 +1,8 @@
 import { animateModalClose, animateModalOpen } from './modalReveal.js';
 
 /**
- * Object → Scene: Import Another Object, Outliner modal, and Export asset focus.
+ * Object → Scene: Outliner modal and Export asset focus.
+ * Import Object lives on StartMenuController (prompts replace vs add when needed).
  * Selection swaps the Object menu onto that asset. Studio and Camera stay put.
  */
 export class SceneAssetsUI {
@@ -22,7 +23,6 @@ export class SceneAssetsUI {
   }
 
   bind() {
-    this.importAnotherButton = document.querySelector('#importAnotherObjectButton');
     this.outlinerButton = document.querySelector('#openOutlinerButton');
     this.modal = document.querySelector('#outlinerModal');
     this.list = document.querySelector('#outlinerList');
@@ -32,14 +32,6 @@ export class SceneAssetsUI {
     this.exportFocus = document.querySelector('#exportAssetFocus');
     this.exportObjectGroup = document.querySelector('#exportVideoObjectGroup');
     this.exportMultiNote = document.querySelector('#exportMultiAssetNote');
-
-    this.importAnotherButton?.addEventListener('click', () => {
-      const input = this.ui.buttons?.fileInput || document.querySelector('#fileInput');
-      if (!input || this.importAnotherButton?.disabled) return;
-      this.ui.uiSounds?.playSelect?.();
-      input.dataset.importMode = 'add';
-      input.click();
-    });
 
     this.outlinerButton?.addEventListener('click', () => {
       if (this.outlinerButton?.disabled) return;
@@ -96,10 +88,8 @@ export class SceneAssetsUI {
   sync(payload = {}) {
     const assets = Array.isArray(payload.assets) ? payload.assets : [];
     const count = Number.isFinite(payload.count) ? payload.count : assets.length;
-    const hasModel = count > 0 || !!window.orby?.scene?.currentModel;
     const multi = count > 1;
 
-    if (this.importAnotherButton) this.importAnotherButton.disabled = !hasModel;
     if (this.outlinerButton) this.outlinerButton.disabled = !multi;
 
     this._renderList(assets, payload.activeId);

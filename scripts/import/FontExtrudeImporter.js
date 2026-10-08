@@ -419,6 +419,9 @@ export class FontExtrudeImporter {
           g: baseColor.g,
           b: baseColor.b,
         };
+        // Cap/side identity for per-asset parking — must exist before any select/commit.
+        mesh.userData.orbyFontCapColor = this.currentFillColor;
+        mesh.userData.orbyFontExtrudeColor = this.currentExtrudeColor || this.currentFillColor;
         glyphGroup.add(mesh);
         meshCount += 1;
       }

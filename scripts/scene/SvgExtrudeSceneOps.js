@@ -4,6 +4,7 @@
 
 import { resetSvgExtrudeStateForFontExtrude, DEFAULT_SVG_EXTRUDE_SURFACE_PRESET, DEFAULT_SVG_EXTRUDE_SURFACE_SCALE, DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH } from '../import/extrudeDefaults.js';
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
+import { resolveFontExtrudeSideColor } from '../import/fontExtrudeTwoTone.js';
 
 /** @param {unknown} importer */
 export function isFontExtrudeImporter(importer) {
@@ -91,12 +92,9 @@ export function syncFontExtrudeFillOnImporter(scene) {
     !!scene.currentModel?.userData?.orbyFontGenerated ||
     !!scene.materialController?._isFontExtrudeModel?.(scene.currentModel);
   if (!isFont) return null;
-  const fillHex = normalizeGlyphFillHex(
-    scene.stateStore.getState()?.fontExtrude?.fillColor ?? importer.getFillColor(),
-  );
-  const extrudeHex = normalizeGlyphFillHex(
-    scene.stateStore.getState()?.fontExtrude?.extrudeColor ?? importer.getExtrudeColor?.() ?? fillHex,
-  );
+  const fontState = scene.stateStore.getState()?.fontExtrude;
+  const fillHex = normalizeGlyphFillHex(fontState?.fillColor ?? importer.getFillColor());
+  const extrudeHex = resolveFontExtrudeSideColor(fontState, fillHex);
   if (typeof importer.setTwoToneColors === 'function') {
     importer.setTwoToneColors(fillHex, extrudeHex);
   } else {
@@ -168,10 +166,10 @@ export function rebuildSvgExtrudeMeshesAfterImporterChange(scene) {
     !!scene.currentModel?.userData?.orbyFontGenerated ||
     !!scene.materialController?._isFontExtrudeModel?.(scene.currentModel);
   if (isFont && fillHex) {
-    const extrudeHex = normalizeGlyphFillHex(
-      scene.stateStore.getState()?.fontExtrude?.extrudeColor ?? fillHex,
+    scene.applyFontExtrudeColors(
+      fillHex,
+      resolveFontExtrudeSideColor(scene.stateStore.getState()?.fontExtrude, fillHex),
     );
-    scene.applyFontExtrudeColors(fillHex, extrudeHex);
   }
   scene.setReverseNormals(scene.stateStore.getState().advanced?.reverseNormals ?? false);
   scene.refreshBoneHelpers();

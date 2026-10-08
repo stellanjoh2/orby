@@ -256,6 +256,9 @@ function createStateApplySteps() {
         if (state.material?.brightness !== undefined) {
           s.materialController.setMaterialBrightness(state.material.brightness);
         }
+        if (state.material?.saturation !== undefined) {
+          s.materialController.setMaterialSaturation(state.material.saturation);
+        }
         if (state.material?.metalness !== undefined) {
           s.materialController.setMaterialMetalness(state.material.metalness);
         }

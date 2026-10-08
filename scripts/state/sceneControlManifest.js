@@ -46,6 +46,10 @@ export const SCENE_CONTROL_MANIFEST = [
     apply: { controller: 'materialController', method: 'setMaterialBrightness' },
   },
   {
+    event: 'mesh:material-saturation',
+    apply: { controller: 'materialController', method: 'setMaterialSaturation' },
+  },
+  {
     event: 'mesh:material-metalness',
     apply: { controller: 'materialController', method: 'setMaterialMetalness' },
   },

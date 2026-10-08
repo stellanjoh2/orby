@@ -51,7 +51,7 @@ import { clearShapeLibraryMeshModifiers } from '../shapeLibrary/shapeLibraryModi
  * `bindLocalResetButtons`: every path written there should appear here.
  */
 const RESET_DIRTY_PATHS = {
-  material: ['material.brightness', 'material.metalness', 'material.roughness', 'material.emissive', 'material.colorOverride', 'material.overrideColor'],
+  material: ['material.brightness', 'material.saturation', 'material.metalness', 'material.roughness', 'material.emissive', 'material.colorOverride', 'material.overrideColor'],
   clay: ['clay'],
   subsurface: ['subsurface'],
   wireframe: ['wireframe'],
@@ -611,6 +611,7 @@ export class ResetControls {
           !!matFlags?.importIsSpecGloss,
         );
         this.stateStore.set('material.brightness', defaults.material?.brightness ?? mrDefaults.brightness);
+        this.stateStore.set('material.saturation', defaults.material?.saturation ?? 1.0);
         this.stateStore.set('material.metalness', mrDefaults.metalness);
         this.stateStore.set('material.roughness', mrDefaults.roughness);
         this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
@@ -646,6 +647,7 @@ export class ResetControls {
           !!matFlags?.importIsSpecGloss,
         );
         this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? mrDefaults.brightness);
+        this.eventBus.emit('mesh:material-saturation', defaults.material?.saturation ?? 1.0);
         this.eventBus.emit('mesh:material-metalness', mrDefaults.metalness);
         this.eventBus.emit('mesh:material-roughness', mrDefaults.roughness);
         this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
@@ -911,6 +913,7 @@ export class ResetControls {
             const overrideColor = defaults.material?.overrideColor ?? '#ffffff';
             this.stateStore.batch(() => {
               this.stateStore.set('material.brightness', defaults.material?.brightness ?? mrDefaults.brightness);
+              this.stateStore.set('material.saturation', defaults.material?.saturation ?? 1.0);
               this.stateStore.set('material.metalness', mrDefaults.metalness);
               this.stateStore.set('material.roughness', mrDefaults.roughness);
               this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
@@ -926,6 +929,7 @@ export class ResetControls {
               );
             });
             this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? mrDefaults.brightness);
+            this.eventBus.emit('mesh:material-saturation', defaults.material?.saturation ?? 1.0);
             this.eventBus.emit('mesh:material-metalness', mrDefaults.metalness);
             this.eventBus.emit('mesh:material-roughness', mrDefaults.roughness);
             this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);

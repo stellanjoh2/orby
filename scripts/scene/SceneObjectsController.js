@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { clone as cloneSkinnedHierarchy } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/SkeletonUtils.js';
-import { centerModelGeometryOnRoot } from './centerModelPivot.js';
+import {
+  centerFontModelGeometryOnRoot,
+  centerModelGeometryOnRoot,
+} from './centerModelPivot.js';
 import {
   MATERIAL_MAP_TEXTURE_PROPS,
 } from '../render/disposeMaterialTextures.js';
@@ -13,6 +16,13 @@ import {
   sanitizeObjectAssetSlice,
   writeObjectAssetState,
 } from './objectAssetState.js';
+import {
+  commitFontAssetDocument,
+  hydrateObjectSliceFromFontStamp,
+  meshFontColorsMatch,
+} from './fontExtrudeAssetState.js';
+import { isFontExtrudeModel } from './SvgExtrudeSceneOps.js';
+import { resolveFontExtrudeSideColor } from '../import/fontExtrudeTwoTone.js';
 import { AnimationController } from '../render/AnimationController.js';
 
 /**
@@ -63,6 +73,19 @@ export class SceneObjectsController {
   getPickRoots() {
     if (!this.isMulti()) return [];
     return this.assets.map((asset) => asset.group || asset.mesh).filter(Boolean);
+  }
+
+  /**
+   * Visible asset pivots for transparent PNG crop-to-asset (all objects, not only selection).
+   * @returns {import('three').Object3D[]}
+   */
+  getExportCropRoots() {
+    if (this.assets.length > 0) {
+      return this.assets
+        .map((asset) => asset.group || asset.mesh)
+        .filter((node) => node && node.visible !== false);
+    }
+    return this.scene.currentModel ? [this.scene.currentModel] : [];
   }
 
   /**
@@ -153,14 +176,29 @@ export class SceneObjectsController {
     const slice = captureObjectAssetState(this.scene.stateStore);
     const pivot = asset.group || this.scene.modelRoot;
     Object.assign(slice, readObjectTransform(pivot));
-    sanitizeObjectAssetSlice(slice, asset.mesh, defaultObjectAssetState(this.scene.stateStore));
-    asset.objectState = slice;
+    sanitizeObjectAssetSlice(
+      slice,
+      asset.mesh,
+      defaultObjectAssetState(this.scene.stateStore),
+      asset.objectState,
+    );
+    // Font meshes: stamp is the document. Never prefer the live store here —
+    // before Add-to-Scene the store already holds the *next* draft (often the
+    // same sourceText + colors), and overwriting the stamp is what jumps/darkens
+    // the parked text. Live edits while focused already commit via FontExtrudeUI.
+    if (isFontExtrudeModel(asset.mesh)) {
+      hydrateObjectSliceFromFontStamp(slice, asset.mesh);
+      commitFontAssetDocument(asset.mesh, slice);
+    }
+    // Park an independent copy — never alias nested fontExtrude/material with the live store.
+    asset.objectState = deepClone(slice);
     asset.file = this.scene.currentFile ?? asset.file ?? null;
     asset.gltfMetadata = this.scene.currentAssetMetadata ?? asset.gltfMetadata ?? null;
     asset.svgExtrudeImporter = this.scene.svgExtrudeImporter ?? null;
     asset.isSvgExtrudeModel = !!this.scene.isSvgExtrudeModel;
     asset.isImportSmoothingModel = !!this.scene.isImportSmoothingModel;
-    asset.pivotCenterDelta = this.scene._pivotCenterDelta ?? null;
+    asset.pivotCenterDelta =
+      asset.mesh?.userData?.orbyPivotCenterDelta ?? this.scene._pivotCenterDelta ?? null;
     asset.fbxImportBundle = this.scene._fbxImportBundle ?? null;
     if (this.scene.animationController?.animations) {
       asset.animations = this.scene.animationController.animations;
@@ -181,8 +219,13 @@ export class SceneObjectsController {
     const needsPromote = this.assets.some((asset) => !asset.group);
     if (!needsPromote) return;
 
+    // World pose before reparent (mesh was a direct child of modelRoot).
+    /** @type {Map<object, THREE.Vector3>} */
+    const worldPosBefore = new Map();
     for (const asset of this.assets) {
       if (asset.group || !asset.mesh) continue;
+      asset.mesh.updateMatrixWorld(true);
+      worldPosBefore.set(asset, asset.mesh.getWorldPosition(new THREE.Vector3()));
       root.remove(asset.mesh);
     }
     root.position.set(0, 0, 0);
@@ -195,12 +238,30 @@ export class SceneObjectsController {
       const group = new THREE.Group();
       group.name = asset.name;
       group.userData.orbyAssetId = asset.id;
+      // Asset pivot carries the old modelRoot transform; mesh keeps its local offset.
       group.position.copy(position);
       group.quaternion.copy(quaternion);
       group.scale.copy(scale);
       group.add(asset.mesh);
       root.add(group);
       asset.group = group;
+      group.updateMatrixWorld(true);
+
+      const before = worldPosBefore.get(asset);
+      if (before) {
+        const after = asset.mesh.getWorldPosition(new THREE.Vector3());
+        if (after.distanceTo(before) > 1e-5) {
+          // Compensate on the pivot only — never rewrite glyph mesh locals.
+          group.position.add(before.sub(after));
+          group.updateMatrixWorld(true);
+        }
+      }
+
+      // Parked Object-menu transforms must match the new pivot group, not stale modelRoot.
+      if (!asset.objectState) {
+        asset.objectState = defaultObjectAssetState(scene.stateStore);
+      }
+      Object.assign(asset.objectState, readObjectTransform(group));
     }
 
     scene.transformController?.setTarget(this.getTransformTarget());
@@ -223,7 +284,18 @@ export class SceneObjectsController {
     record.group.userData.orbyAssetId = record.id;
     record.group.add(mesh);
     scene.modelRoot.add(record.group);
-    if (info.center !== false) centerModelGeometryOnRoot(record.group, mesh);
+    // Drop the previous asset's scene delta so finalize cannot undo it onto this mesh.
+    scene._pivotCenterDelta = null;
+    if (info.center !== false) {
+      const delta = isFontExtrudeModel(mesh)
+        ? centerFontModelGeometryOnRoot(record.group, mesh)
+        : centerModelGeometryOnRoot(record.group, mesh);
+      if (delta) {
+        mesh.userData.orbyPivotCenterDelta = delta;
+        record.pivotCenterDelta = delta;
+        scene._pivotCenterDelta = delta;
+      }
+    }
 
     this.assets.push(record);
     this.activeId = record.id;
@@ -265,7 +337,10 @@ export class SceneObjectsController {
     record.group.quaternion.copy(sourcePivot.quaternion);
     record.group.scale.copy(sourcePivot.scale);
     record.gltfMetadata = source.gltfMetadata ?? null;
-    record.svgExtrudeImporter = source.svgExtrudeImporter ?? null;
+    // Never share a FontExtrudeImporter — rebuilds would mutate the source mesh.
+    record.svgExtrudeImporter = isFontExtrudeModel(cloned)
+      ? null
+      : (source.svgExtrudeImporter ?? null);
     record.isSvgExtrudeModel = !!source.isSvgExtrudeModel;
     record.isImportSmoothingModel = !!source.isImportSmoothingModel;
     record.pivotCenterDelta = clonePivotDelta(source.pivotCenterDelta);
@@ -353,66 +428,121 @@ export class SceneObjectsController {
     if (commit) this.commitActive();
     this._parkActiveAnimationSession(previous);
 
-    this.activeId = next.id;
     const scene = this.scene;
-    scene.currentModel = next.mesh;
-    scene.currentFile = next.file ?? null;
-    scene.currentAssetMetadata = next.gltfMetadata ?? null;
-    scene.svgExtrudeImporter = next.svgExtrudeImporter ?? null;
-    scene.isSvgExtrudeModel = !!next.isSvgExtrudeModel;
-    scene.isImportSmoothingModel = !!next.isImportSmoothingModel;
-    scene._pivotCenterDelta = next.pivotCenterDelta ?? null;
-    scene._fbxImportBundle = next.fbxImportBundle ?? null;
-
-    const defaults = defaultObjectAssetState(scene.stateStore);
-    const slice = next.objectState ? { ...next.objectState } : defaults;
-    sanitizeObjectAssetSlice(slice, next.mesh, defaults);
-    const pivot = next.group || scene.modelRoot;
-    Object.assign(slice, readObjectTransform(pivot));
-    next.objectState = slice;
-
+    const reveal = scene.fontTextRevealController;
     const materials = scene.materialController;
-    // Display mode stays on the scene. A stored per-asset shading value must not
-    // retarget the controller before the live mode is applied.
-    const look = { ...slice };
-    delete look.shading;
-    materials?.focusModel?.(next.mesh, look);
-    materials?.beginAssetMaterialLock?.();
+    // Hard isolation order:
+    // 1) freeze previous glyphs  2) point currentModel  3) mirror store for UI
+    // 4) bind next  5) materials for next only — never drive peers from the live store.
+    reveal?.beginAssetFocusHandoff?.();
     try {
-      writeObjectAssetState(scene.stateStore, slice);
+      if (reveal?._boundModel && reveal._boundModel !== next.mesh) {
+        reveal.parkBoundModelForAssetFocus?.();
+      }
+
+      this.activeId = next.id;
+      scene.currentModel = next.mesh;
+      scene.currentFile = next.file ?? null;
+      scene.currentAssetMetadata = next.gltfMetadata ?? null;
+      scene.svgExtrudeImporter = next.svgExtrudeImporter ?? null;
+      scene.isSvgExtrudeModel = !!next.isSvgExtrudeModel;
+      scene.isImportSmoothingModel = !!next.isImportSmoothingModel;
+      scene._pivotCenterDelta =
+        next.mesh?.userData?.orbyPivotCenterDelta ?? next.pivotCenterDelta ?? null;
+      if (scene._pivotCenterDelta && next.mesh?.userData) {
+        next.mesh.userData.orbyPivotCenterDelta = scene._pivotCenterDelta;
+      }
+      scene._fbxImportBundle = next.fbxImportBundle ?? null;
+
+      const defaults = defaultObjectAssetState(scene.stateStore);
+      const slice = next.objectState ? deepClone(next.objectState) : defaults;
+      sanitizeObjectAssetSlice(slice, next.mesh, defaults, next.objectState);
+      // Hard ownership: mesh stamp wins over any polluted parked objectState.
+      if (isFontExtrudeModel(next.mesh)) {
+        hydrateObjectSliceFromFontStamp(slice, next.mesh);
+      }
+      const pivot = next.group || scene.modelRoot;
+      Object.assign(slice, readObjectTransform(pivot));
+      next.objectState = deepClone(slice);
+
+      const look = { ...slice };
+      delete look.shading;
+      materials?.focusModel?.(next.mesh, look);
+      // Store write is UI mirror only — lock so subscribers cannot restyle meshes yet.
+      materials?.beginAssetMaterialLock?.();
+      try {
+        writeObjectAssetState(scene.stateStore, slice);
+      } finally {
+        materials?.endAssetMaterialLock?.();
+      }
+      // Keep stamp aligned with what we mirrored into the Object menu.
+      if (isFontExtrudeModel(next.mesh)) {
+        commitFontAssetDocument(next.mesh, slice);
+      }
+
+      const displayMode = scene.stateStore.peekState()?.shading || materials?.currentShading;
+      scene.transformController?.setTarget(this.getTransformTarget());
+      scene.setAutoRotateSpeed?.(slice.autoRotate ?? 0, { silent: true });
+      scene.setAutoRotateDirection?.(slice.autoRotateDirection ?? 'forward');
+      scene.updateWireframeOverlay?.();
+      scene.modifierController?.parkWithoutRestore?.();
+      scene.modifierController?.bindModel?.(next.mesh);
+      scene.applyModifiersFromState?.(slice);
+      const restoredSession = this._restoreAnimationSession(next);
+      const clipMode = restoredSession
+        ? (scene.animationController?.clipPlaybackMode ?? 'loop')
+        : (slice.animation?.clipPlaybackMode ?? 'loop');
+      scene.animationController?.setClipPlaybackMode?.(clipMode);
+      scene.ui?.syncAnimationClipMode?.(
+        clipMode,
+        (scene.animationController?.animations?.length ?? next.animations?.length ?? 0) > 0,
+      );
+      scene.diagnosticsController?.setModel?.(next.mesh, displayMode);
+      scene.topologyWarningsOverlay?.setModel?.(next.mesh);
+      if (slice.animation) {
+        scene.diagnosticsController?.setJointScale?.(slice.animation.jointScale ?? 0.5);
+        scene.diagnosticsController?.setBoneStrokeWidth?.(slice.animation.boneStrokeWidth ?? 2);
+        scene.setAnimationShowBones?.(!!slice.animation.showBones);
+        scene.setAnimationShowJointNames?.(!!slice.animation.showJointNames);
+      }
+
+      // Bind before material pipelines so store-driven reveal targets the focused mesh.
+      reveal?.bindModel?.(next.mesh);
     } finally {
-      materials?.endAssetMaterialLock?.();
-    }
-    const displayMode = scene.stateStore.peekState()?.shading || materials?.currentShading;
-    if (options.applyLook !== false && this.isMulti()) {
-      materials?.setShading?.(displayMode);
+      reveal?.endAssetFocusHandoff?.();
     }
 
-    scene.transformController?.setTarget(this.getTransformTarget());
-    scene.setAutoRotateSpeed?.(slice.autoRotate ?? 0, { silent: true });
-    scene.setAutoRotateDirection?.(slice.autoRotateDirection ?? 'forward');
-    scene.updateWireframeOverlay?.();
-    scene.modifierController?.parkWithoutRestore?.();
-    scene.modifierController?.bindModel?.(next.mesh);
-    scene.applyModifiersFromState?.(slice);
-    const restoredSession = this._restoreAnimationSession(next);
-    const clipMode = restoredSession
-      ? (scene.animationController?.clipPlaybackMode ?? 'loop')
-      : (slice.animation?.clipPlaybackMode ?? 'loop');
-    scene.animationController?.setClipPlaybackMode?.(clipMode);
-    scene.ui?.syncAnimationClipMode?.(
-      clipMode,
-      (scene.animationController?.animations?.length ?? next.animations?.length ?? 0) > 0,
-    );
-    scene.diagnosticsController?.setModel?.(next.mesh, displayMode);
-    scene.topologyWarningsOverlay?.setModel?.(next.mesh);
-    if (slice.animation) {
-      scene.diagnosticsController?.setJointScale?.(slice.animation.jointScale ?? 0.5);
-      scene.diagnosticsController?.setBoneStrokeWidth?.(slice.animation.boneStrokeWidth ?? 2);
-      scene.setAnimationShowBones?.(!!slice.animation.showBones);
-      scene.setAnimationShowJointNames?.(!!slice.animation.showJointNames);
+    // Materials / colors for the focused asset only — peers stay frozen.
+    if (options.applyLook !== false) {
+      if (this.isMulti()) {
+        materials?._exclusiveMaterials?.(next.mesh);
+        for (const asset of this.assets) {
+          if (asset.mesh && asset.mesh !== next.mesh) {
+            materials?._exclusiveMaterials?.(asset.mesh);
+          }
+        }
+        // Exclusive clones drop shadow-tint hooks — restore scene-wide tint immediately.
+        scene._syncShadowAndGobo?.({ presentationOnly: true });
+        if (scene.scene?.environment) {
+          materials?.updateMaterialsEnvironment?.(
+            scene.scene.environment,
+            Math.max(0, scene.hdriStrength ?? 0),
+            scene.hdriBlurriness ?? 0,
+          );
+        }
+      }
+      if (isFontExtrudeModel(next.mesh)) {
+        const fontFill = next.objectState?.fontExtrude?.fillColor;
+        if (fontFill != null) {
+          const fontSide = resolveFontExtrudeSideColor(next.objectState.fontExtrude, fontFill);
+          if (!meshFontColorsMatch(next.mesh, fontFill, fontSide)) {
+            scene.applyFontExtrudeColors?.(fontFill, fontSide);
+          }
+        }
+        materials?.updateMaterials?.();
+      }
     }
-    scene.fontTextRevealController?.bindModel?.(next.mesh);
+
     scene.creativeLookSceneSync?.syncAsciiPass?.();
     scene.creativeLookSceneSync?.syncTransmissionBackdrop?.();
     this.applyVisibility();

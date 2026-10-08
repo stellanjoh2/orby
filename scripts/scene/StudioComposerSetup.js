@@ -198,6 +198,9 @@ export function setupStudioComposer(scene) {
       },
       getRenderState: () => scene.stateStore.peekState(),
       creativeLookCaptureDeps: scene.creativeLookSceneSync?.captureDeps(),
+      getExportCropRoots: () =>
+        scene.sceneObjects?.getExportCropRoots?.()
+        ?? (scene.currentModel ? [scene.currentModel] : []),
     });
     scene.imageExporter.getHdriRotationDegrees = () =>
       scene.hdriRotation ?? scene.stateStore.getState().hdriRotation ?? 0;

@@ -341,11 +341,10 @@ export class StartMenuController {
       this.fileInput.value = '';
     });
 
-    // "Import Object" button in sidebar
+    // Object → Scene → Import Object (prompt replace vs add when a model is loaded)
     if (this.loadMeshButton) {
       this.loadMeshButton.addEventListener('click', () => {
-        this.fileInput.dataset.importMode = '';
-        this.fileInput.click();
+        void this._beginImportObjectPicker();
       });
     }
 
@@ -363,6 +362,47 @@ export class StartMenuController {
       if (event.animationName === 'dropzoneReveal') {
         noteDropzoneRevealEnded();
       }
+    });
+  }
+
+  /**
+   * Object → Scene → Import Object. Empty scene opens the picker; with a model loaded,
+   * ask replace vs add first.
+   * @returns {Promise<void>}
+   */
+  async _beginImportObjectPicker() {
+    if (!this.fileInput) return;
+    this.ui.uiSounds?.playSelect?.();
+    const hasModel = !!window.orby?.scene?.currentModel;
+    if (!hasModel) {
+      this.fileInput.dataset.importMode = '';
+      this.fileInput.click();
+      return;
+    }
+    const choice = await this._confirmImportPlace();
+    if (choice === 'keep') return;
+    this.fileInput.dataset.importMode = choice === 'add' ? 'add' : '';
+    this.fileInput.click();
+  }
+
+  /**
+   * @returns {Promise<'keep' | 'replace' | 'add'>}
+   */
+  _confirmImportPlace() {
+    return new Promise((resolve) => {
+      this.ui.showMessageAlert(
+        'Import Object can replace what is in the scene or add beside it. Object settings stay per asset when you add.',
+        'Import Object',
+        {
+          confirm: true,
+          cancelLabel: 'Cancel',
+          altLabel: 'Replace',
+          okLabel: 'Add to Scene',
+          onConfirm: () => resolve('add'),
+          onAlt: () => resolve('replace'),
+          onCancel: () => resolve('keep'),
+        },
+      );
     });
   }
 

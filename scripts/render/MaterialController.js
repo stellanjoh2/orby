@@ -106,6 +106,7 @@ import {
   fontExtrudeTwoToneActive,
   FONT_EXTRUDE_CAP_MATERIAL_INDEX,
   FONT_EXTRUDE_SIDE_MATERIAL_INDEX,
+  resolveFontExtrudeSideColor,
 } from '../import/fontExtrudeTwoTone.js';
 import {
   applySvgExtrudeSurfaceToMaterial,
@@ -148,6 +149,10 @@ import {
   shouldApplyMaterialColorSwatch,
 } from './materialColorOverrideAlbedo.js';
 import {
+  clampMaterialSaturation,
+  syncMaterialSaturationOnObject,
+} from './materialSaturationShader.js';
+import {
   applyBlendMapAlphaCutout,
   clearBlendMapAlphaProfileCache,
   isBlendMapAlphaCutoutRetryCandidate,
@@ -183,6 +188,7 @@ import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
+  DEFAULT_MATERIAL_SATURATION,
   IMPORT_MATERIAL_MR_MULTIPLIER,
   MATERIAL_EMISSIVE_SLIDER_MAX,
   MATERIAL_TEXTURED_BRIGHTNESS_HDR_PEAK,
@@ -451,6 +457,7 @@ export class MaterialController {
     this._appliedCreativeLookPreset = null;
     this.materialSettings = {
       brightness: DEFAULT_MATERIAL_BRIGHTNESS,
+      saturation: DEFAULT_MATERIAL_SATURATION,
       metalness: 0.0,
       roughness: DEFAULT_MATERIAL_ROUGHNESS,
       emissive: 0.0,
@@ -525,6 +532,9 @@ export class MaterialController {
         matFromState.brightness ??
         initialState.diffuseBrightness ??
         DEFAULT_MATERIAL_BRIGHTNESS,
+      saturation: Number.isFinite(matFromState.saturation)
+        ? clampMaterialSaturation(matFromState.saturation)
+        : DEFAULT_MATERIAL_SATURATION,
       metalness: Number.isFinite(matFromState.metalness) ? matFromState.metalness : 0.0,
       roughness: Number.isFinite(matFromState.roughness)
         ? matFromState.roughness
@@ -568,6 +578,8 @@ export class MaterialController {
    */
   focusModel(model, state = {}) {
     this.currentModel = model;
+    // Ensure multi-object scenes never share material instances across assets.
+    this._exclusiveMaterials(model);
     if (state.shading) this.currentShading = state.shading;
     if (state.wireframe) this.wireframeSettings = { ...state.wireframe };
     if (state.clay) this.claySettings = { ...state.clay };
@@ -575,6 +587,9 @@ export class MaterialController {
     const mat = state.material ?? {};
     this.materialSettings = {
       brightness: mat.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS,
+      saturation: Number.isFinite(mat.saturation)
+        ? clampMaterialSaturation(mat.saturation)
+        : DEFAULT_MATERIAL_SATURATION,
       metalness: Number.isFinite(mat.metalness) ? mat.metalness : 0.0,
       roughness: Number.isFinite(mat.roughness) ? mat.roughness : DEFAULT_MATERIAL_ROUGHNESS,
       emissive: mat.emissive ?? 0.0,
@@ -1410,6 +1425,12 @@ export class MaterialController {
   /** Whether any import material is standard/physical PBR (per-material authored factors). */
   _modelHasAuthoredPbrMaterials(object) {
     if (!object) return false;
+    // Type Creator meshes use MeshStandardMaterial with studio defaults — not
+    // glTF-authored MR. Treating them as authored clobbers metalness to 1 on
+    // append/setModel and parks that onto the wrong asset via the Object menu.
+    if (object.userData?.orbyFontGenerated || this._isFontExtrudeModel?.(object)) {
+      return false;
+    }
     let hasPbr = false;
     object.traverse((child) => {
       if (hasPbr || !child.isMesh) return;
@@ -1515,13 +1536,16 @@ export class MaterialController {
 
   _applyShapeLibraryMaterialDefaults() {
     const brightness = DEFAULT_MATERIAL_BRIGHTNESS;
+    const saturation = DEFAULT_MATERIAL_SATURATION;
     this.materialSettings.brightness = brightness;
+    this.materialSettings.saturation = saturation;
     this.materialSettings.metalness = SHAPE_LIBRARY_DEFAULT_METALNESS;
     this.materialSettings.roughness = SHAPE_LIBRARY_DEFAULT_ROUGHNESS;
     this.materialSettings.emissive = 0;
     this.materialSettings.colorOverride = SHAPE_LIBRARY_DEFAULT_COLOR_OVERRIDE;
     this.materialSettings.overrideColor = SHAPE_LIBRARY_DEFAULT_COLOR;
     this.stateStore?.set('material.brightness', brightness);
+    this.stateStore?.set('material.saturation', saturation);
     this.stateStore?.set('material.metalness', SHAPE_LIBRARY_DEFAULT_METALNESS);
     this.stateStore?.set('material.roughness', SHAPE_LIBRARY_DEFAULT_ROUGHNESS);
     this.stateStore?.set('material.emissive', 0);
@@ -2915,6 +2939,8 @@ export class MaterialController {
 
   /**
    * One glTF may share materials inside itself. A second asset must not.
+   * Also splits shared import baselines so Mesh→Emissive on one text cannot
+   * zero another text's originals.
    * @param {import('three').Object3D | null | undefined} root
    */
   _exclusiveMaterials(root) {
@@ -2929,9 +2955,15 @@ export class MaterialController {
     }
     const foreign = new Set();
     this.modelRoot.traverse((node) => {
-      if (!node.isMesh || !node.material || objectContains(root, node)) return;
-      const list = Array.isArray(node.material) ? node.material : [node.material];
-      for (const mat of list) {
+      if (!node.isMesh || objectContains(root, node)) return;
+      const live = Array.isArray(node.material) ? node.material : [node.material];
+      for (const mat of live) {
+        if (mat) foreign.add(mat);
+      }
+      const stored = this.originalMaterials.get(node);
+      if (!stored) return;
+      const baselines = Array.isArray(stored) ? stored : [stored];
+      for (const mat of baselines) {
         if (mat) foreign.add(mat);
       }
     });
@@ -2951,11 +2983,26 @@ export class MaterialController {
     this._exclusivingMaterials = true;
     try {
       root.traverse((node) => {
-        if (!node.isMesh || !node.material) return;
-        if (Array.isArray(node.material)) {
-          node.material = node.material.map((mat) => replaceOne(node, mat));
-        } else if (foreign.has(node.material)) {
-          node.material = replaceOne(node, node.material);
+        if (!node.isMesh) return;
+        if (node.material) {
+          if (Array.isArray(node.material)) {
+            node.material = node.material.map((mat) => replaceOne(node, mat));
+          } else if (foreign.has(node.material)) {
+            node.material = replaceOne(node, node.material);
+          }
+        }
+        // Live may already be unique while the import snapshot is still shared.
+        const stored = this.originalMaterials.get(node);
+        if (!stored) return;
+        if (Array.isArray(stored)) {
+          if (stored.some((mat) => mat && foreign.has(mat))) {
+            this.originalMaterials.set(
+              node,
+              stored.map((mat) => (mat && foreign.has(mat) ? this._safeCloneMaterial(mat) : mat)),
+            );
+          }
+        } else if (foreign.has(stored)) {
+          this.originalMaterials.set(node, this._safeCloneMaterial(stored));
         }
       });
     } finally {
@@ -3036,6 +3083,9 @@ export class MaterialController {
     const mat = slice?.material ?? {};
     this.materialSettings = {
       brightness: mat.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS,
+      saturation: Number.isFinite(mat.saturation)
+        ? clampMaterialSaturation(mat.saturation)
+        : DEFAULT_MATERIAL_SATURATION,
       metalness: Number.isFinite(mat.metalness) ? mat.metalness : 0.0,
       roughness: Number.isFinite(mat.roughness) ? mat.roughness : DEFAULT_MATERIAL_ROUGHNESS,
       emissive: mat.emissive ?? 0.0,
@@ -3370,6 +3420,7 @@ export class MaterialController {
       this._applyRenderedImportGltfGlassPresentation(this.currentModel);
     }
     this._applyCreativeLookOverride();
+    this._syncCurrentModelSaturation();
 
     // After recreating shaded materials, either apply user emissive glow or re-sync file emissive
     // (microtask so hooks like Fresnel/SVG run first; import textures may also finish binding).
@@ -5450,6 +5501,26 @@ export class MaterialController {
     }
   }
 
+  setMaterialSaturation(saturation) {
+    this.materialSettings.saturation = clampMaterialSaturation(saturation);
+    this.updateMaterials();
+  }
+
+  /**
+   * Object → Material saturation on the focused (or peer) model.
+   * Runs after Fresnel / surface so this stays the outer compile wrap.
+   */
+  _syncCurrentModelSaturation() {
+    if (!this.currentModel) return;
+    const saturation = clampMaterialSaturation(
+      this.materialSettings?.saturation ?? DEFAULT_MATERIAL_SATURATION,
+    );
+    syncMaterialSaturationOnObject(this.currentModel, saturation, (mat, child) => (
+      this._isProtectedGlassMesh(child, mat)
+      || this._isProtectedGlassMesh(child, this.originalMaterials.get(child))
+    ));
+  }
+
   setMaterialMetalness(metalness) {
     const m = Number(metalness);
     this.materialSettings.metalness = Number.isFinite(m) ? Math.min(1, Math.max(0, m)) : 0;
@@ -5740,6 +5811,7 @@ export class MaterialController {
         this.applyFresnelToModel(this.currentModel);
       }
       this.reapplySvgExtrudeSurfaceShaders();
+      this._syncCurrentModelSaturation();
     }
     if (this.creativeLookSettings?.enabled) {
       this._syncCreativeLookLiveUniforms();
@@ -6451,8 +6523,16 @@ export class MaterialController {
         ? Math.min(1, Math.max(0, o))
         : DEFAULT_SHADOW_OPACITY;
     }
-    if (this.currentModel) {
-      this.applyShadowTintToObject(this.currentModel);
+    // Multi-object: tint every display root. Selection must not gate studio shadows.
+    const roots = this.getDisplayModeRoots?.();
+    const targets =
+      Array.isArray(roots) && roots.length > 0
+        ? roots
+        : this.currentModel
+          ? [this.currentModel]
+          : [];
+    for (const root of targets) {
+      this.applyShadowTintToObject(root);
     }
   }
 
@@ -7869,6 +7949,9 @@ export class MaterialController {
    */
   setFontExtrudeColors(fillHex, extrudeHex) {
     if (!this.currentModel || !this._isFontExtrudeModel()) return;
+    // Split any shared materials with peer assets before painting — otherwise
+    // coloring text A also recolors text B's still-shared instances.
+    this._exclusiveMaterials(this.currentModel);
     const faceHex = normalizeGlyphFillHex(fillHex);
     const sideHex = normalizeGlyphFillHex(extrudeHex ?? faceHex);
     const twoTone = fontExtrudeTwoToneActive(faceHex, sideHex);
@@ -8022,8 +8105,9 @@ export class MaterialController {
 
   /** @deprecated — use {@link setFontExtrudeColors} */
   setFontExtrudeFillColor(hex) {
-    const extrude = this.stateStore?.getState()?.fontExtrude?.extrudeColor ?? hex;
-    this.setFontExtrudeColors(hex, extrude);
+    const fontState = this.stateStore?.getState()?.fontExtrude;
+    const face = normalizeGlyphFillHex(hex ?? fontState?.fillColor);
+    this.setFontExtrudeColors(face, resolveFontExtrudeSideColor(fontState, face));
   }
 
   isClayMaterial(mesh) {

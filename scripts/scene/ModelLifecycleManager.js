@@ -45,6 +45,10 @@ export class ModelLifecycleManager {
   constructor(scene) {
     this.scene = scene;
     this._meshSpawnScaleRaf = 0;
+    /** @type {import('three').Object3D | null} */
+    this._spawnScaleObject = null;
+    /** @type {import('three').Vector3 | null} */
+    this._spawnScaleTarget = null;
   }
 
   disposeNode(object) {
@@ -433,23 +437,33 @@ export class ModelLifecycleManager {
 
   _finalizeFontModelAfterTypography(object) {
     const s = this.scene;
-    if (!object || s.currentModel !== object) return;
+    if (!object) return;
     if (!object.userData?.orbyFontGenerated && !isFontExtrudeRevealModel(object)) return;
 
+    const isActive = s.currentModel === object;
+    // Multi-object: never jump ink in world space — only fix the local pivot.
+    // Without preserveWorld, spawn finalize after placeBeside slides the new text
+    // and _afterPivotChange can desync peer transforms via the shared store.
     s.finalizeFontModelStudioPlacement?.({
-      alignGround: !!s._pendingFontGroundAlignAfterTypography,
+      model: object,
+      force: true,
+      preserveWorld: !!s.sceneObjects?.isMulti?.(),
+      alignGround: isActive && !!s._pendingFontGroundAlignAfterTypography,
     });
-    s._pendingFontGroundAlignAfterTypography = false;
-    s.fontTextRevealController?.reconcileTypographyToMaster?.(object);
+    if (isActive) s._pendingFontGroundAlignAfterTypography = false;
 
-    if (s._pendingFontCameraFocusAfterTypography) {
+    if (isActive && s._pendingFontCameraFocusAfterTypography) {
       s._pendingFontCameraFocusAfterTypography = false;
       if (!s._skipCameraFlightOnNextModelLoad) {
         s.cameraController?.focusOnObjectAnimated(s.currentModel, 1.0);
       }
       s._skipCameraFlightOnNextModelLoad = false;
-    } else if (s.currentModel === object) {
+    } else if (isActive) {
       s.cameraController?.refreshModelBounds(s.currentModel);
+    }
+
+    if (isActive) {
+      s.sceneObjects?.captureActiveState?.();
     }
   }
 
@@ -506,14 +520,25 @@ export class ModelLifecycleManager {
       cancelAnimationFrame(this._meshSpawnScaleRaf);
       this._meshSpawnScaleRaf = 0;
     }
+    if (this._spawnScaleObject && this._spawnScaleTarget) {
+      const orphan = this._spawnScaleObject;
+      orphan.scale.copy(this._spawnScaleTarget);
+      s._fontSpawnPlacementLock = false;
+      this._finalizeFontModelAfterTypography(orphan);
+    }
 
     const targetScale = object.scale.clone();
     const duration = Math.min(SCALE_TOGGLE_IN_MS, 320);
     const startTime = performance.now();
+    this._spawnScaleObject = object;
+    this._spawnScaleTarget = targetScale;
 
     object.visible = true;
     this._presentObjectSurfaceAfterModelVisible();
     s.fontTextRevealController?.resetAllAnimations?.({ resumeConstant: false });
+    // Avoid studio pivot math while the mesh is collapsed — left-canonical text
+    // would park mesh.position ≈ 0 and leave the gizmo beside the ink.
+    s._fontSpawnPlacementLock = true;
     object.scale.set(
       targetScale.x * 0.001,
       targetScale.y * 0.001,
@@ -521,7 +546,15 @@ export class ModelLifecycleManager {
     );
 
     const tick = () => {
-      if (s.currentModel !== object) return;
+      if (s.currentModel !== object) {
+        object.scale.copy(targetScale);
+        this._meshSpawnScaleRaf = 0;
+        this._spawnScaleObject = null;
+        this._spawnScaleTarget = null;
+        s._fontSpawnPlacementLock = false;
+        this._finalizeFontModelAfterTypography(object);
+        return;
+      }
       const t = Math.min(1, (performance.now() - startTime) / duration);
       const m = easeOutExpo(t);
       object.scale.set(targetScale.x * m, targetScale.y * m, targetScale.z * m);
@@ -532,6 +565,9 @@ export class ModelLifecycleManager {
       } else {
         object.scale.copy(targetScale);
         this._meshSpawnScaleRaf = 0;
+        this._spawnScaleObject = null;
+        this._spawnScaleTarget = null;
+        s._fontSpawnPlacementLock = false;
         this._presentObjectSurfaceAfterModelVisible();
         s.fontTextRevealController?.resetAllAnimations?.({ resumeConstant: true });
         this._finalizeFontModelAfterTypography(object);
@@ -790,9 +826,16 @@ export class ModelLifecycleManager {
     let addedId = null;
     session._installing = true;
     const materials = s.materialController;
+    const reveal = s.fontTextRevealController;
     materials?.beginAssetMaterialLock?.();
     let materialsLocked = true;
     try {
+      // Freeze the previous text before any store write / rebuild can restyle it.
+      reveal?.beginAssetFocusHandoff?.();
+      if (reveal?._boundModel && reveal._boundModel === previous) {
+        reveal.parkBoundModelForAssetFocus?.();
+      }
+
       session.promoteToPerAssetTransforms();
       const record = session.beginAdditionalAsset(loaded.object, {
         file: options.file ?? null,
@@ -805,9 +848,14 @@ export class ModelLifecycleManager {
       if (svgMeta?.enabled && svgMeta.importer) {
         s.svgExtrudeImporter = svgMeta.importer;
         s.isSvgExtrudeModel = true;
+        // Park on the record immediately — do not wait for a later commitActive.
+        record.svgExtrudeImporter = svgMeta.importer;
+        record.isSvgExtrudeModel = true;
       } else {
         s.svgExtrudeImporter = null;
         s.isSvgExtrudeModel = false;
+        record.svgExtrudeImporter = null;
+        record.isSvgExtrudeModel = false;
       }
 
       const nextState = defaultObjectAssetState(s.stateStore);
@@ -821,6 +869,17 @@ export class ModelLifecycleManager {
       if (nextState.shapeLibrary) {
         nextState.shapeLibrary.panelOpen = !!s.stateStore.peekState()?.shapeLibrary?.panelOpen;
       }
+      // Do not zero the live transform sliders onto the new pivot yet — placeBeside
+      // owns x/y/z. Writing defaults here used to race with gizmo sync and nudge peers.
+      delete nextState.xOffset;
+      delete nextState.yOffset;
+      delete nextState.zOffset;
+      delete nextState.scale;
+      delete nextState.scaleY;
+      delete nextState.scaleZ;
+      delete nextState.rotationX;
+      delete nextState.rotationY;
+      delete nextState.rotationZ;
       writeObjectAssetState(s.stateStore, nextState);
       if (loaded.object.userData?.orbyShapeLibrary && loaded.object.userData.orbyShapeLibraryId) {
         loadShapeLibraryMeshModifiers(s.stateStore, loaded.object.userData.orbyShapeLibraryId);
@@ -869,8 +928,6 @@ export class ModelLifecycleManager {
       s.setAutoRotateDirection(s.stateStore.getState().autoRotateDirection ?? 'forward');
       session.applyVisibility();
       s._syncTransformControlsForObjectHidden?.();
-      session._installing = false;
-      session.captureActiveState();
       session.refreshFocusBounds();
 
       s.updateStatsUI(options.file ?? null, loaded.object, loaded.gltfMetadata);
@@ -878,7 +935,13 @@ export class ModelLifecycleManager {
       s.ui.updateTopBarDetail(`${record.name} — Idle`);
       s.ui.endLoadSpinner();
       loaded.object.visible = false;
+      // Capture after spawn finalize so font pivot deltas belong to this asset.
+      // Keep _installing true through spawn finalize so pivot sync cannot rewrite
+      // store offsets while the newcomer (and peers) are still settling.
       this._scaleInMeshOnSpawn(loaded.object);
+      if (!s._fontSpawnPlacementLock) {
+        session.captureActiveState();
+      }
       if (options.toast !== null) {
         const toast = options.toast || `Added ${record.name}`;
         s.ui.showToast(toast, 3200, { notification: false });
@@ -890,9 +953,11 @@ export class ModelLifecycleManager {
       return record;
     } catch (error) {
       if (materialsLocked) materials?.endAssetMaterialLock?.();
-      session._installing = false;
       if (addedId != null) session.abortAdditional(addedId, previousId);
       throw error;
+    } finally {
+      session._installing = false;
+      reveal?.endAssetFocusHandoff?.();
     }
   }
 }

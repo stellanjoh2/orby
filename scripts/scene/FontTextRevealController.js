@@ -113,8 +113,11 @@ export class FontTextRevealController {
    *   onNeedRender?: () => void,
    *   onTypographyLayoutChange?: () => void,
    *   reapplyMaterialEmissive?: () => void,
+   *   getFocusedModel?: () => import('three').Object3D | null | undefined,
    * }} [options]
    * @param {() => void} [options.reapplyMaterialEmissive] Re-apply Mesh → Emissive slider to live materials (no event loop).
+   * @param {() => import('three').Object3D | null | undefined} [options.getFocusedModel]
+   *   Scene `currentModel` — store-driven typography/emissive may only touch this mesh.
    */
   constructor({
     stateStore,
@@ -122,12 +125,14 @@ export class FontTextRevealController {
     onNeedRender = null,
     onTypographyLayoutChange = null,
     reapplyMaterialEmissive = null,
+    getFocusedModel = null,
   } = {}) {
     this.stateStore = stateStore;
     this.onPreviewTimeUpdate = onPreviewTimeUpdate;
     this.onNeedRender = onNeedRender;
     this.onTypographyLayoutChange = onTypographyLayoutChange;
     this._reapplyMaterialEmissive = reapplyMaterialEmissive;
+    this._getFocusedModel = typeof getFocusedModel === 'function' ? getFocusedModel : null;
     /** @type {THREE.Object3D[]} */
     this._glyphGroups = [];
     /** @type {Array<import('./fontTextRevealTypes.js').RevealGlyphState>} */
@@ -162,6 +167,11 @@ export class FontTextRevealController {
     this._previewLastTs = 0;
     /** Reentrancy guard — {@link #onMaterialBaselineChanged} may call {@link #_reapplyMaterialEmissive} → updateMaterials → callback again. */
     this._materialBaselineSyncDepth = 0;
+    /**
+     * While selecting another asset, material updates must not rewrite the previous
+     * text's glyphs from the next text's store (tracking / emissive / slam).
+     */
+    this._assetFocusHandoffDepth = 0;
     /** @type {import('./FontTextConstantController.js').FontTextConstantController | null} */
     this._constantController = null;
     /** Resume reveal preview when {@link #applyPauseAll} clears after pausing a playing preview. */
@@ -178,8 +188,27 @@ export class FontTextRevealController {
     controller?.setRevealController?.(this);
   }
 
+  /**
+   * Typography document for the bound mesh.
+   * Focused + bound: live Object menu (peek) so deferred-notify scrubbing still
+   * drives letter-spacing / line-height before stamp commit on pointer-up.
+   * Peers / unbound: mesh stamp wins — never another asset's draft.
+   */
+  _fontExtrudeSlice() {
+    const live = this.stateStore?.peekState?.()?.fontExtrude
+      || this.stateStore?.getState()?.fontExtrude
+      || null;
+    const focused = this._getFocusedModel?.() ?? null;
+    if (this._boundModel && focused && this._boundModel === focused && live) {
+      return live;
+    }
+    const stamp = this._boundModel?.userData?.orbyFontAssetSettings?.fontExtrude;
+    if (stamp && typeof stamp === 'object') return stamp;
+    return live || {};
+  }
+
   getDurationSec() {
-    const raw = this.stateStore?.getState()?.fontExtrude?.revealDurationSec;
+    const raw = this._fontExtrudeSlice()?.revealDurationSec;
     return clampFontRevealDurationSec(raw ?? DEFAULT_FONT_REVEAL_DURATION_SEC);
   }
 
@@ -217,11 +246,11 @@ export class FontTextRevealController {
   }
 
   getRevealType() {
-    return normalizeFontRevealType(this.stateStore?.getState()?.fontExtrude?.revealType);
+    return normalizeFontRevealType(this._fontExtrudeSlice()?.revealType);
   }
 
   getRevealUnit() {
-    const unit = normalizeFontRevealUnit(this.stateStore?.getState()?.fontExtrude?.revealUnit);
+    const unit = normalizeFontRevealUnit(this._fontExtrudeSlice()?.revealUnit);
     if (unit === 'word' && this._wordCount <= 0) return 'character';
     return unit;
   }
@@ -242,49 +271,49 @@ export class FontTextRevealController {
   }
 
   getSlideDepth() {
-    const raw = this.stateStore?.getState()?.fontExtrude?.revealSlideDepth;
+    const raw = this._fontExtrudeSlice()?.revealSlideDepth;
     return clampFontRevealSlideDepth(raw ?? DEFAULT_FONT_REVEAL_SLIDE_DEPTH);
   }
 
   getSlideTime() {
-    const raw = this.stateStore?.getState()?.fontExtrude?.revealSlideTime;
+    const raw = this._fontExtrudeSlice()?.revealSlideTime;
     return clampFontRevealSlideTime(raw ?? DEFAULT_FONT_REVEAL_SLIDE_TIME);
   }
 
   getSlideDirection() {
-    const raw = this.stateStore?.getState()?.fontExtrude?.revealSlideDirection;
+    const raw = this._fontExtrudeSlice()?.revealSlideDirection;
     return normalizeFontRevealSlideDirection(raw ?? DEFAULT_FONT_REVEAL_SLIDE_DIRECTION);
   }
 
   getRevealStaggerEasing() {
-    const raw = this.stateStore?.getState()?.fontExtrude?.revealStaggerEasing;
+    const raw = this._fontExtrudeSlice()?.revealStaggerEasing;
     return normalizeFontRevealStaggerEasing(raw);
   }
 
   isLoopEnabled() {
-    const loop = this.stateStore?.getState()?.fontExtrude?.revealLoop;
+    const loop = this._fontExtrudeSlice()?.revealLoop;
     return loop !== false;
   }
 
   isEmissiveSlamEnabled() {
     return normalizeFontRevealEmissiveSlamEnabled(
-      this.stateStore?.getState()?.fontExtrude?.revealEmissiveSlam ??
+      this._fontExtrudeSlice()?.revealEmissiveSlam ??
         DEFAULT_FONT_REVEAL_EMISSIVE_SLAM,
     );
   }
 
   getEmissiveSlamStrength() {
-    const raw = this.stateStore?.getState()?.fontExtrude?.revealEmissiveStrength;
+    const raw = this._fontExtrudeSlice()?.revealEmissiveStrength;
     return clampFontRevealEmissiveStrength(raw ?? DEFAULT_FONT_REVEAL_EMISSIVE_STRENGTH);
   }
 
   getEmissiveSlamDecaySec() {
-    const raw = this.stateStore?.getState()?.fontExtrude?.revealEmissiveDecaySec;
+    const raw = this._fontExtrudeSlice()?.revealEmissiveDecaySec;
     return clampFontRevealEmissiveDecaySec(raw ?? DEFAULT_FONT_REVEAL_EMISSIVE_DECAY_SEC);
   }
 
   getEmissiveSlamColor() {
-    const raw = this.stateStore?.getState()?.fontExtrude?.revealEmissiveColor;
+    const raw = this._fontExtrudeSlice()?.revealEmissiveColor;
     return normalizeFontRevealEmissiveColor(raw ?? DEFAULT_FONT_REVEAL_EMISSIVE_COLOR);
   }
 
@@ -298,7 +327,7 @@ export class FontTextRevealController {
 
   _isTrackingAnimatorConfigured() {
     if (!normalizeFontTrackingAnimatorEnabled(
-      this.stateStore?.getState()?.fontExtrude?.trackingAnimatorEnabled,
+      this._fontExtrudeSlice()?.trackingAnimatorEnabled,
     )) {
       return false;
     }
@@ -335,7 +364,7 @@ export class FontTextRevealController {
 
   /** Current letter-spacing master value (typography slider). */
   getMasterTracking() {
-    const fromState = Number(this.stateStore?.getState()?.fontExtrude?.tracking);
+    const fromState = Number(this._fontExtrudeSlice()?.tracking);
     if (Number.isFinite(fromState)) return fromState;
     return this.getBakedTracking();
   }
@@ -441,7 +470,7 @@ export class FontTextRevealController {
 
   /** Current horizontal alignment (typography select). */
   getMasterAlign() {
-    const fromState = this.stateStore?.getState()?.fontExtrude?.align;
+    const fromState = this._fontExtrudeSlice()?.align;
     if (fromState === 'center' || fromState === 'right' || fromState === 'left') {
       return fromState;
     }
@@ -453,7 +482,7 @@ export class FontTextRevealController {
     if (Number.isFinite(fromModel)) return normalizeFontLineHeight(fromModel);
     const inferred = this._inferBakedLineHeightFromRestBaselines();
     if (Number.isFinite(inferred)) return normalizeFontLineHeight(inferred);
-    return normalizeFontLineHeight(this.stateStore?.getState()?.fontExtrude?.lineHeight ?? 1);
+    return normalizeFontLineHeight(this._fontExtrudeSlice()?.lineHeight ?? 1);
   }
 
   /** Legacy meshes without baked metadata — infer multiplier from rest line spacing. */
@@ -469,7 +498,7 @@ export class FontTextRevealController {
 
   /** Current line-height multiplier (typography slider). */
   getMasterLineHeight() {
-    const fromState = Number(this.stateStore?.getState()?.fontExtrude?.lineHeight);
+    const fromState = Number(this._fontExtrudeSlice()?.lineHeight);
     if (Number.isFinite(fromState)) return normalizeFontLineHeight(fromState);
     return this.getBakedLineHeight();
   }
@@ -480,17 +509,17 @@ export class FontTextRevealController {
   }
 
   getTrackingAnimatorAmountPercent() {
-    const fontState = this.stateStore?.getState()?.fontExtrude;
+    const fontState = this._fontExtrudeSlice();
     return resolveFontTrackingAnimatorAmountPercent(fontState, this.getMasterTracking());
   }
 
   getTrackingAnimatorTimeSec() {
-    const raw = this.stateStore?.getState()?.fontExtrude?.trackingAnimatorTimeSec;
+    const raw = this._fontExtrudeSlice()?.trackingAnimatorTimeSec;
     return clampFontTrackingAnimatorTimeSec(raw ?? DEFAULT_FONT_TRACKING_ANIMATOR_TIME_SEC);
   }
 
   getTrackingAnimatorEasing() {
-    const raw = this.stateStore?.getState()?.fontExtrude?.trackingAnimatorEasing;
+    const raw = this._fontExtrudeSlice()?.trackingAnimatorEasing;
     return normalizeFontTrackingAnimatorEasing(raw);
   }
 
@@ -503,7 +532,7 @@ export class FontTextRevealController {
   }
 
   isPauseAll() {
-    return this.stateStore?.getState()?.fontExtrude?.pauseAllAnimations === true;
+    return this._fontExtrudeSlice()?.pauseAllAnimations === true;
   }
 
   getPreviewElapsed() {
@@ -654,11 +683,46 @@ export class FontTextRevealController {
   }
 
   /**
+   * Park the focused text before Object-menu state switches to another asset.
+   * Clears glyph state so material callbacks cannot mutate the peer mid-select.
+   */
+  parkBoundModelForAssetFocus() {
+    if (!this._boundModel || !this._glyphStates.length) return;
+    this._settleBoundModelForHandoff();
+    this._glyphGroups = [];
+    this._glyphStates = [];
+    this._boundModel = null;
+  }
+
+  beginAssetFocusHandoff() {
+    this._assetFocusHandoffDepth += 1;
+  }
+
+  endAssetFocusHandoff() {
+    this._assetFocusHandoffDepth = Math.max(0, this._assetFocusHandoffDepth - 1);
+  }
+
+  /**
+   * Live Object-menu / material callbacks may only restyle the focused text.
+   * Inactive peers stay frozen — they never read the global fontExtrude store.
+   */
+  _canMutateBoundFromLiveStore() {
+    if (!this._boundModel || !this._glyphStates.length) return false;
+    // Mid-select before bind: no glyph owner may consume the next asset's store.
+    if (this._assetFocusHandoffDepth > 0) {
+      if (!this._getFocusedModel) return false;
+      return this._boundModel === this._getFocusedModel();
+    }
+    if (!this._getFocusedModel) return true;
+    return this._boundModel === this._getFocusedModel();
+  }
+
+  /**
    * After MaterialController updates brightness/metalness/emissive, re-sync baseline
    * and re-apply the current reveal pose (slam overlay or rest restore).
    */
   onMaterialBaselineChanged() {
-    if (!this._glyphStates.length) return;
+    if (!this._canMutateBoundFromLiveStore()) return;
 
     this._refreshGlyphMaterialReferences();
 
@@ -762,6 +826,30 @@ export class FontTextRevealController {
   }
 
   /**
+   * Leave the currently bound text in a neutral rest pose before focusing another.
+   * Keeps live typography offsets so the peer does not jump in world space, and
+   * parks those offsets on glyph userData so the next bind can recover true rest
+   * (otherwise rebind treats offset poses as rest and applies tracking/align again).
+   * Does not touch emissive — each text keeps its own Material look; rewriting
+   * from a shared rest capture was darkening the unfocused mesh on select.
+   */
+  _settleBoundModelForHandoff() {
+    if (!this._boundModel || !this._glyphStates.length) return;
+    this._constantController?.beginModelTransition?.();
+    for (const state of this._glyphStates) {
+      const tx = Number(state.lastTypographyX) || 0;
+      const ty = Number(state.lastTypographyY) || 0;
+      resetRevealGlyphPose(state, { skipEmissive: true });
+      state.group.position.x += tx;
+      state.group.position.y += ty;
+      state.lastTypographyX = tx;
+      state.lastTypographyY = ty;
+      state.group.userData.orbyFontParkedTypography = { x: tx, y: ty };
+    }
+    this._boundModel.updateMatrixWorld?.(true);
+  }
+
+  /**
    * @param {THREE.Object3D | null | undefined} model
    */
   bindModel(model) {
@@ -769,7 +857,9 @@ export class FontTextRevealController {
     this._clearTrackingAmountPreviewPin();
     this._constantController?.beginModelTransition?.();
 
-    if (this._boundModel === model && this._glyphStates.length) {
+    if (this._boundModel && this._boundModel !== model && this._glyphStates.length) {
+      this._settleBoundModelForHandoff();
+    } else if (this._boundModel === model && this._glyphStates.length) {
       this._stripLiveTypographyOffsets();
     }
 
@@ -1048,9 +1138,19 @@ export class FontTextRevealController {
       const slideDistance = Math.max(size.y * 0.75, 0.08);
       const meshMaterials = this._collectGlyphGroupMeshMaterials(group);
 
+      // Handoff parks live tracking/align on the group so the unfocused mesh does not
+      // snap. Subtract that park before capturing rest, or select re-applies it twice.
+      const parked = group.userData?.orbyFontParkedTypography;
+      const parkX = Number(parked?.x) || 0;
+      const parkY = Number(parked?.y) || 0;
+      if (parked) delete group.userData.orbyFontParkedTypography;
+      const restPosition = group.position.clone();
+      restPosition.x -= parkX;
+      restPosition.y -= parkY;
+
       return {
         group,
-        restPosition: group.position.clone(),
+        restPosition,
         restRotationX: group.rotation.x,
         restRotationY: group.rotation.y,
         restRotationZ: group.rotation.z,
@@ -1075,10 +1175,13 @@ export class FontTextRevealController {
       state.lastTypographyY = 0;
     }
     this._boundModel?.updateMatrixWorld(true);
+    // Mesh-local bounds — world space drifts after centerFont / asset pivots and
+    // would re-apply center-align as a second jump on select.
     const { boundsByLine, paragraphWidth } = computeTypographyLineBoundsFromRest(
       this._glyphStates,
       this._glyphLineIndices,
       this._lineGlyphCounts,
+      this._boundModel,
     );
     this._typographyLayoutBounds = boundsByLine;
     this._typographyParagraphWidth = paragraphWidth;
@@ -1347,6 +1450,16 @@ export class FontTextRevealController {
     const duration = this.getDurationSec();
     const count = this._glyphStates.length;
     if (count === 0) return;
+    // Viewport pose from the live store must never restyle a parked peer.
+    // Export drive may target an explicit bound model while focus is elsewhere.
+    if (
+      !this._exportDriveActive
+      && this._getFocusedModel
+      && this._boundModel
+      && this._boundModel !== this._getFocusedModel()
+    ) {
+      return;
+    }
 
     const type = this.getRevealType();
     const revealActive = isFontRevealAnimationActive(type) && duration > 0;
@@ -1445,6 +1558,8 @@ export class FontTextRevealController {
    */
   _applyTypographyTracking(elapsedSec, options = {}) {
     if (!this._glyphStates.length || !isFontTrackingAnimatorModel(this._boundModel)) return;
+    // Never apply another asset's live tracking/align onto a parked peer.
+    if (this._getFocusedModel && this._boundModel !== this._getFocusedModel()) return;
 
     const bakedTracking = this.getBakedTracking();
     const masterTracking = this.getMasterTracking();
@@ -1484,6 +1599,7 @@ export class FontTextRevealController {
       lineRestYBaselines: this._lineRestYBaselines,
       layoutBounds: this._typographyLayoutBounds,
       paragraphWidth: this._typographyParagraphWidth,
+      spaceRoot: this._boundModel,
     });
   }
 
@@ -1508,12 +1624,15 @@ export class FontTextRevealController {
       this._resetCompositeClocks();
       this.applyAtTime(0);
     }
-    this._syncStudioPlacementAfterIdlePose();
+    // Do not re-center on bind/select — that rewrites mesh.position and jumps
+    // already-placed multi-object texts in world space. Placement sync runs only
+    // on real typography edits and first spawn finalize.
   }
 
-  /** Re-center font block on studio origin after idle typography/reveal pose settles. */
+  /** Re-center font block after a live typography edit (tracking / align / line height). */
   _syncStudioPlacementAfterIdlePose() {
     if (this._previewMode === 'playing' || this._previewMode === 'paused') return;
+    if (!this._canMutateBoundFromLiveStore()) return;
     this.onTypographyLayoutChange?.();
   }
 

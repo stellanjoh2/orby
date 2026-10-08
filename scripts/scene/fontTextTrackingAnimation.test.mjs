@@ -208,6 +208,54 @@ test('line bounds from rest positions use glyph ink width not pivot points', () 
   assert.ok(paragraphWidth > 3.5);
 });
 
+test('mesh-local layout bounds stay stable after centerFont-style parent offset', () => {
+  // World-space bounds shift when the font mesh is recentered; align then
+  // double-applies on rebind. Local-space bounds must not.
+  const root = new THREE.Group();
+  const mesh = new THREE.Group();
+  root.add(mesh);
+  const makeGlyph = (x, width = 1) => {
+    const group = new THREE.Group();
+    const geo = new THREE.Mesh(new THREE.BoxGeometry(width, 1, 0.1));
+    group.add(geo);
+    group.position.x = x;
+    mesh.add(group);
+    return { group, restPosition: group.position.clone() };
+  };
+  const glyphStates = [makeGlyph(0, 2), makeGlyph(3, 2)];
+  root.updateMatrixWorld(true);
+  const before = computeTypographyLineBoundsFromRest(
+    glyphStates,
+    [0, 0],
+    [2],
+    mesh,
+  );
+  // Simulate centerFont: slide the mesh so ink centers on the root origin.
+  mesh.position.x = -2;
+  root.updateMatrixWorld(true);
+  const afterLocal = computeTypographyLineBoundsFromRest(
+    glyphStates,
+    [0, 0],
+    [2],
+    mesh,
+  );
+  const afterWorld = computeTypographyLineBoundsFromRest(
+    glyphStates,
+    [0, 0],
+    [2],
+    null,
+  );
+  const b0 = before.boundsByLine.get(0);
+  const a0 = afterLocal.boundsByLine.get(0);
+  const w0 = afterWorld.boundsByLine.get(0);
+  assert.ok(Math.abs(b0.minX - a0.minX) < 1e-6, 'local minX stable');
+  assert.ok(Math.abs(b0.maxX - a0.maxX) < 1e-6, 'local maxX stable');
+  assert.ok(
+    Math.abs(w0.minX - b0.minX) > 0.5,
+    'world bounds must move (proves the bug space)',
+  );
+});
+
 test('live typography applies align-only offsets without re-extruding', () => {
   const makeGlyph = (x, width = 1) => {
     const group = new THREE.Group();

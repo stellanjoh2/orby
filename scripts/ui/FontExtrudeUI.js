@@ -1,6 +1,10 @@
 import { ORBY_BLACK } from '../constants.js';
 import { normalizeFontExtrudeDetail } from '../import/fontExtrudeSampling.js';
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
+import {
+  isFontExtrudeExtrudeColorEnabled,
+  resolveFontExtrudeSideColor,
+} from '../import/fontExtrudeTwoTone.js';
 import { FontExtrudeController } from '../scene/FontExtrudeController.js';
 import { FontFamilyPicker } from './FontFamilyPicker.js';
 import {
@@ -87,6 +91,8 @@ import {
   normalizeFontCircularWrapMode,
 } from '../scene/fontCircularLayout.js';
 import { arrayBufferToBase64, fileFromEmbeddedAsset } from '../utils/binaryAsset.js';
+import { commitFontAssetDocumentIfOwned } from '../scene/fontExtrudeAssetState.js';
+import { deepClone } from '../utils/deepClone.js';
 
 /**
  * Object panel — Type Creator (2D preview + extrude).
@@ -272,10 +278,6 @@ export class FontExtrudeUI {
               <i class="fa-solid fa-cube" aria-hidden="true"></i>
               <span>Generate 3D Text</span>
             </button>
-            <button type="button" id="fontExtrudeAddToScene" class="accent-action-btn font-extrude-add" disabled data-tooltip="Add this text beside the objects already in the scene">
-              <i class="fa-solid fa-plus" aria-hidden="true"></i>
-              <span>Add to Scene</span>
-            </button>
           </div>
           </div>
           <div class="panel-block-divider" aria-hidden="true"></div>
@@ -294,12 +296,20 @@ export class FontExtrudeUI {
             </button>
           </div>
           <label class="color-line font-extrude-fill-color">
-            <span data-tooltip="Front faces and bevels on generated 3D text">Face color</span>
+            <span data-tooltip="Default color for faces, bevels, and sides (unless Extrude color is on)">Color</span>
             <input type="color" id="fontExtrudeFillColor" class="color-chip" value="#808080" />
           </label>
-          <label class="color-line font-extrude-extrude-color">
-            <span data-tooltip="Extruded side walls and depth — pick a contrasting color for two-tone type">Extrude color</span>
-            <input type="color" id="fontExtrudeExtrudeColor" class="color-chip" value="#808080" />
+          <label class="slider-line slider-line--toggle-only font-extrude-extrude-color-enabled">
+            <span data-tooltip="Paint extruded side walls a different color from the face">Extrude color</span>
+            <label class="effect-toggle">
+              <input type="checkbox" id="fontExtrudeExtrudeColorEnabled" />
+              <span class="effect-indicator" aria-hidden="true"></span>
+              <span class="sr-only">Separate extrude color</span>
+            </label>
+          </label>
+          <label class="color-line is-muted font-extrude-extrude-color font-extrude-extrude-color-detail">
+            <span data-tooltip="Color for extruded side walls and depth">Side color</span>
+            <input type="color" id="fontExtrudeExtrudeColor" class="color-chip is-disabled-handle" value="#808080" disabled />
           </label>
           </div>
           ${FONT_EXTRUDE_SHAPE_CONTROLS_HTML}
@@ -392,6 +402,7 @@ export class FontExtrudeUI {
       hardEdgeAngle: block.querySelector('#fontExtrudeHardEdgeAngle'),
       bevelAmount: block.querySelector('#fontExtrudeBevelAmount'),
       fillColor: block.querySelector('#fontExtrudeFillColor'),
+      extrudeColorEnabled: block.querySelector('#fontExtrudeExtrudeColorEnabled'),
       extrudeColor: block.querySelector('#fontExtrudeExtrudeColor'),
       revealDuration: block.querySelector('#fontExtrudeRevealDuration'),
       revealStaggerEasingFamily: block.querySelector('#fontExtrudeRevealStaggerEasingFamily'),
@@ -423,7 +434,6 @@ export class FontExtrudeUI {
       constantSpeed: block.querySelector('#fontExtrudeConstantSpeed'),
       constantSpread: block.querySelector('#fontExtrudeConstantSpread'),
       generate: block.querySelector('#fontExtrudeGenerate'),
-      addToScene: block.querySelector('#fontExtrudeAddToScene'),
     };
 
     if (this.ui.dom?.subsections) {
@@ -611,21 +621,27 @@ export class FontExtrudeUI {
     els.generate?.addEventListener('click', () => {
       void this.onGenerate();
     });
-    els.addToScene?.addEventListener('click', () => {
-      void this.onGenerate({ append: true });
-    });
 
     bindSvgExtrudeControls(this._fontExtrudeCtx());
     bindExtrudeBevelControls(this._fontExtrudeCtx());
 
     const onFillColorChange = () => {
       const fillColor = normalizeGlyphFillHex(els.fillColor?.value);
-      const extrudeColor = normalizeGlyphFillHex(
-        els.extrudeColor?.value ?? this.stateStore.getState()?.fontExtrude?.extrudeColor,
-      );
       this.stateStore.set('fontExtrude.fillColor', fillColor);
       this.stateStore.set('svgExtrude.availableColors', [fillColor]);
-      this.getScene()?.applyFontExtrudeColors?.(fillColor, extrudeColor);
+      const side = resolveFontExtrudeSideColor(this.stateStore.getState()?.fontExtrude, fillColor);
+      this.getScene()?.applyFontExtrudeColors?.(fillColor, side);
+      this.schedulePreview();
+    };
+    const onExtrudeColorEnabledChange = () => {
+      const enabled = !!els.extrudeColorEnabled?.checked;
+      this.stateStore.set('fontExtrude.extrudeColorEnabled', enabled);
+      this._syncExtrudeColorControlsVisibility();
+      const fillColor = normalizeGlyphFillHex(
+        els.fillColor?.value ?? this.stateStore.getState()?.fontExtrude?.fillColor,
+      );
+      const side = resolveFontExtrudeSideColor(this.stateStore.getState()?.fontExtrude, fillColor);
+      this.getScene()?.applyFontExtrudeColors?.(fillColor, side);
       this.schedulePreview();
     };
     const onExtrudeColorChange = () => {
@@ -634,11 +650,13 @@ export class FontExtrudeUI {
         els.fillColor?.value ?? this.stateStore.getState()?.fontExtrude?.fillColor,
       );
       this.stateStore.set('fontExtrude.extrudeColor', extrudeColor);
+      this.stateStore.set('fontExtrude.extrudeColorEnabled', true);
       this.getScene()?.applyFontExtrudeColors?.(fillColor, extrudeColor);
       this.schedulePreview();
     };
     els.fillColor?.addEventListener('input', onFillColorChange);
     els.fillColor?.addEventListener('change', onFillColorChange);
+    els.extrudeColorEnabled?.addEventListener('change', onExtrudeColorEnabledChange);
     els.extrudeColor?.addEventListener('input', onExtrudeColorChange);
     els.extrudeColor?.addEventListener('change', onExtrudeColorChange);
 
@@ -995,7 +1013,10 @@ export class FontExtrudeUI {
     this._onRevealPreviewTime = (payload) => this.syncRevealPreviewControls(payload);
     this._attachRevealPreviewCallback();
 
-    this._stateUnsub = this.stateStore.subscribe((state) => this.syncFromState(state));
+    this._stateUnsub = this.stateStore.subscribe((state) => {
+      this.syncFromState(state);
+      this._commitOwnedFontDocument(state);
+    });
 
     this._onFontGenerated = () => {
       if (this.stateStore.getState()?.fontExtrude?.pauseAllAnimations) {
@@ -1011,6 +1032,8 @@ export class FontExtrudeUI {
     };
     this._onAssetFocusChanged = () => {
       this.syncPostGenControlsVisibility();
+      if (!this._hasFontMesh()) return;
+      void this.restoreFromSettings(this.stateStore.getState()?.fontExtrude);
     };
     this.eventBus.on('font:generated', this._onFontGenerated);
     this.eventBus.on('scene:model-load-complete', this._onModelLoadComplete);
@@ -1041,6 +1064,28 @@ export class FontExtrudeUI {
       model?.userData?.orbyFontGenerated ||
       scene?.materialController?._isFontExtrudeModel?.(model)
     );
+  }
+
+  /**
+   * Persist Object-menu edits onto the focused font mesh only.
+   * Drafting the next Generate (mismatched text/colors) does not touch the stamp.
+   */
+  _commitOwnedFontDocument(state = this.stateStore.getState()) {
+    const scene = this.getScene();
+    if (scene?.sceneObjects?._installing) return;
+    const mesh = scene?.currentModel;
+    if (!mesh || !this._hasFontMesh()) return;
+    if (!commitFontAssetDocumentIfOwned(mesh, state)) return;
+    const asset = scene.sceneObjects?.getActive?.();
+    if (!asset || asset.mesh !== mesh || !asset.objectState) return;
+    const stamp = mesh.userData?.orbyFontAssetSettings;
+    if (stamp?.fontExtrude) {
+      asset.objectState.fontExtrude = deepClone(stamp.fontExtrude);
+      if (stamp.svgExtrude) asset.objectState.svgExtrude = deepClone(stamp.svgExtrude);
+    }
+    if (mesh.userData?.orbyFontMaterialSettings) {
+      asset.objectState.material = deepClone(mesh.userData.orbyFontMaterialSettings);
+    }
   }
 
   /** Used by shelf preview dock visibility (separate from Object → Animation GLB transport). */
@@ -1342,6 +1387,9 @@ export class FontExtrudeUI {
   onSubsectionReset(resetType) {
     this.schedulePreview();
     switch (resetType) {
+      case 'font-extrude-appearance':
+        this._syncExtrudeColorControlsVisibility();
+        break;
       case 'font-extrude-circular-wrap':
         this._syncCircularWrapControlsVisibility();
         this._syncTrackingAnimatorControls();
@@ -1411,10 +1459,14 @@ export class FontExtrudeUI {
     if (this.els.fillColor && document.activeElement !== this.els.fillColor) {
       this.els.fillColor.value = fill;
     }
-    const extrude = normalizeGlyphFillHex(state?.fontExtrude?.extrudeColor);
+    if (this.els.extrudeColorEnabled) {
+      this.els.extrudeColorEnabled.checked = isFontExtrudeExtrudeColorEnabled(state?.fontExtrude);
+    }
+    const extrude = normalizeGlyphFillHex(state?.fontExtrude?.extrudeColor ?? fill);
     if (this.els.extrudeColor && document.activeElement !== this.els.extrudeColor) {
       this.els.extrudeColor.value = extrude;
     }
+    this._syncExtrudeColorControlsVisibility();
     const revealDuration = clampFontRevealDurationSec(
       state?.fontExtrude?.revealDurationSec ?? DEFAULT_FONT_REVEAL_DURATION_SEC,
     );
@@ -1666,6 +1718,9 @@ export class FontExtrudeUI {
     this.ui.setEffectFoldoutOpen('font-extrude', !!fontState.panelOpen);
     this.ui.syncFontExtrudeAnimationPreviewDock?.();
 
+    const prevSourceText = this._syncedSourceText;
+    const nextSourceText =
+      typeof fontState.sourceText === 'string' ? fontState.sourceText : '';
     if (
       this.els.text &&
       typeof fontState.sourceText === 'string' &&
@@ -1673,6 +1728,7 @@ export class FontExtrudeUI {
     ) {
       this.els.text.value = fontState.sourceText;
     }
+    this._syncedSourceText = nextSourceText;
 
     const align =
       fontState.align === 'center' || fontState.align === 'right' ? fontState.align : 'left';
@@ -1725,6 +1781,9 @@ export class FontExtrudeUI {
     this.syncExtrudeControls(state);
     this.syncPostGenControlsVisibility();
     this._syncSystemFontsPromptVisibility();
+    if (prevSourceText !== nextSourceText) {
+      this.schedulePreview();
+    }
   }
 
   /**
@@ -2071,6 +2130,16 @@ export class FontExtrudeUI {
     this._syncLiveEditorPreviewMode();
   }
 
+  _syncExtrudeColorControlsVisibility() {
+    const enabled = !!this.els.extrudeColorEnabled?.checked;
+    const row = this.els.extrudeColor?.closest('.font-extrude-extrude-color-detail');
+    row?.classList.toggle('is-muted', !enabled);
+    if (this.els.extrudeColor) {
+      this.els.extrudeColor.disabled = !enabled;
+      this.els.extrudeColor.classList.toggle('is-disabled-handle', !enabled);
+    }
+  }
+
   _syncCircularWrapControlsVisibility() {
     const enabled = normalizeFontCircularWrapEnabled(this.els.circularWrapEnabled?.checked);
     if (this.els.circularWrapControls) {
@@ -2289,8 +2358,14 @@ export class FontExtrudeUI {
       fillColor: normalizeGlyphFillHex(
         this.els.fillColor?.value ?? fontState.fillColor ?? '#808080',
       ),
-      extrudeColor: normalizeGlyphFillHex(
-        this.els.extrudeColor?.value ?? fontState.extrudeColor ?? '#808080',
+      extrudeColor: resolveFontExtrudeSideColor(
+        {
+          ...fontState,
+          extrudeColorEnabled:
+            this.els.extrudeColorEnabled?.checked ?? fontState.extrudeColorEnabled,
+          extrudeColor: this.els.extrudeColor?.value ?? fontState.extrudeColor,
+        },
+        this.els.fillColor?.value ?? fontState.fillColor ?? '#808080',
       ),
       maxWidth: Math.max(120, previewWidth - pad * 2),
       circularWrap: {
@@ -2397,6 +2472,7 @@ export class FontExtrudeUI {
     const text = (this.els.text?.value ?? '').trim();
     const hasFont = !!this.controller.font;
     const canGenerate = text.length > 0 && hasFont && !this._generating;
+    const regenerating = this._hasFontMesh();
     const blockedTip = !hasFont
       ? 'Select or load a font first'
       : !text.length
@@ -2404,12 +2480,12 @@ export class FontExtrudeUI {
         : '';
     if (this.els.generate) {
       this.els.generate.disabled = !canGenerate;
-      this.els.generate.dataset.tooltip = blockedTip || 'Extrude preview text into a 3D mesh';
-    }
-    if (this.els.addToScene) {
-      this.els.addToScene.disabled = !canGenerate;
-      this.els.addToScene.dataset.tooltip = blockedTip
-        || 'Add this text beside the objects already in the scene';
+      this.els.generate.dataset.tooltip = blockedTip
+        || (regenerating
+          ? 'Re-extrude the current text with the settings above'
+          : 'Extrude preview text into a 3D mesh');
+      const label = this.els.generate.querySelector('span');
+      if (label) label.textContent = regenerating ? 'Regenerate 3D Text' : 'Generate 3D Text';
     }
   }
 
@@ -2449,8 +2525,20 @@ export class FontExtrudeUI {
     this._syncTrackingAnimatorControls();
   }
 
+  /** True when the scene already has a generated 3D text (multi-text is disabled). */
+  _sceneHasFontText(scene = this.getScene()) {
+    if (scene?.currentModel?.userData?.orbyFontGenerated) return true;
+    const assets = scene?.sceneObjects?.assets;
+    if (!Array.isArray(assets)) return false;
+    return assets.some(
+      (asset) =>
+        !!(asset?.mesh?.userData?.orbyFontGenerated || asset?.mesh?.userData?.orbyFontExtrude),
+    );
+  }
+
   /**
-   * Generate replaces the scene. Ask before wiping objects that are already there.
+   * Generate replaces a non-text scene object. Ask before wiping / offer Add beside.
+   * Regenerating the focused Type Creator mesh skips this (see onGenerate).
    * @returns {Promise<'keep' | 'replace' | 'add'>}
    */
   _confirmGeneratePlace() {
@@ -2489,7 +2577,19 @@ export class FontExtrudeUI {
     }
 
     const sceneBefore = this.getScene();
-    if (!append && sceneBefore?.currentModel) {
+    // Temporary: one generated text per scene — never append beside an existing font.
+    if (append && this._sceneHasFontText(sceneBefore)) {
+      this.ui.showToast(
+        'Multiple 3D texts are temporarily unavailable — replace the current text instead',
+        4200,
+        { notification: false },
+      );
+      return;
+    }
+    // Solo text already in the Object menu — regenerate in place, no place dialog.
+    if (!append && this._hasFontMesh()) {
+      skipConfirm = true;
+    } else if (!append && sceneBefore?.currentModel) {
       const choice = await this._confirmGeneratePlace();
       if (choice === 'keep') return;
       if (choice === 'add') append = true;
@@ -2498,8 +2598,7 @@ export class FontExtrudeUI {
 
     this._generating = true;
     this.updateGenerateState();
-    this.els.generate?.classList.toggle('is-loading', !append);
-    this.els.addToScene?.classList.toggle('is-loading', append);
+    this.els.generate?.classList.add('is-loading');
     this.ui.beginLoadSpinner();
 
     try {
@@ -2519,7 +2618,19 @@ export class FontExtrudeUI {
         skipConfirm,
       });
       if (!added) return;
-      scene.fontTextRevealController?.reconcileTypographyToMaster?.(added);
+      // Spawn already bindModel + finalize. Reconciling during scale-in would
+      // re-center at ~0.001 scale and park the pivot beside the text.
+      if (!scene._fontSpawnPlacementLock) {
+        scene.fontTextRevealController?.reconcileTypographyToMaster?.(added);
+        // Typography bind can shift glyph pivots — re-center this mesh only.
+        // Multi-object: keep world ink where placeBeside left it.
+        scene.finalizeFontModelStudioPlacement?.({
+          model: added,
+          force: true,
+          preserveWorld: !!scene.sceneObjects?.isMulti?.(),
+        });
+        scene.sceneObjects?.commitActive?.();
+      }
       if (normalizeFontCircularWrapEnabled(meshOptions.circularWrap?.enabled)) {
         this.stateStore.set('fontExtrude.trackingAnimatorEnabled', false);
       }
@@ -2539,7 +2650,6 @@ export class FontExtrudeUI {
     } finally {
       this._generating = false;
       this.els.generate?.classList.remove('is-loading');
-      this.els.addToScene?.classList.remove('is-loading');
       this.ui.endLoadSpinner();
       this.updateGenerateState();
     }

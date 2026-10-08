@@ -74,6 +74,7 @@ export function initStudioShell(scene, initialState) {
     scene.isImportSmoothingModel = false;
     scene.importRawByMesh = new Map();
     scene._pivotCenterDelta = null;
+    scene._fontSpawnPlacementLock = false;
     scene.reverseNormalsEnabled = initialState.advanced?.reverseNormals ?? false;
     scene.originalGeometryIndices = new WeakMap();
     scene.originalGeometryAttributes = new WeakMap();
@@ -139,11 +140,27 @@ export function initStudioShell(scene, initialState) {
     scene._syncAnimationControllerFromState();
     scene.fontTextRevealController = new FontTextRevealController({
       stateStore: scene.stateStore,
+      getFocusedModel: () => scene.currentModel,
       onNeedRender: () => scene.requestRender(),
       onTypographyLayoutChange: () => {
-        scene.finalizeFontModelStudioPlacement();
+        if (scene._fontSpawnPlacementLock) return;
+        const bound = scene.fontTextRevealController?._boundModel;
+        // Store-driven recenter only for the focused text — never a parked peer.
+        if (!bound || bound !== scene.currentModel) return;
+        scene.finalizeFontModelStudioPlacement({
+          model: bound,
+          // Multi-object texts must keep world placement; only the local pivot recenters.
+          preserveWorld: !!scene.sceneObjects?.isMulti?.(),
+        });
       },
       reapplyMaterialEmissive: () => {
+        // Only the focused mesh may receive Mesh → Emissive from the live store.
+        if (
+          scene.fontTextRevealController?._boundModel
+          && scene.fontTextRevealController._boundModel !== scene.currentModel
+        ) {
+          return;
+        }
         const emissive = scene.stateStore.getState().material?.emissive ?? 0;
         scene.materialController.materialSettings.emissive = emissive;
         scene.materialController.updateMaterials();

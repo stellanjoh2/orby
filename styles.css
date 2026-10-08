@@ -5865,6 +5865,15 @@ a.about-highlight:focus-visible {
   border-radius: 2px;
 }
 
+/* Accent CTAs: pink badge flips to brand black with lime hover fill */
+.accent-action-btn .dev-badge {
+  transition: color 0.2s;
+}
+
+.accent-action-btn:hover:not(:disabled) .dev-badge {
+  color: var(--orby-black);
+}
+
 .subsection.is-muted .block-title .dev-badge,
 .panel-block.is-muted .block-title .dev-badge,
 .subsection.is-muted .dev-badge,
@@ -7245,7 +7254,8 @@ button.advanced-info-doc-btn {
 }
 
 .slider-line.is-muted > :is(span:first-child, .slider-line-label, .block-title-name),
-.slider-line.is-muted .value {
+.slider-line.is-muted .value,
+.color-line.is-muted > span:first-child {
   opacity: var(--muted-section-text-scale);
 }
 
@@ -11488,14 +11498,12 @@ html:not(.mobile-landing) #orby-font-picker-portal .font-extrude-family-option-l
   margin: 0;
 }
 
-.font-extrude-generate.is-loading,
-.font-extrude-add.is-loading {
+.font-extrude-generate.is-loading {
   pointer-events: none;
   opacity: 0.72;
 }
 
-.font-extrude-generate.is-loading span::after,
-.font-extrude-add.is-loading span::after {
+.font-extrude-generate.is-loading span::after {
   content: '';
   display: inline-block;
   width: 0.85em;

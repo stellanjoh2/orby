@@ -1,6 +1,22 @@
 import * as THREE from 'three';
 import { deepClone } from '../utils/deepClone.js';
+import {
+  hydrateObjectSliceFromFontStamp,
+  reconcileFontExtrudeSliceForMesh,
+} from './fontExtrudeAssetState.js';
 import { isFontExtrudeModel, isSvgFileExtrudeModel } from './SvgExtrudeSceneOps.js';
+
+export {
+  stampFontExtrudeAssetSettings,
+  syncFontExtrudeStampColorsFromMesh,
+  readFontExtrudeAssetSettings,
+  reconcileFontExtrudeSliceForMesh,
+  commitFontAssetDocument,
+  commitFontAssetDocumentIfOwned,
+  hydrateObjectSliceFromFontStamp,
+  readOwnedFontExtrude,
+  resolveFontExtrudeForMesh,
+} from './fontExtrudeAssetState.js';
 
 /**
  * Object-menu state. Studio, lights, camera, and Camera & FX stay on the shared scene.
@@ -8,6 +24,7 @@ import { isFontExtrudeModel, isSvgFileExtrudeModel } from './SvgExtrudeSceneOps.
  * restore a different look on the other assets.
  * Gizmo toggles stay global so selection does not turn widgets on and off.
  * Object Info foldout (`advanced.objectInfoOpen`) is UI chrome — kept open across selects.
+ * Shape Library panel (`shapeLibrary.panelOpen`) is scene chrome — selection must not open/close it.
  */
 export const OBJECT_ASSET_STATE_KEYS = [
   'scale',
@@ -64,14 +81,19 @@ export function defaultObjectAssetState(stateStore) {
  * @param {object} slice
  */
 export function writeObjectAssetState(stateStore, slice) {
-  // Foldout disclosure is not per-mesh look — keep whatever the user already opened.
-  const objectInfoOpen = !!stateStore.peekState()?.advanced?.objectInfoOpen;
+  // Foldout / library disclosure is scene chrome — not per-mesh look.
+  const live = stateStore.peekState();
+  const objectInfoOpen = !!live?.advanced?.objectInfoOpen;
+  const shapeLibraryPanelOpen = !!live?.shapeLibrary?.panelOpen;
   stateStore.batch(() => {
     for (const key of OBJECT_ASSET_STATE_KEYS) {
       if (slice?.[key] === undefined) continue;
       const value = deepClone(slice[key]);
       if (key === 'advanced' && value && typeof value === 'object') {
         value.objectInfoOpen = objectInfoOpen;
+      }
+      if (key === 'shapeLibrary' && value && typeof value === 'object') {
+        value.panelOpen = shapeLibraryPanelOpen;
       }
       stateStore.set(key, value);
     }
@@ -84,8 +106,9 @@ export function writeObjectAssetState(stateStore, slice) {
  * @param {object} slice
  * @param {import('three').Object3D | null | undefined} mesh
  * @param {object} defaults
+ * @param {object | null | undefined} [parkedSlice]
  */
-export function sanitizeObjectAssetSlice(slice, mesh, defaults) {
+export function sanitizeObjectAssetSlice(slice, mesh, defaults, parkedSlice = null) {
   if (!slice || !defaults) return slice;
   const font = isFontExtrudeModel(mesh);
   const svgFile = !font && isSvgFileExtrudeModel(mesh);
@@ -94,6 +117,11 @@ export function sanitizeObjectAssetSlice(slice, mesh, defaults) {
   }
   if (!font && !svgFile && defaults.svgExtrude) {
     slice.svgExtrude = deepClone(defaults.svgExtrude);
+  }
+  if (font) {
+    reconcileFontExtrudeSliceForMesh(slice, mesh, parkedSlice);
+    // Stamp is the document — parked objectState must never win over the mesh.
+    hydrateObjectSliceFromFontStamp(slice, mesh);
   }
   return slice;
 }

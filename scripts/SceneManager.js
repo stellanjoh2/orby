@@ -92,7 +92,10 @@ import { lightsAutoRotateDegreesPerSecond } from './config/lightsAutoRotate.js';
 import { ImageExporter } from './render/ImageExporter.js';
 import { CaptureSizeMismatchError } from './render/capture/captureReadback.js';
 import { normalizeGlyphFillHex } from './import/FontExtrudeImporter.js';
-import { fontExtrudeTwoToneActive } from './import/fontExtrudeTwoTone.js';
+import {
+  fontExtrudeTwoToneActive,
+  resolveFontExtrudeSideColor,
+} from './import/fontExtrudeTwoTone.js';
 import { VideoExporter } from './render/VideoExporter.js';
 import { ExportMovementPreview } from './render/ExportMovementPreview.js';
 import { resolveExportMeshAnimationTiming } from './render/exportVideoMovements.js';
@@ -185,6 +188,7 @@ import {
 } from './import/stlNormalSmoothing.js';
 import {
   captureAndApplyCenterPivot,
+  captureAndApplyCenterFontPivot,
   centerModelGeometryOnRoot,
   centerFontModelGeometryOnRoot,
   undoCenterPivot,
@@ -2237,13 +2241,26 @@ export class SceneManager {
     }
   }
 
+  /**
+   * Every imported asset mesh — shadow tint is scene-wide, not selection-gated.
+   * @returns {import('three').Object3D[]}
+   */
+  _getShadowTintModelRoots() {
+    const assets = this.sceneObjects?.assets;
+    if (Array.isArray(assets) && assets.length > 0) {
+      return assets.map((asset) => asset.mesh).filter(Boolean);
+    }
+    return this.currentModel ? [this.currentModel] : [];
+  }
+
   _syncStudioGroundSurfaces({ presentationOnly = false } = {}) {
     const color = this.lightsShadowColor ?? '#080808';
     const strength = this._isShadowTintActive() ? 1 : 0;
     const opacity = this.lightsShadowOpacity ?? 0.25;
     this.materialController?.setShadowTintSettings({ color, strength, opacity });
+    // Always push onto every asset + studio floors (peers used to stay stale until select).
+    this._applyShadowTintPresentation({ color, strength, opacity });
     if (presentationOnly) {
-      this._applyShadowTintPresentation({ color, strength, opacity });
       this.wakeViewportPresentation(2);
       return;
     }
@@ -2267,8 +2284,8 @@ export class SceneManager {
       opacity: opacity ?? 0.25,
       forceRepatch: false,
     };
-    if (this.currentModel) {
-      mc.applyShadowTintToObject(this.currentModel, tintOpts);
+    for (const root of this._getShadowTintModelRoots()) {
+      mc.applyShadowTintToObject(root, tintOpts);
     }
     const ground = this.groundController;
     if (ground?.podium) {
@@ -2353,15 +2370,17 @@ export class SceneManager {
     const next = !!enabled;
     if (this.lightsShadowTwoSided === next) return;
     this.lightsShadowTwoSided = next;
-    if (!this.currentModel) return;
-    this.currentModel.traverse((child) => {
-      if (!child?.isMesh) return;
-      const mats = Array.isArray(child.material) ? child.material : [child.material];
-      mats.forEach((mat) => {
-        if (!mat) return;
-        mat.shadowSide = this.lightsShadowTwoSided ? THREE.DoubleSide : null;
+    const side = this.lightsShadowTwoSided ? THREE.DoubleSide : null;
+    for (const root of this._getShadowTintModelRoots()) {
+      root.traverse((child) => {
+        if (!child?.isMesh) return;
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        mats.forEach((mat) => {
+          if (!mat) return;
+          mat.shadowSide = side;
+        });
       });
-    });
+    }
   }
 
   setLightsShadowSettings(settings = {}) {
@@ -3028,8 +3047,11 @@ export class SceneManager {
     }
 
     const pivotRoot = this.getTransformTarget();
-    if (this._pivotCenterDelta) {
-      undoCenterPivot(pivotRoot, this.currentModel, this._pivotCenterDelta);
+    // Only this mesh's delta — never a sibling's scene-level leftover.
+    const prevDelta = this.currentModel.userData?.orbyPivotCenterDelta ?? null;
+    if (prevDelta) {
+      undoCenterPivot(pivotRoot, this.currentModel, prevDelta);
+      this.currentModel.userData.orbyPivotCenterDelta = null;
       this._pivotCenterDelta = null;
     }
 
@@ -3041,7 +3063,10 @@ export class SceneManager {
       return false;
     }
 
+    this.currentModel.userData.orbyPivotCenterDelta = delta;
     this._pivotCenterDelta = delta;
+    const active = this.sceneObjects?.getActive?.();
+    if (active?.mesh === this.currentModel) active.pivotCenterDelta = delta;
     this._afterPivotChange();
     if (options.showToast !== false) {
       this.ui?.showToast?.('Pivot centered', 3200, { notification: false });
@@ -3063,8 +3088,11 @@ export class SceneManager {
     }
 
     const pivotRoot = this.getTransformTarget();
-    if (this._pivotCenterDelta) {
-      undoCenterPivot(pivotRoot, this.currentModel, this._pivotCenterDelta);
+    // Only this mesh's delta — never a sibling's scene-level leftover.
+    const prevDelta = this.currentModel.userData?.orbyPivotCenterDelta ?? null;
+    if (prevDelta) {
+      undoCenterPivot(pivotRoot, this.currentModel, prevDelta);
+      this.currentModel.userData.orbyPivotCenterDelta = null;
       this._pivotCenterDelta = null;
     }
 
@@ -3076,7 +3104,10 @@ export class SceneManager {
       return false;
     }
 
+    this.currentModel.userData.orbyPivotCenterDelta = delta;
     this._pivotCenterDelta = delta;
+    const active = this.sceneObjects?.getActive?.();
+    if (active?.mesh === this.currentModel) active.pivotCenterDelta = delta;
     this._afterPivotChange();
     return true;
   }
@@ -3084,23 +3115,40 @@ export class SceneManager {
   /**
    * Center generated font meshes on the studio origin after live typography offsets.
    * Keeps the text block above the grid with a centered model pivot.
-   * @param {{ alignGround?: boolean }} [options]
+   * @param {{
+   *   alignGround?: boolean,
+   *   model?: import('three').Object3D | null,
+   *   force?: boolean,
+   *   preserveWorld?: boolean,
+   * }} [options]
    */
   finalizeFontModelStudioPlacement(options = {}) {
-    if (!isFontExtrudeRevealModel(this.currentModel)) return false;
+    if (this._fontSpawnPlacementLock && !options.force) return false;
 
-    const pivotRoot = this.getTransformTarget();
-    if (this._pivotCenterDelta) {
-      undoCenterPivot(pivotRoot, this.currentModel, this._pivotCenterDelta);
-      this._pivotCenterDelta = null;
+    const model = options.model ?? this.currentModel;
+    if (!isFontExtrudeRevealModel(model)) return false;
+
+    const pivotRoot = this._pivotRootForModel(model);
+    // Undo only this mesh's own delta — never another asset's parked scene delta.
+    const prevDelta = model.userData?.orbyPivotCenterDelta ?? null;
+    if (prevDelta) {
+      undoCenterPivot(pivotRoot, model, prevDelta);
+      model.userData.orbyPivotCenterDelta = null;
     }
+    if (this.currentModel === model) this._pivotCenterDelta = null;
 
-    const delta = centerFontModelGeometryOnRoot(pivotRoot, this.currentModel);
+    const delta = options.preserveWorld
+      ? captureAndApplyCenterFontPivot(pivotRoot, model)
+      : centerFontModelGeometryOnRoot(pivotRoot, model);
     if (!delta) return false;
 
-    this._pivotCenterDelta = delta;
-    this._afterPivotChange();
-    if (options.alignGround) {
+    model.userData.orbyPivotCenterDelta = delta;
+    if (this.currentModel === model) this._pivotCenterDelta = delta;
+    const active = this.sceneObjects?.getActive?.();
+    if (active?.mesh === model) active.pivotCenterDelta = delta;
+
+    this._afterPivotChange(model);
+    if (options.alignGround && model === this.currentModel) {
       this._cancelGroundGridBottomAlignAnimation();
       // Keep the wireframe grid on the studio floor — text sits slightly above it.
       this._alignGroundAndGridToCurrentModelBottom({
@@ -3111,15 +3159,36 @@ export class SceneManager {
     return true;
   }
 
-  _afterPivotChange() {
-    if (!this.currentModel) return;
-    this.currentModel.updateMatrixWorld(true);
-    this.modelRoot.updateMatrixWorld(true);
-    this.cameraController?.refreshModelBounds(this.currentModel);
+  /**
+   * Asset pivot group for a mesh, or modelRoot for the single-object scene.
+   * @param {import('three').Object3D | null | undefined} model
+   */
+  _pivotRootForModel(model) {
+    if (!model) return this.getTransformTarget();
+    if (this.sceneObjects?.usesPerAssetTransforms?.()) {
+      const asset = this.sceneObjects.assets?.find((entry) => entry.mesh === model);
+      if (asset?.group) return asset.group;
+    }
+    if (model === this.currentModel) return this.getTransformTarget();
+    return this.modelRoot;
+  }
+
+  _afterPivotChange(model = this.currentModel) {
+    if (!model) return;
+    model.updateMatrixWorld(true);
+    this.modelRoot?.updateMatrixWorld(true);
+    if (model === this.currentModel) {
+      this.cameraController?.refreshModelBounds(this.currentModel);
+    }
     this.updateWireframeOverlayTransforms();
     this.updateUvCheckerOverlayTransforms();
     this.updateNormalViewOverlayTransforms();
-    this._syncTransformFromGizmo();
+    // Commit only when the gizmo target is this model's pivot — never while the
+    // transform target still points at a peer (multi-object install/select races).
+    const pivotRoot = this._pivotRootForModel(model);
+    if (model === this.currentModel && this.getTransformTarget() === pivotRoot) {
+      this._syncTransformFromGizmo();
+    }
     this.transformControlsTranslate?.updateMatrixWorld?.();
     this.transformControlsRotate?.updateMatrixWorld?.();
     this.transformControlsScale?.updateMatrixWorld?.();
@@ -3404,13 +3473,32 @@ export class SceneManager {
       importer.currentColorPalette = [faceHex];
     }
     this.materialController?.setFontExtrudeColors?.(faceHex, sideHex);
+    const model = this.currentModel;
+    const stamp = model?.userData?.orbyFontAssetSettings?.fontExtrude;
+    const live = this.stateStore.getState()?.fontExtrude;
+    if (stamp) {
+      stamp.fillColor = faceHex;
+      stamp.extrudeColorEnabled = !!live?.extrudeColorEnabled;
+      // Keep the picker value from state when the toggle is off (mesh sides use face).
+      stamp.extrudeColor = normalizeGlyphFillHex(live?.extrudeColor ?? sideHex);
+    }
+    // Keep the active asset's parked Object-menu slice in sync so a later select
+    // of a peer cannot resurrect a stale fill from before this paint.
+    const active = this.sceneObjects?.getActive?.();
+    if (active?.mesh === model && active.objectState?.fontExtrude) {
+      active.objectState.fontExtrude.fillColor = faceHex;
+      active.objectState.fontExtrude.extrudeColorEnabled = !!live?.extrudeColorEnabled;
+      active.objectState.fontExtrude.extrudeColor = normalizeGlyphFillHex(
+        live?.extrudeColor ?? sideHex,
+      );
+    }
   }
 
   /** @deprecated — use {@link applyFontExtrudeColors} */
   applyFontExtrudeFillColor(hex) {
-    const extrude =
-      this.stateStore.getState()?.fontExtrude?.extrudeColor ?? hex;
-    this.applyFontExtrudeColors(hex, extrude);
+    const fontState = this.stateStore.getState()?.fontExtrude;
+    const face = normalizeGlyphFillHex(hex);
+    this.applyFontExtrudeColors(face, resolveFontExtrudeSideColor(fontState, face));
   }
 
   setSvgExtrudeColorOverride(settings = {}, options = {}) {
@@ -3455,9 +3543,10 @@ export class SceneManager {
     const overrideColor = new THREE.Color(faceHex);
     const replacements = replacementsOverride || svg.colorReplacements || {};
     const fontState = this.stateStore.getState()?.fontExtrude || {};
+    const fontFace = normalizeGlyphFillHex(fontState.fillColor);
     const fontTwoToneFromState = fontExtrudeTwoToneActive(
-      fontState.fillColor,
-      fontState.extrudeColor,
+      fontFace,
+      resolveFontExtrudeSideColor(fontState, fontFace),
     );
 
     if (overrideTwoTone) {
