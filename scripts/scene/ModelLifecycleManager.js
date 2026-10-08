@@ -29,6 +29,11 @@ import {
   loadShapeLibraryMeshModifiers,
   saveShapeLibraryMeshModifiers,
 } from '../shapeLibrary/shapeLibraryModifierState.js';
+import { deepClone } from '../utils/deepClone.js';
+import {
+  defaultObjectAssetState,
+  writeObjectAssetState,
+} from './objectAssetState.js';
 
 /**
  * Model load, replace, clear, dispose, and first-load presentation (camera fade, scale-in).
@@ -64,6 +69,8 @@ export class ModelLifecycleManager {
   clearModel() {
     const s = this.scene;
     if (!s?.modelRoot) return;
+    s.sceneObjects?.reset?.();
+    s.transformController?.setTarget?.(s.modelRoot);
     const fbxDefaults = s.stateStore.getDefaults().fbxMapSlots;
     s.stateStore.set('fbxMapSlots', { ...fbxDefaults, enabled: false, activeMaterial: '' });
     s._fbxImportBundle = null;
@@ -689,6 +696,203 @@ export class ModelLifecycleManager {
       s.eventBus.emit('scene:model-load-complete', { success: false, error });
     } finally {
       s.ui.endLoadSpinner();
+    }
+  }
+
+  /**
+   * Add a second (or later) model beside the one already in the scene.
+   * The new asset starts from Object-menu defaults. Studio and Camera stay as they are.
+   * @param {File} file
+   * @param {{ silent?: boolean }} [options]
+   */
+  async loadAdditionalFile(file, options = {}) {
+    const s = this.scene;
+    if (!file) return;
+    if (!s.currentModel || !s.sceneObjects) {
+      return this.loadFile(file, options);
+    }
+    if (blockTabletStudioAccess()) return;
+
+    const session = s.sceneObjects;
+    session.ensureActiveRegistered();
+    session.commitActive();
+
+    s.ui.setLoadSpinnerStatusPrefix?.('Loading');
+    s.ui.beginLoadSpinner();
+    s.ui.beginLoadSpinnerElapsed?.();
+    await deferSpinnerPaint();
+
+    try {
+      await s.ui.ensureStudioUiReady();
+      await s.ensureStudioReady();
+      await s.syncViewportSize();
+      s.startRenderLoop();
+
+      const defaults = defaultObjectAssetState(s.stateStore);
+      const svg = defaults.svgExtrude || {};
+      const loaded = await s.modelLoader.loadFile(file, {
+        svgExtrudeDepth: svg.depth,
+        svgExtrudeNormalAngle: svg.normalAngle,
+        svgExtrudeHardEdgeAngle: svg.hardEdgeAngle,
+        svgExtrudeColorDepths: svg.colorDepths || {},
+        svgExtrudeColorOffsets: svg.colorOffsets || {},
+        svgExtrudeFlipDirection: !!svg.flipDirection,
+        svgExtrudeBevelAmount: svg.bevelAmount ?? 0,
+        svgExtrudeDetail: svg.detail ?? 'high',
+      });
+
+      await this.attachAdditionalAsset(loaded, {
+        file,
+        configureFbx: true,
+        toast: options.silent ? 'Object added' : undefined,
+        complete: { file },
+      });
+      recordAssetLoaded(file);
+    } catch (error) {
+      console.error('Failed to add model', error);
+      const msg =
+        error && typeof error.message === 'string' && error.message.trim().length > 0
+          ? error.message.trim()
+          : 'Could not add model';
+      if (msg.length > LONG_TOAST_CHAR_THRESHOLD) {
+        s.ui.showMessageAlert(msg, 'Couldn’t add model');
+      } else {
+        s.ui.showToast(msg);
+      }
+      s.eventBus.emit('scene:model-load-complete', { success: false, file, error, added: true });
+    } finally {
+      s.ui.endLoadSpinner();
+    }
+  }
+
+  /**
+   * Park the current asset and place an already-built object beside it.
+   * The new asset starts from Object-menu defaults. `stateOverlay` keeps
+   * keys that belong to the new object (generated text settings).
+   * @param {{ object: import('three').Object3D, animations?: object[], gltfMetadata?: object, svgExtrude?: object }} loaded
+   * @param {{ file?: File | null, name?: string, configureFbx?: boolean, toast?: string | null, stateOverlay?: object, complete?: object }} [options]
+   */
+  async attachAdditionalAsset(loaded, options = {}) {
+    const s = this.scene;
+    const session = s.sceneObjects;
+    if (!session || !loaded?.object) {
+      throw new Error('Could not add model');
+    }
+
+    const previous = s.currentModel;
+    if (previous?.userData?.orbyShapeLibrary && previous.userData.orbyShapeLibraryId) {
+      saveShapeLibraryMeshModifiers(s.stateStore, previous.userData.orbyShapeLibraryId);
+    }
+    session.ensureActiveRegistered();
+    const previousId = session.getActive()?.id ?? null;
+    session.commitActive();
+
+    let addedId = null;
+    session._installing = true;
+    const materials = s.materialController;
+    materials?.beginAssetMaterialLock?.();
+    let materialsLocked = true;
+    try {
+      session.promoteToPerAssetTransforms();
+      const record = session.beginAdditionalAsset(loaded.object, {
+        file: options.file ?? null,
+        animations: loaded.animations ?? [],
+        name: options.name,
+      });
+      addedId = record.id;
+
+      const svgMeta = loaded.svgExtrude;
+      if (svgMeta?.enabled && svgMeta.importer) {
+        s.svgExtrudeImporter = svgMeta.importer;
+        s.isSvgExtrudeModel = true;
+      } else {
+        s.svgExtrudeImporter = null;
+        s.isSvgExtrudeModel = false;
+      }
+
+      const nextState = defaultObjectAssetState(s.stateStore);
+      const overlay = options.stateOverlay;
+      if (overlay && typeof overlay === 'object') {
+        for (const key of Object.keys(overlay)) {
+          if (overlay[key] !== undefined) nextState[key] = deepClone(overlay[key]);
+        }
+      }
+      // The library is scene chrome. A new asset must not snap it shut.
+      if (nextState.shapeLibrary) {
+        nextState.shapeLibrary.panelOpen = !!s.stateStore.peekState()?.shapeLibrary?.panelOpen;
+      }
+      writeObjectAssetState(s.stateStore, nextState);
+      if (loaded.object.userData?.orbyShapeLibrary && loaded.object.userData.orbyShapeLibraryId) {
+        loadShapeLibraryMeshModifiers(s.stateStore, loaded.object.userData.orbyShapeLibraryId);
+      }
+
+      materials?.endAssetMaterialLock?.();
+      materialsLocked = false;
+
+      const state = s.stateStore.getState();
+      s.materialController.setModel(loaded.object, state.shading, {
+        clay: state.clay,
+        fresnel: state.fresnel,
+        subsurface: state.subsurface,
+        wireframe: state.wireframe,
+        creativeLook: state.creativeLook,
+        advanced: state.advanced,
+        material: state.material,
+        preserveSessionMaterialMr: false,
+      }, { keepOriginalMaterials: true });
+      s.setShading(state.shading);
+      this.applyAssetMetadata(loaded);
+      s._fbxImportBundle = null;
+      if (options.configureFbx && options.file) {
+        this._configureFbxAfterLoad(options.file, loaded.object);
+      }
+      session.placeAdditionalAsset(record);
+
+      s.modifierController?.parkWithoutRestore?.();
+      s.modifierController?.bindModel(loaded.object);
+      s.applyModifiersFromState(s.stateStore.getState());
+      // Keep the previous asset's mixer (and pause state) alive while the new one binds.
+      if (previousId != null) {
+        const previousAsset = session.assets.find((asset) => asset.id === previousId);
+        if (previousAsset) {
+          previousAsset.animationSession =
+            s.animationController.detachSession() ?? previousAsset.animationSession;
+        }
+      }
+      s.animationController.setModel(loaded.object, loaded.animations ?? []);
+      s.diagnosticsController.setModel(loaded.object, s.stateStore.getState().shading);
+      s.topologyWarningsOverlay?.setModel(loaded.object);
+      if (s.scene.environment) {
+        s.updateMaterialsEnvironment(s.scene.environment, Math.max(0, s.hdriStrength));
+      }
+      s.setAutoRotateSpeed(s.stateStore.getState().autoRotate ?? 0, { silent: true });
+      s.setAutoRotateDirection(s.stateStore.getState().autoRotateDirection ?? 'forward');
+      session.applyVisibility();
+      s._syncTransformControlsForObjectHidden?.();
+      session._installing = false;
+      session.captureActiveState();
+      session.refreshFocusBounds();
+
+      s.updateStatsUI(options.file ?? null, loaded.object, loaded.gltfMetadata);
+      s.ui.updateTitle(record.name);
+      s.ui.updateTopBarDetail(`${record.name} — Idle`);
+      s.ui.endLoadSpinner();
+      loaded.object.visible = false;
+      this._scaleInMeshOnSpawn(loaded.object);
+      if (options.toast !== null) {
+        const toast = options.toast || `Added ${record.name}`;
+        s.ui.showToast(toast, 3200, { notification: false });
+      }
+      const complete = options.complete && typeof options.complete === 'object' ? options.complete : {};
+      s.eventBus.emit('scene:assets-changed', session.getSnapshot());
+      s.eventBus.emit('scene:model-load-complete', { success: true, added: true, ...complete });
+      s.eventBus.emit('scene:asset-focus-changed', { id: record.id, name: record.name });
+      return record;
+    } catch (error) {
+      if (materialsLocked) materials?.endAssetMaterialLock?.();
+      session._installing = false;
+      if (addedId != null) session.abortAdditional(addedId, previousId);
+      throw error;
     }
   }
 }

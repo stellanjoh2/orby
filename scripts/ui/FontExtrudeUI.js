@@ -272,6 +272,10 @@ export class FontExtrudeUI {
               <i class="fa-solid fa-cube" aria-hidden="true"></i>
               <span>Generate 3D Text</span>
             </button>
+            <button type="button" id="fontExtrudeAddToScene" class="accent-action-btn font-extrude-add" disabled data-tooltip="Add this text beside the objects already in the scene">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i>
+              <span>Add to Scene</span>
+            </button>
           </div>
           </div>
           <div class="panel-block-divider" aria-hidden="true"></div>
@@ -419,6 +423,7 @@ export class FontExtrudeUI {
       constantSpeed: block.querySelector('#fontExtrudeConstantSpeed'),
       constantSpread: block.querySelector('#fontExtrudeConstantSpread'),
       generate: block.querySelector('#fontExtrudeGenerate'),
+      addToScene: block.querySelector('#fontExtrudeAddToScene'),
     };
 
     if (this.ui.dom?.subsections) {
@@ -605,6 +610,9 @@ export class FontExtrudeUI {
     });
     els.generate?.addEventListener('click', () => {
       void this.onGenerate();
+    });
+    els.addToScene?.addEventListener('click', () => {
+      void this.onGenerate({ append: true });
     });
 
     bindSvgExtrudeControls(this._fontExtrudeCtx());
@@ -1001,8 +1009,12 @@ export class FontExtrudeUI {
         this.syncPostGenControlsVisibility();
       }
     };
+    this._onAssetFocusChanged = () => {
+      this.syncPostGenControlsVisibility();
+    };
     this.eventBus.on('font:generated', this._onFontGenerated);
     this.eventBus.on('scene:model-load-complete', this._onModelLoadComplete);
+    this.eventBus.on('scene:asset-focus-changed', this._onAssetFocusChanged);
 
     if (this.els.liveEditor && typeof ResizeObserver !== 'undefined') {
       this._previewResizeObs = new ResizeObserver(() => {
@@ -1623,6 +1635,10 @@ export class FontExtrudeUI {
     if (this._onModelLoadComplete) {
       this.eventBus.off('scene:model-load-complete', this._onModelLoadComplete);
       this._onModelLoadComplete = null;
+    }
+    if (this._onAssetFocusChanged) {
+      this.eventBus.off('scene:asset-focus-changed', this._onAssetFocusChanged);
+      this._onAssetFocusChanged = null;
     }
     this._stateUnsub?.();
     this._stateUnsub = null;
@@ -2381,13 +2397,19 @@ export class FontExtrudeUI {
     const text = (this.els.text?.value ?? '').trim();
     const hasFont = !!this.controller.font;
     const canGenerate = text.length > 0 && hasFont && !this._generating;
+    const blockedTip = !hasFont
+      ? 'Select or load a font first'
+      : !text.length
+        ? 'Enter text to generate'
+        : '';
     if (this.els.generate) {
       this.els.generate.disabled = !canGenerate;
-      this.els.generate.dataset.tooltip = !hasFont
-        ? 'Select or load a font first'
-        : !text.length
-          ? 'Enter text to generate'
-          : 'Extrude preview text into a 3D mesh';
+      this.els.generate.dataset.tooltip = blockedTip || 'Extrude preview text into a 3D mesh';
+    }
+    if (this.els.addToScene) {
+      this.els.addToScene.disabled = !canGenerate;
+      this.els.addToScene.dataset.tooltip = blockedTip
+        || 'Add this text beside the objects already in the scene';
     }
   }
 
@@ -2427,8 +2449,32 @@ export class FontExtrudeUI {
     this._syncTrackingAnimatorControls();
   }
 
-  async onGenerate() {
+  /**
+   * Generate replaces the scene. Ask before wiping objects that are already there.
+   * @returns {Promise<'keep' | 'replace' | 'add'>}
+   */
+  _confirmGeneratePlace() {
+    return new Promise((resolve) => {
+      this.ui.showMessageAlert(
+        'Generate 3D Text wipes what is in the scene. Choose Add to Scene to keep it and place the text beside it.',
+        'This replaces the scene',
+        {
+          confirm: true,
+          cancelLabel: 'Keep current',
+          altLabel: 'Replace',
+          okLabel: 'Add to Scene',
+          onConfirm: () => resolve('add'),
+          onAlt: () => resolve('replace'),
+          onCancel: () => resolve('keep'),
+        },
+      );
+    });
+  }
+
+  async onGenerate(options = {}) {
     if (this._generating) return;
+    let append = !!options.append;
+    let skipConfirm = !!options.skipConfirm;
     const text = this.els.text?.value ?? '';
     if (!text.trim()) return;
     if (!this.controller.font) {
@@ -2442,9 +2488,18 @@ export class FontExtrudeUI {
       return;
     }
 
+    const sceneBefore = this.getScene();
+    if (!append && sceneBefore?.currentModel) {
+      const choice = await this._confirmGeneratePlace();
+      if (choice === 'keep') return;
+      if (choice === 'add') append = true;
+      else skipConfirm = true;
+    }
+
     this._generating = true;
     this.updateGenerateState();
-    this.els.generate?.classList.add('is-loading');
+    this.els.generate?.classList.toggle('is-loading', !append);
+    this.els.addToScene?.classList.toggle('is-loading', append);
     this.ui.beginLoadSpinner();
 
     try {
@@ -2453,12 +2508,19 @@ export class FontExtrudeUI {
         throw new Error('Studio is not ready — refresh the page and try again');
       }
       await scene.ensureStudioReady();
-      const options = this.getOptions();
-      const group = await this.controller.generateMesh(text, options);
-      const added = await this.controller.addToScene(group);
+      const meshOptions = this.getOptions();
+      const sceneHasModel = !!scene.currentModel;
+      const group = await this.controller.generateMesh(text, {
+        ...meshOptions,
+        appendToScene: append && sceneHasModel,
+      });
+      const added = await this.controller.addToScene(group, {
+        append: append && sceneHasModel,
+        skipConfirm,
+      });
       if (!added) return;
       scene.fontTextRevealController?.reconcileTypographyToMaster?.(added);
-      if (normalizeFontCircularWrapEnabled(options.circularWrap?.enabled)) {
+      if (normalizeFontCircularWrapEnabled(meshOptions.circularWrap?.enabled)) {
         this.stateStore.set('fontExtrude.trackingAnimatorEnabled', false);
       }
       this.stateStore.set('fontExtrude.panelOpen', true);
@@ -2477,6 +2539,7 @@ export class FontExtrudeUI {
     } finally {
       this._generating = false;
       this.els.generate?.classList.remove('is-loading');
+      this.els.addToScene?.classList.remove('is-loading');
       this.ui.endLoadSpinner();
       this.updateGenerateState();
     }

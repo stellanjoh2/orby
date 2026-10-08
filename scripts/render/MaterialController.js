@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { deepClone } from '../utils/deepClone.js';
 import { mergeVertices } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 import { LineMaterial } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/lines/LineMaterial.js';
 import { LineSegmentsGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/lines/LineSegmentsGeometry.js';
@@ -99,6 +100,7 @@ import {
 import { normalizeCreativeLookPresetParams } from './creativeLookPresetSliders.js';
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 import { isFontExtrudeModel, isSvgFileExtrudeModel } from '../scene/SvgExtrudeSceneOps.js';
+import { OBJECT_ASSET_STATE_KEYS } from '../scene/objectAssetState.js';
 import {
   applyFontExtrudeTwoToneToMesh,
   fontExtrudeTwoToneActive,
@@ -150,8 +152,10 @@ import {
   clearBlendMapAlphaProfileCache,
   isBlendMapAlphaCutoutRetryCandidate,
   resolveBlendMapAlphaProfile,
+  revertBlendMapAlphaCutout,
   scheduleBlendMapAlphaCutoutRetry,
   shouldPromoteBlendMapToAlphaCutout,
+  shouldProvisionallyCutoutUnknownBlendMap,
 } from './gltfBlendMapAlphaCutout.js';
 import {
   SHAPE_LIBRARY_DEFAULT_METALNESS,
@@ -292,6 +296,29 @@ function isOrbyShaderPatchHook(hook) {
   );
 }
 
+/** JSON-safe userData so Material.clone does not throw on shader hooks. */
+function plainMaterialUserData(data) {
+  const safe = {};
+  if (!data) return safe;
+  for (const key of Object.keys(data)) {
+    const value = data[key];
+    const kind = typeof value;
+    if (value == null || kind === 'string' || kind === 'number' || kind === 'boolean') {
+      safe[key] = value;
+    }
+  }
+  return safe;
+}
+
+function objectContains(root, node) {
+  let current = node;
+  while (current) {
+    if (current === root) return true;
+    current = current.parent;
+  }
+  return false;
+}
+
 /**
  * Base onBeforeCompile for Fresnel — not another Orby patch.
  * When shadow tint is already outer, using it as Fresnel's `original` creates a cycle
@@ -348,6 +375,8 @@ export class MaterialController {
     onCreativeLookAsciiSync = null,
     /** Studio canvas logical size + DPR for Line2 resolution / linewidth (not `window` dimensions). */
     getWireframeViewportSync = null,
+    /** When set, wireframe display mode draws every asset, not only the selected mesh. */
+    getDisplayModeRoots = null,
   }) {
     this.stateStore = stateStore;
     this.modelRoot = modelRoot;
@@ -361,9 +390,12 @@ export class MaterialController {
     this.onNeedsTransmissionBackdrop = onNeedsTransmissionBackdrop;
     this.onCreativeLookAsciiSync = onCreativeLookAsciiSync;
     this.getWireframeViewportSync = getWireframeViewportSync;
+    this.getDisplayModeRoots = getDisplayModeRoots;
 
     this.currentModel = null;
     this.currentShading = null;
+    this._assetMaterialLock = 0;
+    this._exclusivingMaterials = false;
     this.originalMaterials = new WeakMap();
     /** @type {THREE.Mesh[]|null} Wire overlay meshes (parented next to their source mesh for correct hierarchy). */
     this.wireframeOverlayMeshes = null;
@@ -427,7 +459,7 @@ export class MaterialController {
     };
   }
 
-  setModel(model, shading, initialState = {}) {
+  setModel(model, shading, initialState = {}, options = {}) {
     this.currentModel = model;
     this.currentShading = shading;
     this.claySettings = { ...(initialState.clay || {}) };
@@ -501,7 +533,9 @@ export class MaterialController {
       colorOverride: matFromState.colorOverride === true,
       overrideColor: normalizeGlyphFillHex(matFromState.overrideColor ?? '#ffffff'),
     };
-    this.originalMaterials = new WeakMap();
+    if (!options.keepOriginalMaterials) {
+      this.originalMaterials = new WeakMap();
+    }
     this._appliedCreativeLookPreset = null;
     this.prepareMesh(model);
     const preserveSession =
@@ -524,6 +558,60 @@ export class MaterialController {
     this.stateStore?.set('material.surfaceEligible', this._modelSurfaceEligible(model));
     this._migrateLegacyExtrudeSurfaceStateToMaterial();
     // Note: Fresnel will be applied by setShading, which is called after setModel
+  }
+
+  /**
+   * Point material tools at another asset without rebuilding its already-applied look.
+   * Import baselines in `originalMaterials` stay so later slider edits still start from the file.
+   * @param {import('three').Object3D} model
+   * @param {object} state
+   */
+  focusModel(model, state = {}) {
+    this.currentModel = model;
+    if (state.shading) this.currentShading = state.shading;
+    if (state.wireframe) this.wireframeSettings = { ...state.wireframe };
+    if (state.clay) this.claySettings = { ...state.clay };
+    if (state.fresnel) this.fresnelSettings = { ...state.fresnel };
+    const mat = state.material ?? {};
+    this.materialSettings = {
+      brightness: mat.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS,
+      metalness: Number.isFinite(mat.metalness) ? mat.metalness : 0.0,
+      roughness: Number.isFinite(mat.roughness) ? mat.roughness : DEFAULT_MATERIAL_ROUGHNESS,
+      emissive: mat.emissive ?? 0.0,
+      colorOverride: mat.colorOverride === true,
+      overrideColor: normalizeGlyphFillHex(mat.overrideColor ?? '#ffffff'),
+    };
+    const adv = state.advanced ?? {};
+    this.uvCheckerOverlay.applySettings({
+      enabled: adv.uvChecker === true,
+      scale: adv.uvCheckerScale,
+      style: adv.uvCheckerStyle,
+    });
+    this.uvCheckerOverlay.setModel(model);
+    this.normalViewOverlay.applySettings({
+      enabled: adv.normalView === true,
+      mode: adv.normalViewMode,
+    });
+    this.normalViewOverlay.setModel(model);
+    this._adoptCreativeLookSettings(state.creativeLook);
+  }
+
+  /**
+   * Point Shader Lab at this asset's saved settings without rebuilding materials
+   * already on the mesh. The next slider edit then matches this object.
+   * @param {object | null | undefined} creativeLook
+   */
+  _adoptCreativeLookSettings(creativeLook) {
+    if (!creativeLook || typeof creativeLook !== 'object') return;
+    const cl = deepClone(creativeLook);
+    const preset = normalizeCreativeLookPreset(cl.preset);
+    this.creativeLookSettings = {
+      ...this.creativeLookSettings,
+      ...cl,
+      enabled: !!cl.enabled,
+      preset,
+    };
+    this._appliedCreativeLookPreset = cl.enabled ? preset : null;
   }
 
   _modelHasImportSurfaceBlockingMaps(object) {
@@ -995,16 +1083,21 @@ export class MaterialController {
         target.transparent = !!importMat.transparent;
         target.opacity = Number.isFinite(importMat.opacity) ? importMat.opacity : 1;
         target.depthWrite = importMat.depthWrite !== false;
+        target.alphaTest = Number.isFinite(importMat.alphaTest) ? importMat.alphaTest : 0;
         if (importMat.color?.isColor) target.color.copy(importMat.color);
         if ('alphaHash' in target) target.alphaHash = !!importMat.alphaHash;
       } else {
         const mitigation = importMat.userData?.orbyBlendMitigation;
+        const importCutout =
+          mitigation === 'alphaTest'
+          || (Number(importMat.alphaTest) > 0 && !importMat.transparent);
         if (mitigation === 'opaque') {
           target.transparent = false;
           target.opacity = 1;
           target.depthWrite = true;
+          target.alphaTest = 0;
           if ('alphaHash' in target) target.alphaHash = false;
-        } else if (mitigation === 'alphaTest') {
+        } else if (importCutout) {
           target.transparent = false;
           target.opacity = 1;
           target.depthWrite = true;
@@ -1012,15 +1105,18 @@ export class MaterialController {
             ? importMat.alphaTest
             : 0.02;
           if ('alphaHash' in target) target.alphaHash = false;
+          target.userData.orbyBlendMitigation = 'alphaTest';
         } else if (mitigation === 'alphaHash') {
           target.transparent = b.transparent;
           target.opacity = b.opacity;
           target.depthWrite = b.depthWrite;
+          target.alphaTest = Number.isFinite(b.alphaTest) ? b.alphaTest : 0;
           if ('alphaHash' in target) target.alphaHash = true;
         } else {
           target.transparent = b.transparent;
           target.opacity = b.opacity;
           target.depthWrite = b.depthWrite;
+          target.alphaTest = Number.isFinite(b.alphaTest) ? b.alphaTest : 0;
           if ('alphaHash' in target) target.alphaHash = b.alphaHash;
         }
       }
@@ -2095,9 +2191,11 @@ export class MaterialController {
 
   _resolveBlendMapAlphaProfile(m) {
     const cached = m?.userData?.orbyBlendMapAlphaProfile;
-    if (cached === 'cutout' || cached === 'soft' || cached === 'unknown') return cached;
+    if (cached === 'cutout' || cached === 'soft') return cached;
     const profile = resolveBlendMapAlphaProfile(m?.map);
-    if (m?.userData) m.userData.orbyBlendMapAlphaProfile = profile;
+    if ((profile === 'cutout' || profile === 'soft') && m?.userData) {
+      m.userData.orbyBlendMapAlphaProfile = profile;
+    }
     return profile;
   }
 
@@ -2116,6 +2214,10 @@ export class MaterialController {
     applyBlendMapAlphaCutout(m);
   }
 
+  _revertBlendMapAlphaCutout(m) {
+    revertBlendMapAlphaCutout(m, m?.userData?.orbyGltfImportBaseline);
+  }
+
   _applyBlendMapAlphaCutoutFallback(m) {
     if (!m || (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial)) return false;
     if (this._materialHasImportTransmission(m)) return false;
@@ -2129,9 +2231,22 @@ export class MaterialController {
     return true;
   }
 
+  _refreshShadingAfterBlendMapAlphaCutout() {
+    const shading = this.currentShading ?? this.stateStore?.getState()?.shading ?? 'shaded';
+    if (
+      shading === 'shaded'
+      || shading === 'wireframe'
+      || shading === 'clay'
+      || shading === 'textures'
+    ) {
+      this.setShading(shading);
+    }
+  }
+
   /**
    * BLEND + baseColor map with hard cutout alpha (atlas padding, interiors) → alphaTest + depthWrite
    * so nested shells (car cabins) draw correctly. Soft map alpha (hair) is left as true BLEND.
+   * Unknown profiles get a provisional cutout so foliage works on first paint under HDRI+AO.
    */
   applyGltfBlendMapAlphaCutout(object) {
     this._forEachImportMaterial(object, (m) => {
@@ -2139,6 +2254,33 @@ export class MaterialController {
         this._applyBlendMapAlphaCutout(m);
         return;
       }
+
+      const alphaMode = m.userData?.alphaMode ?? this._inferGltfAlphaMode(m);
+      const profile = this._resolveBlendMapAlphaProfile(m);
+      if (
+        shouldProvisionallyCutoutUnknownBlendMap(m, profile, {
+          fullOpacityThreshold: GLTF_FULL_OPACITY_BLEND_THRESHOLD,
+          alphaMode,
+        })
+        && this._applyBlendMapAlphaCutoutFallback(m)
+      ) {
+        scheduleBlendMapAlphaCutoutRetry(m, () => {
+          if (!this.currentModel) return;
+          clearBlendMapAlphaProfileCache(m);
+          const refined = this._resolveBlendMapAlphaProfile(m);
+          if (refined === 'soft') {
+            this._revertBlendMapAlphaCutout(m);
+            this._refreshShadingAfterBlendMapAlphaCutout();
+            return;
+          }
+          if (refined === 'cutout' && m.transparent) {
+            this._applyBlendMapAlphaCutout(m);
+            this._refreshShadingAfterBlendMapAlphaCutout();
+          }
+        });
+        return;
+      }
+
       if (!isBlendMapAlphaCutoutRetryCandidate(m)) return;
       scheduleBlendMapAlphaCutoutRetry(m, () => {
         if (!this.currentModel) return;
@@ -2146,15 +2288,7 @@ export class MaterialController {
         const applied =
           this._shouldPromoteBlendMapAlphaCutout(m) || this._applyBlendMapAlphaCutoutFallback(m);
         if (!applied) return;
-        const shading = this.currentShading ?? this.stateStore?.getState()?.shading ?? 'shaded';
-        if (
-          shading === 'shaded'
-          || shading === 'wireframe'
-          || shading === 'clay'
-          || shading === 'textures'
-        ) {
-          this.setShading(shading);
-        }
+        this._refreshShadingAfterBlendMapAlphaCutout();
       });
     });
   }
@@ -2746,14 +2880,230 @@ export class MaterialController {
     return standard;
   }
 
+  beginAssetMaterialLock() {
+    this._assetMaterialLock += 1;
+  }
+
+  endAssetMaterialLock() {
+    this._assetMaterialLock = Math.max(0, this._assetMaterialLock - 1);
+  }
+
+  /**
+   * Clone a live material that another asset is also using, and leave the neighbour's
+   * instance alone. Shader hooks stay on the neighbour; this asset is rebuilt after.
+   * @param {import('three').Material | null | undefined} material
+   */
+  _safeCloneMaterial(material) {
+    if (!material?.clone) return material;
+    const baseHook = resolveFresnelBaseOnBeforeCompile(material);
+    const saved = material.userData;
+    material.userData = plainMaterialUserData(saved);
+    try {
+      const cloned = material.clone();
+      cloned.userData = plainMaterialUserData(saved);
+      delete cloned.userData.fresnelPatched;
+      delete cloned.userData.svgExtrudeProceduralPatched;
+      delete cloned.userData.svgExtrudeSurfacePresetId;
+      delete cloned.userData.shadowTintPatched;
+      if (typeof baseHook === 'function') cloned.onBeforeCompile = baseHook;
+      cloned.needsUpdate = true;
+      return cloned;
+    } finally {
+      material.userData = saved;
+    }
+  }
+
+  /**
+   * One glTF may share materials inside itself. A second asset must not.
+   * @param {import('three').Object3D | null | undefined} root
+   */
+  _exclusiveMaterials(root) {
+    if (
+      !root
+      || !this.modelRoot
+      || root === this.modelRoot
+      || this._exclusivingMaterials
+      || this.modelRoot.children.length < 2
+    ) {
+      return;
+    }
+    const foreign = new Set();
+    this.modelRoot.traverse((node) => {
+      if (!node.isMesh || !node.material || objectContains(root, node)) return;
+      const list = Array.isArray(node.material) ? node.material : [node.material];
+      for (const mat of list) {
+        if (mat) foreign.add(mat);
+      }
+    });
+    if (foreign.size === 0) return;
+
+    const replaceOne = (node, mat) => {
+      if (!mat || !foreign.has(mat)) return mat;
+      const cloned = this._safeCloneMaterial(mat);
+      const stored = this.originalMaterials.get(node);
+      if (stored === mat) this.originalMaterials.set(node, cloned);
+      else if (Array.isArray(stored) && stored.includes(mat)) {
+        this.originalMaterials.set(node, stored.map((entry) => (entry === mat ? cloned : entry)));
+      }
+      return cloned;
+    };
+
+    this._exclusivingMaterials = true;
+    try {
+      root.traverse((node) => {
+        if (!node.isMesh || !node.material) return;
+        if (Array.isArray(node.material)) {
+          node.material = node.material.map((mat) => replaceOne(node, mat));
+        } else if (foreign.has(node.material)) {
+          node.material = replaceOne(node, node.material);
+        }
+      });
+    } finally {
+      this._exclusivingMaterials = false;
+    }
+  }
+
+  /**
+   * Rebuild display materials on assets that are not selected.
+   * Each asset keeps its own clay, brightness, and shader settings.
+   * @param {string} mode
+   * @param {Array<{ mesh?: import('three').Object3D, objectState?: object }>} assets
+   */
+  applyDisplayModeToAssets(mode, assets) {
+    if (!assets?.length) return;
+    const snapshot = this._captureDisplayContext();
+    this._shadingPeerApply = true;
+    try {
+      for (const asset of assets) {
+        if (!asset?.mesh) continue;
+        this._adoptAssetDisplaySettings(asset.objectState);
+        this._withAssetStateView(asset.objectState, mode, () => {
+          const previousModel = this.currentModel;
+          this.currentModel = asset.mesh;
+          try {
+            this.setShading(mode, { peer: true, skipWireframeOverlay: true });
+            if (this._lastEnvTexture && mode !== 'textures') {
+              this.updateMaterialsEnvironment(
+                this._lastEnvTexture,
+                this._lastEnvIntensity,
+                this._lastHdriBlurriness,
+              );
+            }
+          } finally {
+            this.currentModel = previousModel;
+          }
+        });
+      }
+    } finally {
+      this._shadingPeerApply = false;
+      this._restoreDisplayContext(snapshot);
+    }
+  }
+
+  _captureDisplayContext() {
+    return {
+      currentModel: this.currentModel,
+      currentShading: this.currentShading,
+      unlitMode: this.unlitMode,
+      claySettings: { ...this.claySettings },
+      wireframeSettings: { ...this.wireframeSettings },
+      fresnelSettings: { ...this.fresnelSettings },
+      subsurfaceSettings: { ...this.subsurfaceSettings },
+      materialSettings: { ...this.materialSettings },
+      creativeLookSettings: deepClone(this.creativeLookSettings),
+      appliedCreativeLookPreset: this._appliedCreativeLookPreset,
+    };
+  }
+
+  _restoreDisplayContext(snapshot) {
+    this.currentModel = snapshot.currentModel;
+    this.currentShading = snapshot.currentShading;
+    this.unlitMode = snapshot.unlitMode;
+    this.claySettings = snapshot.claySettings;
+    this.wireframeSettings = snapshot.wireframeSettings;
+    this.fresnelSettings = snapshot.fresnelSettings;
+    this.subsurfaceSettings = snapshot.subsurfaceSettings;
+    this.materialSettings = snapshot.materialSettings;
+    this.creativeLookSettings = snapshot.creativeLookSettings;
+    this._appliedCreativeLookPreset = snapshot.appliedCreativeLookPreset;
+  }
+
+  /**
+   * Point material settings at one asset without moving UV or normal overlays.
+   * @param {object | null | undefined} slice
+   */
+  _adoptAssetDisplaySettings(slice = {}) {
+    const mat = slice?.material ?? {};
+    this.materialSettings = {
+      brightness: mat.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS,
+      metalness: Number.isFinite(mat.metalness) ? mat.metalness : 0.0,
+      roughness: Number.isFinite(mat.roughness) ? mat.roughness : DEFAULT_MATERIAL_ROUGHNESS,
+      emissive: mat.emissive ?? 0.0,
+      colorOverride: mat.colorOverride === true,
+      overrideColor: normalizeGlyphFillHex(mat.overrideColor ?? '#ffffff'),
+    };
+    if (slice?.clay) this.claySettings = { ...slice.clay };
+    if (slice?.wireframe) this.wireframeSettings = { ...slice.wireframe };
+    if (slice?.subsurface) {
+      this.subsurfaceSettings = {
+        enabled: slice.subsurface.enabled === true,
+        translucency: slice.subsurface.translucency ?? 0,
+        scatterTint: slice.subsurface.scatterTint ?? DEFAULT_SUBSURFACE_SCATTER_TINT,
+      };
+    } else {
+      this.subsurfaceSettings = {
+        enabled: false,
+        translucency: 0,
+        scatterTint: DEFAULT_SUBSURFACE_SCATTER_TINT,
+      };
+    }
+    this.fresnelSettings = {
+      ...(slice?.fresnel ?? this.fresnelSettings),
+      enabled: slice?.fresnel?.enabled === true,
+    };
+    this._adoptCreativeLookSettings(slice?.creativeLook ?? { enabled: false });
+  }
+
+  /**
+   * Reads inside shading rebuilds follow this asset. Writes still hit the live store,
+   * so callers must not `set` per-asset fields while the view is installed.
+   * @param {object | null | undefined} slice
+   * @param {string} mode
+   * @param {() => void} fn
+   */
+  _withAssetStateView(slice, mode, fn) {
+    const store = this.stateStore;
+    if (!store?.getState || !store.peekState) return fn();
+    const merged = { ...store.peekState(), shading: mode };
+    if (slice) {
+      for (const key of OBJECT_ASSET_STATE_KEYS) {
+        if (slice[key] !== undefined) merged[key] = slice[key];
+      }
+    }
+    merged.shading = mode;
+    const previousGet = store.getState;
+    const previousPeek = store.peekState;
+    store.getState = () => deepClone(merged);
+    store.peekState = () => merged;
+    try {
+      return fn();
+    } finally {
+      store.getState = previousGet;
+      store.peekState = previousPeek;
+    }
+  }
+
   /**
    * @param {string} mode
-   * @param {{ skipWireframeOverlay?: boolean }} [options]
+   * @param {{ skipWireframeOverlay?: boolean, peer?: boolean }} [options]
    *   When true, caller rebuilds the wireframe overlay (e.g. behind a load spinner).
+   *   `peer` rebuilds another asset's materials without moving scene overlays or the UI.
    */
   setShading(mode, options = {}) {
+    if (this._assetMaterialLock > 0) return;
     if (!this.currentModel) return;
-    this.mapInspectPreview?.clear();
+    this._exclusiveMaterials(this.currentModel);
+    if (!options.peer) this.mapInspectPreview?.clear();
     this.currentShading = mode;
     const modelHasEmissive = this._modelHasAnyEmissiveBaseline();
     this.currentModel.traverse((child) => {
@@ -3007,11 +3357,13 @@ export class MaterialController {
     });
 
     this.unlitMode = mode === 'textures';
-    if (!options.skipWireframeOverlay) {
+    if (!options.skipWireframeOverlay && !options.peer) {
       this.updateWireframeOverlay();
     }
-    this.uvCheckerOverlay.rebuild();
-    this.normalViewOverlay.rebuild();
+    if (!options.peer) {
+      this.uvCheckerOverlay.rebuild();
+      this.normalViewOverlay.rebuild();
+    }
     this.applyFresnelToModel(this.currentModel);
     this.reapplySvgExtrudeSurfaceShaders();
     if (!this._shaderLabBypassesGlassPresentation()) {
@@ -3024,17 +3376,23 @@ export class MaterialController {
     if (mode === 'shaded' || mode === 'wireframe') {
       if (this.materialSettings?.emissive > 0) {
         this.updateMaterials();
-        this.onPostShaderMaterialSync?.();
+        if (!options.peer) this.onPostShaderMaterialSync?.();
+      } else if (options.peer) {
+        this.resyncEmissiveFromImportedMaterials();
       } else {
+        const model = this.currentModel;
         queueMicrotask(() => {
+          if (this.currentModel !== model || this._assetMaterialLock > 0) return;
           this.resyncEmissiveFromImportedMaterials();
           this.onPostShaderMaterialSync?.();
         });
       }
     } else if (this.materialSettings?.emissive > 0 && mode !== 'textures') {
       this.updateMaterials();
-      this.onPostShaderMaterialSync?.();
+      if (!options.peer) this.onPostShaderMaterialSync?.();
     }
+
+    if (options.peer) return;
 
     if (typeof this.onNeedsTransmissionBackdrop === 'function') {
       this.onNeedsTransmissionBackdrop();
@@ -3241,11 +3599,13 @@ export class MaterialController {
     if (isDustFieldCreativeLookPreset(preset)) {
       this._applyDustFieldMaterial(preset, patternScale);
       this._appliedCreativeLookPreset = preset;
-      if (this.onMaterialUpdate) {
-        this.onMaterialUpdate();
-      }
-      if (typeof this.afterCreativeLookMaterialRebuild === 'function') {
-        this.afterCreativeLookMaterialRebuild();
+      if (!this._shadingPeerApply) {
+        if (this.onMaterialUpdate) {
+          this.onMaterialUpdate();
+        }
+        if (typeof this.afterCreativeLookMaterialRebuild === 'function') {
+          this.afterCreativeLookMaterialRebuild();
+        }
       }
       return;
     }
@@ -3431,6 +3791,11 @@ export class MaterialController {
       this._stabilizeFontExtrudeGlassPresentation();
     }
     this._appliedCreativeLookPreset = preset;
+
+    if (this._shadingPeerApply) {
+      this.reapplyCreativeLookSurfaceShaders();
+      return;
+    }
 
     if (this.onMaterialUpdate) {
       this.onMaterialUpdate();
@@ -4244,6 +4609,151 @@ export class MaterialController {
     this._applyCreativeLookOverride();
   }
 
+  /**
+   * Keep Shader Lab alive on assets that are not selected.
+   * Uses each asset's saved settings, not the focused Object menu.
+   * @param {object[] | null | undefined} assets
+   * @param {number | null | undefined} activeId
+   * @param {number} elapsedSeconds
+   */
+  tickParkedCreativeLooks(assets, activeId, elapsedSeconds) {
+    if (!assets || assets.length < 2) return;
+    const blur = Number(this.stateStore?.peekState?.()?.hdriBlurriness ?? 0);
+    const hdriBlur = Number.isFinite(blur) ? blur : 0;
+    for (const asset of assets) {
+      if (asset.id === activeId) continue;
+      const cl = asset.objectState?.creativeLook;
+      if (!cl?.enabled || !asset.mesh) continue;
+      this._pushParkedCreativeLook(asset, cl, elapsedSeconds, hdriBlur);
+    }
+  }
+
+  /**
+   * @param {object} asset
+   * @param {object} cl
+   * @param {number} elapsedSeconds
+   * @param {number} hdriBlur
+   */
+  _pushParkedCreativeLook(asset, cl, elapsedSeconds, hdriBlur) {
+    const root = asset.mesh;
+    const preset = normalizeCreativeLookPreset(cl.preset);
+    let animSpeed = Number(cl.shaderAnimationSpeed);
+    if (!Number.isFinite(animSpeed)) animSpeed = 0.4;
+    animSpeed = THREE.MathUtils.clamp(animSpeed, 0, 2);
+    const scaledClock = elapsedSeconds * animSpeed;
+    let effectiveTime = scaledClock;
+    if (cl.pauseShaderAnimations === true) {
+      if (asset._creativeLookPausedAt == null) asset._creativeLookPausedAt = scaledClock;
+      effectiveTime = asset._creativeLookPausedAt;
+    } else {
+      asset._creativeLookPausedAt = null;
+    }
+    const patternScale = normalizeCreativeLookPatternScale(preset, Number(cl.patternScale) || 1);
+    const intensity = normalizeCreativeLookIntensity(cl.intensity);
+    const liftCrush = normalizeCreativeLookLiftCrush(cl.liftCrush);
+    const masterHue = normalizeCreativeLookMasterHue(cl.masterHue);
+    const hueRad = creativeLookMasterHueRadians(masterHue);
+    const brightnessUi = Number(asset.objectState?.material?.brightness);
+    const brightness = Number.isFinite(brightnessUi) ? brightnessUi : DEFAULT_MATERIAL_BRIGHTNESS;
+    const brightnessEffective = materialBrightnessEffectiveScale(brightness);
+    const litEnvMul = materialBrightnessLitEnvMultiplier(brightness);
+    const metalness = Number(asset.objectState?.material?.metalness);
+    const roughness = Number(asset.objectState?.material?.roughness);
+
+    if (typeof this.getCreativeLookKeyLightDir === 'function') {
+      const dir = this.getCreativeLookKeyLightDir(this._creativeToonKeyDirScratch);
+      root.traverse((child) => {
+        if (!child.isMesh) return;
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        for (const m of mats) {
+          const tag = m?.userData?.orbyCreativeLook;
+          if (
+            (tag === 'toon' || tag === 'ps2-crush' || tag === 'psx' || tag === 'vga-dos-3d'
+              || tag === 'watercolour' || tag === 'gouache' || tag === 'sketch' || tag === 'sketch-colour')
+            && m.uniforms?.uLightDir
+          ) {
+            m.uniforms.uLightDir.value.copy(dir);
+          }
+        }
+      });
+    }
+
+    root.traverse((child) => {
+      if (!child.isMesh) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      for (const m of mats) {
+        const tag = m?.userData?.orbyCreativeLook;
+        if (!tag) continue;
+        if (creativeLookPresetUsesShaderAnimation(tag) && m.uniforms?.uTime) {
+          m.uniforms.uTime.value = effectiveTime;
+        }
+        if (m.uniforms?.uPatternScale) m.uniforms.uPatternScale.value = patternScale;
+        if (m.uniforms?.uMasterHue) m.uniforms.uMasterHue.value = hueRad;
+        if (m.uniforms?.uLiftCrush) m.uniforms.uLiftCrush.value = liftCrush;
+        if (m.uniforms?.uBrightness) m.uniforms.uBrightness.value = brightnessEffective;
+        if (m.uniforms?.uIntensity && tag !== 'watercolour' && tag !== 'gouache' && tag !== 'sketch' && tag !== 'sketch-colour') {
+          m.uniforms.uIntensity.value = intensity;
+        }
+        if (m.uniforms?.uMetalness && Number.isFinite(metalness)) m.uniforms.uMetalness.value = metalness;
+        if (m.uniforms?.uRoughness && Number.isFinite(roughness)) m.uniforms.uRoughness.value = roughness;
+        if (tag === 'chrome' && m.isMeshPhysicalMaterial) {
+          m.roughness = creativeChromeRoughness(patternScale, hdriBlur);
+        }
+        if (tag === 'glass' && m.isMeshPhysicalMaterial) {
+          syncCreativeLookGlassPhysical(m, {
+            patternScale,
+            hdriBlurriness: hdriBlur,
+            mesh: child,
+            intensity: this._lastEnvIntensity ?? 1,
+            litEnvMul,
+            liftCrush,
+            envTexture: this._lastEnvTexture ?? null,
+          });
+          applyCreativeLookPhysicalTransmissionTuning(m, {
+            ...creativeLookTransmissionTuningFromState(cl),
+            baseRoughness: m.userData.orbyCreativeLookBaseRoughness,
+          });
+        }
+        if (tag === 'holo-glass' && m.isMeshPhysicalMaterial) {
+          syncCreativeLookHoloGlassUniforms(m, { time: effectiveTime, patternScale, intensity });
+          const params = creativeHoloGlassParamsForMesh(patternScale, hdriBlur, child, intensity);
+          m.thickness = params.thickness;
+          m.roughness = params.roughness;
+          m.iridescence = params.iridescence;
+          m.iridescenceThicknessRange = params.iridescenceThicknessRange;
+          applyCreativeLookPhysicalTransmissionTuning(m, {
+            ...creativeLookTransmissionTuningFromState(cl),
+            baseRoughness: params.roughness,
+          });
+        }
+        if (tag === 'crystal-gem' && m.isMeshPhysicalMaterial) {
+          syncCreativeLookCrystalGemUniforms(m, { time: effectiveTime, patternScale, intensity });
+          const params = creativeCrystalGemParamsForMesh(patternScale, hdriBlur, child, intensity);
+          m.thickness = params.thickness;
+          m.roughness = params.roughness;
+          m.attenuationDistance = params.attenuationDistance;
+          applyCreativeLookPhysicalTransmissionTuning(m, {
+            ...creativeLookTransmissionTuningFromState(cl),
+            baseRoughness: params.roughness,
+          });
+        }
+        if (m.isMeshPhysicalMaterial) {
+          applyCreativeLookPhysicalMasterHue(m, masterHue, brightnessEffective);
+        }
+      }
+    });
+
+    if (isDustFieldCreativeLookPreset(preset)) {
+      const points = root.userData?.orbyDustFieldPoints;
+      const anchors = root.userData?.orbyDustFieldAnchors;
+      const dustMat = points?.material;
+      if (dustMat?.uniforms?.uTime) dustMat.uniforms.uTime.value = effectiveTime;
+      if (points?.geometry && anchors) {
+        updateDustFieldParticlePositions(anchors, root, points.geometry);
+      }
+    }
+  }
+
   updateCreativeLookTime(elapsedSeconds) {
     const cl = this.stateStore?.getState()?.creativeLook ?? {};
     this._syncCreativeLookFieldsFromStore(cl);
@@ -4979,10 +5489,12 @@ export class MaterialController {
   }
 
   updateMaterials() {
+    if (this._assetMaterialLock > 0) return;
     // Object → Maps preview swaps transient MeshBasicMaterials on the mesh; shaded clones
     // are parked in MapInspectPreview._savedMaterials. Patching child.material here would
     // miss the parked materials and leave a stale restore (brightness pop after unpin).
     if (this.mapInspectPreview?.activeSlot) return;
+    this._exclusiveMaterials(this.currentModel);
 
     // Material controls apply in Shaded / Wireframe / Textures / Clay (wireframe shares shaded albedo)
     if (this.currentModel && (this.currentShading === 'shaded' || this.currentShading === 'wireframe' || this.currentShading === 'textures' || this.currentShading === 'clay')) {
@@ -5559,8 +6071,18 @@ export class MaterialController {
     return material;
   }
 
+  /** Wireframe display mode draws every asset. Other modes keep the selected mesh only. */
+  _wireframeOverlayRoots() {
+    if (this.currentShading === 'wireframe') {
+      const roots = this.getDisplayModeRoots?.();
+      if (Array.isArray(roots) && roots.length > 0) return roots;
+    }
+    return this.currentModel ? [this.currentModel] : [];
+  }
+
   updateWireframeOverlay() {
     if (!this.currentModel) return;
+    const overlayRoots = this._wireframeOverlayRoots();
 
     // Always clear existing overlay first to prevent duplicates
     this.clearWireframeOverlay();
@@ -5613,7 +6135,8 @@ export class MaterialController {
       // Parent each wire mesh to the same Object3D as the source mesh so local transforms
       // (position/rotation/scale) stay correct — a single overlay group under the model root
       // would misapply nested locals and produce huge offsets / wrong scale (common on GLB).
-      this.currentModel.traverse((child) => {
+      for (const root of overlayRoots) {
+      root.traverse((child) => {
         if (
           !child.isMesh
           || !child.geometry
@@ -5695,10 +6218,11 @@ export class MaterialController {
         if (hostParent) {
           hostParent.add(wireMesh);
         } else {
-          this.currentModel.add(wireMesh);
+          root.add(wireMesh);
         }
         this.wireframeOverlayMeshes.push(wireMesh);
       });
+      }
       this._syncWireframeOverlayScreenSpace();
     }
   }
@@ -5766,6 +6290,7 @@ export class MaterialController {
   }
 
   setFresnelSettings(settings) {
+    if (this._assetMaterialLock > 0) return;
     this.fresnelSettings = {
       ...this.fresnelSettings,
       ...settings,
@@ -5784,20 +6309,26 @@ export class MaterialController {
    * @param {{ silentEligible?: boolean }} [options]
    */
   reapplySvgExtrudeSurfaceShaders(options = {}) {
+    if (this._assetMaterialLock > 0) return;
     if (!this.currentModel) return;
+    this._exclusiveMaterials(this.currentModel);
     const eligible = this._modelSurfaceEligible(this.currentModel);
-    if (options.silentEligible) {
-      this.stateStore?._writePath('material.surfaceEligible', eligible);
-    } else {
-      this.stateStore?.set('material.surfaceEligible', eligible);
+    if (!this._shadingPeerApply) {
+      if (options.silentEligible) {
+        this.stateStore?._writePath('material.surfaceEligible', eligible);
+      } else {
+        this.stateStore?.set('material.surfaceEligible', eligible);
+      }
     }
     // SVG surface wraps Fresnel in onBeforeCompile — patch Fresnel before re-applying surface.
     if (this.fresnelSettings?.enabled) {
       this.applyFresnelToModel(this.currentModel);
     }
-    const present = typeof this.onObjectSurfacePresentationRefresh === 'function'
-      ? this.onObjectSurfacePresentationRefresh
-      : undefined;
+    const present = this._shadingPeerApply
+      ? undefined
+      : typeof this.onObjectSurfacePresentationRefresh === 'function'
+        ? this.onObjectSurfacePresentationRefresh
+        : undefined;
     const onPresentationRefresh = present
       ? () => {
           if (this.currentModel) {
@@ -5888,7 +6419,9 @@ export class MaterialController {
   }
 
   applyFresnelToModel(root) {
+    if (this._assetMaterialLock > 0) return;
     if (!root) return;
+    this._exclusiveMaterials(root);
     root.traverse((child) => {
       if (!child.isMesh || !child.material) return;
       const materials = Array.isArray(child.material)
@@ -6218,9 +6751,31 @@ export class MaterialController {
     material.needsUpdate = true;
   }
 
+  /**
+   * Studio HDRI is one texture for the whole scene. Assign it to every asset mesh
+   * without rewriting another asset's brightness or roughness.
+   * @param {import('three').Texture | null} envTexture
+   */
+  _assignSharedEnvMap(envTexture) {
+    if (!envTexture || !this.modelRoot) return;
+    this.modelRoot.traverse((child) => {
+      if (!child.isMesh || !child.material) return;
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      for (const material of materials) {
+        if (!material?.isMeshStandardMaterial && !material?.isMeshPhysicalMaterial) continue;
+        if (material.envMap === envTexture) continue;
+        material.envMap = envTexture;
+        material.needsUpdate = true;
+      }
+    });
+  }
+
   updateMaterialsEnvironment(envTexture, intensity, hdriBlurriness = 0) {
+    if (this._assetMaterialLock > 0) return;
     if (!this.currentModel) return;
     this._lastEnvTexture = envTexture ?? null;
+    this._assignSharedEnvMap(envTexture);
+    this._exclusiveMaterials(this.currentModel);
     this._lastEnvIntensity = intensity;
     this._lastHdriBlurriness = hdriBlurriness;
 

@@ -256,6 +256,123 @@ export class AnimationController {
     }
   }
 
+  /**
+   * Detach the live mixer without stopping clips so a parked asset keeps its
+   * pause / time / clip while another object is selected.
+   * @returns {object | null}
+   */
+  detachSession() {
+    if (!this.mixer) return null;
+    this.mixer.removeEventListener('finished', this._handleClipFinished);
+    const session = {
+      mixer: this.mixer,
+      currentAction: this.currentAction,
+      currentClipIndex: this.currentClipIndex,
+      animations: this.animations,
+      playbackSpeed: this.playbackSpeed,
+      playbackReverse: this.playbackReverse,
+      clipPlaybackMode: this.clipPlaybackMode,
+    };
+    this.mixer = null;
+    this.currentAction = null;
+    this.animations = [];
+    this.currentClipIndex = 0;
+    this._exportAction = null;
+    this._exportDriveActive = false;
+    this._exportPoseHoldActive = false;
+    this._exportDriveSnapshot = null;
+    return session;
+  }
+
+  /**
+   * Resume a session previously returned by {@link detachSession}.
+   * @param {object | null | undefined} session
+   * @returns {boolean}
+   */
+  attachSession(session) {
+    if (!session?.mixer) return false;
+    if (this.mixer) {
+      this.mixer.removeEventListener('finished', this._handleClipFinished);
+      this.mixer.stopAllAction();
+    }
+    this.mixer = session.mixer;
+    this.currentAction = session.currentAction ?? null;
+    this.currentClipIndex = session.currentClipIndex ?? 0;
+    this.animations = session.animations ?? [];
+    this.playbackSpeed = session.playbackSpeed ?? 1;
+    this.playbackReverse = !!session.playbackReverse;
+    this.clipPlaybackMode = session.clipPlaybackMode === 'cycle' ? 'cycle' : 'loop';
+    this._exportAction = null;
+    this._exportDriveActive = false;
+    this._exportPoseHoldActive = false;
+    this._exportDriveSnapshot = null;
+    this.mixer.addEventListener('finished', this._handleClipFinished);
+    this._emitClipsChanged();
+    this._applyTimeScale();
+    this._applyClipLoopSettings();
+    const clip = this.animations[this.currentClipIndex];
+    if (this.currentAction && clip) {
+      this.onPlayStateChanged(!this.currentAction.paused);
+      this.onClipIndexChanged(this.currentClipIndex);
+      this.onTimeUpdate(this.currentAction.time, clip.duration);
+      const fileName = this.getFileName();
+      this.onTopBarUpdate(
+        `${fileName} — ${clip.name || 'Clip'} (${formatTime(clip.duration)})`,
+      );
+    } else {
+      this.onPlayStateChanged(false);
+    }
+    return true;
+  }
+
+  /** @param {object | null | undefined} session */
+  static disposeSession(session) {
+    if (!session?.mixer) return;
+    // Listener was removed in detachSession; only tear down actions here.
+    session.mixer.stopAllAction();
+    session.mixer = null;
+    session.currentAction = null;
+    session.animations = [];
+  }
+
+  /**
+   * Advance mixers for deselected assets (playing clips keep moving; paused stay put).
+   * @param {object[] | null | undefined} assets
+   * @param {number | null | undefined} activeId
+   * @param {number} delta
+   */
+  static updateParkedSessions(assets, activeId, delta) {
+    if (!assets?.length || !(delta > 0)) return;
+    for (const asset of assets) {
+      if (asset.id === activeId) continue;
+      const mixer = asset.animationSession?.mixer;
+      if (mixer) mixer.update(delta);
+    }
+  }
+
+  /**
+   * @param {object[] | null | undefined} assets
+   * @param {number | null | undefined} activeId
+   */
+  static hasParkedPlayingSession(assets, activeId) {
+    if (!assets?.length) return false;
+    for (const asset of assets) {
+      if (asset.id === activeId) continue;
+      const action = asset.animationSession?.currentAction;
+      if (action && !action.paused && action.isRunning?.()) return true;
+    }
+    return false;
+  }
+
+  _emitClipsChanged() {
+    const formattedClips = this.animations.map((clip, index) => ({
+      name: clip.name || `Clip ${index + 1}`,
+      duration: formatTime(clip.duration),
+      seconds: clip.duration,
+    }));
+    this.onClipsChanged(formattedClips);
+  }
+
   setModel(model, animations = []) {
     if (this.mixer) {
       this.mixer.removeEventListener('finished', this._handleClipFinished);
@@ -276,12 +393,7 @@ export class AnimationController {
     this.mixer.addEventListener('finished', this._handleClipFinished);
     this.animations = normalizeAnimationClips(animations);
     this.currentClipIndex = 0;
-    const formattedClips = animations.map((clip, index) => ({
-      name: clip.name || `Clip ${index + 1}`,
-      duration: formatTime(clip.duration),
-      seconds: clip.duration,
-    }));
-    this.onClipsChanged(formattedClips);
+    this._emitClipsChanged();
     this.playClip(0);
   }
 

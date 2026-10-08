@@ -8,6 +8,8 @@ import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 const DRAG_THRESHOLD_PX = 6;
 const OPEN_DURATION = 0.18;
 const CLOSE_DURATION = 0.12;
+/** Temporary: void right-click menu stays implemented, but does not open while the UX is reworked. */
+const VOID_CONTEXT_MENU_ENABLED = false;
 
 function prefersReducedMotion() {
   return (
@@ -175,11 +177,26 @@ export class ViewportContextMenu {
     if (event.altKey || event.shiftKey) return;
     if (!press || press.dragged) return;
 
+    // Object menu only when a mesh is selected (transform widgets on) — not while
+    // casually right-clicking / panning with nothing picked.
+    if (!this._hasObjectSelection()) return;
+
     const hitObject = this._hitsCurrentModel(press.x, press.y);
+    if (!hitObject && !VOID_CONTEXT_MENU_ENABLED) return;
     const items = hitObject ? this._objectItems() : this._voidItems();
     if (!items.length) return;
 
     this._show(press.x, press.y, items);
+  }
+
+  /** True when the user has picked a mesh (move / rotate / scale widget active). */
+  _hasObjectSelection() {
+    const state = this.stateStore?.getState?.() ?? {};
+    return !!(
+      state.moveWidgetEnabled ||
+      state.rotateWidgetEnabled ||
+      state.scaleWidgetEnabled
+    );
   }
 
   _onPointerDownOutside(event) {
@@ -206,9 +223,8 @@ export class ViewportContextMenu {
   _hitsCurrentModel(clientX, clientY) {
     const scene = window.orby?.scene;
     const camera = scene?.camera;
-    const model = scene?.currentModel;
     const canvas = this._canvas();
-    if (!camera || !model || !canvas) return false;
+    if (!camera || !canvas) return false;
 
     const rect = canvas.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return false;
@@ -216,7 +232,21 @@ export class ViewportContextMenu {
     this._ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
     this._ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
     this._raycaster.setFromCamera(this._ndc, camera);
-    return this._raycaster.intersectObject(model, true).length > 0;
+
+    const roots = scene.sceneObjects?.getPickRoots?.() ?? [];
+    const targets = roots.length
+      ? roots
+      : (scene.currentModel ? [scene.currentModel] : []);
+    if (!targets.length) return false;
+
+    const hits = this._raycaster.intersectObjects(targets, true);
+    if (!hits.length) return false;
+
+    const assetId = scene.sceneObjects?.findAssetIdFromObject?.(hits[0].object);
+    if (assetId != null && assetId !== scene.sceneObjects.activeId) {
+      scene.selectSceneAsset?.(assetId);
+    }
+    return true;
   }
 
   _objectItems() {
@@ -227,6 +257,7 @@ export class ViewportContextMenu {
       { id: 'focus', label: 'Focus', action: () => this._focusObject() },
       { id: 'reset-orientation', label: 'Reset orientation', action: () => this._resetOrientation() },
       { id: 'reset-transform', label: 'Reset transform', action: () => this._resetTransform() },
+      { id: 'duplicate-object', label: 'Duplicate Object', action: () => this._duplicateObject() },
       {
         id: 'hide-object',
         label: hidden ? 'Show object' : 'Hide object',
@@ -240,11 +271,18 @@ export class ViewportContextMenu {
         action: () => this._toggleAutoRotate(),
       },
       {
-        id: 'quick-export-png',
-        label: 'Quick export PNG',
-        action: () => this._quickExportPng(),
+        id: 'quick-export-png-1x',
+        label: 'Quick export 1×',
+        action: () => this._quickExportPng(1),
+      },
+      {
+        id: 'quick-export-png-2x',
+        label: 'Quick export 2×',
+        action: () => this._quickExportPng(2),
       },
       { id: 'import-object', label: 'Import new object', action: () => this._importNewObject() },
+      { id: 'delete-sep', separator: true },
+      { id: 'delete-object', label: 'Delete Object', action: () => this._deleteObject() },
     ];
   }
 
@@ -297,6 +335,14 @@ export class ViewportContextMenu {
 
     this.list.replaceChildren();
     for (const item of items) {
+      if (item.separator) {
+        const sep = document.createElement('li');
+        sep.className = 'orby-context-menu__sep';
+        sep.setAttribute('role', 'separator');
+        this.list.appendChild(sep);
+        continue;
+      }
+
       const li = document.createElement('li');
       li.className = 'orby-context-menu__item';
       li.setAttribute('role', 'none');
@@ -499,6 +545,14 @@ export class ViewportContextMenu {
     if (this.ui.inputs?.groundSolid) this.ui.inputs.groundSolid.checked = next;
   }
 
+  _duplicateObject() {
+    window.orby?.scene?.sceneObjects?.duplicateActive?.();
+  }
+
+  _deleteObject() {
+    window.orby?.scene?.sceneObjects?.deleteActive?.();
+  }
+
   _importNewObject() {
     const input =
       this.ui.buttons?.fileInput ??
@@ -517,12 +571,13 @@ export class ViewportContextMenu {
     });
   }
 
-  /** 1× transparent PNG, crop-to-asset — ignores Export panel toggles. */
-  _quickExportPng() {
+  /** Transparent PNG, crop-to-asset — ignores Export panel toggles. @param {1|2} size */
+  _quickExportPng(size = 1) {
+    const scale = size === 2 ? 2 : 1;
     this.eventBus.emit('export:png', {
       transparent: true,
       transparentFraming: 'crop',
-      size: 1,
+      size: scale,
     });
   }
 }

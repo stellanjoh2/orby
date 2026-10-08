@@ -4,10 +4,33 @@
  */
 
 import { dofNeedsLiveUpdate } from '../constants.js';
+import { AnimationController } from '../render/AnimationController.js';
 
 /** @param {ReturnType<import('./toggleScaleAnimation.js').createToggleScaleContext>} ctx */
 export function toggleScaleAnimActive(ctx) {
   return ctx?.phase === 'in' || ctx?.phase === 'out';
+}
+
+/**
+ * True while OrbitControls still has rotational / pan damping remainder.
+ * Does **not** look at pointer state — use this when deciding whether coast has finished.
+ *
+ * Note: stock three OrbitControls keeps `sphericalDelta` / `panOffset` / `state` in a
+ * closure (not on the instance). When those fields are missing this returns false and
+ * callers must use `controls.update()`'s boolean return for coast detection instead.
+ *
+ * @param {import('three/examples/jsm/controls/OrbitControls.js').OrbitControls | null | undefined} controls
+ */
+export function orbitControlsHaveDampingDeltas(controls) {
+  if (!controls) return false;
+  const sd = controls.sphericalDelta;
+  if (sd) {
+    if (Math.abs(sd.theta) > 1e-6 || Math.abs(sd.phi) > 1e-6 || Math.abs(sd.radius) > 1e-6) {
+      return true;
+    }
+  }
+  const po = controls.panOffset;
+  return !!(po && po.lengthSq() > 1e-12);
 }
 
 /**
@@ -16,17 +39,9 @@ export function toggleScaleAnimActive(ctx) {
  */
 export function orbitControlsNeedFrame(controls) {
   if (!controls?.enabled) return false;
-  // three@0.167 OrbitControls: STATE.NONE === -1
+  // three@0.167 OrbitControls: STATE.NONE === -1 (only if exposed on the instance)
   if (typeof controls.state === 'number' && controls.state !== -1) return true;
-  const sd = controls.sphericalDelta;
-  if (sd) {
-    if (Math.abs(sd.theta) > 1e-6 || Math.abs(sd.phi) > 1e-6 || Math.abs(sd.radius) > 1e-6) {
-      return true;
-    }
-  }
-  const po = controls.panOffset;
-  if (po && po.lengthSq() > 1e-12) return true;
-  return false;
+  return orbitControlsHaveDampingDeltas(controls);
 }
 
 /**
@@ -40,6 +55,14 @@ export function needsContinuousFrames(scene, ctx) {
 
   const action = scene.animationController?.currentAction;
   if (action && !action.paused && action.isRunning?.()) return true;
+  if (
+    AnimationController.hasParkedPlayingSession(
+      scene.sceneObjects?.assets,
+      scene.sceneObjects?.activeId,
+    )
+  ) {
+    return true;
+  }
 
   if (scene.backgroundController?.hdriShadowReceiver?.shouldTrackModelEachFrame?.()) {
     return true;
@@ -84,6 +107,17 @@ export function needsContinuousFrames(scene, ctx) {
   return false;
 }
 
+/** Focused shader, or a shader still running on another asset. */
+export function sceneHasLiveCreativeLook(scene) {
+  if (scene.materialController?.creativeLookSettings?.enabled) return true;
+  const assets = scene.sceneObjects?.assets;
+  if (!assets) return false;
+  for (const asset of assets) {
+    if (asset.objectState?.creativeLook?.enabled) return true;
+  }
+  return false;
+}
+
 /**
  * Snapshot of feature flags for one frame (avoids repeated stateStore reads per step).
  * @param {import('../SceneManager.js').SceneManager} scene
@@ -98,7 +132,7 @@ export function buildRenderLoopFrameContext(scene) {
       !scene.unlitMode,
     grainActive:
       !!state.grain?.enabled && !!scene.postPipeline?.grainTintPass?.enabled,
-    creativeLookEnabled: !!scene.materialController?.creativeLookSettings?.enabled,
+    creativeLookEnabled: sceneHasLiveCreativeLook(scene),
     colorCheckerActive:
       !!scene.colorCheckerRoot || toggleScaleAnimActive(scene._ccToggleCtx),
     baseAppearActive:

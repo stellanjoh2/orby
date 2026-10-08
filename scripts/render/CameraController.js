@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import { expandBox3FromArmature } from '../import/bvhArmatureBounds.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/controls/OrbitControls.js';
-import { orbitControlsNeedFrame } from '../scene/renderLoopIdle.js';
+import {
+  orbitControlsHaveDampingDeltas,
+  orbitControlsNeedFrame,
+} from '../scene/renderLoopIdle.js';
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 import { setCameraOrbitFromAngles } from '../camera/isometricView.js';
 import {
@@ -368,7 +371,11 @@ export class CameraController {
       if (this._wheelZoomInteractionActive || this.isWheelZoomSettling()) {
         this._forceCompleteWheelZoom();
       }
+      // New gesture owns the camera. Residual sphericalDelta may still coast via
+      // _hasOrbitControlDeltas, but settle-mode must not stick while state ≠ NONE
+      // (orbitControlsNeedFrame stays true for the whole press).
       this._orbitInertiaSnapValid = false;
+      this._orbitDampingSettling = false;
       this._orbitPointerPending = true;
       // TransformControls pointerdown runs after OrbitControls on the same canvas.
       // Defer so a gizmo grab is not treated as orbit (avoids one-frame camera drift).
@@ -471,18 +478,7 @@ export class CameraController {
   }
 
   _hasOrbitControlDeltas() {
-    const sd = this.controls?.sphericalDelta;
-    if (sd) {
-      if (
-        Math.abs(sd.theta) > 1e-6
-        || Math.abs(sd.phi) > 1e-6
-        || Math.abs(sd.radius) > 1e-6
-      ) {
-        return true;
-      }
-    }
-    const po = this.controls?.panOffset;
-    return !!(po && po.lengthSq() > 1e-12);
+    return orbitControlsHaveDampingDeltas(this.controls);
   }
 
   _snapshotOrbitInertiaFromControls() {
@@ -523,13 +519,15 @@ export class CameraController {
     return true;
   }
 
-  /** Sync on pointer end — restore damped remainder if OrbitControls already cleared it. */
+  /**
+   * Start post-release coast. Stock OrbitControls keeps sphericalDelta private, so we
+   * cannot read the remainder — always enter settle after a real drag and keep calling
+   * update() until it reports no motion (see update() lock logic).
+   */
   _beginOrbitDampingSettleFromSnapshot() {
-    if (!orbitControlsNeedFrame(this.controls)) {
+    if (!this._hasOrbitControlDeltas()) {
       this._restoreOrbitInertiaFromSnapshot();
     }
-    if (!orbitControlsNeedFrame(this.controls)) return;
-
     this._orbitDampingSettling = true;
     this._unlockOrbitSolve();
     this._wakeRender();
@@ -562,11 +560,15 @@ export class CameraController {
     this._orbitDampingSettling = false;
   }
 
-  /** Reconcile OrbitControls with the current camera pose after manual wheel dolly. */
-  _syncOrbitControlsFromCamera() {
+  /**
+   * Book-keep after manual wheel dolly without OrbitControls.update().
+   * A full solve round-trips spherical → makeSafe → lookAt and nudges a few pixels
+   * right as zoom damping ends; controls re-read camera.position on the next real solve.
+   */
+  _commitManualOrbitPoseFromCamera({ applyTilt = false } = {}) {
     this._zeroOrbitControlDeltas();
-    this._updateOrbitControls();
-    if (!this._isometricModeActive) {
+    this._orbitInertiaSnapValid = false;
+    if (applyTilt && !this._isometricModeActive) {
       this._applyTilt();
     }
   }
@@ -594,7 +596,9 @@ export class CameraController {
 
     this._wheelZoomPendingScale = 1;
     this._wheelZoomInteractionActive = false;
-    this._syncOrbitControlsFromCamera();
+    // Position may have jumped — re-assert lookAt+tilt, but do not OrbitControls.update().
+    this._commitManualOrbitPoseFromCamera({ applyTilt: true });
+    this._lockOrbitSolve();
   }
 
   _unlockOrbitSolve() {
@@ -610,7 +614,7 @@ export class CameraController {
     if (
       this._orbitDampingSettling
       && this._orbitInertiaSnapValid
-      && !orbitControlsNeedFrame(this.controls)
+      && !this._hasOrbitControlDeltas()
     ) {
       this._restoreOrbitInertiaFromSnapshot();
     }
@@ -1470,30 +1474,34 @@ export class CameraController {
     // Only update controls if auto-orbit is off (to prevent interference)
     // When auto-orbit is on, updateAutoOrbit sets pose then _applyTilt() there.
     if (this.autoOrbitMode === 'off') {
+      // Commit finished wheel zoom before any orbit solve. Otherwise an unlocked
+      // post-zoom frame re-runs lookAt/makeSafe and rotates a few pixels at rest.
+      if (this._wheelZoomInteractionActive && !this.isWheelZoomSettling()) {
+        this._finalizeWheelZoomInteraction();
+      }
+
       const zoomSettling = this.isWheelZoomSettling();
       if (zoomSettling) {
         this._unlockOrbitSolve();
       }
 
       // Keep rotational coast under eased zoom; idle zoom still skips orbit solve.
+      // Delta check only — pointer state must not keep "coasting" after inertia is spent.
       const coasting =
-        this._orbitDampingSettling || orbitControlsNeedFrame(this.controls);
+        this._orbitDampingSettling || this._hasOrbitControlDeltas();
       const runOrbitSolve = zoomSettling
         ? coasting
         : this._shouldRunOrbitSolve();
       if (!runOrbitSolve && !zoomSettling) {
-        if (this._wheelZoomInteractionActive) {
-          this._finalizeWheelZoomInteraction();
-        }
         return;
       }
 
-      let changed = false;
+      let orbitChanged = false;
       if (runOrbitSolve) {
         // Always solve on rAF while dragging. OrbitControls also calls update() from
         // pointermove (stock Three), but skipping rAF leaves sphericalDelta frozen between
         // pointer events — visible as micro-freezes / hitching while orbiting with damping.
-        changed = this._runOrbitSolveAndTilt();
+        orbitChanged = this._runOrbitSolveAndTilt();
       }
 
       if (zoomSettling) {
@@ -1501,16 +1509,22 @@ export class CameraController {
         if (zoomChanged) {
           this._applyTilt();
         }
-        changed = changed || zoomChanged;
+        // Snap + commit in the same frame the ease finishes so we never enter an
+        // unlocked idle frame that re-solves the orbit.
+        if (!this.isWheelZoomSettling() && this._wheelZoomInteractionActive) {
+          this._finalizeWheelZoomInteraction();
+        }
       }
 
-      if (this._orbitDampingSettling && !orbitControlsNeedFrame(this.controls)) {
+      // sphericalDelta is private on stock OrbitControls — coast progress is update()'s
+      // return value, not _hasOrbitControlDeltas().
+      if (this._orbitDampingSettling && !orbitChanged) {
         this._orbitDampingSettling = false;
       }
 
       if (this._getIsGizmoDragging()) {
         // Mesh gizmo drag — keep the settled orbit pose frozen.
-      } else if (zoomSettling || this._wheelZoomInteractionActive) {
+      } else if (this.isWheelZoomSettling() || this._wheelZoomInteractionActive) {
         this._orbitSolveLocked = false;
       } else if (this._orbitPointerPending && !this._orbitInteractionActive) {
         // Bare click — stay locked despite OrbitControls.state ≠ NONE.
@@ -1520,10 +1534,12 @@ export class CameraController {
         !this.isFocusAnimating() &&
         !this.hasViewportInteraction()
       ) {
-        // Lock only when per-frame motion and damping deltas have both settled.
+        // Lock only when update() reports rest. Readable deltas are unreliable (private
+        // on stock OrbitControls); zoom commit avoids running a solve so orbitChanged
+        // stays false and we lock without a lookAt nudge.
         const dampingSettled =
           !this._orbitDampingSettling && !this._hasOrbitControlDeltas();
-        if (!changed && dampingSettled) {
+        if (!orbitChanged && dampingSettled) {
           this._clearOrbitControlDeltas();
           this._orbitSolveLocked = true;
         } else {
@@ -1531,10 +1547,6 @@ export class CameraController {
         }
       } else {
         this._orbitSolveLocked = false;
-      }
-
-      if (!this.isWheelZoomSettling() && this._wheelZoomInteractionActive) {
-        this._finalizeWheelZoomInteraction();
       }
     }
   }
@@ -1860,13 +1872,13 @@ export class CameraController {
     this._wheelZoomInteractionActive = false;
     this._wheelZoomPendingScale = 1;
     const coasting =
-      this._orbitDampingSettling || orbitControlsNeedFrame(this.controls);
+      this._orbitDampingSettling || this._hasOrbitControlDeltas();
+    // Leave orientation exactly as the last zoom frame left it — no lookAt /
+    // OrbitControls.update() resync (that was the few-px rotation at rest).
+    this._commitManualOrbitPoseFromCamera({ applyTilt: false });
     if (coasting) {
-      // Radius is already on the camera; next orbit solve re-reads position without
-      // clearing remaining rotational inertia.
       this._unlockOrbitSolve();
     } else {
-      this._syncOrbitControlsFromCamera();
       this._lockOrbitSolve();
     }
     queueMicrotask(() => {
@@ -1893,6 +1905,9 @@ export class CameraController {
     const alpha = Math.min(WHEEL_ZOOM_DAMPING_MAX, damping * WHEEL_ZOOM_DAMPING_MULT);
     const step = 1 + (pending - 1) * alpha;
     this._wheelZoomPendingScale = 1 + (pending - 1) * (1 - alpha);
+    if (Math.abs(this._wheelZoomPendingScale - 1) <= WHEEL_ZOOM_PENDING_EPS) {
+      this._wheelZoomPendingScale = 1;
+    }
 
     const target = this.controls?.target;
     if (!target) return false;

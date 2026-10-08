@@ -110,10 +110,12 @@ export function sampleImageAlphaNormalized(image, gridSize = DEFAULT_SAMPLE_GRID
 export function resolveBlendMapAlphaProfile(texture) {
   if (!texture?.isTexture) return 'unknown';
   const cached = texture.userData?.orbyBlendMapAlphaProfile;
-  if (cached === 'cutout' || cached === 'soft' || cached === 'unknown') return cached;
+  // Never cache `unknown` — ImageBitmap / late-decoded maps often become readable next frame.
+  if (cached === 'cutout' || cached === 'soft') return cached;
 
   const samples = sampleImageAlphaNormalized(texture.image);
-  const profile = classifyBlendMapAlphaSamples(samples ?? []);
+  if (!samples?.length) return 'unknown';
+  const profile = classifyBlendMapAlphaSamples(samples);
   texture.userData.orbyBlendMapAlphaProfile = profile;
   return profile;
 }
@@ -156,6 +158,47 @@ export function applyBlendMapAlphaCutout(material, alphaTest = GLTF_BLEND_MAP_CU
   if ('alphaHash' in material) material.alphaHash = false;
   material.userData.orbyBlendMitigation = 'alphaTest';
   material.needsUpdate = true;
+}
+
+/**
+ * Undo {@link applyBlendMapAlphaCutout} using the glTF import baseline (soft maps after refine).
+ * @param {import('three').Material} material
+ * @param {{ transparent?: boolean, opacity?: number, depthWrite?: boolean, alphaTest?: number, alphaHash?: boolean } | null | undefined} baseline
+ */
+export function revertBlendMapAlphaCutout(material, baseline) {
+  if (!material || !baseline) return;
+  material.transparent = !!baseline.transparent;
+  material.opacity = Number.isFinite(baseline.opacity) ? baseline.opacity : 1;
+  material.depthWrite = baseline.depthWrite !== false;
+  material.alphaTest = Number.isFinite(baseline.alphaTest) ? baseline.alphaTest : 0;
+  if ('alphaHash' in material) material.alphaHash = !!baseline.alphaHash;
+  if (material.userData) delete material.userData.orbyBlendMitigation;
+  material.needsUpdate = true;
+}
+
+/**
+ * Near-opaque BLEND + map when alpha profile is not readable yet — provisional cutout so
+ * foliage cards punch through on the first frame (refine may revert if soft).
+ * @param {import('three').Material | null | undefined} material
+ * @param {'cutout' | 'soft' | 'unknown'} profile
+ * @param {{ fullOpacityThreshold?: number, alphaMode?: string | null }} [opts]
+ */
+export function shouldProvisionallyCutoutUnknownBlendMap(material, profile, opts = {}) {
+  if (profile !== 'unknown') return false;
+  if (!material) return false;
+  if (!material.isMeshStandardMaterial && !material.isMeshPhysicalMaterial) return false;
+  if (material.userData?.orbySkipBlendMitigation) return false;
+  if (material.userData?.orbyEmissiveBlend) return false;
+  if (!material.transparent) return false;
+  if (!material.map?.isTexture) return false;
+  if (material.alphaMap) return false;
+  if (material.alphaTest > 0) return false;
+  const threshold = opts.fullOpacityThreshold ?? 0.989;
+  const opacity = Number.isFinite(material.opacity) ? material.opacity : 1;
+  if (opacity < threshold) return false;
+  const alphaMode = opts.alphaMode ?? material.userData?.alphaMode ?? null;
+  if (alphaMode === 'MASK') return false;
+  return alphaMode === 'BLEND' || alphaMode == null;
 }
 
 /**

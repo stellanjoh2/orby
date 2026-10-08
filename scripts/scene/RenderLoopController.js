@@ -7,6 +7,7 @@
  */
 
 import { dofNeedsLiveUpdate, RENDER_LOOP_IDLE_GRACE_MS } from '../constants.js';
+import { AnimationController } from '../render/AnimationController.js';
 import {
   buildRenderLoopFrameContext,
   needsContinuousFrames,
@@ -67,6 +68,11 @@ export class RenderLoopController {
         when: (_ctx, s) => !s.animationController?.isExportSessionActive?.(),
         run: (delta, s) => {
           s.animationController.update(delta);
+          AnimationController.updateParkedSessions(
+            s.sceneObjects?.assets,
+            s.sceneObjects?.activeId,
+            delta,
+          );
         },
       },
       {
@@ -80,10 +86,12 @@ export class RenderLoopController {
       {
         id: 'mesh-auto-rotate',
         run: (delta, s) => {
-          if (s.autoRotateSpeed && s.currentModel) {
+          const target = s.getTransformTarget?.() || s.modelRoot;
+          if (s.autoRotateSpeed && target) {
             const sign = s.autoRotateDirection === 'reverse' ? -1 : 1;
-            s.modelRoot.rotation.y += delta * s.autoRotateSpeed * sign;
+            target.rotation.y += delta * s.autoRotateSpeed * sign;
           }
+          s.sceneObjects?.tick?.(delta);
         },
       },
       {
@@ -124,7 +132,13 @@ export class RenderLoopController {
         id: 'creative-look-time',
         when: (ctx) => ctx.creativeLookEnabled,
         run: (_delta, s) => {
-          s.materialController.updateCreativeLookTime(s.clock.elapsedTime);
+          const elapsed = s.clock.elapsedTime;
+          s.materialController.updateCreativeLookTime(elapsed);
+          s.materialController.tickParkedCreativeLooks(
+            s.sceneObjects?.assets,
+            s.sceneObjects?.activeId,
+            elapsed,
+          );
         },
       },
       {

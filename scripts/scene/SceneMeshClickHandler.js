@@ -6,6 +6,9 @@ export class SceneMeshClickHandler {
     this.canvas = deps.canvas;
     this.camera = deps.camera;
     this.getCurrentModel = deps.getCurrentModel;
+    this.getAssetPickRoots = deps.getAssetPickRoots ?? null;
+    this.findAssetIdFromObject = deps.findAssetIdFromObject ?? null;
+    this.onSelectAsset = deps.onSelectAsset ?? null;
     this.stateStore = deps.stateStore;
     this.eventBus = deps.eventBus;
     this.hitsLightConeAt = deps.hitsLightConeAt ?? null;
@@ -74,7 +77,18 @@ export class SceneMeshClickHandler {
             return;
           }
 
-          const intersects = this.raycaster.intersectObject(currentModel, true);
+          const pickRoots = this.getAssetPickRoots?.() ?? [];
+          if (pickRoots.length > 1) {
+            const picked = this.raycaster.intersectObjects(pickRoots, true);
+            const hit = picked.find((entry) => entry.object);
+            const assetId = hit ? this.findAssetIdFromObject?.(hit.object) : null;
+            if (assetId != null) this.onSelectAsset?.(assetId);
+          }
+
+          const focusedModel = this.getCurrentModel();
+          const intersects = focusedModel
+            ? this.raycaster.intersectObject(focusedModel, true)
+            : [];
 
           if (intersects.length > 0) {
             this.onDeselectLight?.();

@@ -17,6 +17,7 @@ import {
   compositeAoWithBackdrop,
   isN8aoCatcherMesh,
   isN8aoDepthIgnoredMesh,
+  meshNeedsN8aoBeautyDepthFill,
   resolveGlassCompositeWeight,
 } from './meshglN8aoBackdrop.js';
 
@@ -257,6 +258,8 @@ describe('N8AO + HDRI source invariants', () => {
     assert.match(pass, /_preserveBackdropPlate/);
     assert.match(pass, /beauty\?\.depthTexture/);
     assert.match(pass, /_enforceBeautyDepth/);
+    assert.match(pass, /withOnlyN8aoBeautyDepthFillMeshesVisible/);
+    assert.match(pass, /sceneHasN8aoBeautyDepthFillMesh/);
     assert.match(pass, /withCameraLayerMask/);
     assert.match(pass, /_restoreScreenSpaceOverlays/);
     assert.match(pass, /setGlassAoFloor/);
@@ -270,6 +273,30 @@ describe('N8AO + HDRI source invariants', () => {
     assert.doesNotMatch(pass, /withN8aoExcludedMeshesHidden/);
     assert.match(pass, /tBeauty\.value/);
     assert.match(pass, /_restoreBackdropPass\.render\(renderer, readBuffer, writeBuffer\)/);
+  });
+
+  it('beauty depth fill targets only depthWrite:false meshes (keeps alpha-test cutouts)', () => {
+    assert.equal(
+      meshNeedsN8aoBeautyDepthFill({
+        isMesh: true,
+        material: { depthWrite: false, alphaTest: 0 },
+      }),
+      true,
+    );
+    assert.equal(
+      meshNeedsN8aoBeautyDepthFill({
+        isMesh: true,
+        material: { depthWrite: true, alphaTest: 0.02, transparent: false },
+      }),
+      false,
+    );
+    assert.equal(
+      meshNeedsN8aoBeautyDepthFill({
+        isMesh: true,
+        material: { depthWrite: true, alphaTest: 0 },
+      }),
+      false,
+    );
   });
 
   it('invalidates N8AO view cache when AO settings change', () => {

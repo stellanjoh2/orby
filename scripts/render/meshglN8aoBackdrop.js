@@ -115,6 +115,61 @@ export function isN8aoDepthIgnoredMesh(object) {
 }
 
 /**
+ * Beauty depth enforce uses a solid MeshDepthMaterial override (no map alpha).
+ * Only re-draw meshes that skipped depth in the beauty seed (`depthWrite: false`).
+ * Alpha-tested cutouts already wrote punched depth — stomping them fills leaf/decal
+ * holes and composites as black against a null beauty background under HDRI+AO.
+ *
+ * @param {import('three').Object3D | null | undefined} mesh
+ * @returns {boolean}
+ */
+export function meshNeedsN8aoBeautyDepthFill(mesh) {
+  if (!mesh?.isMesh || !mesh.material) return false;
+  const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  for (const m of mats) {
+    if (m && m.depthWrite === false) return true;
+  }
+  return false;
+}
+
+/**
+ * @param {import('three').Scene} scene
+ * @returns {boolean}
+ */
+export function sceneHasN8aoBeautyDepthFillMesh(scene) {
+  let found = false;
+  scene?.traverse?.((child) => {
+    if (found || !child.isMesh || !child.visible) return;
+    if (meshNeedsN8aoBeautyDepthFill(child)) found = true;
+  });
+  return found;
+}
+
+/**
+ * Hide meshes that already wrote correct beauty depth (opaque + alpha-test cutouts).
+ *
+ * @param {import('three').Scene} scene
+ * @param {() => void} fn
+ */
+export function withOnlyN8aoBeautyDepthFillMeshesVisible(scene, fn) {
+  /** @type {import('three').Object3D[]} */
+  const hidden = [];
+  scene.traverse((child) => {
+    if (!child.isMesh || !child.visible) return;
+    if (meshNeedsN8aoBeautyDepthFill(child)) return;
+    hidden.push(child);
+    child.visible = false;
+  });
+  try {
+    fn();
+  } finally {
+    for (const child of hidden) {
+      child.visible = true;
+    }
+  }
+}
+
+/**
  * @param {import('three').Scene} scene
  * @param {() => void} fn
  */

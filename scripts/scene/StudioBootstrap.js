@@ -26,6 +26,7 @@ import {
 } from '../render/CreativeLookMaterials.js';
 import { AutoExposureController } from '../render/AutoExposureController.js';
 import { TransformController, clampMeshScaleComponents } from '../render/TransformController.js';
+import { SceneObjectsController } from './SceneObjectsController.js';
 import { MeshModifierController } from '../render/MeshModifierController.js';
 import { LensDirtController } from '../render/LensDirtController.js';
 import { BackgroundController } from '../render/BackgroundController.js';
@@ -271,6 +272,7 @@ export function teardownStudioGpu(scene) {
     scene.scene = null;
     scene.camera = null;
     scene.modelRoot = null;
+    scene.sceneObjects = null;
     scene.colorCheckerRoot = null;
     scene.clock = null;
     scene.diagnosticsController = null;
@@ -418,6 +420,7 @@ export async function bootstrapStudio(scene) {
 
     scene.modelRoot = new THREE.Group();
     scene.scene.add(scene.modelRoot);
+    scene.sceneObjects = new SceneObjectsController(scene);
     scene.colorCheckerRoot = createColorCheckerMeshGroup();
     scene.colorCheckerRoot.visible = false;
     scene.colorCheckerRoot.name = 'ColorCheckerRoot';
@@ -512,11 +515,12 @@ export async function bootstrapStudio(scene) {
     scene.transformControlsScale.addEventListener('dragging-changed', handleGizmoDraggingChanged);
     
     const handleGizmoChange = () => {
+      const scaleTarget = scene.getTransformTarget?.() || scene.modelRoot;
       if (
-        scene.transformControlsScale.object === scene.modelRoot
+        scene.transformControlsScale.object === scaleTarget
         && scene.transformControlsScale.dragging
       ) {
-        clampMeshScaleComponents(scene.modelRoot.scale);
+        clampMeshScaleComponents(scaleTarget.scale);
       }
       if (scene._gizmoDragActive) {
         scene._updateTransformSliderUI();
@@ -567,6 +571,12 @@ export async function bootstrapStudio(scene) {
           height: size.y,
           pixelRatio: scene.renderer?.getPixelRatio?.() ?? 1,
         };
+      },
+      getDisplayModeRoots: () => {
+        const session = scene.sceneObjects;
+        if (!session?.isMulti?.()) return null;
+        const meshes = session.assets.map((asset) => asset.mesh).filter(Boolean);
+        return meshes.length > 1 ? meshes : null;
       },
       getCreativeLookKeyLightDir: (out) => scene._getCreativeLookKeyLightDir(out),
       getCreativeLookToonLightScalars: () =>

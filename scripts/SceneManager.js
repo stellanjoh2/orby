@@ -338,6 +338,26 @@ export class SceneManager {
     }
   }
 
+  /** Selected asset pivot, or modelRoot while the scene still has one object. */
+  getTransformTarget() {
+    return this.sceneObjects?.getTransformTarget?.() || this.modelRoot;
+  }
+
+  /**
+   * @param {File} file
+   * @param {object} [options]
+   */
+  async loadAdditionalFile(file, options) {
+    return this.modelLifecycle.loadAdditionalFile(file, options);
+  }
+
+  /**
+   * @param {number} id
+   */
+  selectSceneAsset(id) {
+    return this.sceneObjects?.select?.(id) ?? false;
+  }
+
   setAntiAliasing(value) {
     if (!this.fxaaPass) return;
     const tier = resolveRenderQualityTier(this.stateStore.getState().renderQuality);
@@ -359,8 +379,9 @@ export class SceneManager {
     const objectHidden = !!this.stateStore?.getState()?.objectHidden;
     const show = enabled && !objectHidden;
     control.visible = show;
-    if (show && this.currentModel && this.modelRoot) {
-      control.attach(this.modelRoot);
+    const target = this.getTransformTarget();
+    if (show && this.currentModel && target) {
+      control.attach(target);
     } else if (!enabled) {
       control.detach();
     }
@@ -390,6 +411,9 @@ export class SceneManager {
       canvas: this.canvas,
       camera: this.camera,
       getCurrentModel: () => this.currentModel,
+      getAssetPickRoots: () => this.sceneObjects?.getPickRoots?.() ?? [],
+      findAssetIdFromObject: (object) => this.sceneObjects?.findAssetIdFromObject?.(object) ?? null,
+      onSelectAsset: (id) => this.selectSceneAsset(id),
       stateStore: this.stateStore,
       eventBus: this.eventBus,
       hitsLightConeAt: (clientX, clientY) =>
@@ -3003,12 +3027,13 @@ export class SceneManager {
       return false;
     }
 
+    const pivotRoot = this.getTransformTarget();
     if (this._pivotCenterDelta) {
-      undoCenterPivot(this.modelRoot, this.currentModel, this._pivotCenterDelta);
+      undoCenterPivot(pivotRoot, this.currentModel, this._pivotCenterDelta);
       this._pivotCenterDelta = null;
     }
 
-    const delta = captureAndApplyCenterPivot(this.modelRoot, this.currentModel);
+    const delta = captureAndApplyCenterPivot(pivotRoot, this.currentModel);
     if (!delta) {
       if (options.showToast !== false) {
         this.ui?.showToast?.('Could not center pivot');
@@ -3037,12 +3062,13 @@ export class SceneManager {
       return false;
     }
 
+    const pivotRoot = this.getTransformTarget();
     if (this._pivotCenterDelta) {
-      undoCenterPivot(this.modelRoot, this.currentModel, this._pivotCenterDelta);
+      undoCenterPivot(pivotRoot, this.currentModel, this._pivotCenterDelta);
       this._pivotCenterDelta = null;
     }
 
-    const delta = centerModelGeometryOnRoot(this.modelRoot, this.currentModel);
+    const delta = centerModelGeometryOnRoot(pivotRoot, this.currentModel);
     if (!delta) {
       if (options.showToast !== false) {
         this.ui?.showToast?.('Could not center import');
@@ -3063,12 +3089,13 @@ export class SceneManager {
   finalizeFontModelStudioPlacement(options = {}) {
     if (!isFontExtrudeRevealModel(this.currentModel)) return false;
 
+    const pivotRoot = this.getTransformTarget();
     if (this._pivotCenterDelta) {
-      undoCenterPivot(this.modelRoot, this.currentModel, this._pivotCenterDelta);
+      undoCenterPivot(pivotRoot, this.currentModel, this._pivotCenterDelta);
       this._pivotCenterDelta = null;
     }
 
-    const delta = centerFontModelGeometryOnRoot(this.modelRoot, this.currentModel);
+    const delta = centerFontModelGeometryOnRoot(pivotRoot, this.currentModel);
     if (!delta) return false;
 
     this._pivotCenterDelta = delta;
@@ -3588,7 +3615,8 @@ export class SceneManager {
    * Read current transform values from the live model root (gizmo / scene source of truth).
    */
   _readTransformValuesFromModelRoot() {
-    if (!this.modelRoot) {
+    const root = this.getTransformTarget();
+    if (!root) {
       return {
         scale: 1,
         scaleY: 1,
@@ -3602,15 +3630,15 @@ export class SceneManager {
       };
     }
     return {
-      scale: this.modelRoot.scale.x,
-      scaleY: this.modelRoot.scale.y,
-      scaleZ: this.modelRoot.scale.z,
-      xOffset: this.modelRoot.position.x,
-      yOffset: this.modelRoot.position.y,
-      zOffset: this.modelRoot.position.z,
-      rotationX: THREE.MathUtils.radToDeg(this.modelRoot.rotation.x),
-      rotationY: THREE.MathUtils.radToDeg(this.modelRoot.rotation.y),
-      rotationZ: THREE.MathUtils.radToDeg(this.modelRoot.rotation.z),
+      scale: root.scale.x,
+      scaleY: root.scale.y,
+      scaleZ: root.scale.z,
+      xOffset: root.position.x,
+      yOffset: root.position.y,
+      zOffset: root.position.z,
+      rotationX: THREE.MathUtils.radToDeg(root.rotation.x),
+      rotationY: THREE.MathUtils.radToDeg(root.rotation.y),
+      rotationZ: THREE.MathUtils.radToDeg(root.rotation.z),
     };
   }
 
@@ -3650,7 +3678,15 @@ export class SceneManager {
   }
 
   setScale(value) {
-    this.transformController?.setScaleX(value);
+    this.transformController?.setScale(value);
+    const node = this.getTransformTarget?.();
+    if (node) {
+      this.stateStore.batch(() => {
+        this.stateStore.set('scale', node.scale.x);
+        this.stateStore.set('scaleY', node.scale.y);
+        this.stateStore.set('scaleZ', node.scale.z);
+      });
+    }
     this._syncScaleGizmoMatrix();
   }
 
@@ -3665,7 +3701,7 @@ export class SceneManager {
   }
 
   _syncScaleGizmoMatrix() {
-    if (this.transformControlsScale?.object === this.modelRoot) {
+    if (this.transformControlsScale?.object === this.getTransformTarget()) {
       this.transformControlsScale.updateMatrixWorld();
     }
   }
@@ -3686,7 +3722,7 @@ export class SceneManager {
   setXOffset(value) {
     this.transformController?.setXOffset(value);
     // Update transform controls if attached
-    if (this.transformControlsTranslate?.object === this.modelRoot) {
+    if (this.transformControlsTranslate?.object === this.getTransformTarget()) {
       this.transformControlsTranslate.updateMatrixWorld();
     }
   }
@@ -3694,7 +3730,7 @@ export class SceneManager {
   setYOffset(value) {
     this.transformController?.setYOffset(value);
     // Update transform controls if attached
-    if (this.transformControlsTranslate?.object === this.modelRoot) {
+    if (this.transformControlsTranslate?.object === this.getTransformTarget()) {
       this.transformControlsTranslate.updateMatrixWorld();
     }
   }
@@ -3702,7 +3738,7 @@ export class SceneManager {
   setZOffset(value) {
     this.transformController?.setZOffset(value);
     // Update transform controls if attached
-    if (this.transformControlsTranslate?.object === this.modelRoot) {
+    if (this.transformControlsTranslate?.object === this.getTransformTarget()) {
       this.transformControlsTranslate.updateMatrixWorld();
     }
   }
@@ -3808,7 +3844,12 @@ export class SceneManager {
     return mode === 'wireframe' || !!state.wireframe?.alwaysOn;
   }
 
-  setShading(mode) {
+  /**
+   * @param {string} mode
+   * @param {{ broadcast?: boolean }} [options]
+   *   `broadcast` applies the display mode to every asset, not only the selected one.
+   */
+  setShading(mode, options = {}) {
     const clearReference =
       !!this.stateStore.getState().colorChecker?.rawColors && mode !== 'textures';
     if (clearReference) {
@@ -3824,6 +3865,13 @@ export class SceneManager {
     } else {
       this._wireframeOverlayBuildGen += 1;
       this.materialController.setShading(mode);
+    }
+
+    if (options.broadcast && this.sceneObjects?.isMulti?.()) {
+      this.materialController.applyDisplayModeToAssets(
+        mode,
+        this.sceneObjects.peerAssets(),
+      );
     }
 
     this.unlitMode = this.materialController.getUnlitMode();
@@ -4031,7 +4079,12 @@ export class SceneManager {
     const next = !!hidden;
     this.stateStore.set('objectHidden', next);
 
-    if (this.modelRoot) {
+    const target = this.getTransformTarget();
+    if (this.sceneObjects?.usesPerAssetTransforms?.()) {
+      if (target) target.visible = !next;
+      if (this.modelRoot) this.modelRoot.visible = true;
+      this.sceneObjects.applyVisibility?.();
+    } else if (this.modelRoot) {
       this.modelRoot.visible = !next;
     }
     this._syncTransformControlsForObjectHidden();
@@ -4054,22 +4107,22 @@ export class SceneManager {
     if (this.transformControlsTranslate) {
       const show = !!state.moveWidgetEnabled && !objectHidden;
       this.transformControlsTranslate.visible = show;
-      if (show && this.modelRoot) {
-        this.transformControlsTranslate.attach(this.modelRoot);
+      if (show && this.getTransformTarget()) {
+        this.transformControlsTranslate.attach(this.getTransformTarget());
       }
     }
     if (this.transformControlsRotate) {
       const show = !!state.rotateWidgetEnabled && !objectHidden;
       this.transformControlsRotate.visible = show;
-      if (show && this.modelRoot) {
-        this.transformControlsRotate.attach(this.modelRoot);
+      if (show && this.getTransformTarget()) {
+        this.transformControlsRotate.attach(this.getTransformTarget());
       }
     }
     if (this.transformControlsScale) {
       const show = !!state.scaleWidgetEnabled && !objectHidden;
       this.transformControlsScale.visible = show;
-      if (show && this.modelRoot) {
-        this.transformControlsScale.attach(this.modelRoot);
+      if (show && this.getTransformTarget()) {
+        this.transformControlsScale.attach(this.getTransformTarget());
       }
     }
   }
@@ -4770,6 +4823,9 @@ export class SceneManager {
     }
     if (syncToggle) {
       video.meshSyncCameraToDuration = !!syncToggle.checked;
+    }
+    if (this.sceneObjects?.isMulti?.()) {
+      video.turntable = false;
     }
     if (this.ui?.pngExportDirectoryHandle) {
       video.pngOutputDirectoryHandle = this.ui.pngExportDirectoryHandle;

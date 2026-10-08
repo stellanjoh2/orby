@@ -22,6 +22,7 @@ import { ComposerLifecycle } from './ComposerLifecycle.js';
 import { ImageExporter } from '../render/ImageExporter.js';
 import { VideoExporter } from '../render/VideoExporter.js';
 import { ExportMovementPreview } from '../render/ExportMovementPreview.js';
+import { AnimationController } from '../render/AnimationController.js';
 import { prepareArtisticCreativeLookForCapture } from '../render/capture/captureArtisticLookPrep.js';
 import { isFontExtrudeRevealModel } from './FontTextRevealController.js';
 import { toggleScaleAnimActive } from './renderLoopIdle.js';
@@ -62,6 +63,14 @@ export function setupStudioComposer(scene) {
         if (scene.animationController?.isExportSessionActive?.()) return true;
         const action = scene.animationController?.currentAction;
         if (action && !action.paused && action.isRunning?.()) return true;
+        if (
+          AnimationController.hasParkedPlayingSession(
+            scene.sceneObjects?.assets,
+            scene.sceneObjects?.activeId,
+          )
+        ) {
+          return true;
+        }
         if (toggleScaleAnimActive(scene._ccToggleCtx)) return true;
         if (toggleScaleAnimActive(scene._baseToggleCtx)) return true;
         if (toggleScaleAnimActive(scene._baseGlassToggleCtx)) return true;

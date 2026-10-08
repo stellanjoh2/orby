@@ -1212,6 +1212,38 @@ html.orby-mobile-modal-open body {
   color: var(--warning);
 }
 
+.outliner-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: min(50vh, 22rem);
+  overflow-y: auto;
+}
+
+.outliner-row {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  padding: 0.65rem 0.8rem;
+  cursor: pointer;
+}
+
+.outliner-row.is-active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.export-video-object-group.is-muted {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 .message-alert-body {
   margin: 0;
   font-size: 0.95rem;
@@ -1246,6 +1278,28 @@ html.orby-mobile-modal-open body {
   min-width: 0;
   width: auto;
   border-radius: 999px;
+}
+
+.message-alert-actions:has(#messageAlertAlt:not([hidden])) {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.message-alert-actions:has(#messageAlertAlt:not([hidden])) button {
+  flex: none;
+  width: 100%;
+}
+
+/* Primary choice in a three-action confirm — solid accent, not the dim shelf rest state */
+.message-alert-actions:has(#messageAlertAlt:not([hidden])) #messageAlertOk {
+  background: var(--accent);
+  color: var(--brand-text);
+  opacity: 1;
+}
+
+.message-alert-actions:has(#messageAlertAlt:not([hidden])) #messageAlertOk:hover {
+  filter: brightness(1.08);
+  box-shadow: var(--ui-accent-outer-glow);
 }
 
 .message-alert-actions.message-alert-actions--wide {
@@ -11434,12 +11488,14 @@ html:not(.mobile-landing) #orby-font-picker-portal .font-extrude-family-option-l
   margin: 0;
 }
 
-.font-extrude-generate.is-loading {
+.font-extrude-generate.is-loading,
+.font-extrude-add.is-loading {
   pointer-events: none;
   opacity: 0.72;
 }
 
-.font-extrude-generate.is-loading span::after {
+.font-extrude-generate.is-loading span::after,
+.font-extrude-add.is-loading span::after {
   content: '';
   display: inline-block;
   width: 0.85em;

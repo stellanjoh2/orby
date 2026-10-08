@@ -141,6 +141,13 @@
                   MP4 is a real-time viewport capture, not an offline render. Heavier scenes may drop frames or fail—best for previews and lighter setups. For dependable output, export a PNG sequence.
                 </p>
                 <div class="export-controls">
+                  <p id="exportMultiAssetNote" class="export-format-sub" hidden>
+                    Object motion is off while the scene has more than one asset. Camera moves still run on the focused asset.
+                  </p>
+                  <label id="exportAssetFocusLine" class="select-line" hidden>
+                    <span data-tooltip="Which asset export framing and camera moves treat as the subject.">Asset focus</span>
+                    <select id="exportAssetFocus" aria-label="Asset focus"></select>
+                  </label>
                   <div class="block-title export-section-title">Object</div>
                   <div id="exportVideoObjectGroup" class="export-option-group export-video-object-group">
                     <div class="export-button-group">

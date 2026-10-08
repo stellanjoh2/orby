@@ -11,11 +11,13 @@ import {
   getN8aoSceneLayerMaskWithoutOverlays,
   getN8aoScreenSpaceOverlayLayerMask,
   sceneHasN8aoBackdropMultiplyMesh,
+  sceneHasN8aoBeautyDepthFillMesh,
   sceneHasN8aoCatcherMesh,
   sceneHasN8aoDepthIgnoredMesh,
   sceneHasN8aoExcludedMesh,
   withCameraLayerMask,
   withN8aoExcludedMeshRenderHooksPaused,
+  withOnlyN8aoBeautyDepthFillMeshesVisible,
   withOnlyN8aoCatcherMeshesVisible,
   withOnlyN8aoExcludedMeshesVisible,
 } from './meshglN8aoBackdrop.js';
@@ -337,12 +339,15 @@ export class MeshglN8AOPass extends N8AOPass {
   /**
    * Depth-only pass into the existing beauty colour buffer — ensures AO + sky mask see
    * mesh/base/podium even when import materials use depthWrite:false.
+   * Only re-draws those meshes: a scene-wide solid depth override would fill alpha-tested
+   * cutout holes (foliage cards) and composite them as black under HDRI + AO.
    *
    * @param {import('three').WebGLRenderer} renderer
    */
   _enforceBeautyDepth(renderer) {
     const beauty = this.beautyRenderTarget;
     if (!beauty?.depthTexture) return;
+    if (!sceneHasN8aoBeautyDepthFillMesh(this.scene)) return;
 
     const camera = this.camera;
     const savedCameraViewport = camera?.viewport;
@@ -363,7 +368,9 @@ export class MeshglN8AOPass extends N8AOPass {
       renderer.autoClear = false;
       renderer.setRenderTarget(beauty);
       resetRendererFullViewport(renderer);
-      renderer.render(this.scene, camera);
+      withOnlyN8aoBeautyDepthFillMeshesVisible(this.scene, () => {
+        renderer.render(this.scene, camera);
+      });
     } finally {
       if (savedSceneBackground !== null) {
         this.scene.background = savedSceneBackground;

@@ -83,8 +83,19 @@ export class MeshModifierController {
       if (!pos) return;
 
       const normalAttr = geo.attributes.normal;
-      const base = new Float32Array(pos.array);
-      const baseNormal = normalAttr ? new Float32Array(normalAttr.array) : null;
+      const cached = mesh.userData.orbyModifierBase;
+      const base = cached?.base
+        ? new Float32Array(cached.base)
+        : new Float32Array(pos.array);
+      const baseNormal = cached?.base
+        ? (cached.baseNormal ? new Float32Array(cached.baseNormal) : null)
+        : (normalAttr ? new Float32Array(normalAttr.array) : null);
+      if (!cached?.base) {
+        mesh.userData.orbyModifierBase = {
+          base: new Float32Array(base),
+          baseNormal: baseNormal ? new Float32Array(baseNormal) : null,
+        };
+      }
       this._meshes.push({
         mesh,
         sourceGeo: geo,
@@ -118,6 +129,17 @@ export class MeshModifierController {
 
     const modelBox = baseBox.applyMatrix4(this._invModelWorld);
     this._bounds = modifierBoundsFromBox(modelBox);
+  }
+
+  /**
+   * Drop the active binding without restoring geometry, so another asset can take the controller
+   * while this mesh keeps its modifier deformation.
+   */
+  parkWithoutRestore() {
+    this._model = null;
+    this._meshes = [];
+    this._bounds = null;
+    this._supported = true;
   }
 
   release() {

@@ -27,6 +27,7 @@ export class UIManagerModalOverlays {
     this._messageAlertPendingConfirm = false;
     this._messageAlertOnConfirm = null;
     this._messageAlertOnCancel = null;
+    this._messageAlertOnAlt = null;
     this._fullscreenPromptKeydownHandler = null;
     this._fullscreenPromptOnConfirm = null;
     this._fullscreenPromptOnCancel = null;
@@ -45,7 +46,7 @@ export class UIManagerModalOverlays {
 
   /**
    * Modal with OK — for long errors/warnings that need time to read.
-   * @param {{ okLabel?: string, confirm?: boolean, cancelLabel?: string, onConfirm?: () => void, onCancel?: () => void }} [options]
+   * @param {{ okLabel?: string, confirm?: boolean, cancelLabel?: string, altLabel?: string, onConfirm?: () => void, onCancel?: () => void, onAlt?: () => void }} [options]
    */
   showMessageAlert(message, title = 'Message', options = {}) {
     if (!this._ui.dom.messageAlertModal || !this._ui.dom.messageAlertBody) return;
@@ -57,6 +58,7 @@ export class UIManagerModalOverlays {
     this._messageAlertPendingConfirm = confirm;
     this._messageAlertOnConfirm = typeof options?.onConfirm === 'function' ? options.onConfirm : null;
     this._messageAlertOnCancel = typeof options?.onCancel === 'function' ? options.onCancel : null;
+    this._messageAlertOnAlt = typeof options?.onAlt === 'function' ? options.onAlt : null;
 
     const okLabel = confirm
       ? typeof options?.okLabel === 'string' && options.okLabel.trim()
@@ -82,6 +84,14 @@ export class UIManagerModalOverlays {
     if (this._ui.dom.messageAlertCancel) {
       this._ui.dom.messageAlertCancel.hidden = !confirm;
       this._ui.dom.messageAlertCancel.textContent = cancelLabel;
+    }
+    const altLabel =
+      typeof options?.altLabel === 'string' && options.altLabel.trim()
+        ? options.altLabel.trim()
+        : '';
+    if (this._ui.dom.messageAlertAlt) {
+      this._ui.dom.messageAlertAlt.hidden = !altLabel;
+      if (altLabel) this._ui.dom.messageAlertAlt.textContent = altLabel;
     }
 
     const wide = !confirm && okLabel !== 'OK';
@@ -171,6 +181,7 @@ export class UIManagerModalOverlays {
     if (!modal) return;
 
     this._ui.dom.messageAlertOk?.addEventListener('click', () => this._messageAlertPrimaryClose());
+    this._ui.dom.messageAlertAlt?.addEventListener('click', () => this._messageAlertAltClose());
     this._ui.dom.messageAlertCancel?.addEventListener('click', () => this._messageAlertCancelClose());
     this._ui.dom.messageAlertClose?.addEventListener('click', () => this._messageAlertHeaderClose());
     modal.addEventListener('click', (event) => {
@@ -181,6 +192,11 @@ export class UIManagerModalOverlays {
 
   _messageAlertPrimaryClose() {
     this._messageAlertOnConfirm?.();
+    this._messageAlertCleanupAndClose();
+  }
+
+  _messageAlertAltClose() {
+    this._messageAlertOnAlt?.();
     this._messageAlertCleanupAndClose();
   }
 
@@ -208,6 +224,8 @@ export class UIManagerModalOverlays {
     this._messageAlertPendingConfirm = false;
     this._messageAlertOnConfirm = null;
     this._messageAlertOnCancel = null;
+    this._messageAlertOnAlt = null;
+    if (this._ui.dom.messageAlertAlt) this._ui.dom.messageAlertAlt.hidden = true;
     const modal = this._ui.dom.messageAlertModal;
     if (modal) snapModalHidden(modal, this.getMessageAlertPanel());
   }

@@ -50,7 +50,7 @@ export class EventManager {
 
     eventBus.on('mesh:shading', (mode) => {
       const hadMapPreview = !!s.materialController?.mapInspectPreview?.activeSlot;
-      s.setShading(mode);
+      s.setShading(mode, { broadcast: true });
       s.setSceneGeometryWireframe(false);
       if (s._suppressModeChangeToasts === 0) {
         s.ui?.showModeChangeToast?.('displayMode', mode, { mapPreviewCleared: hadMapPreview });
@@ -194,6 +194,11 @@ export class EventManager {
       }
 
       if (await handoffFileToMobileAppIfLanding(file)) return;
+
+      if (payload?.addToScene && s.currentModel) {
+        await s.loadAdditionalFile(file, loadOpts);
+        return;
+      }
 
       s.loadFile(file, loadOpts);
     });

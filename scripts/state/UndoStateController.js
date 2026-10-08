@@ -47,6 +47,7 @@ export class UndoStateController {
     this.eventBus.on('scene:model-load-complete', (payload) => {
       if (payload?.success) this.clearUndo();
     });
+    this.eventBus.on('scene:asset-focus-changed', () => this.clearUndo());
   }
 
   /** @returns {boolean} */

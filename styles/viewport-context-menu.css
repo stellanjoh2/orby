@@ -45,6 +45,13 @@
   padding: 0;
 }
 
+.orby-context-menu__sep {
+  height: 1px;
+  margin: calc(0.28rem * var(--studio-ui-scale, 1)) calc(0.45rem * var(--studio-ui-scale, 1));
+  background: color-mix(in srgb, var(--text, #f5f1ff) 16%, transparent);
+  pointer-events: none;
+}
+
 .orby-context-menu__btn {
   display: flex;
   align-items: center;

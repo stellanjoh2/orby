@@ -17,7 +17,7 @@ Human-readable rules: `docs/n8ao-hdri-base-glass-rules.md`.
 2. **`MeshglN8AOPass`** (order matters):
    - Copy RenderPass plate → `_backdropHoldRT` **before** N8AO clobber.
    - Seed N8AO beauty via `renderSceneBeautyToTarget` (strip `scene.background` only — **glass stays visible** in beauty colour/depth).
-   - `_enforceBeautyDepth` — `MeshDepthMaterial` + `colorWrite: false` for imports with `depthWrite: false`.
+   - `_enforceBeautyDepth` — `MeshDepthMaterial` + `colorWrite: false` only for meshes that still have `depthWrite: false` (do not stomp alpha-tested cutout foliage depth).
    - `_renderGlassMask` — white mask for base glass silhouette only (`withOnlyN8aoExcludedMeshesVisible`; pause Reflector `onBeforeRender` hooks).
    - Run N8AO with `autoRenderBeauty: false`, `transparencyAware: false`, `autoDetectTransparency: false`.
    - Composite to `readBuffer`:

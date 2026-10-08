@@ -13,6 +13,12 @@ import {
 	ORBY_PURPLE_BRIGHT,
 } from '../constants.js';
 import {
+	axisScaleRatioFromPointer,
+	clampMeshScaleComponents,
+	MIN_MESH_SCALE,
+	uniformScaleRatioFromPointer,
+} from '../render/TransformController.js';
+import {
 	BoxGeometry,
 	BufferGeometry,
 	CylinderGeometry,
@@ -418,45 +424,52 @@ class TransformControls extends Object3D {
 
 			if ( axis.search( 'XYZ' ) !== - 1 ) {
 
-				let d = this.pointEnd.length() / this.pointStart.length();
+				if ( this.pointEnd.dot( this.pointStart ) < 0 ) {
 
-				if ( this.pointEnd.dot( this.pointStart ) < 0 ) d *= - 1;
+					// Past the pivot — park at the floor (no negative/inverted scale).
+					object.scale.set( MIN_MESH_SCALE, MIN_MESH_SCALE, MIN_MESH_SCALE );
 
-				_tempVector2.set( d, d, d );
+				} else {
+
+					const d = uniformScaleRatioFromPointer(
+						this.pointEnd.length(),
+						this.pointStart.length(),
+					);
+
+					if ( d == null ) {
+
+						// Near-center grab / unusable divisor — do not spike scale.
+						object.scale.copy( this._scaleStart );
+
+					} else {
+
+						_tempVector2.set( d, d, d );
+						object.scale.copy( this._scaleStart ).multiply( _tempVector2 );
+
+					}
+
+				}
 
 			} else {
 
 				_tempVector.copy( this.pointStart );
 				_tempVector2.copy( this.pointEnd );
 
-				_tempVector.applyQuaternion( this._worldQuaternionInv );
-				_tempVector2.applyQuaternion( this._worldQuaternionInv );
+				// Freeze the drag-start basis — live worldQuaternion can churn if scale
+				// briefly goes non-finite before clamp, which desyncs later ratios.
+				_tempQuaternion.copy( this.worldQuaternionStart ).invert();
+				_tempVector.applyQuaternion( _tempQuaternion );
+				_tempVector2.applyQuaternion( _tempQuaternion );
 
-				_tempVector2.divide( _tempVector );
+				_tempVector2.set(
+					axis.search( 'X' ) !== - 1 ? axisScaleRatioFromPointer( _tempVector2.x, _tempVector.x ) : 1,
+					axis.search( 'Y' ) !== - 1 ? axisScaleRatioFromPointer( _tempVector2.y, _tempVector.y ) : 1,
+					axis.search( 'Z' ) !== - 1 ? axisScaleRatioFromPointer( _tempVector2.z, _tempVector.z ) : 1,
+				);
 
-				if ( axis.search( 'X' ) === - 1 ) {
-
-					_tempVector2.x = 1;
-
-				}
-
-				if ( axis.search( 'Y' ) === - 1 ) {
-
-					_tempVector2.y = 1;
-
-				}
-
-				if ( axis.search( 'Z' ) === - 1 ) {
-
-					_tempVector2.z = 1;
-
-				}
+				object.scale.copy( this._scaleStart ).multiply( _tempVector2 );
 
 			}
-
-			// Apply scale
-
-			object.scale.copy( this._scaleStart ).multiply( _tempVector2 );
 
 			if ( this.scaleSnap ) {
 
@@ -479,6 +492,8 @@ class TransformControls extends Object3D {
 				}
 
 			}
+
+			clampMeshScaleComponents( object.scale );
 
 		} else if ( mode === 'rotate' ) {
 

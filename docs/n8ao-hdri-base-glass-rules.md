@@ -57,7 +57,7 @@ The working fix is **not** “revert AO.” It is: keep the HDRI backdrop compos
    |------|------|-----|
    | 1 | Copy RenderPass plate → `_backdropHoldRT` | Hold HDRI + glass reflections before N8AO clobbers buffers |
    | 2 | Seed beauty via `renderSceneBeautyToTarget` | Geometry colour/depth for N8AO; **strip `scene.background` only** |
-   | 3 | `_enforceBeautyDepth` | `MeshDepthMaterial` + `colorWrite: false` for imports with `depthWrite: false` |
+   | 3 | `_enforceBeautyDepth` | `MeshDepthMaterial` + `colorWrite: false` **only** for meshes that still have `depthWrite: false` — never stomp alpha-tested cutout depth (foliage cards) |
    | 4 | `_renderGlassMask` | White silhouette mask for base glass disc only |
    | 5 | Run N8AO | `autoRenderBeauty: false`, `transparencyAware: false`, `autoDetectTransparency: false` |
    | 6 | Composite to `readBuffer` | Sky / mesh / glass rules below |

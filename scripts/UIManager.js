@@ -38,6 +38,7 @@ import {
 } from './ui/modeChangeToast.js';
 import { UIHelpers } from './ui/UIHelpers.js';
 import { MeshControls } from './ui/MeshControls.js';
+import { SceneAssetsUI } from './ui/SceneAssetsUI.js';
 import { ModifierControls } from './ui/ModifierControls.js';
 import { FbxMapSlotsControls } from './ui/FbxMapSlotsControls.js';
 import { MapInspectControls } from './ui/MapInspectControls.js';
@@ -214,6 +215,8 @@ export class UIManager {
       helpers: this.helpers,
     });
     this.meshControls = new MeshControls(this.eventBus, this.stateStore, this, this.helpers);
+    this.sceneAssetsUi = new SceneAssetsUI(this.eventBus, this);
+    this.sceneAssetsUi.bind();
     this.modifierControls = new ModifierControls(this.eventBus, this.stateStore, this, this.helpers);
     this.fbxMapSlotsControls = new FbxMapSlotsControls(this.eventBus, this.stateStore, this);
     this.mapInspectControls = new MapInspectControls(this.eventBus, this.stateStore, this);
@@ -443,6 +446,7 @@ export class UIManager {
     this.dom.messageAlertBody = q('#messageAlertBody');
     this.dom.messageAlertOk = q('#messageAlertOk');
     this.dom.messageAlertCancel = q('#messageAlertCancel');
+    this.dom.messageAlertAlt = q('#messageAlertAlt');
     this.dom.messageAlertActions = q('#messageAlertActions');
     this.dom.messageAlertClose = q('#messageAlertClose');
     this.dom.fullscreenPrompt = q('#orbyFullscreenPrompt');
@@ -484,8 +488,6 @@ export class UIManager {
       shading: document.querySelectorAll('input[name="shading"]'),
       scale: q('#scaleXControl'),
       scaleX: q('#scaleXControl'),
-      scaleY: q('#scaleYControl'),
-      scaleZ: q('#scaleZControl'),
       xOffset: q('#xOffsetControl'),
       yOffset: q('#yOffsetControl'),
       zOffset: q('#zOffsetControl'),

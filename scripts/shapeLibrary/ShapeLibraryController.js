@@ -40,9 +40,11 @@ export class ShapeLibraryController {
     const scene = this.getScene?.();
     if (!scene) return false;
 
+    let append = !!options.append;
     if (scene.currentModel && !options.skipConfirm) {
-      const confirmed = await this._confirmReplace();
-      if (!confirmed) return false;
+      const choice = await this._confirmPlace();
+      if (choice === 'keep') return false;
+      append = choice === 'add';
     }
 
     if (this._loadPromise) {
@@ -53,7 +55,7 @@ export class ShapeLibraryController {
       }
     }
 
-    const loadTask = this._loadShapeIntoScene(scene, entry, options);
+    const loadTask = this._loadShapeIntoScene(scene, entry, { ...options, append });
     this._loadPromise = loadTask;
     try {
       await loadTask;
@@ -117,22 +119,37 @@ export class ShapeLibraryController {
       scene.ui.updateTitle(label);
       scene.ui.updateTopBarDetail(`${label} — Idle`);
 
-      scene.modelLifecycle.setModel(asset.object, asset.animations ?? [], {
-        resetTransform: true,
-        focusCamera: true,
-        alignGround: true,
-      });
-      scene.modelLifecycle.applyAssetMetadata(asset);
-      scene._fbxImportBundle = null;
-      scene.isSvgExtrudeModel = false;
-      scene.svgExtrudeImporter = null;
-      scene.updateStatsUI(null, asset.object, asset.gltfMetadata);
+      if (options.append && scene.currentModel && scene.sceneObjects) {
+        await scene.modelLifecycle.attachAdditionalAsset(
+          {
+            object: asset.object,
+            animations: asset.animations ?? [],
+            gltfMetadata: asset.gltfMetadata,
+          },
+          {
+            name: label,
+            toast: options.skipToast ? null : 'Shape added to scene',
+            complete: { source: 'shape-library' },
+          },
+        );
+      } else {
+        scene.modelLifecycle.setModel(asset.object, asset.animations ?? [], {
+          resetTransform: true,
+          focusCamera: true,
+          alignGround: true,
+        });
+        scene.modelLifecycle.applyAssetMetadata(asset);
+        scene._fbxImportBundle = null;
+        scene.isSvgExtrudeModel = false;
+        scene.svgExtrudeImporter = null;
+        scene.updateStatsUI(null, asset.object, asset.gltfMetadata);
 
-      if (!options.skipToast) {
-        scene.ui.showToast('Shape added to scene', 3200, { notification: false });
+        if (!options.skipToast) {
+          scene.ui.showToast('Shape added to scene', 3200, { notification: false });
+        }
+        scene.eventBus.emit('scene:model-load-complete', { success: true, source: 'shape-library' });
       }
       this.eventBus.emit('shape-library:inserted', { id: entry.id });
-      scene.eventBus.emit('scene:model-load-complete', { success: true, source: 'shape-library' });
     } catch (error) {
       console.error('Shape library load failed', error);
       const msg =
@@ -146,18 +163,21 @@ export class ShapeLibraryController {
     }
   }
 
-  _confirmReplace() {
+  /** @returns {Promise<'keep' | 'replace' | 'add'>} */
+  _confirmPlace() {
     const scene = this.getScene?.();
     return new Promise((resolve) => {
       scene?.ui?.showMessageAlert(
-        'The current model will be replaced by this shape. Any unsaved work on the existing object will be lost.',
-        'Replace model?',
+        'Keep what is in the scene, replace it with this shape, or add the shape beside it.',
+        'Add shape?',
         {
           confirm: true,
           cancelLabel: 'Keep current',
-          okLabel: 'Replace',
-          onConfirm: () => resolve(true),
-          onCancel: () => resolve(false),
+          altLabel: 'Replace',
+          okLabel: 'Add to Scene',
+          onConfirm: () => resolve('add'),
+          onAlt: () => resolve('replace'),
+          onCancel: () => resolve('keep'),
         },
       );
     });

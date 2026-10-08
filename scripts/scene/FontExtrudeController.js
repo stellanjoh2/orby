@@ -18,11 +18,13 @@ import {
   resolveDefaultFontPostscript,
 } from './fontExtrudeDefaultFont.js';
 import {
+  buildFontExtrudeSvgExtrudeBaseline,
   DEFAULT_EXTRUDE_BEVEL_AMOUNT,
   DEFAULT_EXTRUDE_DEPTH,
   DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
   DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
 } from '../import/extrudeDefaults.js';
+import { deepClone } from '../utils/deepClone.js';
 import { DEFAULT_FONT_BEVEL_TYPE } from '../import/extrudeBevel.js';
 import {
   clearSvgExtrudeLegacyForFontGeneration,
@@ -505,7 +507,14 @@ export class FontExtrudeController {
       throw new Error('No font loaded');
     }
     const scene = this.getScene?.();
-    if (scene && shouldClearSvgExtrudeLegacyForFontGeneration(scene)) {
+    this._appendUsesFontBaseline = false;
+    const appendBeside = !!options.appendToScene && !!scene?.currentModel;
+    if (appendBeside) {
+      // Fresh importer so the object already in the scene keeps its own.
+      // Skip the SVG reset — that writes the live store and would restyle the current mesh.
+      this.fontExtrudeImporter = new FontExtrudeImporter();
+      this._appendUsesFontBaseline = shouldClearSvgExtrudeLegacyForFontGeneration(scene);
+    } else if (scene && shouldClearSvgExtrudeLegacyForFontGeneration(scene)) {
       clearSvgExtrudeLegacyForFontGeneration(this.stateStore, this.eventBus);
       this.fontExtrudeImporter = new FontExtrudeImporter();
     }
@@ -526,7 +535,9 @@ export class FontExtrudeController {
     if (!layout.lines.length) {
       throw new Error('Text has no drawable paths');
     }
-    const extrudeState = this.stateStore.getState()?.svgExtrude || {};
+    const extrudeState = this._appendUsesFontBaseline
+      ? buildFontExtrudeSvgExtrudeBaseline()
+      : (this.stateStore.getState()?.svgExtrude || {});
     const fillColor = normalizeGlyphFillHex(
       options.fillColor ?? fontState.fillColor ?? DEFAULT_PREVIEW_FILL,
     );
@@ -566,11 +577,15 @@ export class FontExtrudeController {
   /**
    * Replace the active scene model with a font-generated mesh (same path as SVG import).
    * @param {THREE.Group} group
-   * @param {{ skipConfirm?: boolean, skipToast?: boolean }} [options]
+   * @param {{ skipConfirm?: boolean, skipToast?: boolean, append?: boolean }} [options]
    */
   async addToScene(group, options = {}) {
     const scene = this.getScene();
     if (!scene) return null;
+
+    if (options.append && scene.currentModel && scene.sceneObjects) {
+      return this._appendGeneratedText(scene, group, options);
+    }
 
     const needsConfirm =
       !options.skipConfirm &&
@@ -639,6 +654,93 @@ export class FontExtrudeController {
       if (!options.skipToast) {
         scene.ui.showToast('Text generated', 3200, { notification: false });
       }
+      return group;
+    } finally {
+      scene.ui.endLoadSpinner();
+    }
+  }
+
+  /**
+   * Place generated text beside the objects already in the scene.
+   * @param {import('../SceneManager.js').SceneManager} scene
+   * @param {import('three').Group} group
+   * @param {{ skipToast?: boolean }} options
+   */
+  async _appendGeneratedText(scene, group, options = {}) {
+    const assetName = this.fontLabel || 'Generated Text';
+    const fillColor = normalizeGlyphFillHex(
+      this.stateStore.getState()?.fontExtrude?.fillColor ?? DEFAULT_PREVIEW_FILL,
+    );
+    const extrudeColor = normalizeGlyphFillHex(
+      this.stateStore.getState()?.fontExtrude?.extrudeColor ?? fillColor,
+    );
+    const live = this.stateStore.getState();
+    const overlay = {
+      fontExtrude: deepClone(live.fontExtrude),
+    };
+    if (this._appendUsesFontBaseline) {
+      overlay.svgExtrude = buildFontExtrudeSvgExtrudeBaseline({
+        enabled: true,
+        depth: this.fontExtrudeImporter.getDepth(),
+        normalAngle: this.fontExtrudeImporter.getNormalAngleDeg(),
+        hardEdgeAngle: this.fontExtrudeImporter.getHardEdgeAngleDeg(),
+        bevelAmount: this.fontExtrudeImporter.getBevelAmount(),
+        detail: this.fontExtrudeImporter.getDetail(),
+        flipDirection: FONT_EXTRUDE_FLIP_DIRECTION,
+        availableColors: [fillColor],
+      });
+    } else {
+      const svg = deepClone(live.svgExtrude) || {};
+      svg.enabled = true;
+      svg.flipDirection = FONT_EXTRUDE_FLIP_DIRECTION;
+      svg.availableColors = [fillColor];
+      overlay.svgExtrude = svg;
+    }
+
+    scene.ui.setLoadSpinnerStatusPrefix?.('Loading');
+    scene.ui.beginLoadSpinner();
+    scene.ui.beginLoadSpinnerElapsed?.();
+    try {
+      await scene.ui.ensureStudioUiReady();
+      await scene.ensureStudioReady();
+      scene.ui.setDropzoneVisible(false);
+      await scene.syncViewportSize();
+      scene.startRenderLoop();
+      normalizeImportScale(group);
+      await scene.modelLifecycle.attachAdditionalAsset(
+        {
+          object: group,
+          animations: [],
+          gltfMetadata: {
+            assetName,
+            generator: 'FontExtrude',
+            version: null,
+            copyright: null,
+          },
+          svgExtrude: {
+            enabled: true,
+            depth: this.fontExtrudeImporter.getDepth(),
+            normalAngle: this.fontExtrudeImporter.getNormalAngleDeg(),
+            hardEdgeAngle: this.fontExtrudeImporter.getHardEdgeAngleDeg(),
+            colorDepths: this.fontExtrudeImporter.getColorDepths(),
+            colorOffsets: this.fontExtrudeImporter.getColorOffsets(),
+            colors: [fillColor],
+            flipDirection: FONT_EXTRUDE_FLIP_DIRECTION,
+            bevelAmount: this.fontExtrudeImporter.getBevelAmount(),
+            bevelType: this.fontExtrudeImporter.getBevelType(),
+            detail: this.fontExtrudeImporter.getDetail(),
+            importer: this.fontExtrudeImporter,
+          },
+        },
+        {
+          name: assetName,
+          stateOverlay: overlay,
+          toast: options.skipToast ? null : 'Text added to scene',
+          complete: { source: 'font' },
+        },
+      );
+      scene.applyFontExtrudeColors?.(fillColor, extrudeColor);
+      this.eventBus.emit('font:generated', { group });
       return group;
     } finally {
       scene.ui.endLoadSpinner();
@@ -907,7 +1009,7 @@ export class FontExtrudeController {
     if (Math.abs(state.rotationX ?? 0) > eps) return true;
     if (Math.abs(state.rotationY ?? 0) > eps) return true;
     if (Math.abs(state.rotationZ ?? 0) > eps) return true;
-    const root = scene.modelRoot;
+    const root = scene.getTransformTarget?.() || scene.modelRoot;
     if (!root) return false;
     if (Math.abs(root.scale.x - 1) > eps || Math.abs(root.scale.y - 1) > eps || Math.abs(root.scale.z - 1) > eps) {
       return true;

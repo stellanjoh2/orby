@@ -81,6 +81,10 @@ import {
   MESH_CHECKBOX_UI_MANIFEST,
   MESH_UI_CONTROL_MANIFEST,
 } from '../state/uiMeshControlManifest.js';
+import {
+  scaleAxesToUniformTarget,
+  uniformMeshScale,
+} from '../render/TransformController.js';
 export class MeshControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
     this.eventBus = eventBus;
@@ -212,6 +216,7 @@ export class MeshControls {
     // Transform + material + clay — manifest-driven dual-write
     this.helpers.bindManifestControls(MESH_UI_CONTROL_MANIFEST);
     this.helpers.bindManifestControls(MESH_CHECKBOX_UI_MANIFEST);
+    this._bindUniformScaleSlider();
 
     bindSvgExtrudeControls(this._svgExtrudeCtx());
     bindExtrudeBevelControls(this._svgExtrudeCtx());
@@ -1480,20 +1485,47 @@ export class MeshControls {
     }
   }
 
+  /**
+   * Shelf Scale is one linked control. It multiplies X, Y, and Z together
+   * so a non-uniform squash from the scale gizmo (R) is preserved.
+   */
+  _bindUniformScaleSlider() {
+    const slider = this.ui.inputs.scale || this.ui.inputs.scaleX;
+    if (!slider) return;
+
+    slider.addEventListener('input', () => {
+      const target = parseFloat(slider.value);
+      if (!Number.isFinite(target)) return;
+      const state = this.stateStore.peekState();
+      const next = scaleAxesToUniformTarget(
+        state.scale,
+        state.scaleY,
+        state.scaleZ,
+        target,
+      );
+      this.helpers.updateValueLabel('scale', target, 'multiplier');
+      this.stateStore.batch(() => {
+        this.stateStore.set('scale', next.x);
+        this.stateStore.set('scaleY', next.y);
+        this.stateStore.set('scaleZ', next.z);
+      });
+      this.eventBus.emit('mesh:scale-vector', next);
+    });
+    this.helpers.enableSliderKeyboardStepping(slider);
+  }
+
   syncTransformSliders(values) {
     if (!values) return;
-    if (this.ui.inputs.scaleX) {
-      this.ui.inputs.scaleX.value = values.scale;
-      this.helpers.updateValueLabel('scale', values.scale, 'multiplier');
+    const uniform = uniformMeshScale(
+      values.scale,
+      values.scaleY ?? values.scale,
+      values.scaleZ ?? values.scale,
+    );
+    const scaleSlider = this.ui.inputs.scale || this.ui.inputs.scaleX;
+    if (scaleSlider && this.helpers.syncRangeFromState(scaleSlider, uniform)) {
+      this.helpers.updateSliderFill(scaleSlider);
     }
-    if (this.ui.inputs.scaleY) {
-      this.ui.inputs.scaleY.value = values.scaleY;
-      this.helpers.updateValueLabel('scaleY', values.scaleY, 'multiplier');
-    }
-    if (this.ui.inputs.scaleZ) {
-      this.ui.inputs.scaleZ.value = values.scaleZ;
-      this.helpers.updateValueLabel('scaleZ', values.scaleZ, 'multiplier');
-    }
+    this.helpers.updateValueLabel('scale', uniform, 'multiplier');
     if (this.ui.inputs.xOffset) {
       this.ui.inputs.xOffset.value = values.xOffset;
       this.helpers.updateValueLabel('xOffset', values.xOffset, 'distance');

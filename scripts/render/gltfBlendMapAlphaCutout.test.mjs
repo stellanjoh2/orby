@@ -5,9 +5,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  applyBlendMapAlphaCutout,
   classifyBlendMapAlphaSamples,
+  revertBlendMapAlphaCutout,
   sampleRasterAlphaNormalized,
   shouldPromoteBlendMapToAlphaCutout,
+  shouldProvisionallyCutoutUnknownBlendMap,
   GLTF_BLEND_MAP_SOFT_ALPHA_FRACTION,
 } from './gltfBlendMapAlphaCutout.js';
 
@@ -111,5 +114,70 @@ describe('shouldPromoteBlendMapToAlphaCutout', () => {
       userData: { alphaMode: 'BLEND' },
     };
     assert.equal(shouldPromoteBlendMapToAlphaCutout(material, 'cutout'), false);
+  });
+
+  it('promotes houseplant-style bimodal atlas padding as cutout', () => {
+    // ~2% mid-alpha fringe, rest binary — matches Sketchfab foliage cards.
+    const samples = [];
+    for (let i = 0; i < 610; i += 1) samples.push(0);
+    for (let i = 0; i < 20; i += 1) samples.push(0.5);
+    for (let i = 0; i < 370; i += 1) samples.push(1);
+    assert.equal(classifyBlendMapAlphaSamples(samples), 'cutout');
+    const material = {
+      isMeshStandardMaterial: true,
+      transparent: true,
+      opacity: 1,
+      alphaTest: 0,
+      map: { isTexture: true },
+      userData: { alphaMode: 'BLEND' },
+    };
+    assert.equal(shouldPromoteBlendMapToAlphaCutout(material, 'cutout'), true);
+  });
+});
+
+describe('shouldProvisionallyCutoutUnknownBlendMap', () => {
+  it('provisionally cutouts unread BLEND + map so foliage punches on first frame', () => {
+    const material = {
+      isMeshStandardMaterial: true,
+      transparent: true,
+      opacity: 1,
+      alphaTest: 0,
+      map: { isTexture: true },
+      userData: { alphaMode: 'BLEND' },
+    };
+    assert.equal(shouldProvisionallyCutoutUnknownBlendMap(material, 'unknown'), true);
+    assert.equal(shouldProvisionallyCutoutUnknownBlendMap(material, 'soft'), false);
+  });
+});
+
+describe('applyBlendMapAlphaCutout / revertBlendMapAlphaCutout', () => {
+  it('promotes then restores baseline for soft refine', () => {
+    const material = {
+      isMeshStandardMaterial: true,
+      transparent: true,
+      opacity: 1,
+      alphaTest: 0,
+      depthWrite: false,
+      alphaHash: false,
+      userData: {},
+      needsUpdate: false,
+    };
+    const baseline = {
+      transparent: true,
+      opacity: 1,
+      depthWrite: false,
+      alphaTest: 0,
+      alphaHash: false,
+    };
+    applyBlendMapAlphaCutout(material);
+    assert.equal(material.transparent, false);
+    assert.ok(material.alphaTest > 0);
+    assert.equal(material.depthWrite, true);
+    assert.equal(material.userData.orbyBlendMitigation, 'alphaTest');
+    revertBlendMapAlphaCutout(material, baseline);
+    assert.equal(material.transparent, true);
+    assert.equal(material.alphaTest, 0);
+    assert.equal(material.depthWrite, false);
+    assert.equal(material.userData.orbyBlendMitigation, undefined);
   });
 });

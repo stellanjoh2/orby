@@ -65,6 +65,29 @@ export function needsTransmissionBackdrop(state) {
 }
 
 /**
+ * Focused Object-menu state plus every other asset. Glass on an unselected
+ * object still refracts `scene.background`.
+ * @param {import('../SceneManager.js').SceneManager | null | undefined} scene
+ */
+export function sceneNeedsTransmissionBackdrop(scene) {
+  const state = scene?.stateStore?.getState?.();
+  if (!state) return false;
+  if (needsTransmissionBackdrop(state)) return true;
+  const assets = scene.sceneObjects?.assets;
+  if (!assets?.length) return false;
+  const hdriOn = state.hdriEnabled !== false;
+  const activeId = scene.sceneObjects.activeId;
+  for (const asset of assets) {
+    if (asset.id === activeId) continue;
+    const cl = asset.objectState?.creativeLook;
+    if (cl?.enabled === true && creativeLookPresetNeedsHdriBackdrop(cl.preset) && hdriOn) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * MeshPhysicalMaterial transmission refracts `scene.background`, not the renderer clear color.
  * When Render Backdrop is off, bind the user's flat/image backdrop to `scene.background` for
  * refraction — without mutating `hdriBackground` (user controls that toggle).
@@ -75,7 +98,7 @@ export function needsTransmissionBackdrop(state) {
 export function applyTransmissionSceneBackground(scene) {
   if (!scene?.stateStore) return false;
   const state = scene.stateStore.getState();
-  const needs = needsTransmissionBackdrop(state);
+  const needs = sceneNeedsTransmissionBackdrop(scene);
   const hdriBackdrop = isHdriBackdropActive(state);
   const bg = scene.backgroundController;
 

@@ -264,11 +264,16 @@ export class StartMenuController {
   bindEvents() {
     if (!this.dropzone || !this.fileInput || !this.browseButton) return;
 
-    const emitFile = (file) => {
+    const emitFile = (file, extra = {}) => {
       if (!file) return;
       if (blockTabletStudioAccess()) return;
       void handoffFileToMobileAppIfLanding(file).then((handled) => {
-        if (!handled) this.eventBus.emit('file:selected', file);
+        if (handled) return;
+        if (extra.addToScene) {
+          this.eventBus.emit('file:selected', { file, addToScene: true });
+          return;
+        }
+        this.eventBus.emit('file:selected', file);
       });
     };
 
@@ -295,6 +300,7 @@ export class StartMenuController {
 
     // Browse button click
     this.browseButton.addEventListener('click', () => {
+      this.fileInput.dataset.importMode = '';
       this.fileInput.click();
     });
 
@@ -329,13 +335,16 @@ export class StartMenuController {
     // File input change
     this.fileInput.addEventListener('change', (event) => {
       const file = event.target.files[0];
-      emitFile(file);
+      const addToScene = this.fileInput.dataset.importMode === 'add';
+      this.fileInput.dataset.importMode = '';
+      emitFile(file, { addToScene });
       this.fileInput.value = '';
     });
 
     // "Import Object" button in sidebar
     if (this.loadMeshButton) {
       this.loadMeshButton.addEventListener('click', () => {
+        this.fileInput.dataset.importMode = '';
         this.fileInput.click();
       });
     }
