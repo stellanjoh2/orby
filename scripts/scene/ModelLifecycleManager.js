@@ -797,10 +797,9 @@ export class ModelLifecycleManager {
         toast: options.silent ? 'Object added' : undefined,
         complete: { file },
       });
-      // PlaceBeside parks on +X; keep the new mesh in frame so Add is obvious.
-      if (s.currentModel && !options.silent) {
-        s.cameraController?.focusOnObjectAnimated?.(s.currentModel, 0.85);
-      }
+      // Keep the existing framing — focusOnObjectAnimated disables orbit for the
+      // flight and can lock onto spawn-scale (~0.001) bounds, leaving the camera stuck.
+      s.sceneObjects?.refreshFocusBounds?.();
       recordAssetLoaded(file);
     } catch (error) {
       console.error('Failed to add model', error);
