@@ -220,6 +220,17 @@ export const MARKETING_SECTIONS = [
       "Product visualization, automotive, architecture, game assets, scanned meshes — whatever you're working with, Orby treats it like a hero. Cinematic post-processing, HDR environments, ACES filmic tone mapping, and color grading that makes real-time look anything but.",
     gallery: [
       {
+        src: './assets/marketing/showcase/showcase-quixel.jpg',
+        alt: 'Quixel Megascans dining table hero render in Orby',
+        imageCredit: {
+          title: 'Megascans dining props',
+          artist: 'Quixel Megascans',
+          artistHref: 'https://quixel.com/',
+          sourceLabel: 'Quixel',
+          sourceHref: 'https://quixel.com/',
+        },
+      },
+      {
         src: './assets/marketing/orby-marketing-promo3.jpg',
         alt: '2018 Porsche 911 Carrera GTS hero render in Orby',
         imageCredit: {
@@ -241,6 +252,18 @@ export const MARKETING_SECTIONS = [
           sourceLabel: 'Sketchfab',
           sourceHref:
             'https://sketchfab.com/3d-models/backpack-4732564eec0542ed8b1855f381e64127',
+        },
+      },
+      {
+        src: './assets/marketing/showcase/showcase-lowpoly.jpg',
+        alt: 'Low-poly animal pack hero render in Orby',
+        imageCredit: {
+          title: 'Animals FREE — Low Poly Pack',
+          artist: 'ithappy',
+          artistHref: 'https://ithappystudios.com/',
+          sourceLabel: 'Fab',
+          sourceHref:
+            'https://www.fab.com/listings/0c8f3917-2461-4775-a853-b995bb93bac5',
         },
       },
       {
@@ -489,33 +512,18 @@ export const MARKETING_SECTIONS = [
         },
       },
       {
-        title: 'Look Filters',
+        title: 'Multiple assets',
         body:
-          'Cinematic presets, luminance curve, and full color grade — everything you need to land the mood before export. No round trip through Lightroom.',
-        flipGallery: [
-          {
-            src: './assets/marketing/orby-marketing-lookfilter-01.jpg',
-            alt: 'Product render with a cinematic look filter preset in Orby',
-          },
-          {
-            src: './assets/marketing/orby-marketing-lookfilter-02.jpg',
-            alt: 'Same model with a different look filter grade in Orby',
-          },
-          {
-            src: './assets/marketing/orby-marketing-lookfilter-03.jpg',
-            alt: 'Same model with another look filter preset in Orby',
-          },
-          {
-            src: './assets/marketing/orby-marketing-lookfilter-04.jpg',
-            alt: 'Same model with a warm look filter treatment in Orby',
-          },
-          {
-            src: './assets/marketing/orby-marketing-lookfilter-05.jpg',
-            alt: 'Same model with a high-contrast look filter grade in Orby',
-          },
-        ],
-        flipGalleryIntervalMs: 2000,
-        flipGalleryFadeMs: 0.405,
+          'Review or present multiple assets at once — load several models in one scene and compare looks without juggling separate files.',
+        imageSrc: './assets/marketing/pro-feature-multiple-assets.jpg',
+        imageAlt: 'Multiple Megascans dining props presented together in Orby',
+        imageCredit: {
+          title: 'Megascans dining props',
+          artist: 'Quixel Megascans',
+          artistHref: 'https://quixel.com/',
+          sourceLabel: 'Quixel',
+          sourceHref: 'https://quixel.com/',
+        },
       },
       {
         title: 'Lens Effects',

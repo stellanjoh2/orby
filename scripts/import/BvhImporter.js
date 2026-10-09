@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { BVHLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/BVHLoader.js';
-import { normalizeImportScale } from './normalizeImportScale.js';
 import { findArmatureRootBone } from './bvhArmatureBounds.js';
 
 export class BvhImporter {
@@ -32,8 +31,6 @@ export class BvhImporter {
       throw new Error('BVH skeleton has no root bone.');
     }
     root.add(rootBone);
-
-    normalizeImportScale(root);
 
     return {
       object: root,

@@ -1,7 +1,11 @@
-import { animateModalClose, animateModalOpen } from './modalReveal.js';
+import { animateModalClose, animateModalOpen, prefersReducedMotion } from './modalReveal.js';
+import {
+  bindFloatingPanelHeaderDrag,
+  setFloatingPanelDragging,
+} from './floatingPanelHeaderDrag.js';
 
 /**
- * Object → Scene: Outliner modal and Export asset focus.
+ * Object → Scene: Outliner floating panel and Export asset focus.
  * Import Object lives on StartMenuController (prompts replace vs add when needed).
  * Selection swaps the Object menu onto that asset. Studio and Camera stay put.
  */
@@ -24,7 +28,9 @@ export class SceneAssetsUI {
 
   bind() {
     this.outlinerButton = document.querySelector('#openOutlinerButton');
-    this.modal = document.querySelector('#outlinerModal');
+    this.panel = document.querySelector('#outlinerPanel');
+    this.panelChrome = this.panel?.querySelector('.outliner-panel__chrome') ?? null;
+    this.panelHeader = this.panel?.querySelector('.outliner-panel__header') ?? null;
     this.list = document.querySelector('#outlinerList');
     this.empty = document.querySelector('#outlinerEmpty');
     this.closeButton = document.querySelector('#closeOutliner');
@@ -36,21 +42,22 @@ export class SceneAssetsUI {
     this.outlinerButton?.addEventListener('click', () => {
       if (this.outlinerButton?.disabled) return;
       this.ui.uiSounds?.playSelect?.();
-      this.openOutliner();
+      if (this._open) this.closeOutliner();
+      else this.openOutliner();
     });
 
     this.closeButton?.addEventListener('click', () => this.closeOutliner());
-    this.modal?.addEventListener('click', (event) => {
-      if (event.target === this.modal) this.closeOutliner();
-    });
+    bindFloatingPanelHeaderDrag(this.panelHeader, (event) => this._startPanelDrag(event));
     this.list?.addEventListener('click', (event) => {
       const row = event.target?.closest?.('[data-asset-id]');
       if (!row) return;
       const id = Number(row.dataset.assetId);
       if (!Number.isFinite(id)) return;
       this.ui.uiSounds?.playSelect?.();
-      window.orby?.scene?.selectSceneAsset?.(id);
-      this.closeOutliner();
+      const selected = window.orby?.scene?.selectSceneAsset?.(id);
+      if (!selected) return;
+      const name = row.textContent?.trim() || 'Object';
+      this.ui.showToast?.(`${name} Selected`, 2200, { notification: false });
     });
     this.exportFocus?.addEventListener('change', () => {
       if (this._syncingFocus) return;
@@ -91,28 +98,128 @@ export class SceneAssetsUI {
     const multi = count > 1;
 
     if (this.outlinerButton) this.outlinerButton.disabled = !multi;
+    if (!multi && this._open) this.closeOutliner({ animate: false });
 
     this._renderList(assets, payload.activeId);
     this._syncExport(assets, payload.activeId, multi);
   }
 
   openOutliner() {
-    if (!this.modal || this._open) return;
-    const scene = window.orby?.scene;
-    if (scene?.sceneObjects?.getSnapshot) this.sync(scene.sceneObjects.getSnapshot());
+    if (!this.panel || !this.panelChrome || this._open) return;
+    const snap = window.orby?.scene?.sceneObjects?.getSnapshot?.();
+    if (snap) this.sync(snap);
+    if ((snap?.count ?? 0) < 2) return;
+
     this._open = true;
     document.addEventListener('keydown', this._onKeyDown, true);
+    this._positionPanelDefault();
+    this.panel.removeAttribute('hidden');
+    this.panel.style.display = '';
     this.ui.uiSounds?.playShelfShow?.();
-    void animateModalOpen(this.modal, this.modal.querySelector('.load-settings-content'), {
-      revealBackdrop: false,
+
+    if (prefersReducedMotion()) {
+      this._snapPanelVisible();
+      return;
+    }
+
+    void animateModalOpen(this.panel, this.panelChrome, { revealBackdrop: false }).then(() => {
+      this.panel.style.display = '';
     });
   }
 
-  closeOutliner() {
-    if (!this.modal || !this._open) return;
+  /**
+   * @param {{ animate?: boolean }} [options]
+   */
+  closeOutliner(options = {}) {
+    if (!this.panel || !this.panelChrome || !this._open) return;
+    const animate = options.animate !== false;
     this._open = false;
     document.removeEventListener('keydown', this._onKeyDown, true);
-    animateModalClose(this.modal, this.modal.querySelector('.load-settings-content'));
+
+    if (animate) this.ui.uiSounds?.playShelfHide?.();
+
+    if (!animate || prefersReducedMotion()) {
+      this._snapPanelHidden();
+      return;
+    }
+
+    animateModalClose(
+      this.panel,
+      this.panelChrome,
+      () => {
+        this.panel.setAttribute('hidden', '');
+        this.panel.style.display = '';
+      },
+      false,
+      { revealBackdrop: false },
+    );
+  }
+
+  _snapPanelVisible() {
+    if (!this.panel || !this.panelChrome) return;
+    this.panel.removeAttribute('hidden');
+    this.panel.style.display = '';
+  }
+
+  _snapPanelHidden() {
+    if (!this.panel || !this.panelChrome) return;
+    this.panel.setAttribute('hidden', '');
+    this.panel.style.display = '';
+  }
+
+  _positionPanelDefault() {
+    if (!this.panel) return;
+    const shelf = document.getElementById('shelf');
+    const insetRaw = shelf ? getComputedStyle(shelf).getPropertyValue('--shelf-inset').trim() : '';
+    const inset = insetRaw || '48px';
+    this.panel.style.top = inset;
+    this.panel.style.left = inset;
+  }
+
+  /**
+   * @param {PointerEvent} event
+   */
+  _startPanelDrag(event) {
+    if (!this.panel) return;
+    event.preventDefault();
+
+    const panel = this.panel;
+    setFloatingPanelDragging(panel, true);
+    const rect = panel.getBoundingClientRect();
+    const offsetX = event.clientX - rect.left;
+    const offsetY = event.clientY - rect.top;
+    panel.setPointerCapture?.(event.pointerId);
+
+    const onMove = (moveEvent) => {
+      const inset = this._getShelfInsetPx();
+      const w = panel.offsetWidth;
+      const h = panel.offsetHeight;
+      let left = moveEvent.clientX - offsetX;
+      let top = moveEvent.clientY - offsetY;
+      left = Math.max(inset, Math.min(left, window.innerWidth - w - inset));
+      top = Math.max(inset, Math.min(top, window.innerHeight - h - inset));
+      panel.style.left = `${left}px`;
+      panel.style.top = `${top}px`;
+    };
+
+    const onUp = (upEvent) => {
+      setFloatingPanelDragging(panel, false);
+      panel.releasePointerCapture?.(upEvent.pointerId);
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+    };
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  }
+
+  _getShelfInsetPx() {
+    const shelf = document.getElementById('shelf');
+    const insetStr =
+      (shelf ? getComputedStyle(shelf).getPropertyValue('--shelf-inset').trim() : '') ||
+      getComputedStyle(document.documentElement).getPropertyValue('--shelf-inset').trim() ||
+      '48px';
+    return parseFloat(insetStr) || 48;
   }
 
   /**

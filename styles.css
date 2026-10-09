@@ -1209,18 +1209,164 @@ html.orby-mobile-modal-open body {
   font-size: 1.375rem;
   font-weight: 600;
   letter-spacing: -0.02em;
+  color: var(--accent);
+}
+
+/* Severe / destructive notices only — pink title */
+.message-alert-modal.message-alert-modal--caution .load-settings-header h3 {
   color: var(--warning);
+}
+
+/* Outliner — floating left panel (same chrome language as Shape Library; no backdrop blur) */
+.outliner-panel {
+  position: fixed;
+  z-index: 120;
+  top: var(--shelf-inset, 48px);
+  left: var(--shelf-inset, 48px);
+  width: auto;
+  max-width: calc(100vw - 2 * var(--shelf-inset, 48px));
+  pointer-events: none;
+  --shelf-reveal-dur: 0.45s;
+  --shelf-reveal-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  visibility: visible;
+  transition:
+    opacity var(--shelf-reveal-dur) var(--shelf-reveal-ease),
+    transform var(--shelf-reveal-dur) var(--shelf-reveal-ease),
+    visibility 0s;
+}
+
+body.ui-hidden .outliner-panel:not([hidden]) {
+  opacity: 0;
+  transform: translate3d(-36px, 0, 0);
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity var(--shelf-reveal-dur) var(--shelf-reveal-ease),
+    transform var(--shelf-reveal-dur) var(--shelf-reveal-ease),
+    visibility 0s linear var(--shelf-reveal-dur);
+}
+
+body.ui-hidden .outliner-panel:not([hidden]) .outliner-panel__chrome {
+  pointer-events: none;
+}
+
+.outliner-panel[hidden] {
+  display: none !important;
+}
+
+.outliner-panel__chrome {
+  display: flex;
+  flex-direction: column;
+  gap: var(--shelf-section-gap, 16px);
+  width: min(20rem, calc(100vw - 2 * var(--shelf-inset, 48px) - 2.4rem));
+  max-width: 100%;
+  max-height: calc(100vh - 2 * var(--shelf-inset, 48px));
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: var(--shelf-card-padding, 1.2rem);
+  border-radius: var(--app-settings-chrome-radius, 18px);
+  background: var(--shelf-bg, var(--ui-frosted-bg));
+  backdrop-filter: blur(var(--ui-frosted-blur, 15px));
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur, 15px));
+  --popup-chrome-shadow-alpha: 1;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, calc(0.35 * var(--popup-chrome-shadow-alpha)));
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+.outliner-panel__header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  min-height: 2.25rem;
+  flex: 0 0 auto;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.outliner-panel.is-panel-dragging .outliner-panel__header {
+  cursor: grabbing;
+}
+
+.outliner-panel__header .close-btn {
+  margin: -0.35rem -0.35rem 0 0;
+  cursor: pointer;
+}
+
+.outliner-panel__drag {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: -0.35rem 0 0 -0.35rem;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: grab;
+  touch-action: none;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.outliner-panel__drag:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--brand-primary) 14%, transparent);
+}
+
+.outliner-panel__drag:active {
+  cursor: grabbing;
+}
+
+.outliner-panel__grip {
+  width: 11px;
+  height: 11px;
+  background: radial-gradient(circle, currentColor 1.5px, transparent 1.6px);
+  background-size: 5.5px 5.5px;
+  opacity: 0.85;
+}
+
+.outliner-panel__title {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.outliner-panel__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.outliner-panel__empty {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text-dim);
 }
 
 .outliner-list {
   list-style: none;
-  margin: 0.75rem 0 0;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  max-height: min(50vh, 22rem);
-  overflow-y: auto;
 }
 
 .outliner-row {
@@ -1237,6 +1383,17 @@ html.orby-mobile-modal-open body {
 .outliner-row.is-active {
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+html:not(.mobile-landing) .outliner-panel {
+  top: calc(48px * var(--studio-ui-scale));
+  left: calc(48px * var(--studio-ui-scale));
+  max-width: calc(100vw - 96px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .outliner-panel__chrome {
+  backdrop-filter: blur(var(--ui-frosted-blur));
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
 }
 
 .export-video-object-group.is-muted {
@@ -1291,13 +1448,15 @@ html.orby-mobile-modal-open body {
 }
 
 /* Primary choice in a three-action confirm — solid accent, not the dim shelf rest state */
-.message-alert-actions:has(#messageAlertAlt:not([hidden])) #messageAlertOk {
+.message-alert-actions:has(#messageAlertAlt:not([hidden])):not(.message-alert-actions--no-primary)
+  #messageAlertOk {
   background: var(--accent);
   color: var(--brand-text);
   opacity: 1;
 }
 
-.message-alert-actions:has(#messageAlertAlt:not([hidden])) #messageAlertOk:hover {
+.message-alert-actions:has(#messageAlertAlt:not([hidden])):not(.message-alert-actions--no-primary)
+  #messageAlertOk:hover {
   filter: brightness(1.08);
   box-shadow: var(--ui-accent-outer-glow);
 }

@@ -626,6 +626,40 @@
             </div>
           </div>
           <div
+            id="outlinerPanel"
+            class="outliner-panel"
+            hidden
+            role="dialog"
+            aria-modal="false"
+            aria-label="Outliner"
+          >
+            <div class="outliner-panel__chrome">
+              <div class="load-settings-header outliner-panel__header">
+                <button
+                  type="button"
+                  id="outlinerPanelDrag"
+                  class="outliner-panel__drag"
+                  aria-label="Drag panel"
+                >
+                  <span class="outliner-panel__grip" aria-hidden="true"></span>
+                </button>
+                <p class="outliner-panel__title">Outliner</p>
+                <button
+                  type="button"
+                  id="closeOutliner"
+                  class="close-btn"
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div class="outliner-panel__body">
+                <p id="outlinerEmpty" class="outliner-panel__empty">
+                  Use Import Object → Add additional to switch between assets here.
+                </p>
+                <ul id="outlinerList" class="outliner-list" aria-label="Scene assets"></ul>
+              </div>
+            </div>
+          </div>
+          <div
             id="mapPreviewPanel"
             class="map-preview-panel"
             hidden
@@ -871,32 +905,14 @@
         </div>
         <p id="messageAlertBody" class="message-alert-body"></p>
         <div class="load-settings-actions message-alert-actions" id="messageAlertActions">
-          <button type="button" id="messageAlertCancel" class="ghost-btn" hidden>
-            No
-          </button>
           <button type="button" id="messageAlertAlt" class="ghost-btn" hidden>
             Add to Scene
           </button>
           <button type="button" id="messageAlertOk" class="accent-action-btn">OK</button>
+          <button type="button" id="messageAlertCancel" class="ghost-btn" hidden>
+            No
+          </button>
         </div>
-      </div>
-    </div>
-
-    <div
-      id="outlinerModal"
-      class="load-settings-modal message-alert-modal"
-      style="display: none;"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="outlinerTitle"
-    >
-      <div class="load-settings-content message-alert-content">
-        <div class="load-settings-header">
-          <h3 id="outlinerTitle">Outliner</h3>
-          <button type="button" id="closeOutliner" class="close-btn" aria-label="Close"></button>
-        </div>
-        <p id="outlinerEmpty" class="message-alert-body">Use Import Object → Add to Scene to switch between assets here.</p>
-        <ul id="outlinerList" class="outliner-list" aria-label="Scene assets"></ul>
       </div>
     </div>
 

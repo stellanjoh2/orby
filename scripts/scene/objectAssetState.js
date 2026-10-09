@@ -5,6 +5,7 @@ import {
   reconcileFontExtrudeSliceForMesh,
 } from './fontExtrudeAssetState.js';
 import { isFontExtrudeModel, isSvgFileExtrudeModel } from './SvgExtrudeSceneOps.js';
+export { placeAssetBeside } from './placeAssetBeside.js';
 
 export {
   stampFontExtrudeAssetSettings,
@@ -155,30 +156,4 @@ export function readObjectTransform(root) {
     rotationY: THREE.MathUtils.radToDeg(root.rotation.y),
     rotationZ: THREE.MathUtils.radToDeg(root.rotation.z),
   };
-}
-
-/**
- * Park `newcomer` just to the +X side of `anchors`, near them and the origin.
- * @param {import('three').Object3D[]} anchors
- * @param {import('three').Object3D} newcomer
- * @returns {number}
- */
-export function placeAssetBeside(anchors, newcomer) {
-  newcomer.updateMatrixWorld(true);
-  const newcomers = new THREE.Box3().setFromObject(newcomer);
-  const occupied = new THREE.Box3();
-  for (const anchor of anchors) {
-    if (!anchor) continue;
-    anchor.updateMatrixWorld(true);
-    occupied.expandByObject(anchor);
-  }
-  if (occupied.isEmpty() || newcomers.isEmpty()) {
-    newcomer.position.x = 1.25;
-    return newcomer.position.x;
-  }
-  const occupiedSize = occupied.getSize(new THREE.Vector3());
-  const newcomerSize = newcomers.getSize(new THREE.Vector3());
-  const gap = Math.max(0.25, Math.min(occupiedSize.x, newcomerSize.x) * 0.2);
-  newcomer.position.x += occupied.max.x - newcomers.min.x + gap;
-  return newcomer.position.x;
 }

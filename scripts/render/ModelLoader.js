@@ -166,8 +166,35 @@ export class ModelLoader {
   async loadFile(file, options = {}) {
     if (!file) throw new Error('No file provided');
     const extension = file.name.split('.').pop().toLowerCase();
-    const asset = await this.parseFileByExtension(file, extension, options);
-    return { ...asset, sourceFile: file };
+    this._beginImportScale(options);
+    try {
+      const asset = await this.parseFileByExtension(file, extension, options);
+      return { ...asset, sourceFile: file };
+    } finally {
+      this._endImportScale();
+    }
+  }
+
+  /**
+   * @param {{ importScaleFactor?: number }} [options]
+   */
+  _beginImportScale(options = {}) {
+    const factor = options.importScaleFactor;
+    this._pendingImportScaleFactor =
+      Number.isFinite(factor) && factor > 0 ? factor : undefined;
+  }
+
+  _endImportScale() {
+    this._pendingImportScaleFactor = undefined;
+  }
+
+  /** @param {import('three').Object3D | null | undefined} object */
+  _normalizeLoaded(object) {
+    const shared = this._pendingImportScaleFactor;
+    if (Number.isFinite(shared) && shared > 0) {
+      return normalizeImportScale(object, { scaleFactor: shared });
+    }
+    return normalizeImportScale(object);
   }
 
   async loadFileBundle(files) {
@@ -241,7 +268,7 @@ export class ModelLoader {
             version: asset.version || null,
             copyright: asset.copyright || null,
           };
-          normalizeImportScale(gltf.scene);
+          this._normalizeLoaded(gltf.scene);
           resolve({
             object: gltf.scene,
             animations: gltf.animations ?? [],
@@ -281,7 +308,9 @@ export class ModelLoader {
   }
 
   async loadBvh(file) {
-    return this.bvhImporter.loadFromFile(file, (f) => this.fileReaders.text(f));
+    const loaded = await this.bvhImporter.loadFromFile(file, (f) => this.fileReaders.text(f));
+    this._normalizeLoaded(loaded.object);
+    return loaded;
   }
 
   async loadSvg(file, options = {}) {
@@ -305,7 +334,7 @@ export class ModelLoader {
       bevelAmount,
       detail,
     });
-    normalizeImportScale(object);
+    this._normalizeLoaded(object);
     const assetName = file.name.replace(/\.[^/.]+$/, '') || 'SVG';
     return {
       object,
@@ -348,7 +377,7 @@ export class ModelLoader {
           if (!assetName) {
             assetName = file.name.replace(/\.[^/.]+$/, '');
           }
-          normalizeImportScale(gltf.scene);
+          this._normalizeLoaded(gltf.scene);
           resolve({
             object: gltf.scene,
             animations: gltf.animations,
@@ -388,7 +417,7 @@ export class ModelLoader {
           if (!assetName) {
             assetName = file.name.replace(/\.[^/.]+$/, '');
           }
-          normalizeImportScale(gltf.scene);
+          this._normalizeLoaded(gltf.scene);
           resolve({
             object: gltf.scene,
             animations: gltf.animations || [],
@@ -488,7 +517,7 @@ export class ModelLoader {
   }
 
   normalizeFbxScale(object) {
-    normalizeImportScale(object);
+    this._normalizeLoaded(object);
   }
 
   applyFbxVertexColorFallback(object) {
@@ -566,7 +595,7 @@ export class ModelLoader {
     return new Promise((resolve, reject) => {
       try {
         const object = this.objLoader.parse(text);
-        normalizeImportScale(object);
+        this._normalizeLoaded(object);
         resolve({ object, animations: [] });
       } catch (error) {
         reject(error);
@@ -586,7 +615,7 @@ export class ModelLoader {
         });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.userData.orbyStlImport = true;
-        normalizeImportScale(mesh);
+        this._normalizeLoaded(mesh);
         resolve({
           object: mesh,
           animations: [],
@@ -613,7 +642,7 @@ export class ModelLoader {
         'This USD file had no meshes the viewer could read. GLB/glTF is more reliable for web; lights, cameras, and some composition features may be skipped.',
       );
     }
-    normalizeImportScale(object);
+    this._normalizeLoaded(object);
     return { object, animations: [] };
   }
 

@@ -34,6 +34,7 @@ import {
   defaultObjectAssetState,
   writeObjectAssetState,
 } from './objectAssetState.js';
+import { resolveSharedImportScaleFactor } from '../import/normalizeImportScale.js';
 
 /**
  * Model load, replace, clear, dispose, and first-load presentation (camera fade, scale-in).
@@ -766,6 +767,7 @@ export class ModelLifecycleManager {
 
       const defaults = defaultObjectAssetState(s.stateStore);
       const svg = defaults.svgExtrude || {};
+      const sharedScale = resolveSharedImportScaleFactor(session.assets);
       const loaded = await s.modelLoader.loadFile(file, {
         svgExtrudeDepth: svg.depth,
         svgExtrudeNormalAngle: svg.normalAngle,
@@ -775,6 +777,7 @@ export class ModelLifecycleManager {
         svgExtrudeFlipDirection: !!svg.flipDirection,
         svgExtrudeBevelAmount: svg.bevelAmount ?? 0,
         svgExtrudeDetail: svg.detail ?? 'high',
+        ...(sharedScale != null ? { importScaleFactor: sharedScale } : {}),
       });
 
       await this.attachAdditionalAsset(loaded, {

@@ -90,7 +90,7 @@ export const ROADMAP_TASK_GRID_DEFS = [
   { label: 'Bevels V2', startGrid: 21, endGrid: 24, status: 'priority' },
   { label: 'BUG FIXES', startGrid: 20, endGrid: 24, status: 'priority' },
   { label: 'Scene sharing', startGrid: 20, endGrid: 23, status: 'todo' },
-  { label: 'OUTLINER', startGrid: 20, endGrid: 24, status: 'future' },
+  { label: 'OUTLINER', startGrid: 20, endGrid: 24, status: 'done' },
 
   /* Q4 2026 (grid 24–28) */
   { label: 'Advanced Animation', startGrid: 24, endGrid: 28, status: 'future' },

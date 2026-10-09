@@ -46,7 +46,7 @@ export class UIManagerModalOverlays {
 
   /**
    * Modal with OK — for long errors/warnings that need time to read.
-   * @param {{ okLabel?: string, confirm?: boolean, cancelLabel?: string, altLabel?: string, onConfirm?: () => void, onCancel?: () => void, onAlt?: () => void }} [options]
+   * @param {{ okLabel?: string, confirm?: boolean, cancelLabel?: string, altLabel?: string, okAccent?: boolean, onConfirm?: () => void, onCancel?: () => void, onAlt?: () => void, modalTone?: 'caution' | 'notification' | 'none' }} [options]
    */
   showMessageAlert(message, title = 'Message', options = {}) {
     if (!this._ui.dom.messageAlertModal || !this._ui.dom.messageAlertBody) return;
@@ -73,13 +73,19 @@ export class UIManagerModalOverlays {
         ? options.cancelLabel.trim()
         : 'No';
 
+    const tone = options?.modalTone === 'caution' ? 'caution' : 'notification';
+    this._ui.dom.messageAlertModal.classList.toggle('message-alert-modal--caution', tone === 'caution');
+
     if (this._ui.dom.messageAlertTitle) {
       this._ui.dom.messageAlertTitle.textContent = title;
     }
     this._ui.dom.messageAlertBody.textContent = text;
 
+    const okAccent = options?.okAccent !== false;
     if (this._ui.dom.messageAlertOk) {
       this._ui.dom.messageAlertOk.textContent = okLabel;
+      this._ui.dom.messageAlertOk.classList.toggle('accent-action-btn', okAccent);
+      this._ui.dom.messageAlertOk.classList.toggle('ghost-btn', !okAccent);
     }
     if (this._ui.dom.messageAlertCancel) {
       this._ui.dom.messageAlertCancel.hidden = !confirm;
@@ -96,6 +102,10 @@ export class UIManagerModalOverlays {
 
     const wide = !confirm && okLabel !== 'OK';
     this._ui.dom.messageAlertActions?.classList.toggle('message-alert-actions--wide', wide);
+    this._ui.dom.messageAlertActions?.classList.toggle(
+      'message-alert-actions--no-primary',
+      !okAccent,
+    );
 
     if (this._messageAlertKeydownHandler) {
       document.removeEventListener('keydown', this._messageAlertKeydownHandler, true);
@@ -226,7 +236,13 @@ export class UIManagerModalOverlays {
     this._messageAlertOnCancel = null;
     this._messageAlertOnAlt = null;
     if (this._ui.dom.messageAlertAlt) this._ui.dom.messageAlertAlt.hidden = true;
+    if (this._ui.dom.messageAlertOk) {
+      this._ui.dom.messageAlertOk.classList.add('accent-action-btn');
+      this._ui.dom.messageAlertOk.classList.remove('ghost-btn');
+    }
+    this._ui.dom.messageAlertActions?.classList.remove('message-alert-actions--no-primary');
     const modal = this._ui.dom.messageAlertModal;
+    modal?.classList.remove('message-alert-modal--caution');
     if (modal) snapModalHidden(modal, this.getMessageAlertPanel());
   }
 
@@ -341,6 +357,7 @@ export class UIManagerModalOverlays {
       '#bugReportModal',
       '#orbyFullscreenPrompt',
       '#shapeLibraryPanel',
+      '#outlinerPanel',
     ];
     for (const sel of selectors) {
       const modal = document.querySelector(sel);

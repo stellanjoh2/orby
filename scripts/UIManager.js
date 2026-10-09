@@ -1083,7 +1083,7 @@ export class UIManager {
     if (!noCautionSound && tone === 'caution') {
       this.uiSounds?.playCaution();
     }
-    this.modalOverlays?.showMessageAlert(message, title, alertOptions);
+    this.modalOverlays?.showMessageAlert(message, title, { ...alertOptions, modalTone: tone });
   }
 
   /**

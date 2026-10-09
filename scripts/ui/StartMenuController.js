@@ -396,10 +396,12 @@ export class StartMenuController {
         {
           confirm: true,
           cancelLabel: 'Cancel',
-          altLabel: 'Replace',
-          okLabel: 'Add to Scene',
-          onConfirm: () => resolve('add'),
-          onAlt: () => resolve('replace'),
+          altLabel: 'Add additional',
+          okLabel: 'Replace current object',
+          okAccent: false,
+          modalTone: 'notification',
+          onConfirm: () => resolve('replace'),
+          onAlt: () => resolve('add'),
           onCancel: () => resolve('keep'),
         },
       );

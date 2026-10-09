@@ -70,6 +70,8 @@ export function shouldCopyAssetToDist(src) {
     if (rel.startsWith('showcase/')) {
       if (
         rel === 'showcase/showcase-backpack.jpg' ||
+        rel === 'showcase/showcase-quixel.jpg' ||
+        rel === 'showcase/showcase-lowpoly.jpg' ||
         rel === 'showcase/goblin-girl.jpg' ||
         rel === 'showcase/showcase-cottage.jpg'
       ) {
