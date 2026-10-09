@@ -294,11 +294,12 @@ export class EnvironmentController {
     const baseEnvTexture = this.environmentRenderTarget.texture;
     const envIntensity = this.strength;
 
+    // Always apply intensity — strength can change while the PMREM texture reference stays put.
     if (this.scene.environment !== baseEnvTexture) {
       this.scene.environment = baseEnvTexture;
-      this.scene.environmentIntensity = envIntensity;
-      this._notifyEnvironmentMapUpdated(baseEnvTexture, envIntensity);
     }
+    this.scene.environmentIntensity = envIntensity;
+    this._notifyEnvironmentMapUpdated(baseEnvTexture, envIntensity);
 
     const drawHdriBackdrop =
       this.backgroundEnabled

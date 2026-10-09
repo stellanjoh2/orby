@@ -3,10 +3,7 @@
  */
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/GLTFLoader.js';
 import { registerKHRMaterialsPbrSpecularGlossiness } from '../render/gltfKHRSpecularGlossinessPlugin.js';
-import {
-  normalizeImportScale,
-  resolveSharedImportScaleFactor,
-} from '../import/normalizeImportScale.js';
+import { normalizeImportScale } from '../import/normalizeImportScale.js';
 import {
   findBakeableShapeLibraryEntry,
   applyShapeLibraryPresentationTilt,
@@ -97,18 +94,9 @@ export class ShapeLibraryController {
           buffer,
           '',
           (gltf) => {
-            const appending =
-              !!options.append && !!scene.currentModel && !!scene.sceneObjects;
-            const sharedScale = appending
-              ? resolveSharedImportScaleFactor(scene.sceneObjects.assets)
-              : null;
-            if (sharedScale != null) {
-              normalizeImportScale(gltf.scene, { scaleFactor: sharedScale });
-            } else {
-              normalizeImportScale(gltf.scene, {
-                target: SHAPE_LIBRARY_TARGET_MAX_DIMENSION,
-              });
-            }
+            normalizeImportScale(gltf.scene, {
+              target: SHAPE_LIBRARY_TARGET_MAX_DIMENSION,
+            });
             applyShapeLibraryPresentationTilt(gltf.scene);
             gltf.scene.userData.orbyShapeLibrary = true;
             gltf.scene.userData.orbyShapeLibraryId = entry.id;

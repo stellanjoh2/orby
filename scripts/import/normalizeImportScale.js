@@ -89,8 +89,11 @@ export function normalizeImportScale(object, options = {}) {
 
 /**
  * Import scale from the first scene asset that already went through
- * {@link normalizeImportScale}. Skips generated font/SVG so pack GLBs are not
- * sized off typography bounds.
+ * {@link normalizeImportScale}. Skips generated font/SVG so same-authoring-scale
+ * pack GLBs can opt in to a shared multiplier.
+ *
+ * Do not use for Object → Add additional / shape append — unrelated files must
+ * each fit {@link STUDIO_IMPORT_TARGET_MAX_DIMENSION} on their own.
  *
  * @param {{ mesh?: import('three').Object3D | null, isSvgExtrudeModel?: boolean }[] | null | undefined} assets
  * @returns {number | null}

@@ -1446,6 +1446,16 @@ export class SceneManager {
     const maxStrength = 5 * HDRI_STRENGTH_UNIT;
     this.hdriStrength = Math.min(maxStrength, Math.max(0, value));
     this.environmentController?.setStrength(this.hdriStrength);
+    // Mesh IBL uses per-material `envMapIntensity` — Three.js ignores `scene.environmentIntensity`
+    // when `material.envMap` is set (which we assign for lit/glass scaling). Sync materials
+    // explicitly like `setHdriBlurriness`, so the slider cannot leave the mesh stuck bright
+    // while only the backdrop dims.
+    if (this.scene?.environment) {
+      this.updateMaterialsEnvironment(
+        this.scene.environment,
+        Math.max(0, this.hdriStrength),
+      );
+    }
   }
 
   setHdriBlurriness(value) {

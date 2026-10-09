@@ -34,8 +34,6 @@ import {
   defaultObjectAssetState,
   writeObjectAssetState,
 } from './objectAssetState.js';
-import { resolveSharedImportScaleFactor } from '../import/normalizeImportScale.js';
-
 /**
  * Model load, replace, clear, dispose, and first-load presentation (camera fade, scale-in).
  */
@@ -566,6 +564,7 @@ export class ModelLifecycleManager {
         this._meshSpawnScaleRaf = requestAnimationFrame(tick);
       } else {
         object.scale.copy(targetScale);
+        object.visible = true;
         this._meshSpawnScaleRaf = 0;
         this._spawnScaleObject = null;
         this._spawnScaleTarget = null;
@@ -573,6 +572,16 @@ export class ModelLifecycleManager {
         this._presentObjectSurfaceAfterModelVisible();
         s.fontTextRevealController?.resetAllAnimations?.({ resumeConstant: true });
         this._finalizeFontModelAfterTypography(object);
+        // Non-font adds skip typography finalize — still park Object-menu state now that
+        // spawn scale has settled (capture was deferred while _fontSpawnPlacementLock).
+        if (
+          s.currentModel === object
+          && !object.userData?.orbyFontGenerated
+          && !isFontExtrudeRevealModel(object)
+        ) {
+          s.sceneObjects?.captureActiveState?.();
+        }
+        s.requestRender?.();
       }
     };
 
@@ -768,7 +777,9 @@ export class ModelLifecycleManager {
 
       const defaults = defaultObjectAssetState(s.stateStore);
       const svg = defaults.svgExtrude || {};
-      const sharedScale = resolveSharedImportScaleFactor(session.assets);
+      // Fit this file to the studio target on its own. Reusing the first asset's
+      // importScaleFactor is for same-scale packs only — unrelated Add-additional
+      // meshes (e.g. teddy + car) become microscopic or gigantic otherwise.
       const loaded = await s.modelLoader.loadFile(file, {
         svgExtrudeDepth: svg.depth,
         svgExtrudeNormalAngle: svg.normalAngle,
@@ -778,7 +789,6 @@ export class ModelLifecycleManager {
         svgExtrudeFlipDirection: !!svg.flipDirection,
         svgExtrudeBevelAmount: svg.bevelAmount ?? 0,
         svgExtrudeDetail: svg.detail ?? 'high',
-        ...(sharedScale != null ? { importScaleFactor: sharedScale } : {}),
       });
 
       await this.attachAdditionalAsset(loaded, {
@@ -787,6 +797,10 @@ export class ModelLifecycleManager {
         toast: options.silent ? 'Object added' : undefined,
         complete: { file },
       });
+      // PlaceBeside parks on +X; keep the new mesh in frame so Add is obvious.
+      if (s.currentModel && !options.silent) {
+        s.cameraController?.focusOnObjectAnimated?.(s.currentModel, 0.85);
+      }
       recordAssetLoaded(file);
     } catch (error) {
       console.error('Failed to add model', error);

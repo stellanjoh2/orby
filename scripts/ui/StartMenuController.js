@@ -3,6 +3,7 @@
  * Handles drag & drop, file input, visibility, and all start menu interactions
  */
 import gsap from 'gsap';
+import { isOrbySceneFile } from '../import/dispatchImportFile.js';
 import { handoffFileToMobileAppIfLanding } from '../orbyMobileHandoff.js';
 import { blockTabletStudioAccess } from '../orbyTabletGate.js';
 import {
@@ -13,6 +14,15 @@ import {
 } from './orbyPageTransition.js';
 import { TEXT_REVEAL_PACE } from './bigMessageHeadlineReveal.js';
 import { ensureLottie } from './lottieLoader.js';
+
+/** True when the drag payload includes OS files (not in-app shape drags, etc.). */
+function dataTransferHasFiles(dataTransfer) {
+  const types = dataTransfer?.types;
+  if (!types) return false;
+  if (typeof types.includes === 'function') return types.includes('Files');
+  if (typeof types.contains === 'function') return types.contains('Files');
+  return Array.from(types).includes('Files');
+}
 
 const STAGGER_CLASS = 'orby-stagger-word';
 
@@ -348,10 +358,27 @@ export class StartMenuController {
       });
     }
 
-    // Global drop handler (for dropping anywhere on window)
-    window.addEventListener('drop', (event) => {
-      this.handleDropEvent(event, emitFile);
-    }, { passive: false });
+    // Global drag/drop — required once the dropzone is hidden (mesh loaded).
+    // Without dragover preventDefault the browser downloads/navigates the file.
+    ['dragenter', 'dragover'].forEach((eventName) => {
+      window.addEventListener(
+        eventName,
+        (event) => {
+          if (!dataTransferHasFiles(event.dataTransfer)) return;
+          event.preventDefault();
+          if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+        },
+        { passive: false },
+      );
+    });
+    window.addEventListener(
+      'drop',
+      (event) => {
+        if (!dataTransferHasFiles(event.dataTransfer)) return;
+        this.handleDropEvent(event, emitFile);
+      },
+      { passive: false },
+    );
 
     this.dropzone.addEventListener('animationend', (event) => {
       if (event.target !== this.dropzone) return;
@@ -539,9 +566,9 @@ export class StartMenuController {
     // Try to extract directory entries first (for folder drops)
     const entries = this.extractEntries(event.dataTransfer);
     if (entries.length) {
-      this.collectFilesFromEntries(entries).then((files) => {
+      void this.collectFilesFromEntries(entries).then((files) => {
         if (files.length === 1) {
-          emitFile(files[0].file);
+          void this._emitDroppedFile(files[0].file, emitFile);
         } else if (files.length > 1) {
           this.eventBus.emit('file:bundle', files);
         }
@@ -553,7 +580,7 @@ export class StartMenuController {
     const fileList = event.dataTransfer?.files;
     if (fileList && fileList.length) {
       if (fileList.length === 1) {
-        emitFile(fileList[0]);
+        void this._emitDroppedFile(fileList[0], emitFile);
       } else {
         const files = Array.from(fileList).map((file) => ({
           file,
@@ -562,6 +589,42 @@ export class StartMenuController {
         this.eventBus.emit('file:bundle', files);
       }
     }
+  }
+
+  /**
+   * Drop onto the studio with a model already loaded → same Replace / Add choice as Import Object.
+   * DnD File handles can become unreadable after an async gap (the dialog), so bytes are
+   * copied into a fresh File before awaiting the user.
+   * @param {File} file
+   * @param {(file: File, extra?: { addToScene?: boolean }) => void} emitFile
+   */
+  async _emitDroppedFile(file, emitFile) {
+    if (!file) return;
+    if (isOrbySceneFile(file) || !window.orby?.scene?.currentModel) {
+      emitFile(file);
+      return;
+    }
+
+    let stableFile;
+    try {
+      const buffer = await file.arrayBuffer();
+      if (!buffer?.byteLength) {
+        this.ui?.showToast?.('Could not read file — try again');
+        return;
+      }
+      stableFile = new File([buffer], file.name, {
+        type: file.type || 'application/octet-stream',
+        lastModified: file.lastModified || Date.now(),
+      });
+    } catch (err) {
+      console.error('Dropped file read failed', err);
+      this.ui?.showToast?.('Could not read file — try again');
+      return;
+    }
+
+    const choice = await this._confirmImportPlace();
+    if (choice === 'keep') return;
+    emitFile(stableFile, { addToScene: choice === 'add' });
   }
 
   extractEntries(dataTransfer) {

@@ -433,6 +433,8 @@ export class MaterialController {
     /** @type {THREE.Texture|null} */
     this._lastEnvTexture = null;
     this._lastEnvIntensity = 1;
+    /** @type {{ envTexture: import('three').Texture | null, intensity: number, hdriBlurriness: number } | null} */
+    this._pendingEnvUpdate = null;
     this._lastHdriBlurriness = 0;
     /** When enabled, replaces non-glass mesh materials with creative ShaderMaterials (restored when off). */
     this.creativeLookSettings = {
@@ -2910,6 +2912,11 @@ export class MaterialController {
 
   endAssetMaterialLock() {
     this._assetMaterialLock = Math.max(0, this._assetMaterialLock - 1);
+    if (this._assetMaterialLock === 0 && this._pendingEnvUpdate) {
+      const { envTexture, intensity, hdriBlurriness } = this._pendingEnvUpdate;
+      this._pendingEnvUpdate = null;
+      this.updateMaterialsEnvironment(envTexture, intensity, hdriBlurriness);
+    }
   }
 
   /**
@@ -6851,7 +6858,17 @@ export class MaterialController {
   }
 
   updateMaterialsEnvironment(envTexture, intensity, hdriBlurriness = 0) {
-    if (this._assetMaterialLock > 0) return;
+    if (this._assetMaterialLock > 0) {
+      // Env notify may already have deduped this intensity — flush when the lock ends
+      // so mesh `envMapIntensity` cannot stay stuck while the backdrop already dimmed.
+      this._pendingEnvUpdate = {
+        envTexture: envTexture ?? null,
+        intensity,
+        hdriBlurriness,
+      };
+      return;
+    }
+    this._pendingEnvUpdate = null;
     if (!this.currentModel) return;
     this._lastEnvTexture = envTexture ?? null;
     this._assignSharedEnvMap(envTexture);

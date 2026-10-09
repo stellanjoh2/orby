@@ -400,10 +400,18 @@ export class SceneObjectsController {
       .map((asset) => asset.group || asset.mesh);
     placeAssetBeside(anchors, record.group);
     const live = readObjectTransform(record.group);
+    // Mirror the newcomer's pivot (incl. scale 1) — do not leave the previous
+    // asset's Object scale (e.g. 4) sitting in the store for this selection.
     this.scene.stateStore.batch(() => {
       this.scene.stateStore.set('xOffset', live.xOffset);
       this.scene.stateStore.set('yOffset', live.yOffset);
       this.scene.stateStore.set('zOffset', live.zOffset);
+      this.scene.stateStore.set('scale', live.scale);
+      this.scene.stateStore.set('scaleY', live.scaleY);
+      this.scene.stateStore.set('scaleZ', live.scaleZ);
+      this.scene.stateStore.set('rotationX', live.rotationX);
+      this.scene.stateStore.set('rotationY', live.rotationY);
+      this.scene.stateStore.set('rotationZ', live.rotationZ);
     });
   }
 
