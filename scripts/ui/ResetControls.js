@@ -136,7 +136,8 @@ const RESET_DIRTY_PATHS = {
     'svgExtrude.colorDepths', 'svgExtrude.colorOffsets', 'svgExtrude.colorReplacements',
     'svgExtrude.colorEmissiveBoosts',
     'svgExtrude.flipDirection', 'svgExtrude.colorOverride',
-    'svgExtrude.overrideColor', 'svgExtrude.overrideExtrudeColor', 'svgExtrude.surfacePreset', 'svgExtrude.surfaceScale', 'svgExtrude.surfaceStrength',
+    'svgExtrude.overrideColor', 'svgExtrude.overrideExtrudeColorEnabled',
+    'svgExtrude.overrideExtrudeColor', 'svgExtrude.surfacePreset', 'svgExtrude.surfaceScale', 'svgExtrude.surfaceStrength',
   ],
   advanced: [
     'advanced.reverseNormals', 'advanced.transparencyFix',

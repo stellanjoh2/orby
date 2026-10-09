@@ -15,6 +15,7 @@ import {
   MIN_EXTRUDE_DEPTH,
   MIN_EXTRUDE_NORMAL_ANGLE_DEG,
   MAX_EXTRUDE_NORMAL_ANGLE_DEG,
+  isSvgOverrideExtrudeColorEnabled,
   normalizeSvgOverrideHex,
 } from '../import/extrudeDefaults.js';
 import { MATERIAL_EMISSIVE_SLIDER_MAX } from '../constants.js';
@@ -1133,31 +1134,58 @@ export function bindSvgExtrudeControls(ctx) {
     eventBus.emit('mesh:svg-extrude-flip-direction', enabled);
   });
 
-  inputs.colorOverride?.addEventListener('change', (event) => {
-    const enabled = !!event.target.checked;
-    const color = normalizeSvgOverrideHex(inputs.overrideColor?.value);
-    const extrudeColor = normalizeSvgOverrideHex(
-      inputs.overrideExtrudeColor?.value,
-      color,
-    );
-    stateStore.set('svgExtrude.colorOverride', enabled);
-    eventBus.emit('mesh:svg-extrude-color-override', { enabled, color, extrudeColor });
-  });
-
-  const emitSvgOverrideColors = () => {
+  const emitSvgOverrideColors = ({ forceExtrudeEnabled = false } = {}) => {
     const enabled = !!stateStore.getState().svgExtrude?.colorOverride;
     const color = normalizeSvgOverrideHex(inputs.overrideColor?.value);
+    const extrudeColorEnabled = forceExtrudeEnabled
+      ? true
+      : !!inputs.overrideExtrudeColorEnabled?.checked;
     const extrudeColor = normalizeSvgOverrideHex(
       inputs.overrideExtrudeColor?.value,
       color,
     );
     stateStore.set('svgExtrude.overrideColor', color);
+    stateStore.set('svgExtrude.overrideExtrudeColorEnabled', extrudeColorEnabled);
     stateStore.set('svgExtrude.overrideExtrudeColor', extrudeColor);
-    eventBus.emit('mesh:svg-extrude-color-override', { enabled, color, extrudeColor });
+    if (forceExtrudeEnabled && inputs.overrideExtrudeColorEnabled) {
+      inputs.overrideExtrudeColorEnabled.checked = true;
+    }
+    syncSvgOverrideExtrudeColorVisibility(inputs, extrudeColorEnabled, {
+      overrideEnabled: enabled,
+    });
+    eventBus.emit('mesh:svg-extrude-color-override', {
+      enabled,
+      color,
+      extrudeColorEnabled,
+      extrudeColor,
+    });
   };
 
-  inputs.overrideColor?.addEventListener('input', emitSvgOverrideColors);
-  inputs.overrideExtrudeColor?.addEventListener('input', emitSvgOverrideColors);
+  inputs.colorOverride?.addEventListener('change', (event) => {
+    const enabled = !!event.target.checked;
+    const color = normalizeSvgOverrideHex(inputs.overrideColor?.value);
+    const extrudeColorEnabled = !!inputs.overrideExtrudeColorEnabled?.checked;
+    const extrudeColor = normalizeSvgOverrideHex(
+      inputs.overrideExtrudeColor?.value,
+      color,
+    );
+    stateStore.set('svgExtrude.colorOverride', enabled);
+    eventBus.emit('mesh:svg-extrude-color-override', {
+      enabled,
+      color,
+      extrudeColorEnabled,
+      extrudeColor,
+    });
+  });
+
+  inputs.overrideExtrudeColorEnabled?.addEventListener('change', () => {
+    emitSvgOverrideColors();
+  });
+
+  inputs.overrideColor?.addEventListener('input', () => emitSvgOverrideColors());
+  inputs.overrideExtrudeColor?.addEventListener('input', () => {
+    emitSvgOverrideColors({ forceExtrudeEnabled: true });
+  });
 
   const onColorDepthInput = (event) => {
     const input = event.target;
@@ -1542,25 +1570,47 @@ export function syncSvgExtrudeControls(ctx, state, options = {}) {
     inputs.colorOverride.checked = !!svg.colorOverride;
     ui.setControlDisabled(inputs.colorOverride, !canEdit);
   }
+  const overrideEnabled = !!svg.colorOverride;
+  const extrudeColorEnabled = isSvgOverrideExtrudeColorEnabled(svg);
   if (inputs.overrideColor) {
-    const overrideEnabled = !!svg.colorOverride;
     const color = svg.overrideColor ?? DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR;
     if (document.activeElement !== inputs.overrideColor) {
       inputs.overrideColor.value = color;
     }
     ui.setControlDisabled(inputs.overrideColor, !(canEdit && overrideEnabled));
   }
+  if (inputs.overrideExtrudeColorEnabled) {
+    inputs.overrideExtrudeColorEnabled.checked = extrudeColorEnabled;
+    ui.setControlDisabled(inputs.overrideExtrudeColorEnabled, !(canEdit && overrideEnabled));
+  }
   if (inputs.overrideExtrudeColor) {
-    const overrideEnabled = !!svg.colorOverride;
     const face = svg.overrideColor ?? DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR;
     const extrudeColor = svg.overrideExtrudeColor ?? face;
     if (document.activeElement !== inputs.overrideExtrudeColor) {
       inputs.overrideExtrudeColor.value = extrudeColor;
     }
-    ui.setControlDisabled(inputs.overrideExtrudeColor, !(canEdit && overrideEnabled));
+    syncSvgOverrideExtrudeColorVisibility(inputs, extrudeColorEnabled, {
+      canEdit,
+      overrideEnabled,
+    });
   }
 
   syncSvgExtrudeEmissiveBoostControls(ctx, state, options);
+}
+
+/**
+ * Enable the Side Color chip while the toggle is on (foldout handles show/hide).
+ * @param {{ overrideExtrudeColor?: HTMLInputElement | null }} inputs
+ * @param {boolean} extrudeColorEnabled
+ * @param {{ canEdit?: boolean, overrideEnabled?: boolean }} [options]
+ */
+function syncSvgOverrideExtrudeColorVisibility(inputs, extrudeColorEnabled, options = {}) {
+  const { canEdit = true, overrideEnabled = true } = options;
+  const editable = canEdit && overrideEnabled && !!extrudeColorEnabled;
+  if (inputs.overrideExtrudeColor) {
+    inputs.overrideExtrudeColor.disabled = !editable;
+    inputs.overrideExtrudeColor.classList.toggle('is-disabled-handle', !editable);
+  }
 }
 
 /**

@@ -150,7 +150,9 @@ import {
   DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
   MAX_EXTRUDE_DEPTH,
   MIN_EXTRUDE_DEPTH,
+  isSvgOverrideExtrudeColorEnabled,
   normalizeSvgOverrideHex,
+  resolveSvgOverrideSideColor,
 } from './import/extrudeDefaults.js';
 import { SceneMeshClickHandler } from './scene/SceneMeshClickHandler.js';
 import { SceneBoneHoverHandler } from './scene/SceneBoneHoverHandler.js';
@@ -3511,18 +3513,27 @@ export class SceneManager {
     const color = normalizeSvgOverrideHex(
       settings.color || settings.overrideColor || DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
     );
-    const storedFace = this.stateStore.getState()?.svgExtrude?.overrideColor;
-    const extrudeColor = normalizeSvgOverrideHex(
+    const liveSvg = this.stateStore.getState()?.svgExtrude || {};
+    const storedExtrude = normalizeSvgOverrideHex(
       settings.extrudeColor
         ?? settings.overrideExtrudeColor
-        ?? storedFace
+        ?? liveSvg.overrideExtrudeColor
         ?? color,
       color,
     );
+    const extrudeColorEnabled = settings.extrudeColorEnabled !== undefined
+      || settings.overrideExtrudeColorEnabled !== undefined
+      ? !!(settings.extrudeColorEnabled ?? settings.overrideExtrudeColorEnabled)
+      : isSvgOverrideExtrudeColorEnabled({
+        ...liveSvg,
+        overrideColor: color,
+        overrideExtrudeColor: storedExtrude,
+      });
     if (updateState) {
       this.stateStore.set('svgExtrude.colorOverride', enabled);
       this.stateStore.set('svgExtrude.overrideColor', color);
-      this.stateStore.set('svgExtrude.overrideExtrudeColor', extrudeColor);
+      this.stateStore.set('svgExtrude.overrideExtrudeColorEnabled', extrudeColorEnabled);
+      this.stateStore.set('svgExtrude.overrideExtrudeColor', storedExtrude);
     }
     this.applySvgExtrudeColors();
   }
@@ -3538,7 +3549,7 @@ export class SceneManager {
     const svg = this.stateStore.getState().svgExtrude || {};
     const overrideEnabled = !!svg.colorOverride;
     const faceHex = normalizeSvgOverrideHex(svg.overrideColor);
-    const extrudeHex = normalizeSvgOverrideHex(svg.overrideExtrudeColor, faceHex);
+    const extrudeHex = resolveSvgOverrideSideColor(svg, faceHex);
     const overrideTwoTone = overrideEnabled && fontExtrudeTwoToneActive(faceHex, extrudeHex);
     const overrideColor = new THREE.Color(faceHex);
     const replacements = replacementsOverride || svg.colorReplacements || {};

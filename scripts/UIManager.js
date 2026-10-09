@@ -553,6 +553,7 @@ export class UIManager {
       svgExtrudeFlipDirection: q('#svgExtrudeFlipDirection'),
       svgExtrudeColorOverride: q('#svgExtrudeColorOverride'),
       svgExtrudeColor: q('#svgExtrudeColor'),
+      svgExtrudeExtrudeColorEnabled: q('#svgExtrudeExtrudeColorEnabled'),
       svgExtrudeExtrudeColor: q('#svgExtrudeExtrudeColor'),
       svgExtrudeColorDepths: q('#svgExtrudeColorDepths'),
       svgExtrudeEmissiveBoostRow: q('#svgExtrudeEmissiveBoostRow'),

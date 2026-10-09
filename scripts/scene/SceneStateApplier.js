@@ -360,6 +360,7 @@ function createStateApplySteps() {
             {
               enabled: !!state.svgExtrude.colorOverride,
               color: state.svgExtrude.overrideColor ?? '#7ed321',
+              extrudeColorEnabled: state.svgExtrude.overrideExtrudeColorEnabled,
               extrudeColor:
                 state.svgExtrude.overrideExtrudeColor
                 ?? state.svgExtrude.overrideColor

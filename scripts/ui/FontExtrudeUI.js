@@ -296,20 +296,28 @@ export class FontExtrudeUI {
             </button>
           </div>
           <label class="color-line font-extrude-fill-color">
-            <span data-tooltip="Default color for faces, bevels, and sides (unless Extrude color is on)">Color</span>
+            <span data-tooltip="Primary color for faces, bevels, and sides (unless Side Color is on)">Color</span>
             <input type="color" id="fontExtrudeFillColor" class="color-chip" value="#808080" />
           </label>
           <label class="slider-line slider-line--toggle-only font-extrude-extrude-color-enabled">
-            <span data-tooltip="Paint extruded side walls a different color from the face">Extrude color</span>
+            <span data-tooltip="Use a different color on extruded side walls">Side Color</span>
             <label class="effect-toggle">
               <input type="checkbox" id="fontExtrudeExtrudeColorEnabled" />
               <span class="effect-indicator" aria-hidden="true"></span>
-              <span class="sr-only">Separate extrude color</span>
+              <span class="sr-only">Enable side color</span>
             </label>
           </label>
-          <label class="color-line is-muted font-extrude-extrude-color font-extrude-extrude-color-detail">
-            <span data-tooltip="Color for extruded side walls and depth">Side color</span>
-            <input type="color" id="fontExtrudeExtrudeColor" class="color-chip is-disabled-handle" value="#808080" disabled />
+          <label class="color-line is-muted font-extrude-extrude-color font-extrude-extrude-color-detail" hidden>
+            <span class="sr-only">Side color</span>
+            <input
+              type="color"
+              id="fontExtrudeExtrudeColor"
+              class="color-chip is-disabled-handle"
+              value="#808080"
+              disabled
+              aria-label="Side color"
+              data-tooltip="Color for extruded side walls and depth"
+            />
           </label>
           </div>
           ${FONT_EXTRUDE_SHAPE_CONTROLS_HTML}
@@ -2133,7 +2141,10 @@ export class FontExtrudeUI {
   _syncExtrudeColorControlsVisibility() {
     const enabled = !!this.els.extrudeColorEnabled?.checked;
     const row = this.els.extrudeColor?.closest('.font-extrude-extrude-color-detail');
-    row?.classList.toggle('is-muted', !enabled);
+    if (row) {
+      row.hidden = !enabled;
+      row.classList.toggle('is-muted', !enabled);
+    }
     if (this.els.extrudeColor) {
       this.els.extrudeColor.disabled = !enabled;
       this.els.extrudeColor.classList.toggle('is-disabled-handle', !enabled);

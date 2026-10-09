@@ -44,7 +44,7 @@ export function fontExtrudeTwoToneActive(fillHex, extrudeHex) {
 }
 
 /**
- * Whether Type Creator uses a separate extrude/side color.
+ * Whether Type Creator uses a separate Side Color.
  * Legacy stamps without `extrudeColorEnabled` infer from differing face/side hexes.
  * @param {{ extrudeColorEnabled?: boolean, fillColor?: string, extrudeColor?: string } | null | undefined} fontState
  */
@@ -54,7 +54,7 @@ export function isFontExtrudeExtrudeColorEnabled(fontState) {
 }
 
 /**
- * Effective side-wall color: face color while the Extrude color toggle is off.
+ * Effective side-wall color: face color while Side Color is off.
  * @param {{ extrudeColorEnabled?: boolean, fillColor?: string, extrudeColor?: string } | null | undefined} fontState
  * @param {string} [fillHex]
  */

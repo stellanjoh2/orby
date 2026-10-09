@@ -112,6 +112,7 @@ export class SceneSettingsManager {
       flipDirection: svg.flipDirection,
       colorOverride: svg.colorOverride,
       overrideColor: svg.overrideColor,
+      overrideExtrudeColorEnabled: svg.overrideExtrudeColorEnabled,
       overrideExtrudeColor: svg.overrideExtrudeColor,
       surfacePreset: svg.surfacePreset,
       surfaceScale: svg.surfaceScale,
@@ -737,15 +738,25 @@ export class SceneSettingsManager {
       if (
         payload.svgExtrude?.colorOverride !== undefined
         || payload.svgExtrude?.overrideColor !== undefined
+        || payload.svgExtrude?.overrideExtrudeColorEnabled !== undefined
         || payload.svgExtrude?.overrideExtrudeColor !== undefined
       ) {
         const enabled = !!payload.svgExtrude?.colorOverride;
         const color = payload.svgExtrude?.overrideColor ?? '#7ed321';
         const extrudeColor = payload.svgExtrude?.overrideExtrudeColor ?? color;
+        const extrudeColorEnabled = payload.svgExtrude?.overrideExtrudeColorEnabled !== undefined
+          ? !!payload.svgExtrude.overrideExtrudeColorEnabled
+          : extrudeColor !== color;
         this.stateStore.set('svgExtrude.colorOverride', enabled);
         this.stateStore.set('svgExtrude.overrideColor', color);
+        this.stateStore.set('svgExtrude.overrideExtrudeColorEnabled', extrudeColorEnabled);
         this.stateStore.set('svgExtrude.overrideExtrudeColor', extrudeColor);
-        this.eventBus.emit('mesh:svg-extrude-color-override', { enabled, color, extrudeColor });
+        this.eventBus.emit('mesh:svg-extrude-color-override', {
+          enabled,
+          color,
+          extrudeColorEnabled,
+          extrudeColor,
+        });
       }
       if (
         payload.svgExtrude?.surfacePreset !== undefined ||

@@ -3,6 +3,7 @@ import {
   isBloomTuningActive,
   isVignetteUiEnabled,
 } from '../constants.js';
+import { isSvgOverrideExtrudeColorEnabled } from '../import/extrudeDefaults.js';
 import { isMaterialObjectSurfaceEnabled } from '../render/SvgExtrudeSurfaceShader.js';
 import { isBackgroundFallbackActive } from '../render/backgroundFallback.js';
 import { getBackgroundMode } from '../render/backgroundMode.js';
@@ -86,6 +87,12 @@ export function applyMeshFoldouts(state, setOpen) {
   setOpen(
     'svg-color-override',
     !!state.svgExtrude?.enabled && !!state.svgExtrude?.colorOverride,
+  );
+  setOpen(
+    'svg-side-color',
+    !!state.svgExtrude?.enabled
+      && !!state.svgExtrude?.colorOverride
+      && isSvgOverrideExtrudeColorEnabled(state.svgExtrude),
   );
   setOpen(
     'material-color-override',

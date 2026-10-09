@@ -931,7 +931,7 @@
                     aria-hidden="true"
                   >
                   <label class="color-line">
-                    <span data-tooltip="Front faces and bevels when Color Override is enabled">Face color</span>
+                    <span data-tooltip="Primary color for faces, bevels, and sides (unless Side Color is on)">Color</span>
                     <input
                       type="color"
                       id="svgExtrudeColor"
@@ -939,15 +939,31 @@
                       value="#7ed321"
                     />
                   </label>
-                  <label class="color-line">
-                    <span data-tooltip="Extruded side walls and depth — pick a contrasting color for two-tone SVG">Extrude color</span>
+                  <label class="slider-line slider-line--toggle-only">
+                    <span data-tooltip="Use a different color on extruded side walls">Side Color</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="svgExtrudeExtrudeColorEnabled" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable side color</span>
+                    </label>
+                  </label>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="svg-side-color"
+                    aria-hidden="true"
+                  >
+                  <label class="color-line svg-extrude-extrude-color-detail">
+                    <span class="sr-only">Side color</span>
                     <input
                       type="color"
                       id="svgExtrudeExtrudeColor"
                       class="color-chip"
                       value="#7ed321"
+                      aria-label="Side color"
+                      data-tooltip="Color for extruded side walls and depth"
                     />
                   </label>
+                  </div>
                   </div>
                 </div>
               </div>

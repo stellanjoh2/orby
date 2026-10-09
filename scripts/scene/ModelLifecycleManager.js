@@ -206,6 +206,7 @@ export class ModelLifecycleManager {
       {
         enabled: !!svgState.colorOverride,
         color: svgState.overrideColor ?? DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
+        extrudeColorEnabled: svgState.overrideExtrudeColorEnabled,
         extrudeColor:
           svgState.overrideExtrudeColor
           ?? svgState.overrideColor
