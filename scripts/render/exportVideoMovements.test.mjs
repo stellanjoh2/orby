@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  exportVideoMovementLabel,
   hasExportVideoMovement,
   normalizeExportCameraSpinSettings,
   normalizeExportObjectSpinSettings,
@@ -129,6 +130,21 @@ describe('export mesh animation timing', () => {
 });
 
 describe('hasExportVideoMovement', () => {
+  it('allows fully static export (no spins, no GLB include)', () => {
+    const settings = {
+      turntable: true,
+      orbit: false,
+      objectSpins: 0,
+      objectSubtleDegrees: 0,
+      cameraSpins: 0,
+      cameraSubtleDegrees: 0,
+      meshAnimationsInclude: false,
+    };
+    const movements = normalizeExportVideoMovements(settings);
+    assert.equal(hasExportVideoMovement(movements, settings), true);
+    assert.equal(hasExportVideoMovement(movements, settings, 0), true);
+  });
+
   it('allows static camera when GLB animation is included', () => {
     const settings = {
       turntable: false,
@@ -138,17 +154,7 @@ describe('hasExportVideoMovement', () => {
     const movements = normalizeExportVideoMovements(settings);
     assert.equal(hasExportVideoMovement(movements, settings), true);
     assert.equal(hasExportVideoMovement(movements, settings, 1), true);
-    assert.equal(hasExportVideoMovement(movements, settings, 0), false);
-  });
-
-  it('still requires motion when GLB animation is off', () => {
-    const settings = {
-      turntable: false,
-      orbit: false,
-      meshAnimationsInclude: false,
-    };
-    const movements = normalizeExportVideoMovements(settings);
-    assert.equal(hasExportVideoMovement(movements, settings), false);
+    assert.equal(hasExportVideoMovement(movements, settings, 0), true);
   });
 
   it('allows turntable with rotation even without mesh anim', () => {
@@ -159,5 +165,20 @@ describe('hasExportVideoMovement', () => {
     };
     const movements = normalizeExportVideoMovements(settings);
     assert.equal(hasExportVideoMovement(movements, settings), true);
+  });
+});
+
+describe('exportVideoMovementLabel', () => {
+  it('labels zero-degree turntable/orbit as static', () => {
+    const settings = {
+      turntable: true,
+      orbit: true,
+      objectSpins: 0,
+      objectSubtleDegrees: 0,
+      cameraSpins: 0,
+      cameraSubtleDegrees: 0,
+    };
+    const movements = normalizeExportVideoMovements(settings);
+    assert.equal(exportVideoMovementLabel(movements, settings), 'static');
   });
 });

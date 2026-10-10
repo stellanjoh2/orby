@@ -135,7 +135,7 @@
                   aria-hidden="true"
                 >
                 <p class="export-format-sub">
-                  Combine object turntable, camera orbit/dolly/roll, and optional HDRI rotation.
+                  Optional object turntable and camera orbit/dolly/roll — or leave motion off for a static camera (GLB clips, type reveals, and shaders still animate over the length).
                 </p>
                 <p class="export-format-sub export-format-warning">
                   MP4 is a real-time viewport capture, not an offline render. Heavier scenes may drop frames or fail—best for previews and lighter setups. For dependable output, export a PNG sequence or GIF.
@@ -155,7 +155,7 @@
                     </div>
                     <span class="export-label">Laps</span>
                     <div class="export-button-group export-button-group--triple">
-                      <button type="button" data-video-object-spins="0" class="export-option-btn" data-tooltip="No full 360° mesh rotation — use arc below for partial turns">0</button>
+                      <button type="button" data-video-object-spins="0" class="export-option-btn" data-tooltip="No full 360° mesh rotation — leave arc off for a static mesh, or use arc for partial turns">0</button>
                       <button type="button" data-video-object-spins="1" class="export-option-btn active" data-tooltip="One full mesh rotation over the export length">1</button>
                       <button type="button" data-video-object-spins="2" class="export-option-btn" data-tooltip="Two full mesh rotations over the same duration">2</button>
                     </div>
@@ -179,7 +179,7 @@
                     </div>
                     <span class="export-label">Orbit Laps</span>
                     <div class="export-button-group export-button-group--triple">
-                      <button type="button" data-video-camera-spins="0" class="export-option-btn" data-tooltip="No full 360° camera orbit — use arc below for partial moves">0</button>
+                      <button type="button" data-video-camera-spins="0" class="export-option-btn" data-tooltip="No full 360° camera orbit — leave arc off for a locked camera, or use arc for partial moves">0</button>
                       <button type="button" data-video-camera-spins="1" class="export-option-btn active" data-tooltip="One full camera orbit over the export length">1</button>
                       <button type="button" data-video-camera-spins="2" class="export-option-btn" data-tooltip="Two full camera orbits over the same duration">2</button>
                     </div>
