@@ -171,6 +171,7 @@ await esbuild.build({
   outfile: join(__dirname, 'scripts', 'vendor', 'cdt2d.module.js'),
   legalComments: 'none',
 });
+await import('./scripts/dev/vendorGifski.mjs');
 
 // Build JavaScript bundle
 // Note: Three.js is kept external (loaded via import map in HTML)

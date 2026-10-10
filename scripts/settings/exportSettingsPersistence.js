@@ -18,6 +18,11 @@ import {
   normalizeExportVideoFps,
   normalizeExportVideoResolution,
 } from '../render/exportVideoResolution.js';
+import {
+  normalizeGifExportFps,
+  normalizeGifExportResolution,
+} from '../render/gif/gifExportSettings.js';
+import { normalizeGifManualCropWidth } from '../render/gif/gifCropUnion.js';
 
 /**
  * Snapshot export-tab settings for scene copy / .orby save.
@@ -116,7 +121,7 @@ export function applySavedExportSettings(target, saved) {
   target.video.fovOffset = movements.fovOffset;
   target.video.pitchOffset = movements.pitchOffset;
 
-  if (video.format === 'mp4' || video.format === 'png') {
+  if (video.format === 'mp4' || video.format === 'png' || video.format === 'gif') {
     target.video.format = video.format;
   }
   if (video.durationSec !== undefined) {
@@ -167,15 +172,24 @@ export function applySavedExportSettings(target, saved) {
   target.video.aspectRatio = normalizeExportVideoAspectRatio(video.aspectRatio);
 
   if (video.fps !== undefined) {
-    target.video.fps = normalizeExportVideoFps(Number(video.fps));
+    target.video.fps = target.video.format === 'gif'
+      ? normalizeGifExportFps(Number(video.fps))
+      : normalizeExportVideoFps(Number(video.fps));
   }
-  target.video.resolution = normalizeExportVideoResolution(video.resolution);
+  target.video.resolution = target.video.format === 'gif'
+    ? normalizeGifExportResolution(video.resolution)
+    : normalizeExportVideoResolution(video.resolution);
 
   if (video.mp4Quality === 'low' || video.mp4Quality === 'medium' || video.mp4Quality === 'high') {
     target.video.mp4Quality = video.mp4Quality;
   }
   if (video.movTransparent !== undefined) {
     target.video.movTransparent = !!video.movTransparent;
+  }
+  if (video.gifManualCropWidth !== undefined) {
+    target.video.gifManualCropWidth = normalizeGifManualCropWidth(
+      video.gifManualCropWidth,
+    );
   }
   if (video.meshAnimationsInclude !== undefined) {
     target.video.meshAnimationsInclude = !!video.meshAnimationsInclude;

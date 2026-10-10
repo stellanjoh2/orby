@@ -77,6 +77,13 @@ import {
   normalizeExportVideoFps,
   normalizeExportVideoResolution,
 } from '../render/exportVideoResolution.js';
+import {
+  getGifExportResolutionPixelLabel,
+  isGifExportResolution,
+  normalizeGifExportFps,
+  normalizeGifExportResolution,
+  normalizeVideoExportFormat,
+} from '../render/gif/gifExportSettings.js';
 import { IMPORT_MESH_SMOOTHING_ENABLED } from '../import/stlNormalSmoothing.js';
 import {
   MESH_CHECKBOX_UI_MANIFEST,
@@ -909,7 +916,8 @@ export class MeshControls {
     const updatePngTransparentUi = () => {
       const wrap = this.ui.inputs.exportPngTransparentSettings;
       if (!wrap) return;
-      const enabled = this.ui.exportSettings.video?.format === 'png';
+      const format = normalizeVideoExportFormat(this.ui.exportSettings.video?.format);
+      const enabled = format === 'png' || format === 'gif';
       wrap.classList.toggle('is-muted', !enabled);
       wrap.querySelectorAll('[data-video-mov-transparent]').forEach((el) => {
         if ('disabled' in el) el.disabled = !enabled;
@@ -921,14 +929,43 @@ export class MeshControls {
     const updateMp4Ui = () => {
       const wrap = this.ui.inputs.exportMp4Settings;
       if (!wrap) return;
-      const f = this.ui.exportSettings.video?.format;
-      const showCompression = f === 'mp4';
+      const f = normalizeVideoExportFormat(this.ui.exportSettings.video?.format);
+      const showCompression = f === 'mp4' || f === 'gif';
       wrap.hidden = !showCompression;
       wrap.classList.toggle('is-muted', !showCompression);
       wrap.querySelectorAll('[data-video-mp4-quality]').forEach((btn) => {
         if ('disabled' in btn) btn.disabled = !showCompression;
         btn.classList.toggle('is-disabled', !showCompression);
       });
+      const gifHint = this.ui.inputs.exportGifHint;
+      if (gifHint) gifHint.hidden = f !== 'gif';
+    };
+    const syncExportVideoFormatUi = () => {
+      const format = normalizeVideoExportFormat(this.ui.exportSettings.video?.format);
+      this.ui.exportSettings.video.format = format;
+      document.querySelectorAll('[data-video-format]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.videoFormat === format);
+      });
+      if (format === 'gif') {
+        this.ui.exportSettings.video.resolution = normalizeGifExportResolution(
+          this.ui.exportSettings.video.resolution,
+        );
+        this.ui.exportSettings.video.fps = normalizeGifExportFps(
+          this.ui.exportSettings.video.fps,
+        );
+      } else if (
+        this.ui.exportSettings.video.resolution === '480p'
+        || this.ui.exportSettings.video.resolution === '720p'
+      ) {
+        this.ui.exportSettings.video.resolution = '1080p';
+      }
+      updatePngTransparentUi();
+      updateMp4Ui();
+      syncExportFpsUi();
+      syncExportVideoResolutionUi();
+      if (format !== 'gif') {
+        this.ui.exportGifCropOverlay?.hide?.();
+      }
     };
 
     const ensureSplitExportSpinDefaults = (video = {}) => {
@@ -1149,13 +1186,10 @@ export class MeshControls {
     document.querySelectorAll('[data-video-format]').forEach((button) => {
       button.addEventListener('click', () => {
         const format = button.dataset.videoFormat;
-        if (format !== 'mp4' && format !== 'png') return;
+        if (format !== 'mp4' && format !== 'png' && format !== 'gif') return;
         this.ui.exportSettings.video.format = format;
-        document.querySelectorAll('[data-video-format]').forEach((btn) => {
-          btn.classList.toggle('active', btn === button);
-        });
-        updatePngTransparentUi();
-        updateMp4Ui();
+        syncExportVideoFormatUi();
+        notifyExportPreviewSettingsChanged();
       });
     });
 
@@ -1172,15 +1206,23 @@ export class MeshControls {
 
     const syncExportFpsUi = () => {
       const video = this.ui.exportSettings.video || {};
-      const fps = normalizeExportVideoFps(video.fps);
+      const isGif = normalizeVideoExportFormat(video.format) === 'gif';
+      const fps = isGif
+        ? normalizeGifExportFps(video.fps)
+        : normalizeExportVideoFps(video.fps);
       video.fps = fps;
       document.querySelectorAll('[data-video-fps]').forEach((btn) => {
-        btn.classList.toggle('active', parseInt(btn.dataset.videoFps, 10) === fps);
+        const btnFps = parseInt(btn.dataset.videoFps, 10);
+        const disabled = isGif && btnFps === 60;
+        btn.classList.toggle('active', btnFps === fps);
+        if ('disabled' in btn) btn.disabled = disabled;
+        btn.classList.toggle('is-disabled', disabled);
       });
     };
 
     document.querySelectorAll('[data-video-fps]').forEach((button) => {
       button.addEventListener('click', () => {
+        if (button.disabled) return;
         const fps = parseInt(button.dataset.videoFps, 10);
         if (fps !== 24 && fps !== 30 && fps !== 60) return;
         this.ui.exportSettings.video.fps = fps;
@@ -1188,8 +1230,6 @@ export class MeshControls {
         notifyExportPreviewSettingsChanged();
       });
     });
-
-    syncExportFpsUi();
 
     const syncExportSpinGroupUi = ({
       spinsKey,
@@ -1379,33 +1419,61 @@ export class MeshControls {
 
     document.querySelectorAll('[data-video-resolution]').forEach((button) => {
       button.addEventListener('click', () => {
+        if (button.hidden || button.disabled) return;
         const resolution = button.dataset.videoResolution;
-        if (
+        const isGif = normalizeVideoExportFormat(this.ui.exportSettings.video?.format) === 'gif';
+        if (isGif) {
+          if (!isGifExportResolution(resolution)) return;
+          this.ui.exportSettings.video.resolution = resolution;
+        } else if (
           resolution !== '1080p'
           && resolution !== '1440p'
           && resolution !== '2160p'
-        ) return;
-        this.ui.exportSettings.video.resolution = resolution;
+        ) {
+          return;
+        } else {
+          this.ui.exportSettings.video.resolution = resolution;
+        }
         syncExportVideoResolutionUi();
+        notifyExportPreviewSettingsChanged();
       });
     });
 
     const syncExportVideoResolutionUi = () => {
       const video = this.ui.exportSettings.video || {};
       video.aspectRatio = normalizeExportVideoAspectRatio(video.aspectRatio);
-      const resolution = normalizeExportVideoResolution(video.resolution);
+      const isGif = normalizeVideoExportFormat(video.format) === 'gif';
+      const resolution = isGif
+        ? normalizeGifExportResolution(video.resolution)
+        : normalizeExportVideoResolution(video.resolution);
       video.resolution = resolution;
       const aspectRatio = normalizeExportVideoAspectRatio(video.aspectRatio);
       document.querySelectorAll('[data-video-resolution]').forEach((btn) => {
-        btn.classList.toggle('active', btn.dataset.videoResolution === resolution);
-        btn.dataset.tooltip = getExportVideoResolutionPixelLabel(
-          btn.dataset.videoResolution,
-          aspectRatio,
-        );
+        const key = btn.dataset.videoResolution;
+        const isGifOnly = key === '480p' || key === '720p';
+        if (isGif) {
+          // Show full row; 1440p / 2160p stay visible but disabled.
+          const allowed = isGifExportResolution(key);
+          btn.hidden = false;
+          if ('disabled' in btn) btn.disabled = !allowed;
+          btn.classList.toggle('is-disabled', !allowed);
+          btn.classList.toggle('active', allowed && key === resolution);
+          btn.dataset.tooltip = allowed
+            ? getGifExportResolutionPixelLabel(key)
+            : 'GIF max is 1080p — use PNG sequence or MP4 for higher resolutions';
+          return;
+        }
+        btn.hidden = isGifOnly;
+        if ('disabled' in btn) btn.disabled = false;
+        btn.classList.toggle('is-disabled', false);
+        btn.classList.toggle('active', !isGifOnly && key === resolution);
+        if (!isGifOnly) {
+          btn.dataset.tooltip = getExportVideoResolutionPixelLabel(key, aspectRatio);
+        }
       });
     };
 
-    syncExportVideoResolutionUi();
+    syncExportVideoFormatUi();
 
     document.querySelectorAll('[data-video-mov-transparent]').forEach((button) => {
       button.addEventListener('click', () => {
@@ -1434,18 +1502,13 @@ export class MeshControls {
       this.ui.pickPngExportDirectory();
     });
 
-    updatePngTransparentUi();
-    updateMp4Ui();
     this.ui.syncExportPngFolderUi();
 
     this.syncExportSettingsUi = () => {
-      syncExportVideoResolutionUi();
-      syncExportFpsUi();
+      syncExportVideoFormatUi();
       syncExportMovementButtons();
       syncExportSpinUi();
       syncExportDurationUi();
-      updatePngTransparentUi();
-      updateMp4Ui();
     };
   }
 
@@ -2214,4 +2277,6 @@ export class MeshControls {
     renderSvgColorDepthControls(this.ui.inputs.svgExtrudeColorDepths, state, this.ui);
   }
 }
+
+
 

@@ -25,6 +25,11 @@ import {
   normalizeExportVideoFps,
   normalizeExportVideoResolution,
 } from './exportVideoResolution.js';
+import {
+  getGifExportResolutionPixelLabel,
+  normalizeGifExportFps,
+  normalizeGifExportResolution,
+} from './gif/gifExportSettings.js';
 
 /** Default export job for dropzone / URL overlay preview. */
 export const OFFLINE_EXPORT_OVERLAY_PREVIEW_JOB = {
@@ -155,12 +160,19 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
     exportJob,
     exportJob.clipCount ?? 0,
   );
-  const resolution = normalizeExportVideoResolution(exportJob.resolution);
+  const isGif = exportJob.format === 'gif';
+  const resolution = isGif
+    ? normalizeGifExportResolution(exportJob.resolution)
+    : normalizeExportVideoResolution(exportJob.resolution);
   const aspectRatio = normalizeExportVideoAspectRatio(exportJob.aspectRatio);
   const durationSec = exportJob.durationSec ?? 5;
-  const fps = normalizeExportVideoFps(exportJob.fps);
+  const fps = isGif
+    ? normalizeGifExportFps(exportJob.fps)
+    : normalizeExportVideoFps(exportJob.fps);
   const totalFrames = Math.max(2, Math.round(Number(durationSec) * Number(fps)));
-  const defaultSize = getExportVideoResolutionSize(resolution, aspectRatio);
+  const defaultSize = isGif
+    ? { width: exportJob.exportWidth, height: exportJob.exportHeight }
+    : getExportVideoResolutionSize(resolution, aspectRatio);
   const sequenceFolderName =
     typeof renderContext.sequenceFolderName === 'string'
       ? renderContext.sequenceFolderName.trim()
@@ -172,42 +184,58 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
   const useFolderExport = renderContext.useFolderExport === true && !!outputDirectoryName;
   const zipFileName =
     typeof renderContext.zipFileName === 'string' ? renderContext.zipFileName.trim() : '';
+  const gifFileName =
+    typeof renderContext.gifFileName === 'string' ? renderContext.gifFileName.trim() : '';
   const exportWidth =
     Number(renderContext.exportWidth)
-    || defaultSize.width
-    || 1920;
+    || defaultSize?.width
+    || (isGif ? 1280 : 1920);
   const exportHeight =
     Number(renderContext.exportHeight)
-    || defaultSize.height
-    || 1080;
+    || defaultSize?.height
+    || (isGif ? 720 : 1080);
   const postFxState =
     renderContext.postFxState && typeof renderContext.postFxState === 'object'
       ? renderContext.postFxState
       : {};
 
   const rows = [];
-  addRow(
-    rows,
-    'Output',
-    useFolderExport
-      ? `Folder → ${outputDirectoryName}`
-      : 'ZIP download',
-  );
-  if (sequenceFolderName) {
-    addRow(rows, 'Sequence folder', sequenceFolderName);
+  if (isGif) {
+    addRow(rows, 'Output', 'GIF download');
+    if (gifFileName) {
+      addRow(rows, 'GIF file', gifFileName);
+    }
+    addRow(rows, 'Format', 'Animated GIF (gifski)');
+    const quality = exportJob.mp4Quality === 'low' || exportJob.mp4Quality === 'high'
+      ? exportJob.mp4Quality
+      : 'medium';
+    addRow(rows, 'Quality', quality === 'low' ? 'Low' : quality === 'high' ? 'High' : 'Medium');
+  } else {
+    addRow(
+      rows,
+      'Output',
+      useFolderExport
+        ? `Folder → ${outputDirectoryName}`
+        : 'ZIP download',
+    );
+    if (sequenceFolderName) {
+      addRow(rows, 'Sequence folder', sequenceFolderName);
+    }
+    if (!useFolderExport && zipFileName) {
+      addRow(rows, 'ZIP file', zipFileName);
+    }
+    addRow(
+      rows,
+      'Est. size',
+      estimatePngSequenceSizeLabel(exportWidth, exportHeight, totalFrames),
+    );
   }
-  if (!useFolderExport && zipFileName) {
-    addRow(rows, 'ZIP file', zipFileName);
-  }
-  addRow(
-    rows,
-    'Est. size',
-    estimatePngSequenceSizeLabel(exportWidth, exportHeight, totalFrames),
-  );
   addRow(
     rows,
     'Resolution',
-    getExportVideoResolutionSummaryLabel(resolution, aspectRatio),
+    isGif
+      ? getGifExportResolutionPixelLabel(resolution)
+      : getExportVideoResolutionSummaryLabel(resolution, aspectRatio),
   );
   addRow(rows, 'Aspect', aspectRatio);
   addRow(rows, 'Duration', `${durationSec}s`);
@@ -219,6 +247,15 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
       rows,
       'Framing',
       transparentFramingSummaryLabel(exportJob.transparentFraming),
+    );
+  }
+  if (exportJob.movTransparent && isGif) {
+    addRow(
+      rows,
+      'Framing',
+      isTransparentCropToAsset(exportJob.transparentFraming)
+        ? 'Crop to asset (union of all frames)'
+        : 'Full frame',
     );
   }
   addRow(

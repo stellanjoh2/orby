@@ -138,7 +138,7 @@
                   Combine object turntable, camera orbit/dolly/roll, and optional HDRI rotation.
                 </p>
                 <p class="export-format-sub export-format-warning">
-                  MP4 is a real-time viewport capture, not an offline render. Heavier scenes may drop frames or fail—best for previews and lighter setups. For dependable output, export a PNG sequence.
+                  MP4 is a real-time viewport capture, not an offline render. Heavier scenes may drop frames or fail—best for previews and lighter setups. For dependable output, export a PNG sequence or GIF.
                 </p>
                 <div class="export-controls">
                   <p id="exportMultiAssetNote" class="export-format-sub" hidden>
@@ -324,9 +324,10 @@
                   <div class="block-title export-section-title">Output</div>
                   <div class="export-option-group">
                     <span class="export-label">Format</span>
-                    <div class="export-button-group">
+                    <div class="export-button-group export-button-group--triple">
                       <button data-video-format="mp4" class="export-option-btn active" data-tooltip="Encoded .MP4 export">.MP4</button>
                       <button data-video-format="png" class="export-option-btn" data-tooltip="Numbered PNG sequence">.PNG</button>
+                      <button data-video-format="gif" class="export-option-btn" data-tooltip="Offline animated GIF — seamless loop, optional transparency">.GIF</button>
                     </div>
                   </div>
                   <div id="exportPngTransparentSettings" class="export-png-transparent is-muted">
@@ -334,7 +335,7 @@
                       <span class="export-label">Transparent</span>
                       <div class="export-button-group">
                         <button type="button" data-video-mov-transparent="false" class="export-option-btn active" disabled data-tooltip="Solid background">NO</button>
-                        <button type="button" data-video-mov-transparent="true" class="export-option-btn is-disabled" disabled data-tooltip="Transparent PNG sequence for compositing">YES</button>
+                        <button type="button" data-video-mov-transparent="true" class="export-option-btn is-disabled" disabled data-tooltip="Transparent background for compositing (PNG sequence or GIF)">YES</button>
                       </div>
                     </div>
                   </div>
@@ -342,7 +343,7 @@
                     <div class="export-option-group">
                       <span class="export-label">Framing</span>
                       <div class="export-button-group">
-                        <button type="button" data-export-transparent-framing="crop" class="export-option-btn active" data-tooltip="Trim empty pixels around the mesh — best for stickers and compositing">CROP TO ASSET</button>
+                        <button type="button" data-export-transparent-framing="crop" class="export-option-btn active" data-tooltip="Trim empty pixels around the mesh. GIF uses a fixed union crop across all frames so motion never clips.">CROP TO ASSET</button>
                         <button type="button" data-export-transparent-framing="full" class="export-option-btn" data-tooltip="Keep the export canvas with transparent margins — best for overlays and motion graphics">FULL FRAME</button>
                       </div>
                     </div>
@@ -366,6 +367,9 @@
                       </div>
                     </div>
                   </div>
+                  <p id="exportGifHint" class="export-format-sub" hidden>
+                    GIF is offline-baked and loops forever. Caps at 1080p / 30 FPS. With Crop to asset, scrub the preview and drag the width handles — export uses the wider of your width and the full motion union.
+                  </p>
                   <div id="exportVideoLengthGroup" class="export-option-group">
                     <span class="export-label">Length</span>
                     <div class="export-button-group export-button-group--triple">
@@ -385,10 +389,12 @@
                   </div>
                   <div class="export-option-group">
                     <span class="export-label">Resolution</span>
-                    <div class="export-button-group export-button-group--triple">
-                      <button data-video-resolution="1080p" class="export-option-btn active" data-tooltip="1920 × 1080">1080p</button>
-                      <button data-video-resolution="1440p" class="export-option-btn" data-tooltip="2560 × 1440">1440p</button>
-                      <button data-video-resolution="2160p" class="export-option-btn" data-tooltip="3840 × 2160 (4K). Heavy encode; some browsers may fall back.">2160p</button>
+                    <div id="exportVideoResolutionGroup" class="export-button-group export-button-group--triple">
+                      <button type="button" data-video-resolution="480p" class="export-option-btn export-res-gif" hidden data-tooltip="854 × 480 — smaller GIF">480p</button>
+                      <button type="button" data-video-resolution="720p" class="export-option-btn export-res-gif" hidden data-tooltip="1280 × 720 — recommended GIF">720p</button>
+                      <button type="button" data-video-resolution="1080p" class="export-option-btn export-res-gif export-res-video active" data-tooltip="1920 × 1080">1080p</button>
+                      <button type="button" data-video-resolution="1440p" class="export-option-btn export-res-video" data-tooltip="2560 × 1440">1440p</button>
+                      <button type="button" data-video-resolution="2160p" class="export-option-btn export-res-video" data-tooltip="3840 × 2160 (4K). Heavy encode; some browsers may fall back.">2160p</button>
                     </div>
                   </div>
                   <button
@@ -401,15 +407,52 @@
                   </button>
                   <div class="export-capture-preview-thumb" id="exportCapturePreviewThumbWrap">
                     <div class="export-capture-preview-thumb-frame">
-                      <img id="exportCapturePreviewThumb" alt="Last export capture preview" hidden />
+                      <div class="export-capture-preview-thumb-stage" id="exportCapturePreviewStage">
+                        <img id="exportCapturePreviewThumb" alt="Last export capture preview" hidden />
+                        <div
+                          id="exportGifCropOverlay"
+                          class="export-gif-crop-overlay"
+                          hidden
+                          aria-hidden="true"
+                        >
+                          <div class="export-gif-crop-overlay__window" aria-label="GIF crop frame">
+                            <button
+                              type="button"
+                              class="export-gif-crop-overlay__handle export-gif-crop-overlay__handle--left"
+                              data-gif-crop-handle="left"
+                              data-tooltip="Drag to set GIF width"
+                              aria-label="Drag left edge to set GIF width"
+                            ></button>
+                            <button
+                              type="button"
+                              class="export-gif-crop-overlay__handle export-gif-crop-overlay__handle--right"
+                              data-gif-crop-handle="right"
+                              data-tooltip="Drag to set GIF width"
+                              aria-label="Drag right edge to set GIF width"
+                            ></button>
+                          </div>
+                        </div>
+                      </div>
                       <div class="export-capture-preview-thumb-empty" id="exportCapturePreviewThumbEmpty">
                         <i class="fa-solid fa-eye" aria-hidden="true"></i>
                         <span>Capture a preview frame to see it here</span>
                       </div>
                     </div>
                     <span class="export-capture-preview-thumb-label" id="exportCapturePreviewThumbLabel"></span>
+                    <div class="export-gif-crop-controls" id="exportGifCropControls">
+                      <span class="export-gif-crop-width-hint" id="exportGifCropWidthHint" hidden></span>
+                      <button
+                        type="button"
+                        id="exportGifCropReset"
+                        class="export-option-btn export-gif-crop-reset"
+                        hidden
+                        data-tooltip="Reset to automatic content width (union of frames on export)"
+                      >
+                        Auto width
+                      </button>
+                    </div>
                   </div>
-                  <button id="exportVideoButton" class="accent-action-btn" data-tooltip="Export MP4 or PNG sequence. For long PNG exports, choose an output folder to write frames directly to disk.">
+                  <button id="exportVideoButton" class="accent-action-btn" data-tooltip="Export MP4, PNG sequence, or GIF. For long PNG exports, choose an output folder to write frames directly to disk.">
                     <i class="fa-solid fa-film"></i>
                     Export Video
                   </button>
@@ -497,7 +540,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.1072 · 2026-10-09 21:46:35 UTC</div>
+              <div class="info-version-tag">v0.5.1077 · 2026-10-10 14:03:03 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>

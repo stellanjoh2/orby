@@ -6,7 +6,10 @@ import {
 } from './ui/effectFoldouts.js';
 import { applyCreativeLookPostFxUiBlocks, bindShaderLabBlockedClickHints } from './ui/creativeLookPostFxBlocked.js';
 import { getImageExportFormat, normalizeImageExportFormat } from './render/imageExportFormats.js';
-import { normalizeTransparentFraming } from './render/imageExportFraming.js';
+import {
+  isTransparentCropToAsset,
+  normalizeTransparentFraming,
+} from './render/imageExportFraming.js';
 import { DEFAULT_EXPORT_VIDEO_FPS } from './render/exportVideoResolution.js';
 import {
   applySavedExportSettings,
@@ -55,6 +58,7 @@ import { initInfoPanelNavGuard, openInfoSectionTarget } from './ui/infoSections.
 import { ensureInfoPanelProseLoaded } from './ui/loadInfoPanelProse.js';
 import { AnimationControls } from './ui/AnimationControls.js';
 import { ExportPreviewControls } from './ui/ExportPreviewControls.js';
+import { ExportGifCropOverlay } from './ui/ExportGifCropOverlay.js';
 import { ExportSectionControls } from './ui/ExportSectionControls.js';
 import { FontExtrudeUI } from './ui/FontExtrudeUI.js';
 import { ShapeLibraryUI } from './ui/ShapeLibraryUI.js';
@@ -164,6 +168,7 @@ export class UIManager {
     this.cacheDom();
     this.animationControls = new AnimationControls(this.eventBus, this);
     this.exportPreviewControls = new ExportPreviewControls(this.eventBus, this);
+    this.exportGifCropOverlay = new ExportGifCropOverlay(this);
     this.exportSectionControls = new ExportSectionControls(this);
     this.bindOfflineExportOverlayActions();
     this.uiSounds = new UISounds();
@@ -480,6 +485,10 @@ export class UIManager {
     this.dom.exportCapturePreviewThumb = q('#exportCapturePreviewThumb');
     this.dom.exportCapturePreviewThumbEmpty = q('#exportCapturePreviewThumbEmpty');
     this.dom.exportCapturePreviewThumbLabel = q('#exportCapturePreviewThumbLabel');
+    this.dom.exportCapturePreviewStage = q('#exportCapturePreviewStage');
+    this.dom.exportGifCropOverlay = q('#exportGifCropOverlay');
+    this.dom.exportGifCropWidthHint = q('#exportGifCropWidthHint');
+    this.dom.exportGifCropReset = q('#exportGifCropReset');
     this.dom.animationTimeReferenceSection = q('#animationTimeReferenceSection');
     this.dom.animationFrameNumbers = q('#animationFrameNumbers');
     this.dom.clipPlanesFoldout = q('#clipPlanesFoldout');
@@ -831,6 +840,7 @@ export class UIManager {
       exportPngFolderSettings: q('#exportPngFolderSettings'),
       exportPngFolderLabel: q('#exportPngFolderLabel'),
       exportMp4Settings: q('#exportMp4Settings'),
+      exportGifHint: q('#exportGifHint'),
       exportZoomDistance: q('#exportZoomDistance'),
       exportZoomDistanceSettings: q('#exportZoomDistanceSettings'),
       exportTiltAngle: q('#exportTiltAngle'),
@@ -943,6 +953,8 @@ export class UIManager {
         aspectRatio: '16:9',
         mp4Quality: 'medium',
         movTransparent: false,
+        /** @type {number | null} Manual GIF crop width in export pixels (null = auto union). */
+        gifManualCropWidth: null,
         meshAnimationsInclude: true,
         meshAnimationClipIndex: 0,
         meshMatchDurationToClip: false,
@@ -997,6 +1009,7 @@ export class UIManager {
     this.isometricControls.bind();
     this.animationControls.bind();
     this.exportPreviewControls.bind();
+    this.exportGifCropOverlay.bind();
     this.exportSectionControls.bind();
     this.syncExportVideoPreviewDock?.();
     this.syncFontExtrudeAnimationPreviewDock?.();
@@ -2470,6 +2483,12 @@ export class UIManager {
     if (overlay) {
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
+      const titleEl = overlay.querySelector('.viewport-offline-export__title');
+      if (titleEl && typeof options.title === 'string' && options.title.trim()) {
+        titleEl.textContent = options.title.trim();
+      } else if (titleEl) {
+        titleEl.textContent = 'Rendering PNG sequence';
+      }
     }
     this._offlineExportElapsedStart = performance.now();
     this._offlineExportFrameProgress = { frameIndex: 0, totalFrames: 0 };
@@ -2912,10 +2931,18 @@ export class UIManager {
     const imageEnabled = imageFormat.supportsAlpha && !!this.exportSettings.transparent;
     syncWrap(this.inputs.exportImageTransparentFraming, imageEnabled);
 
+    const videoFormat = this.exportSettings.video?.format;
     const videoEnabled =
-      this.exportSettings.video?.format === 'png'
+      (videoFormat === 'png' || videoFormat === 'gif')
       && !!this.exportSettings.video?.movTransparent;
     syncWrap(this.inputs.exportVideoTransparentFraming, videoEnabled);
+    if (
+      videoFormat !== 'gif'
+      || !this.exportSettings.video?.movTransparent
+      || !isTransparentCropToAsset(this.exportSettings.transparentFraming)
+    ) {
+      this.exportGifCropOverlay?.hide?.();
+    }
   }
 
   /** Image panel — format label, transparency mute (JPEG has no alpha). */
@@ -3078,7 +3105,16 @@ export class UIManager {
   /**
    * Show last offline capture preview tile (export resolution, not live viewport).
    * @param {string} objectUrl
-   * @param {{ width?: number, height?: number, frameIndex?: number, totalFrames?: number, transparent?: boolean, cropped?: boolean }} [meta]
+   * @param {{
+   *   width?: number,
+   *   height?: number,
+   *   frameIndex?: number,
+   *   totalFrames?: number,
+   *   transparent?: boolean,
+   *   cropped?: boolean,
+   *   gifCropEditable?: boolean,
+   *   contentBounds?: { minCol: number, minRow: number, maxCol: number, maxRow: number } | null,
+   * }} [meta]
    */
   showExportCapturePreviewThumb(objectUrl, meta = {}) {
     const wrap = this.dom.exportCapturePreviewThumbWrap;
@@ -3099,6 +3135,12 @@ export class UIManager {
       label.textContent = this._formatExportCapturePreviewLabel(meta);
     }
     wrap?.removeAttribute('hidden');
+    this.exportGifCropOverlay?.sync({
+      enabled: !!meta.gifCropEditable && !!meta.contentBounds,
+      frameWidth: meta.width,
+      frameHeight: meta.height,
+      contentBounds: meta.contentBounds ?? null,
+    });
   }
 
   /** @param {{ width?: number, height?: number, frameIndex?: number, totalFrames?: number, transparent?: boolean, cropped?: boolean }} meta */

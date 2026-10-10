@@ -45,6 +45,24 @@ import {
   resolveVideoExportFrameTiming,
 } from './capture/captureVideoExportFrame.js';
 import {
+  downscaleImageData,
+  encodeGifFrames,
+  imageBlobToImageData,
+} from './gif/encodeGifFrames.js';
+import {
+  applyGifUnionCrop,
+  GIF_UNION_CROP_PADDING,
+  normalizeGifManualCropWidth,
+} from './gif/gifCropUnion.js';
+import { computeTightAlphaBounds } from './capture/TransparentCapture.js';
+import {
+  getGifExportResolutionPixelLabel,
+  getGifExportResolutionSize,
+  normalizeGifExportFps,
+  normalizeGifExportResolution,
+  normalizeVideoExportFormat,
+} from './gif/gifExportSettings.js';
+import {
   applyTransparentCaptureSetup,
   cropTransparentTopDownRgbaToCanvas,
   readTransparentMergedTopDownRgba,
@@ -227,8 +245,19 @@ export class VideoExporter {
     const timing = resolveExportMeshAnimationTiming(settings, clipCount, clipDuration);
     const durationSec = timing.exportDurationSec;
     const cameraMovementDurationSec = timing.cameraMovementDurationSec;
-    const fps = normalizeExportVideoFps(settings?.fps);
+    const format = normalizeVideoExportFormat(settings?.format);
+    const isGif = format === 'gif';
+    const fps = isGif
+      ? normalizeGifExportFps(settings?.fps)
+      : normalizeExportVideoFps(settings?.fps);
     const totalFrames = Math.max(2, Math.round(durationSec * fps));
+    const aspectRatio = normalizeExportVideoAspectRatio(settings?.aspectRatio);
+    const resolution = isGif
+      ? normalizeGifExportResolution(settings?.resolution)
+      : normalizeExportVideoResolution(settings?.resolution);
+    const outputSize = isGif
+      ? getGifExportResolutionSize(resolution)
+      : this._getVideoResolutionSize(resolution, aspectRatio);
     const state = this.stateStore.getState();
     const startRotationY = Number.isFinite(state.rotationY)
       ? state.rotationY
@@ -242,6 +271,7 @@ export class VideoExporter {
         ? state.hdriRotation
         : 0;
     return {
+      format,
       movements,
       hdriRotationSettings: normalizeExportHdriRotationSettings(settings),
       modeLabel: exportVideoMovementLabel(movements),
@@ -255,12 +285,9 @@ export class VideoExporter {
       totalFrames,
       objectSpinSettings: normalizeExportObjectSpinSettings(settings),
       cameraSpinSettings: normalizeExportCameraSpinSettings(settings),
-      resolution: normalizeExportVideoResolution(settings?.resolution),
-      aspectRatio: normalizeExportVideoAspectRatio(settings?.aspectRatio),
-      outputSize: this._getVideoResolutionSize(
-        normalizeExportVideoResolution(settings?.resolution),
-        normalizeExportVideoAspectRatio(settings?.aspectRatio),
-      ),
+      resolution,
+      aspectRatio,
+      outputSize,
       baseName:
         this.getCurrentFile?.()?.name
         || this.getCurrentAssetMetadata?.()?.assetName
@@ -271,6 +298,15 @@ export class VideoExporter {
       lightsAutoRotate: !!state.lightsAutoRotate,
       movementEasing: normalizeExportMovementEasing(settings?.movementEasing),
     };
+  }
+
+  _gifFileName(baseName, modeLabel, durationSec, fps, resolution) {
+    const safeBase = (baseName || 'orby')
+      .replace(/\.[a-z0-9]+$/i, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      || 'orby';
+    return `${safeBase}_${modeLabel}_${durationSec}s_${fps}fps_${resolution}.gif`;
   }
 
   _sequenceFolderName(
@@ -1469,15 +1505,26 @@ export class VideoExporter {
       cameraMovementDurationSec,
     );
 
-    const format = settings?.format === 'png' ? 'png' : 'mp4';
-    const shouldUseTransparentFrames = format === 'png' && !!settings?.movTransparent;
+    const format = normalizeVideoExportFormat(settings?.format ?? params.format);
+    const shouldUseTransparentFrames =
+      (format === 'png' || format === 'gif') && !!settings?.movTransparent;
+    const gifCropEditable =
+      format === 'gif'
+      && shouldUseTransparentFrames
+      && isTransparentCropToAsset(settings?.transparentFraming);
+    // Full-frame bake so the preview can host a draggable width band.
+    const previewTransparentFraming = gifCropEditable
+      ? 'full'
+      : settings?.transparentFraming;
     const wasBackgroundEnabled = !!this.getHdriBackgroundEnabled?.();
     const originalBackground = this.scene.background;
     const originalClearAlpha = this.renderer.getClearAlpha();
     const originalClearColor = this.renderer.getClearColor(new THREE.Color()).clone();
     let transparentSetupSnapshot = null;
 
-    const resolutionLabel = getExportVideoResolutionPixelLabel(resolution, aspectRatio);
+    const resolutionLabel = format === 'gif'
+      ? getGifExportResolutionPixelLabel(resolution)
+      : getExportVideoResolutionPixelLabel(resolution, aspectRatio);
     const usePersistentExportSize = shouldUseTransparentFrames;
     const sizeSnapshot = usePersistentExportSize
       ? this._applyVideoExportSize(
@@ -1543,7 +1590,7 @@ export class VideoExporter {
           transparent: shouldUseTransparentFrames,
           exportWidth: sizeSnapshot.exportWidth,
           exportHeight: sizeSnapshot.exportHeight,
-          transparentFraming: settings?.transparentFraming,
+          transparentFraming: previewTransparentFraming,
         },
       );
       blob = frameCapture.blob;
@@ -1569,6 +1616,30 @@ export class VideoExporter {
     let previewDataUrl = null;
     if (opts.showThumbnail) {
       previewDataUrl = URL.createObjectURL(blob);
+      let contentBounds = null;
+      if (gifCropEditable && blob) {
+        try {
+          const imageData = await imageBlobToImageData(blob);
+          const tight = computeTightAlphaBounds(
+            imageData.data,
+            imageData.width,
+            imageData.height,
+            1,
+          );
+          if (tight) {
+            contentBounds = {
+              minCol: Math.max(0, tight.minCol - GIF_UNION_CROP_PADDING),
+              minRow: Math.max(0, tight.minRow - GIF_UNION_CROP_PADDING),
+              maxCol: Math.min(imageData.width - 1, tight.maxCol + GIF_UNION_CROP_PADDING),
+              maxRow: Math.min(imageData.height - 1, tight.maxRow + GIF_UNION_CROP_PADDING),
+            };
+            outputWidth = imageData.width;
+            outputHeight = imageData.height;
+          }
+        } catch (error) {
+          console.warn('GIF crop preview bounds failed', error);
+        }
+      }
       this.ui?.showExportCapturePreviewThumb?.(previewDataUrl, {
         width: outputWidth,
         height: outputHeight,
@@ -1576,7 +1647,11 @@ export class VideoExporter {
         totalFrames,
         transparent: shouldUseTransparentFrames,
         cropped: outputCropped,
+        gifCropEditable,
+        contentBounds,
       });
+    } else if (!gifCropEditable) {
+      this.ui?.exportGifCropOverlay?.hide?.();
     }
 
     if (download) {
@@ -1652,7 +1727,7 @@ export class VideoExporter {
       cameraMovementDurationSec,
     } = params;
 
-    const format = settings?.format === 'png' ? 'png' : 'mp4';
+    const format = normalizeVideoExportFormat(settings?.format ?? params.format);
 
     const mp4Quality =
       settings?.mp4Quality === 'low' || settings?.mp4Quality === 'high'
@@ -1664,15 +1739,20 @@ export class VideoExporter {
     const originalBackground = this.scene.background;
     const originalClearAlpha = this.renderer.getClearAlpha();
     const originalClearColor = this.renderer.getClearColor(new THREE.Color()).clone();
-    const shouldUseTransparentFrames = format === 'png' && movTransparent;
-    const resolutionLabel = getExportVideoResolutionPixelLabel(resolution, aspectRatio);
-    if (resolution === '2160p' && (fps >= 60 || mp4Quality === 'high')) {
+    const shouldUseTransparentFrames =
+      (format === 'png' || format === 'gif') && movTransparent;
+    const resolutionLabel = format === 'gif'
+      ? getGifExportResolutionPixelLabel(resolution)
+      : getExportVideoResolutionPixelLabel(resolution, aspectRatio);
+    if (format === 'mp4' && resolution === '2160p' && (fps >= 60 || mp4Quality === 'high')) {
       this.ui?.showToast?.(
         '4K export is heavy on this browser/GPU and may use fallback encoding',
       );
     }
     const isOfflinePngSequence = format === 'png';
-    if (isOfflinePngSequence) {
+    const isOfflineGif = format === 'gif';
+    const isOfflineExport = isOfflinePngSequence || isOfflineGif;
+    if (isOfflineExport) {
       const sequenceFolderName = this._sequenceFolderName(
         baseName,
         durationSec,
@@ -1687,23 +1767,29 @@ export class VideoExporter {
       const summary = buildOfflineExportOverlaySummary({
         exportJob: {
           ...settings,
+          format,
           resolution,
           aspectRatio,
           durationSec,
           fps,
           movTransparent: shouldUseTransparentFrames,
           clipCount: meshAnimation.clipCount,
-          pngOutputDirectoryHandle: settings?.pngOutputDirectoryHandle ?? null,
+          pngOutputDirectoryHandle: isOfflinePngSequence
+            ? (settings?.pngOutputDirectoryHandle ?? null)
+            : null,
+          mp4Quality,
         },
         assetName: baseName,
         animationClipLabel: meshAnimation.include
           ? this.getAnimationClipLabel?.(meshAnimation.clipIndex)
           : null,
         renderContext: {
-          sequenceFolderName,
-          zipFileName: `${sequenceFolderName}.zip`,
-          outputDirectoryName: settings?.pngOutputDirectoryHandle?.name ?? null,
-          useFolderExport: !!settings?.pngOutputDirectoryHandle,
+          sequenceFolderName: isOfflinePngSequence ? sequenceFolderName : '',
+          zipFileName: isOfflinePngSequence ? `${sequenceFolderName}.zip` : '',
+          outputDirectoryName: isOfflinePngSequence
+            ? (settings?.pngOutputDirectoryHandle?.name ?? null)
+            : null,
+          useFolderExport: isOfflinePngSequence && !!settings?.pngOutputDirectoryHandle,
           creativeLookEnabled: !!state.creativeLook?.enabled,
           creativeLookPreset: state.creativeLook?.preset ?? null,
           lightsAutoRotate: !!state.lightsAutoRotate,
@@ -1714,12 +1800,16 @@ export class VideoExporter {
           exportWidth: outputSize.width,
           exportHeight: outputSize.height,
           totalFrames,
+          gifFileName: isOfflineGif
+            ? this._gifFileName(baseName, modeLabel, durationSec, fps, resolution)
+            : null,
         },
       });
       this.ui?.showOfflineExportOverlay?.(summary, {
         cancellable: true,
         onCancelExport: () => this.requestCancelExport(),
         assetFilename: baseName,
+        title: isOfflineGif ? 'Rendering GIF' : 'Rendering PNG sequence',
       });
       this.ui?.updateOfflineExportOverlayProgress?.({ frameIndex: 0, totalFrames });
       await this._yieldUntilPaintCommitted();
@@ -1756,8 +1846,8 @@ export class VideoExporter {
       sizeSnapshot,
     };
     let spinnerActive = false;
-    let pngSequenceCancelled = false;
-    if (!isOfflinePngSequence && typeof this.ui?.beginLoadSpinner === 'function') {
+    let offlineExportCancelled = false;
+    if (!isOfflineExport && typeof this.ui?.beginLoadSpinner === 'function') {
       this.ui.beginLoadSpinner();
       spinnerActive = true;
       this.ui.beginLoadSpinnerElapsed?.();
@@ -1817,7 +1907,11 @@ export class VideoExporter {
         return;
       }
 
-      this.ui?.showToast?.(`Rendering ${totalFrames} frames…`);
+      this.ui?.showToast?.(
+        isOfflineGif
+          ? `Rendering ${totalFrames} GIF frames…`
+          : `Rendering ${totalFrames} frames…`,
+      );
       let transparentSetupSnapshot = null;
       let sequenceDirHandle = null;
       let sequenceFolderLabel = null;
@@ -1827,117 +1921,230 @@ export class VideoExporter {
           transparentSetupSnapshot = this._applyTransparentFrameSetup();
         }
 
-        const outputDirectoryHandle = settings?.pngOutputDirectoryHandle ?? null;
-        if (outputDirectoryHandle) {
-          const permitted = await this._ensureDirectoryWritePermission(outputDirectoryHandle);
-          if (permitted) {
-            const prepared = await this._preparePngSequenceOutputFolder({
-              parentHandle: outputDirectoryHandle,
+        if (isOfflineGif) {
+          const gifImages = [];
+          let exportCancelled = false;
+          const gifWidth = outputSize.width;
+          const gifHeight = outputSize.height;
+          // Bake full-frame RGBA, then optionally union-crop so every frame shares
+          // one canvas that fits the whole motion (no per-frame edge clipping).
+          const wantUnionCrop =
+            shouldUseTransparentFrames
+            && isTransparentCropToAsset(settings?.transparentFraming);
+          for (let i = 0; i < totalFrames; i += 1) {
+            if (this._exportCancelRequested) {
+              exportCancelled = true;
+              break;
+            }
+            const t = this._cameraMovementLinearT(i, fps, cameraMovementDurationSec);
+            const { blob } = await captureVideoExportFrameBlob(
+              this,
+              {
+                movements,
+                t,
+                movementEasing,
+                objectSpinSettings,
+                cameraSpinSettings,
+                hdriRotationSettings,
+                startRotationY,
+                startLightsRotation,
+                startHdriRotation,
+                lightsAutoRotate,
+                durationSec,
+                cameraMovementDurationSec,
+                frameIndex: i,
+                fps,
+                meshAnimation,
+              },
+              {
+                transparent: shouldUseTransparentFrames,
+                exportWidth: this._exportCaptureSize?.width,
+                exportHeight: this._exportCaptureSize?.height,
+                transparentFraming: 'full',
+              },
+            );
+            this.ui?.setOfflineExportPreviewFrame?.(blob);
+            let imageData = await imageBlobToImageData(blob);
+            if (imageData.width !== gifWidth || imageData.height !== gifHeight) {
+              imageData = downscaleImageData(imageData, gifWidth, gifHeight);
+            }
+            gifImages.push(imageData);
+            this.ui?.updateOfflineExportOverlayProgress?.({
+              frameIndex: i + 1,
+              totalFrames,
+            });
+            this.ui?.setOfflineExportElapsedFromStart?.();
+            await this._yieldUntilPaintCommitted();
+          }
+
+          if (exportCancelled) {
+            offlineExportCancelled = true;
+            this.ui?.setOfflineExportOverlayCancelled?.();
+            this.ui?.showToast?.('GIF export cancelled', 3200, { notification: false });
+          } else if (gifImages.length > 0) {
+            let encodeFrames = gifImages;
+            let encodeWidth = gifWidth;
+            let encodeHeight = gifHeight;
+            let unionCropped = false;
+            if (wantUnionCrop) {
+              const manualWidthPx = normalizeGifManualCropWidth(
+                settings?.gifManualCropWidth,
+                gifWidth,
+              );
+              const cropped = applyGifUnionCrop(gifImages, { manualWidthPx });
+              encodeFrames = cropped.frames;
+              encodeWidth = cropped.width;
+              encodeHeight = cropped.height;
+              unionCropped = cropped.cropped;
+            }
+            this.ui?.showToast?.('Encoding GIF…');
+            const bytes = await encodeGifFrames(encodeFrames, {
+              width: encodeWidth,
+              height: encodeHeight,
+              fps,
+              qualityPreset: mp4Quality,
+            });
+            const payload = new Uint8Array(bytes.byteLength);
+            payload.set(bytes);
+            const fileName = this._gifFileName(
+              baseName,
+              modeLabel,
+              durationSec,
+              fps,
+              resolution,
+            );
+            this._downloadBlob(
+              new Blob([payload], { type: 'image/gif' }),
+              fileName,
+            );
+            this.ui?.uiSounds?.playRenderFinished();
+            const sizeMb = payload.byteLength / (1024 * 1024);
+            const sizeLabel = sizeMb >= 1
+              ? `${sizeMb.toFixed(1)} MB`
+              : `${Math.max(1, Math.round(payload.byteLength / 1024))} KB`;
+            const notes = [];
+            if (shouldUseTransparentFrames) notes.push('transparent');
+            if (unionCropped) notes.push(`${encodeWidth}×${encodeHeight} union crop`);
+            const noteSuffix = notes.length ? `, ${notes.join(', ')}` : '';
+            this.ui?.showToast?.(
+              `GIF exported (${totalFrames} frames, ${sizeLabel}${noteSuffix})`,
+              3600,
+              { notification: false },
+            );
+          }
+        } else {
+          const outputDirectoryHandle = settings?.pngOutputDirectoryHandle ?? null;
+          if (outputDirectoryHandle) {
+            const permitted = await this._ensureDirectoryWritePermission(outputDirectoryHandle);
+            if (permitted) {
+              const prepared = await this._preparePngSequenceOutputFolder({
+                parentHandle: outputDirectoryHandle,
+                baseName,
+                durationSec,
+                fps,
+                objectSpinSettings,
+                cameraSpinSettings,
+                resolution,
+                mode: modeLabel,
+                aspectRatio,
+              });
+              sequenceDirHandle = prepared.sequenceDirHandle;
+              sequenceFolderLabel = `${outputDirectoryHandle.name}/${prepared.folderName}`;
+              useFolderExport = true;
+            } else {
+              this.ui?.showToast?.('Folder access denied — exporting as ZIP instead');
+            }
+          }
+
+          const bufferedFiles = [];
+          let exportCancelled = false;
+          let framesWritten = 0;
+          for (let i = 0; i < totalFrames; i += 1) {
+            if (this._exportCancelRequested) {
+              exportCancelled = true;
+              break;
+            }
+            const t = this._cameraMovementLinearT(i, fps, cameraMovementDurationSec);
+            const { blob } = await captureVideoExportFrameBlob(
+              this,
+              {
+                movements,
+                t,
+                movementEasing,
+                objectSpinSettings,
+                cameraSpinSettings,
+                hdriRotationSettings,
+                startRotationY,
+                startLightsRotation,
+                startHdriRotation,
+                lightsAutoRotate,
+                durationSec,
+                cameraMovementDurationSec,
+                frameIndex: i,
+                fps,
+                meshAnimation,
+              },
+              {
+                transparent: shouldUseTransparentFrames,
+                exportWidth: this._exportCaptureSize?.width,
+                exportHeight: this._exportCaptureSize?.height,
+                transparentFraming: settings?.transparentFraming,
+              },
+            );
+            const fileName = this._frameNameForSequence(baseName, modeLabel, durationSec, i);
+            this.ui?.setOfflineExportPreviewFrame?.(blob);
+            if (useFolderExport && sequenceDirHandle) {
+              await this._writeBlobToDirectory(sequenceDirHandle, fileName, blob);
+              framesWritten += 1;
+            } else {
+              bufferedFiles.push({ fileName, blob });
+            }
+            this.ui?.updateOfflineExportOverlayProgress?.({
+              frameIndex: i + 1,
+              totalFrames,
+            });
+            this.ui?.setOfflineExportElapsedFromStart?.();
+            await this._yieldUntilPaintCommitted();
+          }
+
+          if (exportCancelled) {
+            offlineExportCancelled = true;
+            this.ui?.setOfflineExportOverlayCancelled?.();
+            this.ui?.showToast?.('PNG export cancelled', 3200, { notification: false });
+          } else if (useFolderExport && framesWritten > 0) {
+            this.ui?.uiSounds?.playRenderFinished();
+            this.ui?.showToast?.(
+              `PNG sequence saved (${framesWritten} frames) → ${sequenceFolderLabel}`,
+              4200,
+              { notification: false },
+            );
+          } else if (bufferedFiles.length > 0) {
+            const zipped = await this._downloadSequenceAsZip({
+              files: bufferedFiles,
               baseName,
               durationSec,
               fps,
               objectSpinSettings,
-    cameraSpinSettings,
+              cameraSpinSettings,
               resolution,
               mode: modeLabel,
               aspectRatio,
             });
-            sequenceDirHandle = prepared.sequenceDirHandle;
-            sequenceFolderLabel = `${outputDirectoryHandle.name}/${prepared.folderName}`;
-            useFolderExport = true;
-          } else {
-            this.ui?.showToast?.('Folder access denied — exporting as ZIP instead');
-          }
-        }
-
-        const bufferedFiles = [];
-        let exportCancelled = false;
-        let framesWritten = 0;
-        for (let i = 0; i < totalFrames; i += 1) {
-          if (this._exportCancelRequested) {
-            exportCancelled = true;
-            break;
-          }
-          const t = this._cameraMovementLinearT(i, fps, cameraMovementDurationSec);
-          const { blob } = await captureVideoExportFrameBlob(
-            this,
-            {
-              movements,
-              t,
-              movementEasing,
-              objectSpinSettings,
-    cameraSpinSettings,
-              hdriRotationSettings,
-              startRotationY,
-              startLightsRotation,
-              startHdriRotation,
-              lightsAutoRotate,
-              durationSec,
-              cameraMovementDurationSec,
-              frameIndex: i,
-              fps,
-              meshAnimation,
-            },
-            {
-              transparent: shouldUseTransparentFrames,
-              exportWidth: this._exportCaptureSize?.width,
-              exportHeight: this._exportCaptureSize?.height,
-              transparentFraming: settings?.transparentFraming,
-            },
-          );
-          const fileName = this._frameNameForSequence(baseName, modeLabel, durationSec, i);
-          this.ui?.setOfflineExportPreviewFrame?.(blob);
-          if (useFolderExport && sequenceDirHandle) {
-            await this._writeBlobToDirectory(sequenceDirHandle, fileName, blob);
-            framesWritten += 1;
-          } else {
-            bufferedFiles.push({ fileName, blob });
-          }
-          this.ui?.updateOfflineExportOverlayProgress?.({
-            frameIndex: i + 1,
-            totalFrames,
-          });
-          this.ui?.setOfflineExportElapsedFromStart?.();
-          await this._yieldUntilPaintCommitted();
-        }
-
-        if (exportCancelled) {
-          pngSequenceCancelled = true;
-          this.ui?.setOfflineExportOverlayCancelled?.();
-          this.ui?.showToast?.('PNG export cancelled', 3200, { notification: false });
-        } else if (useFolderExport && framesWritten > 0) {
-          this.ui?.uiSounds?.playRenderFinished();
-          this.ui?.showToast?.(
-            `PNG sequence saved (${framesWritten} frames) → ${sequenceFolderLabel}`,
-            4200,
-            { notification: false },
-          );
-        } else if (bufferedFiles.length > 0) {
-          const zipped = await this._downloadSequenceAsZip({
-            files: bufferedFiles,
-            baseName,
-            durationSec,
-            fps,
-            objectSpinSettings,
-    cameraSpinSettings,
-            resolution,
-            mode: modeLabel,
-            aspectRatio,
-          });
-          if (!zipped) {
-            // Last-resort fallback if zip library failed to load.
-            for (const file of bufferedFiles) {
-              this._downloadBlob(file.blob, file.fileName);
-              await new Promise((resolve) => setTimeout(resolve, 80));
+            if (!zipped) {
+              // Last-resort fallback if zip library failed to load.
+              for (const file of bufferedFiles) {
+                this._downloadBlob(file.blob, file.fileName);
+                await new Promise((resolve) => setTimeout(resolve, 80));
+              }
+              this.ui?.showToast?.(
+                'ZIP unavailable; downloaded individual PNG files (browser may limit batch downloads)',
+              );
             }
-            this.ui?.showToast?.(
-              'ZIP unavailable; downloaded individual PNG files (browser may limit batch downloads)',
-            );
+            this.ui?.uiSounds?.playRenderFinished();
+            this.ui?.showToast?.(`Video sequence exported (${totalFrames} PNG frames)`, 3200, {
+              notification: false,
+            });
           }
-          this.ui?.uiSounds?.playRenderFinished();
-          this.ui?.showToast?.(`Video sequence exported (${totalFrames} PNG frames)`, 3200, {
-            notification: false,
-          });
         }
       } catch (error) {
         console.error('Video export failed', error);
@@ -1952,7 +2159,7 @@ export class VideoExporter {
         });
       }
     } finally {
-      if (!pngSequenceCancelled) {
+      if (!offlineExportCancelled) {
         this.ui?.hideOfflineExportOverlay?.();
       }
       if (spinnerActive && typeof this.ui?.endLoadSpinner === 'function') {

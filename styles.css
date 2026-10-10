@@ -8668,6 +8668,13 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   overflow: hidden;
 }
 
+.export-capture-preview-thumb-stage {
+  position: relative;
+  display: block;
+  width: 100%;
+  line-height: 0;
+}
+
 .export-capture-preview-thumb img {
   display: block;
   width: 100%;
@@ -8678,6 +8685,91 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   border-radius: 0.35rem;
   border: 1px solid color-mix(in srgb, var(--text-dim) 28%, transparent);
   background: var(--orby-black);
+}
+
+/* GIF crop preview: window matches encode rect (content height × width band) */
+.export-gif-crop-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.35rem;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.export-gif-crop-overlay[hidden] {
+  display: none;
+}
+
+.export-gif-crop-overlay__window {
+  position: absolute;
+  /* Dim everything outside the crop rect (matches final GIF framing). */
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent, #b4ff39) 70%, transparent),
+    0 0 0 9999px color-mix(in srgb, var(--orby-black) 55%, transparent);
+  pointer-events: none;
+}
+
+.export-gif-crop-overlay__handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: ew-resize;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.export-gif-crop-overlay__handle--left {
+  left: 0;
+  transform: translateX(-50%);
+}
+
+.export-gif-crop-overlay__handle--right {
+  right: 0;
+  transform: translateX(50%);
+}
+
+.export-gif-crop-overlay__handle::after {
+  content: '';
+  position: absolute;
+  top: 12%;
+  bottom: 12%;
+  left: 50%;
+  width: 3px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: var(--accent, #b4ff39);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--orby-black) 50%, transparent);
+}
+
+.export-gif-crop-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+  margin-top: 0.15rem;
+}
+
+.export-gif-crop-width-hint {
+  flex: 1 1 12rem;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  line-height: 1.35;
+}
+
+.export-gif-crop-width-hint[hidden],
+.export-gif-crop-reset[hidden] {
+  display: none;
+}
+
+.export-gif-crop-reset {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.55rem;
 }
 
 .export-capture-preview-thumb img[hidden] {
