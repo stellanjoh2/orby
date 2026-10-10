@@ -130,7 +130,7 @@ describe('export mesh animation timing', () => {
 });
 
 describe('hasExportVideoMovement', () => {
-  it('allows fully static export (no spins, no GLB include)', () => {
+  it('allows fully static video export (no spins, no GLB include)', () => {
     const settings = {
       turntable: true,
       orbit: false,

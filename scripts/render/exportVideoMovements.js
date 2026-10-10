@@ -203,7 +203,7 @@ export function normalizeExportCameraSpinSettings(settings = {}) {
 }
 
 /**
- * True when video/GIF export may proceed.
+ * True when video export may proceed (MP4, PNG sequence, GIF — any format).
  * Static camera/object (no spins) is always allowed — duration still captures
  * GLB clips, font reveals, shader loops, or a still timeline.
  * @param {ReturnType<typeof normalizeExportVideoMovements>} [_movements]

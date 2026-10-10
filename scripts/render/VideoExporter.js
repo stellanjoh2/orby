@@ -1691,6 +1691,8 @@ export class VideoExporter {
 
   async exportVideo(settings = {}) {
     this._exportCancelRequested = false;
+    // Static camera/object (zero spins) is valid for every video format —
+    // MP4, PNG sequence, and GIF share _resolveVideoExportParams.
     const params = this._resolveVideoExportParams(settings);
     if (!params) {
       this.ui?.showToast?.('Load a mesh before exporting video');
