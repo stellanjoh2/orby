@@ -203,44 +203,33 @@ export function normalizeExportCameraSpinSettings(settings = {}) {
 }
 
 /**
- * True when export has something to capture over time: camera/object motion,
- * export HDRI spin, or an included GLB clip (static camera + mesh anim is valid).
- * @param {ReturnType<typeof normalizeExportVideoMovements>} movements
- * @param {Record<string, unknown>} [settings]
- * @param {number} [clipCount] — when set, GLB include only counts if clips exist
+ * True when video export may proceed (MP4, PNG sequence, GIF — any format).
+ * Static camera/object (no spins) is always allowed — duration still captures
+ * GLB clips, font reveals, shader loops, or a still timeline.
+ * @param {ReturnType<typeof normalizeExportVideoMovements>} [_movements]
+ * @param {Record<string, unknown>} [_settings]
+ * @param {number} [_clipCount]
  */
-export function hasExportVideoMovement(movements, settings = {}, clipCount) {
-  const objectSpin = normalizeExportObjectSpinSettings(settings);
-  const cameraSpin = normalizeExportCameraSpinSettings(settings);
-  const hdri = normalizeExportHdriRotationSettings(settings);
-  const meshAnim =
-    clipCount === undefined
-      ? settings.meshAnimationsInclude === true
-      : normalizeExportMeshAnimationSettings(settings, clipCount).include;
-  return !!(
-    (movements?.turntable && objectSpin.rotationDegrees > 0)
-    || (movements?.orbit && cameraSpin.rotationDegrees > 0)
-    || movements?.zoomIn
-    || movements?.zoomOut
-    || movements?.tiltLeft
-    || movements?.tiltRight
-    || needsExportFovDrive(movements)
-    || needsExportPitchDrive(movements)
-    || hdri.degrees > 0
-    || meshAnim
-  );
+export function hasExportVideoMovement(_movements, _settings = {}, _clipCount) {
+  return true;
 }
 
-/** @param {ReturnType<typeof normalizeExportVideoMovements>} movements */
-export function exportVideoMovementLabel(movements) {
+/**
+ * Filename / toast label for active export moves (ignores zero-degree spins).
+ * @param {ReturnType<typeof normalizeExportVideoMovements>} movements
+ * @param {Record<string, unknown>} [settings]
+ */
+export function exportVideoMovementLabel(movements, settings = {}) {
+  const objectSpin = normalizeExportObjectSpinSettings(settings);
+  const cameraSpin = normalizeExportCameraSpinSettings(settings);
   const parts = [];
-  if (movements.turntable) parts.push('turntable');
-  if (movements.orbit) parts.push('orbit');
-  if (movements.zoomIn) parts.push('zoomin');
-  if (movements.zoomOut) parts.push('zoomout');
-  if (movements.tiltLeft) parts.push('tiltleft');
-  if (movements.tiltRight) parts.push('tiltright');
-  if (movements.pitchOffset) {
+  if (movements?.turntable && objectSpin.rotationDegrees > 0) parts.push('turntable');
+  if (movements?.orbit && cameraSpin.rotationDegrees > 0) parts.push('orbit');
+  if (movements?.zoomIn) parts.push('zoomin');
+  if (movements?.zoomOut) parts.push('zoomout');
+  if (movements?.tiltLeft) parts.push('tiltleft');
+  if (movements?.tiltRight) parts.push('tiltright');
+  if (movements?.pitchOffset) {
     const sign = movements.pitchOffset > 0 ? 'up' : 'down';
     parts.push(`pitch${sign}${Math.abs(movements.pitchOffset)}`);
   }

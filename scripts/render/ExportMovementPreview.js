@@ -163,10 +163,12 @@ export class ExportMovementPreview {
     }
   }
 
-  /** Whether export settings describe previewable motion (camera/object or GLB clip). */
+  /** Whether export settings may be previewed (static timeline is allowed). */
   static canPreview(settings = {}) {
-    const movements = normalizeExportVideoMovements(settings);
-    return hasExportVideoMovement(movements, settings);
+    return hasExportVideoMovement(
+      normalizeExportVideoMovements(settings),
+      settings,
+    );
   }
 
   _movementSettingsFingerprint(settings = {}) {
@@ -385,7 +387,6 @@ export class ExportMovementPreview {
       return false;
     }
     if (!ExportMovementPreview.canPreview(settings)) {
-      this.ui?.showToast?.('Enable a movement or GLB animation to preview');
       return false;
     }
 
@@ -468,7 +469,6 @@ export class ExportMovementPreview {
       return false;
     }
     if (!ExportMovementPreview.canPreview(settings)) {
-      this.ui?.showToast?.('Enable a movement or GLB animation to preview');
       return false;
     }
 
