@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { verticalFovForAspectPreservingHorizontalFov } from '../camera/lensPresets.js';
 import {
   exportVideoMovementLabel,
-  hasExportVideoMovement,
   needsExportCameraDrive,
   needsExportFovDrive,
   normalizeExportVideoMovements,
@@ -234,9 +233,6 @@ export class VideoExporter {
     }
     const clipCount = this.getAnimationClipCount?.() ?? 0;
     const movements = normalizeExportVideoMovements(settings);
-    if (!hasExportVideoMovement(movements, settings, clipCount)) {
-      return null;
-    }
     const allowedDurations = [5, 10, 15];
     const meshAnimation = normalizeExportMeshAnimationSettings(settings, clipCount);
     const clipDuration = meshAnimation.include
@@ -274,7 +270,7 @@ export class VideoExporter {
       format,
       movements,
       hdriRotationSettings: normalizeExportHdriRotationSettings(settings),
-      modeLabel: exportVideoMovementLabel(movements),
+      modeLabel: exportVideoMovementLabel(movements, settings),
       meshAnimation: timing,
       durationSec,
       cameraMovementDurationSec,
@@ -1426,7 +1422,7 @@ export class VideoExporter {
     if (!blob || !recorderFormat) return false;
     const safeBase = (opts.baseName || 'orby').replace(/\.[a-z0-9]+$/i, '');
     const { durationSec, fps } = opts;
-    const modeLabel = exportVideoMovementLabel(opts.movements);
+    const modeLabel = exportVideoMovementLabel(opts.movements, opts);
     this._downloadBlob(
       blob,
       `${safeBase}_${modeLabel}_${durationSec}s_${fps}fps.${recorderFormat.extension}`,
@@ -1695,13 +1691,11 @@ export class VideoExporter {
 
   async exportVideo(settings = {}) {
     this._exportCancelRequested = false;
+    // Static camera/object (zero spins) is valid for every video format —
+    // MP4, PNG sequence, and GIF share _resolveVideoExportParams.
     const params = this._resolveVideoExportParams(settings);
     if (!params) {
-      if (!this.getCurrentModel?.()) {
-        this.ui?.showToast?.('Load a mesh before exporting video');
-      } else {
-        this.ui?.showToast?.('Enable a movement or GLB animation to export');
-      }
+      this.ui?.showToast?.('Load a mesh before exporting video');
       return;
     }
 
