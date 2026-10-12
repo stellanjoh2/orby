@@ -9,7 +9,7 @@ import {
   normalizeExportObjectSpinSettings,
   normalizeExportCameraSpinSettings,
   normalizeExportHdriRotationSettings,
-  normalizeExportPresetDurationSec,
+  normalizeExportSettingsDurationSec,
   resolveExportMeshAnimationTiming,
   resolveExportCameraMovementLinearT,
 } from './exportVideoMovements.js';
@@ -21,6 +21,10 @@ import {
   DEFAULT_EXPORT_VIDEO_FPS,
   normalizeExportVideoFps,
 } from './exportVideoResolution.js';
+import {
+  normalizeGifExportFps,
+  normalizeVideoExportFormat,
+} from './gif/gifExportSettings.js';
 
 /**
  * Real-time viewport preview of export camera/mesh movement.
@@ -177,14 +181,16 @@ export class ExportMovementPreview {
     const cameraSpinSettings = normalizeExportCameraSpinSettings(settings);
     const hdriRotationSettings = normalizeExportHdriRotationSettings(settings);
     const timing = this._resolveTiming(settings);
-    const fps = normalizeExportVideoFps(settings?.fps);
+    const fps = normalizeVideoExportFormat(settings?.format) === 'gif'
+      ? normalizeGifExportFps(settings?.fps)
+      : normalizeExportVideoFps(settings?.fps);
     return JSON.stringify({
       movements,
       objectSpinSettings,
       cameraSpinSettings,
       hdriRotationSettings,
       movementEasing: normalizeExportMovementEasing(settings?.movementEasing),
-      presetDurationSec: normalizeExportPresetDurationSec(settings?.durationSec),
+      presetDurationSec: normalizeExportSettingsDurationSec(settings),
       exportDurationSec: timing.exportDurationSec,
       cameraMovementDurationSec: timing.cameraMovementDurationSec,
       fps,
@@ -220,10 +226,12 @@ export class ExportMovementPreview {
 
   _applySettings(settings = {}) {
     const timing = this._resolveTiming(settings);
-    this._presetDurationSec = normalizeExportPresetDurationSec(settings?.durationSec);
+    this._presetDurationSec = normalizeExportSettingsDurationSec(settings);
     this._durationSec = timing.exportDurationSec;
     this._cameraMovementDurationSec = timing.cameraMovementDurationSec;
-    this._fps = normalizeExportVideoFps(settings?.fps);
+    this._fps = normalizeVideoExportFormat(settings?.format) === 'gif'
+      ? normalizeGifExportFps(settings?.fps)
+      : normalizeExportVideoFps(settings?.fps);
     this._objectSpinSettings = normalizeExportObjectSpinSettings(settings);
     this._cameraSpinSettings = normalizeExportCameraSpinSettings(settings);
     this._hdriRotationSettings = normalizeExportHdriRotationSettings(settings);

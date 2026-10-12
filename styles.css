@@ -9197,6 +9197,11 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   min-height: 2.5rem; /* Match accent-action-btn exactly */
 }
 
+/* display:flex above beats UA [hidden]; keep GIF-only / format-gated pills out of layout */
+.export-option-btn[hidden] {
+  display: none !important;
+}
+
 .export-option-btn:hover:not(:disabled):not(.is-disabled):not(.active) {
   color: var(--text);
   background: var(--accent-muted);

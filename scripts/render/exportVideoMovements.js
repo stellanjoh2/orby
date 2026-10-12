@@ -1,3 +1,8 @@
+import {
+  normalizeGifExportDuration,
+  normalizeVideoExportFormat,
+} from './gif/gifExportSettings.js';
+
 export const EXPORT_FOV_OFFSET_MIN = -40;
 export const EXPORT_FOV_OFFSET_MAX = 40;
 
@@ -341,6 +346,17 @@ export function normalizeExportPresetDurationSec(durationSec) {
 }
 
 /**
+ * Format-aware length preset (GIF: 2 / 5 / 10; MP4 / PNG sequence: 5 / 10 / 15).
+ * @param {Record<string, unknown>} [settings]
+ */
+export function normalizeExportSettingsDurationSec(settings = {}) {
+  if (normalizeVideoExportFormat(settings?.format) === 'gif') {
+    return normalizeGifExportDuration(settings?.durationSec);
+  }
+  return normalizeExportPresetDurationSec(settings?.durationSec);
+}
+
+/**
  * @param {Record<string, unknown>} [settings]
  * @param {number} [clipCount]
  */
@@ -392,7 +408,7 @@ export function resolveExportCameraMovementLinearT(
  * @param {number} [clipDurationSec]
  */
 export function resolveExportDurationSec(settings = {}, clipDurationSec = 0) {
-  const preset = normalizeExportPresetDurationSec(settings.durationSec);
+  const preset = normalizeExportSettingsDurationSec(settings);
   const include = settings.meshAnimationsInclude === true;
   const match = include && settings.meshMatchDurationToClip === true;
   const clipDuration = Number(clipDurationSec);
@@ -414,9 +430,12 @@ export function resolveExportCameraMovementDurationSec(
   const match = include && settings.meshMatchDurationToClip === true;
   const sync = settings.meshSyncCameraToDuration !== false;
   if (match && !sync) {
-    return normalizeExportPresetDurationSec(settings.durationSec);
+    return normalizeExportSettingsDurationSec(settings);
   }
-  return Math.max(1e-6, Number(exportDurationSec) || normalizeExportPresetDurationSec());
+  return Math.max(
+    1e-6,
+    Number(exportDurationSec) || normalizeExportSettingsDurationSec(settings),
+  );
 }
 
 /**

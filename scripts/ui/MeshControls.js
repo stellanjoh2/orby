@@ -61,6 +61,7 @@ import {
   renderSvgColorDepthControls,
 } from './svgExtrudeControlsShared.js';
 import {
+  normalizeExportPresetDurationSec,
   normalizeExportSubtleSpinDegrees,
   normalizeExportObjectSpinSettings,
   normalizeExportCameraSpinSettings,
@@ -79,7 +80,10 @@ import {
 } from '../render/exportVideoResolution.js';
 import {
   getGifExportResolutionPixelLabel,
+  isGifExportDuration,
+  isGifExportFps,
   isGifExportResolution,
+  normalizeGifExportDuration,
   normalizeGifExportFps,
   normalizeGifExportResolution,
   normalizeVideoExportFormat,
@@ -953,16 +957,30 @@ export class MeshControls {
         this.ui.exportSettings.video.fps = normalizeGifExportFps(
           this.ui.exportSettings.video.fps,
         );
-      } else if (
-        this.ui.exportSettings.video.resolution === '480p'
-        || this.ui.exportSettings.video.resolution === '720p'
-      ) {
-        this.ui.exportSettings.video.resolution = '1080p';
+        this.ui.exportSettings.video.durationSec = normalizeGifExportDuration(
+          this.ui.exportSettings.video.durationSec,
+        );
+      } else {
+        if (
+          this.ui.exportSettings.video.resolution === '480p'
+          || this.ui.exportSettings.video.resolution === '720p'
+        ) {
+          this.ui.exportSettings.video.resolution = '1080p';
+        }
+        // GIF-only 2s (and any other non-video preset) → 5 / 10 / 15.
+        this.ui.exportSettings.video.durationSec = normalizeExportPresetDurationSec(
+          this.ui.exportSettings.video.durationSec,
+        );
+        // GIF-only 10 / 15 / 25 → 24 / 30 / 60.
+        this.ui.exportSettings.video.fps = normalizeExportVideoFps(
+          this.ui.exportSettings.video.fps,
+        );
       }
       updatePngTransparentUi();
       updateMp4Ui();
       syncExportFpsUi();
       syncExportVideoResolutionUi();
+      syncExportDurationUi();
       if (format !== 'gif') {
         this.ui.exportGifCropOverlay?.hide?.();
       }
@@ -1157,9 +1175,18 @@ export class MeshControls {
       const lengthGroup = this.ui.inputs.exportVideoLengthGroup;
       const hint = this.ui.inputs.exportVideoLengthClipHint;
 
+      const isGif = normalizeVideoExportFormat(video.format) === 'gif';
+      const durationSec = isGif
+        ? normalizeGifExportDuration(video.durationSec)
+        : normalizeExportPresetDurationSec(video.durationSec);
+      video.durationSec = durationSec;
       document.querySelectorAll('[data-video-duration]').forEach((btn) => {
         const duration = parseInt(btn.dataset.videoDuration, 10);
-        btn.classList.toggle('active', duration === video.durationSec);
+        const isGifOnly = duration === 2;
+        const isVideoOnly = duration === 15;
+        const visible = isGif ? !isVideoOnly : !isGifOnly;
+        btn.hidden = !visible;
+        btn.classList.toggle('active', visible && duration === durationSec);
         if ('disabled' in btn) btn.disabled = matchDuration;
         btn.classList.toggle('is-disabled', matchDuration);
       });
@@ -1195,9 +1222,15 @@ export class MeshControls {
 
     document.querySelectorAll('[data-video-duration]').forEach((button) => {
       button.addEventListener('click', () => {
-        if (button.disabled) return;
+        if (button.hidden || button.disabled) return;
         const duration = parseInt(button.dataset.videoDuration, 10);
         if (!Number.isFinite(duration)) return;
+        const isGif = normalizeVideoExportFormat(this.ui.exportSettings.video?.format) === 'gif';
+        if (isGif) {
+          if (!isGifExportDuration(duration)) return;
+        } else if (duration !== 5 && duration !== 10 && duration !== 15) {
+          return;
+        }
         this.ui.exportSettings.video.durationSec = duration;
         syncExportDurationUi();
         notifyExportPreviewSettingsChanged();
@@ -1213,18 +1246,26 @@ export class MeshControls {
       video.fps = fps;
       document.querySelectorAll('[data-video-fps]').forEach((btn) => {
         const btnFps = parseInt(btn.dataset.videoFps, 10);
-        const disabled = isGif && btnFps === 60;
-        btn.classList.toggle('active', btnFps === fps);
-        if ('disabled' in btn) btn.disabled = disabled;
-        btn.classList.toggle('is-disabled', disabled);
+        const isGifOnly = btnFps === 10 || btnFps === 15 || btnFps === 25;
+        const visible = isGif ? isGifOnly : !isGifOnly;
+        btn.hidden = !visible;
+        btn.classList.toggle('active', visible && btnFps === fps);
+        if ('disabled' in btn) btn.disabled = false;
+        btn.classList.toggle('is-disabled', false);
       });
     };
 
     document.querySelectorAll('[data-video-fps]').forEach((button) => {
       button.addEventListener('click', () => {
-        if (button.disabled) return;
+        if (button.hidden || button.disabled) return;
         const fps = parseInt(button.dataset.videoFps, 10);
-        if (fps !== 24 && fps !== 30 && fps !== 60) return;
+        if (!Number.isFinite(fps)) return;
+        const isGif = normalizeVideoExportFormat(this.ui.exportSettings.video?.format) === 'gif';
+        if (isGif) {
+          if (!isGifExportFps(fps)) return;
+        } else if (fps !== 24 && fps !== 30 && fps !== 60) {
+          return;
+        }
         this.ui.exportSettings.video.fps = fps;
         syncExportFpsUi();
         notifyExportPreviewSettingsChanged();
@@ -1452,17 +1493,18 @@ export class MeshControls {
         const key = btn.dataset.videoResolution;
         const isGifOnly = key === '480p' || key === '720p';
         if (isGif) {
-          // Show full row; 1440p / 2160p stay visible but disabled.
+          // GIF: 480p / 720p / 1080p only — hide higher video presets.
           const allowed = isGifExportResolution(key);
-          btn.hidden = false;
-          if ('disabled' in btn) btn.disabled = !allowed;
-          btn.classList.toggle('is-disabled', !allowed);
+          btn.hidden = !allowed;
+          if ('disabled' in btn) btn.disabled = false;
+          btn.classList.toggle('is-disabled', false);
           btn.classList.toggle('active', allowed && key === resolution);
-          btn.dataset.tooltip = allowed
-            ? getGifExportResolutionPixelLabel(key)
-            : 'GIF max is 1080p — use PNG sequence or MP4 for higher resolutions';
+          if (allowed) {
+            btn.dataset.tooltip = getGifExportResolutionPixelLabel(key);
+          }
           return;
         }
+        // MP4 / PNG sequence: 1080p / 1440p / 2160p — hide GIF-only sizes.
         btn.hidden = isGifOnly;
         if ('disabled' in btn) btn.disabled = false;
         btn.classList.toggle('is-disabled', false);

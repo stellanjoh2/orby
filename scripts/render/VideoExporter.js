@@ -57,6 +57,7 @@ import { computeTightAlphaBounds } from './capture/TransparentCapture.js';
 import {
   getGifExportResolutionPixelLabel,
   getGifExportResolutionSize,
+  normalizeGifExportDuration,
   normalizeGifExportFps,
   normalizeGifExportResolution,
   normalizeVideoExportFormat,
@@ -233,7 +234,6 @@ export class VideoExporter {
     }
     const clipCount = this.getAnimationClipCount?.() ?? 0;
     const movements = normalizeExportVideoMovements(settings);
-    const allowedDurations = [5, 10, 15];
     const meshAnimation = normalizeExportMeshAnimationSettings(settings, clipCount);
     const clipDuration = meshAnimation.include
       ? this.getAnimationClipDuration?.(meshAnimation.clipIndex) ?? 0
@@ -266,6 +266,10 @@ export class VideoExporter {
       : Number.isFinite(state.hdriRotation)
         ? state.hdriRotation
         : 0;
+    const rawDuration = Number(settings?.durationSec);
+    const presetDurationSec = isGif
+      ? normalizeGifExportDuration(rawDuration)
+      : ([5, 10, 15].includes(rawDuration) ? rawDuration : 5);
     return {
       format,
       movements,
@@ -274,9 +278,7 @@ export class VideoExporter {
       meshAnimation: timing,
       durationSec,
       cameraMovementDurationSec,
-      presetDurationSec: allowedDurations.includes(settings?.durationSec)
-        ? settings.durationSec
-        : 5,
+      presetDurationSec,
       fps,
       totalFrames,
       objectSpinSettings: normalizeExportObjectSpinSettings(settings),

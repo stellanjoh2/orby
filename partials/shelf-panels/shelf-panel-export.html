@@ -368,23 +368,27 @@
                     </div>
                   </div>
                   <p id="exportGifHint" class="export-format-sub" hidden>
-                    GIF is offline-baked and loops forever. Caps at 1080p / 30 FPS. With Crop to asset, scrub the preview and drag the width handles — export uses the wider of your width and the full motion union.
+                    GIF is offline-baked and loops forever. Caps at 1080p / 25 FPS. With Crop to asset, scrub the preview and drag the width handles — export uses the wider of your width and the full motion union.
                   </p>
                   <div id="exportVideoLengthGroup" class="export-option-group">
                     <span class="export-label">Length</span>
                     <div class="export-button-group export-button-group--triple">
-                      <button data-video-duration="5" class="export-option-btn active" data-tooltip="5 second export duration">5s</button>
-                      <button data-video-duration="10" class="export-option-btn" data-tooltip="10 second export duration">10s</button>
-                      <button data-video-duration="15" class="export-option-btn" data-tooltip="15 second export duration">15s</button>
+                      <button type="button" data-video-duration="2" class="export-option-btn export-dur-gif" hidden data-tooltip="2 second GIF — short loop">2s</button>
+                      <button type="button" data-video-duration="5" class="export-option-btn export-dur-gif export-dur-video active" data-tooltip="5 second export duration">5s</button>
+                      <button type="button" data-video-duration="10" class="export-option-btn export-dur-gif export-dur-video" data-tooltip="10 second export duration">10s</button>
+                      <button type="button" data-video-duration="15" class="export-option-btn export-dur-video" data-tooltip="15 second export duration">15s</button>
                     </div>
                     <span id="exportVideoLengthClipHint" class="export-length-clip-hint" hidden></span>
                   </div>
                   <div class="export-option-group">
                     <span class="export-label">FPS</span>
                     <div class="export-button-group export-button-group--triple">
-                      <button data-video-fps="24" class="export-option-btn" data-tooltip="Cinematic motion">24</button>
-                      <button data-video-fps="30" class="export-option-btn active" data-tooltip="Smoother standard video">30</button>
-                      <button data-video-fps="60" class="export-option-btn" data-tooltip="Very smooth motion, larger files">60</button>
+                      <button type="button" data-video-fps="10" class="export-option-btn export-fps-gif" hidden data-tooltip="10 FPS — smaller GIF, choppier motion">10</button>
+                      <button type="button" data-video-fps="15" class="export-option-btn export-fps-gif" hidden data-tooltip="15 FPS — recommended GIF">15</button>
+                      <button type="button" data-video-fps="25" class="export-option-btn export-fps-gif" hidden data-tooltip="25 FPS — smoother GIF (format-exact)">25</button>
+                      <button type="button" data-video-fps="24" class="export-option-btn export-fps-video" data-tooltip="Cinematic motion">24</button>
+                      <button type="button" data-video-fps="30" class="export-option-btn export-fps-video active" data-tooltip="Smoother standard video">30</button>
+                      <button type="button" data-video-fps="60" class="export-option-btn export-fps-video" data-tooltip="Very smooth motion, larger files">60</button>
                     </div>
                   </div>
                   <div class="export-option-group">
@@ -540,7 +544,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.1077 · 2026-10-10 14:03:03 UTC</div>
+              <div class="info-version-tag">v0.5.1078 · 2026-10-12 09:14:33 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>

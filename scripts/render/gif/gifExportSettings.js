@@ -21,6 +21,12 @@ const GIF_SIZES = {
 /** @type {ReadonlySet<string>} */
 export const GIF_EXPORT_RESOLUTIONS = new Set(['480p', '720p', '1080p']);
 
+/** Length presets for GIF only (MP4 / PNG sequence keep 5 / 10 / 15). */
+export const GIF_EXPORT_DURATIONS_SEC = [2, 5, 10];
+
+/** @type {ReadonlySet<number>} */
+export const GIF_EXPORT_DURATION_SET = new Set(GIF_EXPORT_DURATIONS_SEC);
+
 /**
  * @param {unknown} format
  * @returns {'mp4' | 'png' | 'gif'}
@@ -28,6 +34,26 @@ export const GIF_EXPORT_RESOLUTIONS = new Set(['480p', '720p', '1080p']);
 export function normalizeVideoExportFormat(format) {
   if (format === 'png' || format === 'gif') return format;
   return 'mp4';
+}
+
+/**
+ * @param {unknown} value
+ * @returns {2 | 5 | 10}
+ */
+export function normalizeGifExportDuration(value) {
+  const n = Number(value);
+  if (GIF_EXPORT_DURATION_SET.has(n)) return /** @type {2 | 5 | 10} */ (n);
+  // Video-only 15s clamps to GIF max.
+  if (n === 15) return 10;
+  return 5;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function isGifExportDuration(value) {
+  return GIF_EXPORT_DURATION_SET.has(Number(value));
 }
 
 /**
@@ -67,13 +93,29 @@ export function getGifExportResolutionPixelLabel(resolution) {
   return `${width} × ${height}`;
 }
 
+/** GIF-only FPS presets (MP4 / PNG sequence keep 24 / 30 / 60). */
+export const GIF_EXPORT_FPS = [10, 15, 25];
+
+/** @type {ReadonlySet<number>} */
+export const GIF_EXPORT_FPS_SET = new Set(GIF_EXPORT_FPS);
+
 /**
- * GIF FPS — same as video except 60 is clamped (file size / encode cost).
+ * GIF FPS — centisecond-friendly rates; default 15.
  * @param {unknown} value
- * @returns {24 | 30}
+ * @returns {10 | 15 | 25}
  */
 export function normalizeGifExportFps(value) {
-  return value === 24 ? 24 : 30;
+  const n = Number(value);
+  if (GIF_EXPORT_FPS_SET.has(n)) return /** @type {10 | 15 | 25} */ (n);
+  return 15;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function isGifExportFps(value) {
+  return GIF_EXPORT_FPS_SET.has(Number(value));
 }
 
 /**
@@ -92,6 +134,6 @@ export function gifskiQualityFromPreset(preset) {
  * @returns {number}
  */
 export function gifFrameDelayMs(fps) {
-  const safeFps = Math.max(1, Number(fps) || 30);
+  const safeFps = Math.max(1, Number(fps) || 15);
   return Math.max(20, Math.round(1000 / safeFps));
 }
