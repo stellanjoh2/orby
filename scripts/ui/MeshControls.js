@@ -1680,8 +1680,8 @@ export class MeshControls {
     btn.classList.toggle('is-active', isHidden);
     btn.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
     btn.innerHTML = isHidden
-      ? '<i class="fa-solid fa-eye" aria-hidden="true"></i> Object hidden'
-      : '<i class="fa-solid fa-eye" aria-hidden="true"></i> Hide Object';
+      ? '<i class="fa-solid fa-eye" aria-hidden="true"></i> OBJECT HIDDEN'
+      : '<i class="fa-solid fa-eye" aria-hidden="true"></i> HIDE OBJECT';
     btn.dataset.tooltip = isHidden
       ? 'Show the mesh again in the viewport and exports'
       : 'Hide the loaded mesh from the viewport and exports';

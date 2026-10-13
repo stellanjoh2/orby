@@ -450,7 +450,7 @@ export class WatermarkController {
     if (this.customBtn) {
       this.customBtn.textContent = this.customFileName
         ? shortenFileName(this.customFileName)
-        : 'Custom';
+        : 'CUSTOM';
       if (this.customFileName) this.customBtn.title = this.customFileName;
     }
   }

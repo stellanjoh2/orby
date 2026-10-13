@@ -117,6 +117,19 @@
   }
 
   /*
+   * Lower-third media credits (showcase + figure overlays) — fixed 12px / clamp
+   * insets stayed at the 2560 peak while photos scaled → tiny @ 3840.
+   */
+  /* Match hero “Featured Dropzone Artists” (.dropzone-hero-credit @ ultra-wide) */
+  #orby-marketing .orby-marketing__showcase-credit,
+  #orby-marketing .orby-marketing__figure-credit {
+    font-size: calc(14px * var(--orby-ultra-wide-factor));
+    left: calc(1.75rem * var(--orby-ultra-wide-factor));
+    right: calc(1.75rem * var(--orby-ultra-wide-factor));
+    bottom: calc(1.35rem * var(--orby-ultra-wide-factor));
+  }
+
+  /*
    * Pro card + FAQ lime type — scale via --orby-marketing-pro-card-title-size above
    * (22px × factor @ 3840 = 33px). Do not multiply again on the selectors.
    */

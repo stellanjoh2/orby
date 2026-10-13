@@ -120,18 +120,26 @@
   --warning: var(--orby-pink);
   /* Right-hand settings shelf and centered modals (paste scene settings, bug report) */
   --app-settings-chrome-radius: 18px;
-  /* Object shelf Scene / Export pills, modal footers — keep in sync */
-  --ui-accent-action-font-size: 0.8rem;
-  /* Settings shelf: control row labels (Brightness, Color, …) */
-  --shelf-label-font-size: 14px;
-  /* Card section titles (.block-title: Display, Material, …) — 16px @ 2560 */
-  --shelf-block-title-font-size: 16px;
-  /* Compact uppercase sub-heads + preset grids (export / font-extrude section titles) */
-  --shelf-headline-font-size: 12px;
+  /*
+   * Studio type ladder @ 2560×1440 (× --studio-type-scale on desktop).
+   * Prefer these over new rem/px font-size literals in shelf / settings modals.
+   *   S  compact  — dropdowns, captions, hints, kbd, floating-panel titles
+   *   M  body     — gray control labels, values, prose
+   *   L  section  — .block-title card heads
+   *   XL panel    — Object / Studio / … tab name
+   *   CTA         — Scene/Export pills (= S)
+   *   Caption     — secondary line under S in preset tiles (tracks S)
+   */
+  --ui-accent-action-font-size: 13px; /* CTA */
+  --shelf-headline-font-size: 13px; /* S */
+  --shelf-label-font-size: 15px; /* M */
+  --shelf-block-title-font-size: 17px; /* L */
+  --shelf-tab-title-font-size: 28px; /* XL */
+  --shelf-caption-font-size: calc(var(--shelf-headline-font-size) * 0.85); /* ~11 @ S=13 */
+  /* Floating panel eyebrows (Shape Library, Outliner) — same step as S */
+  --ui-floating-panel-title-font-size: var(--shelf-headline-font-size);
   /* Native selects + custom combobox triggers (shelf pills, support forms) */
   --orby-dropdown-height: 24px;
-  /* Tab name only (Object, Studio, …) — 28px @ 2560×1440 reference */
-  --shelf-tab-title-font-size: 28px;
   /* Horizontal gap between paired large CTAs (marketing CTA, dropzone, fullscreen prompts) */
   --orby-big-dual-btn-gap: 36px;
   /* Paired magic pills — equal width (Browse/Load sample, Stay/Go Home, …) */
@@ -156,6 +164,10 @@
   --muted-section-text-scale: 0.5625;
   /* Studio shelf / settings chrome — 1 on mobile landing; scaled on desktop (see below) */
   --studio-ui-scale: 1;
+  /* Type density — tracks layout scale but floors higher so laptop text stays readable */
+  --studio-type-scale: 1;
+  /* Centered modals / overlays — follow layout down, never grow past 2560 reference */
+  --studio-modal-scale: 1;
   /* Home hero frame insets — see orby-home-padding-x.css (--orby-home-padding-x) */
   --orby-home-padding-y: var(--orby-home-padding);
   /* Hero credits — same gutter as showcase gallery (--orby-marketing-col-gap); 112px @ 2560 */
@@ -179,7 +191,7 @@
   --viewport-chrome-inset-x: var(--orby-home-padding-x);
   --viewport-chrome-inset-y: var(--orby-home-padding-y);
   --viewport-load-spinner-lift: 120px;
-  --shelf-inset: 48px;
+  --shelf-inset: 24px;
 }
 
 /* Big screens: extra horizontal inset only — vertical inset follows height */
@@ -216,6 +228,11 @@ html:not(.mobile-landing) body.dropzone-visible {
  * Above: grow with viewport (→ 1.5 @ 3840×2160) — was capped at 1 so 4K stayed
  * 2560-px sized and read very thin. Height still gates ultrawide short screens.
  * Dropzone keeps its own hero factor.
+ *
+ * --studio-type-scale: same curve as layout, but floors at 0.88 so ~1700×1100
+ * laptops stay readable (~13px body) without widening the shelf / card pads.
+ * --studio-modal-scale: follows layout below 2560; caps at 1 so 4K modals match
+ * the 2560 reference (shelf may still grow to 1.5).
  */
 html:not(.mobile-landing) {
   --orby-studio-ref-width: 160rem; /* 2560px */
@@ -225,17 +242,23 @@ html:not(.mobile-landing) {
     min(100vw / var(--orby-studio-ref-width), 100dvh / var(--orby-studio-ref-height)),
     var(--orby-ultra-wide-max-factor, 1.5)
   );
-  --shelf-inset: calc(48px * var(--studio-ui-scale));
+  --studio-type-scale: clamp(
+    0.88,
+    var(--studio-ui-scale),
+    var(--orby-ultra-wide-max-factor, 1.5)
+  );
+  --studio-modal-scale: clamp(0.72, var(--studio-ui-scale), 1);
+  --shelf-inset: calc(24px * var(--studio-ui-scale));
   --viewport-chrome-inset-x: var(--shelf-inset);
   --viewport-chrome-inset-y: var(--shelf-inset);
   --viewport-load-spinner-lift: calc(120px * var(--studio-ui-scale));
   --ui-frosted-blur: calc(15px * var(--studio-ui-scale));
   --app-settings-chrome-radius: calc(18px * var(--studio-ui-scale));
-  --shelf-label-font-size: calc(14px * var(--studio-ui-scale));
-  --shelf-block-title-font-size: calc(16px * var(--studio-ui-scale));
-  --shelf-headline-font-size: calc(12px * var(--studio-ui-scale));
-  --shelf-tab-title-font-size: calc(28px * var(--studio-ui-scale));
-  --ui-accent-action-font-size: calc(0.8rem * var(--studio-ui-scale));
+  --shelf-headline-font-size: calc(13px * var(--studio-type-scale));
+  --shelf-label-font-size: calc(15px * var(--studio-type-scale));
+  --shelf-block-title-font-size: calc(17px * var(--studio-type-scale));
+  --shelf-tab-title-font-size: calc(28px * var(--studio-type-scale));
+  --ui-accent-action-font-size: calc(13px * var(--studio-type-scale));
   --color-chip-w: calc(184px * var(--studio-ui-scale));
   --ui-orby-pill-pad-block: calc(0.52rem * var(--studio-ui-scale));
   --ui-orby-pill-pad-inline: calc(1.9rem * var(--studio-ui-scale));
@@ -243,54 +266,55 @@ html:not(.mobile-landing) {
 
 /*
  * Studio overlays (bug report, paste settings, shell veil, Return Home, 404 card).
- * `scale` shrinks uniformly @ 1920; 2560 stays 1. Separate from `transform` so GSAP modal wipes still work.
+ * `scale` shrinks @ 1920; 2560+ stays 1 (--studio-modal-scale). Separate from
+ * `transform` so GSAP modal wipes still work.
  */
 html:not(.mobile-landing) .load-settings-modal {
-  padding: calc(2rem * var(--studio-ui-scale));
+  padding: calc(2rem * var(--studio-modal-scale));
 }
 
 html:not(.mobile-landing) .load-settings-modal .load-settings-content {
-  scale: var(--studio-ui-scale);
+  scale: var(--studio-modal-scale);
 }
 
 html:not(.mobile-landing) .bug-report-thank-you-layer {
-  padding: calc(2rem * var(--studio-ui-scale));
+  padding: calc(2rem * var(--studio-modal-scale));
 }
 
 html:not(.mobile-landing) .orby-sr {
   padding: clamp(
-    calc(1rem * var(--studio-ui-scale)),
-    calc(4vw * var(--studio-ui-scale)),
-    calc(2rem * var(--studio-ui-scale))
+    calc(1rem * var(--studio-modal-scale)),
+    calc(4vw * var(--studio-modal-scale)),
+    calc(2rem * var(--studio-modal-scale))
   );
 }
 
 html:not(.mobile-landing) .orby-sr__panel {
-  scale: var(--studio-ui-scale);
+  scale: var(--studio-modal-scale);
 }
 
 html:not(.mobile-landing) .orby-not-found-page {
   padding: clamp(
-    calc(1.25rem * var(--studio-ui-scale)),
-    calc(3vw * var(--studio-ui-scale)),
-    calc(2.5rem * var(--studio-ui-scale))
+    calc(1.25rem * var(--studio-modal-scale)),
+    calc(3vw * var(--studio-modal-scale)),
+    calc(2.5rem * var(--studio-modal-scale))
   );
 }
 
 html:not(.mobile-landing) .orby-not-found-copy {
-  scale: var(--studio-ui-scale);
+  scale: var(--studio-modal-scale);
 }
 
 html:not(.mobile-landing) .bug-report-thank-you-stack,
 html:not(.mobile-landing) #orbyFullscreenPrompt .orby-fullscreen-prompt-stack {
-  --orby-big-message-stack-scale: var(--studio-ui-scale);
-  scale: var(--studio-ui-scale);
+  --orby-big-message-stack-scale: var(--studio-modal-scale);
+  scale: var(--studio-modal-scale);
 }
 
 html:not(.mobile-landing) body.orby-not-found-active #orbyFullscreenPrompt .bug-report-thank-you-stack {
-  --orby-big-message-stack-scale: calc(1.25 * var(--studio-ui-scale));
+  --orby-big-message-stack-scale: calc(1.25 * var(--studio-modal-scale));
   transform: none;
-  scale: calc(1.25 * var(--studio-ui-scale));
+  scale: calc(1.25 * var(--studio-modal-scale));
 }
 
 .brand-font-headline {
@@ -669,7 +693,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions
   color: var(--text);
   padding: 0.75rem 1.25rem;
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: var(--shelf-label-font-size);
   cursor: pointer;
   transition: background 0.2s, color 0.2s, opacity 0.2s ease, filter 0.2s ease;
   width: 100%;
@@ -681,7 +705,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions
 
 .ghost-btn.small {
   padding: 0.25rem 0.6rem;
-  font-size: 0.75rem;
+  font-size: var(--shelf-headline-font-size);
   width: auto;
 }
 
@@ -730,7 +754,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions
   color: var(--brand-text);
   padding: 0.4rem 0.9rem;
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: var(--ui-accent-action-font-size);
   font-weight: 700;
   cursor: pointer;
   transition: filter 0.2s, box-shadow 0.2s ease;
@@ -970,7 +994,7 @@ html.orby-sr-on .orby-sr,
 
 .load-settings-description {
   margin: 0 0 0.5rem 0;
-  font-size: 0.85rem;
+  font-size: var(--shelf-label-font-size);
   color: var(--text-dim);
   line-height: 1.4;
 }
@@ -1033,7 +1057,7 @@ html.orby-sr-on .orby-sr,
   border-radius: 8px;
   color: var(--text);
   font-family: 'Geist Mono', 'SF Mono', ui-monospace, 'Menlo', 'Courier New', monospace;
-  font-size: 0.8rem;
+  font-size: var(--shelf-headline-font-size);
   line-height: 1.6;
   resize: vertical;
   outline: none;
@@ -1221,10 +1245,10 @@ html.orby-mobile-modal-open body {
 .outliner-panel {
   position: fixed;
   z-index: 120;
-  top: var(--shelf-inset, 48px);
-  left: var(--shelf-inset, 48px);
+  top: var(--shelf-inset, 24px);
+  left: var(--shelf-inset, 24px);
   width: auto;
-  max-width: calc(100vw - 2 * var(--shelf-inset, 48px));
+  max-width: calc(100vw - 2 * var(--shelf-inset, 24px));
   pointer-events: none;
   --shelf-reveal-dur: 0.45s;
   --shelf-reveal-ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -1260,9 +1284,9 @@ body.ui-hidden .outliner-panel:not([hidden]) .outliner-panel__chrome {
   display: flex;
   flex-direction: column;
   gap: var(--shelf-section-gap, 16px);
-  width: min(20rem, calc(100vw - 2 * var(--shelf-inset, 48px) - 2.4rem));
+  width: min(20rem, calc(100vw - 2 * var(--shelf-inset, 24px) - 2.4rem));
   max-width: 100%;
-  max-height: calc(100vh - 2 * var(--shelf-inset, 48px));
+  max-height: calc(100vh - 2 * var(--shelf-inset, 24px));
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -1337,7 +1361,7 @@ body.ui-hidden .outliner-panel:not([hidden]) .outliner-panel__chrome {
 .outliner-panel__title {
   margin: 0;
   color: var(--text-dim);
-  font-size: 0.72rem;
+  font-size: var(--ui-floating-panel-title-font-size);
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1355,7 +1379,7 @@ body.ui-hidden .outliner-panel:not([hidden]) .outliner-panel__chrome {
 
 .outliner-panel__empty {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--shelf-label-font-size);
   line-height: 1.45;
   color: var(--text-dim);
 }
@@ -1386,9 +1410,9 @@ body.ui-hidden .outliner-panel:not([hidden]) .outliner-panel__chrome {
 }
 
 html:not(.mobile-landing) .outliner-panel {
-  top: calc(48px * var(--studio-ui-scale));
-  left: calc(48px * var(--studio-ui-scale));
-  max-width: calc(100vw - 96px * var(--studio-ui-scale));
+  top: var(--shelf-inset);
+  left: var(--shelf-inset);
+  max-width: calc(100vw - 2 * var(--shelf-inset));
 }
 
 html:not(.mobile-landing) .outliner-panel__chrome {
@@ -1403,7 +1427,7 @@ html:not(.mobile-landing) .outliner-panel__chrome {
 
 .message-alert-body {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--shelf-label-font-size);
   line-height: 1.55;
   color: var(--text);
   white-space: pre-wrap;
@@ -1474,7 +1498,7 @@ html:not(.mobile-landing) .outliner-panel__chrome {
 /* Bug report — Information panel + modal */
 .bug-report-panel-description {
   margin: 0 0 var(--shelf-section-gap);
-  font-size: 0.88rem;
+  font-size: var(--shelf-label-font-size);
   line-height: 1.55;
   color: var(--text-dim);
 }
@@ -1491,7 +1515,7 @@ html:not(.mobile-landing) .outliner-panel__chrome {
 .bug-report-content .load-settings-description {
   margin: 0 0 0.75rem 0;
   /* Match big-message template body (.message-alert-body) */
-  font-size: 0.95rem;
+  font-size: var(--shelf-label-font-size);
   line-height: 1.55;
 }
 
@@ -1618,7 +1642,7 @@ html:not(.mobile-landing) .outliner-panel__chrome {
 
 .bug-report-field label,
 .bug-report-field-label {
-  font-size: 0.8rem;
+  font-size: var(--shelf-headline-font-size);
   color: var(--text-dim);
 }
 
@@ -1629,7 +1653,7 @@ html:not(.mobile-landing) .outliner-panel__chrome {
   border: none;
   color: var(--text);
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: var(--shelf-label-font-size);
   outline: none;
   box-sizing: border-box;
 }
@@ -1712,7 +1736,7 @@ html:not(.mobile-landing) .outliner-panel__chrome {
   background: rgba(255, 255, 255, 0.12);
   color: var(--text);
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: var(--shelf-label-font-size);
   line-height: 1.5;
   resize: none;
   outline: none;
@@ -1794,7 +1818,7 @@ html:not(.mobile-landing) .outliner-panel__chrome {
   border: none;
   color: var(--text);
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: var(--shelf-label-font-size);
   line-height: var(--bug-report-dropdown-height, 30px);
   outline: none;
   box-sizing: border-box;
@@ -1891,7 +1915,7 @@ html:not(.mobile-landing) .outliner-panel__chrome {
   gap: 0.55rem;
   padding: 0.5rem 0.85rem;
   margin: 0;
-  font-size: 0.88rem;
+  font-size: var(--shelf-label-font-size);
   line-height: 1.35;
   color: var(--text);
   cursor: pointer;
@@ -1982,7 +2006,7 @@ html:not(.mobile-landing) .outliner-panel__chrome {
 .bug-report-status {
   margin: 0;
   min-height: 1.15rem;
-  font-size: 0.82rem;
+  font-size: var(--shelf-headline-font-size);
 }
 
 .bug-report-status-text {
@@ -2118,6 +2142,7 @@ html:not(.mobile-landing) .outliner-panel__chrome {
   font-family: inherit;
   font-size: var(--ui-accent-action-font-size);
   font-weight: 700;
+  text-transform: uppercase;
   cursor: pointer;
   transition: background 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s;
   display: flex;
@@ -2270,7 +2295,7 @@ html:not(.mobile-landing) .outliner-panel__chrome {
   transform: scale(0.98);
 }
 
-/* Home magic Browse — scales with --drop-hero-wide-factor (full @ 2560, ~78% @ 1920) */
+/* Home magic Browse — scales with --drop-hero-wide-factor (full @ 2560, ~78% @ 1920, 1.5 @ 3840) */
 .dropzone .orby-magic-btn-host,
 .dropzone .orby-magic-btn.dropzone-btn {
   --orby-magic-btn-bleed: calc(6px * var(--drop-hero-wide-factor));
@@ -2282,8 +2307,13 @@ html:not(.mobile-landing) .outliner-panel__chrome {
 }
 
 .dropzone .orby-magic-btn.dropzone-btn {
-  /* Width grows with label — same min footprint as section CTAs (.orby-magic-btn) */
+  /* Type + pad/height track hero scale (was font-only — pill stayed 2560-sized @ 3840) */
   font-size: var(--orby-marketing-support-size, clamp(0.75rem, 1.2vw, 0.9rem));
+  --orby-magic-btn-pad-block: calc(1.5rem * var(--drop-hero-wide-factor, 1));
+  --orby-magic-btn-pad-inline: calc(1.75rem * var(--drop-hero-wide-factor, 1));
+  --orby-magic-btn-inner-gap: calc(0.5rem * var(--drop-hero-wide-factor, 1));
+  --orby-magic-btn-min-height: calc(4rem * var(--drop-hero-wide-factor, 1));
+  min-height: var(--orby-magic-btn-min-height);
 }
 
 .dropzone-actions .orby-magic-btn.dropzone-btn .orby-magic-btn__inner {
@@ -4614,26 +4644,29 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
   --shelf-accent-action-gap: var(--shelf-panel-gutter);
   /* Inset inside lighter panel cards (.panel-block) */
   --shelf-card-padding: 1.2rem;
+  --shelf-card-padding-y: 28px; /* vertical card pad — scales with studio density below */
   /* Headline inset — match card horizontal padding for symmetric section headers */
   --shelf-section-inset: var(--shelf-card-padding); /* horizontal card inset only — not vertical headline rhythm */
   --shelf-scrollbar-edge-offset: 12px;
   --shelf-scroll-end-pad: calc(1.25rem + var(--shelf-vertical-extra));
   /* Panel footer: last card → version line, logo → shelf bottom (symmetrical) */
   --shelf-footer-outer-gap: calc(1.75rem + var(--shelf-vertical-extra));
-  /* HDRI grid (Studio tab) — 2560×1440 reference */
-  --shelf-hdri-sphere-img: 78px;
-  --shelf-hdri-sphere-ring: 92px;
-  --shelf-hdri-grid-gap-x: 1rem;
-  --shelf-hdri-grid-gap-y: 32px; /* thumbnail edge-to-edge @ 2560×1440 */
-  /* Shader Lab + Object Display pickers — smaller (4-up / dense grids) */
-  --shelf-picker-sphere-img: 54px;
-  --shelf-picker-sphere-ring: 70px;
+  /* HDRI grid (Studio tab) — sized for 418px shelf; equal H/V gaps via fixed tracks */
+  --shelf-hdri-sphere-img: 88px;
+  --shelf-hdri-sphere-ring: 104px;
+  --shelf-hdri-grid-gap: 16px;
+  /* Legacy aliases — keep equal; do not reintroduce unequal X/Y */
+  --shelf-hdri-grid-gap-x: var(--shelf-hdri-grid-gap);
+  --shelf-hdri-grid-gap-y: var(--shelf-hdri-grid-gap);
+  /* Shader Lab + Object Display pickers — 4-up; fill wider shelf like HDRI */
+  --shelf-picker-sphere-img: 62px;
+  --shelf-picker-sphere-ring: 80px;
   --shelf-sphere-ring-border: 3px;
-  --shelf-picker-grid-gap: 8px;
+  --shelf-picker-grid-gap: 9px;
   /* Match show ↔ hide: opacity/transform animate; visibility must not flip until the hide finishes */
   --shelf-reveal-dur: 0.45s;
   --shelf-reveal-ease: cubic-bezier(0.4, 0, 0.2, 1);
-  width: clamp(320px, 23vw, 380px);
+  width: clamp(352px, 25vw, 418px);
   background: var(--ui-frosted-bg);
   display: flex;
   flex-direction: column;
@@ -4682,18 +4715,20 @@ html:not(.mobile-landing) .shelf {
   --shelf-panel-gutter: calc(var(--shelf-shell-rhythm) * 14 / 12);
   /* 16px @ 1920, 1.2rem @ 2560 — card inner gutter */
   --shelf-card-padding: calc(16px + 3.2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
+  --shelf-card-padding-y: calc(28px * var(--studio-ui-scale)); /* 28px @ 2560 */
   --shelf-section-inset: var(--shelf-card-padding); /* horizontal card inset only — not vertical headline rhythm */
   --shelf-scrollbar-edge-offset: calc(12px * var(--studio-ui-scale));
   --shelf-scroll-end-pad: calc(1.25rem * var(--studio-ui-scale) + var(--shelf-vertical-extra));
   --shelf-footer-outer-gap: calc(1.75rem * var(--studio-ui-scale) + var(--shelf-vertical-extra));
-  --shelf-hdri-sphere-img: round(78px * var(--studio-ui-scale), 1px);
-  --shelf-hdri-sphere-ring: round(92px * var(--studio-ui-scale), 1px);
-  --shelf-hdri-grid-gap-x: calc(1rem * var(--studio-ui-scale));
-  --shelf-hdri-grid-gap-y: round(calc(32px * var(--studio-ui-scale)), 1px);
-  --shelf-picker-sphere-img: round(54px * var(--studio-ui-scale), 1px);
-  --shelf-picker-sphere-ring: round(70px * var(--studio-ui-scale), 1px);
+  --shelf-hdri-sphere-img: round(88px * var(--studio-ui-scale), 1px);
+  --shelf-hdri-sphere-ring: round(104px * var(--studio-ui-scale), 1px);
+  --shelf-hdri-grid-gap: round(16px * var(--studio-ui-scale), 1px);
+  --shelf-hdri-grid-gap-x: var(--shelf-hdri-grid-gap);
+  --shelf-hdri-grid-gap-y: var(--shelf-hdri-grid-gap);
+  --shelf-picker-sphere-img: round(62px * var(--studio-ui-scale), 1px);
+  --shelf-picker-sphere-ring: round(80px * var(--studio-ui-scale), 1px);
   --shelf-sphere-ring-border: round(3px * var(--studio-ui-scale), 1px);
-  --shelf-picker-grid-gap: calc(8px * var(--studio-ui-scale));
+  --shelf-picker-grid-gap: calc(9px * var(--studio-ui-scale));
   --shelf-toggle-track-height: calc(1.15rem * var(--studio-ui-scale));
   --shelf-dropdown-pill-height: calc(var(--orby-dropdown-height) * var(--studio-ui-scale));
   --shelf-select-inner-stroke: calc(2px * var(--studio-ui-scale));
@@ -4703,7 +4738,7 @@ html:not(.mobile-landing) .shelf {
   /* Value / color-chip column — was fixed 2.5rem so chips stayed 2560-px while shelf grew */
   --shelf-row-value-col: calc(2.5rem * var(--studio-ui-scale));
   --slider-value-col: var(--shelf-row-value-col);
-  width: calc(380px * var(--studio-ui-scale));
+  width: calc(418px * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .shelf.is-shelf-hidden {
@@ -4895,27 +4930,8 @@ html:not(.mobile-landing) .shelf .panel-header-title {
   margin: 0.95rem 0 var(--shelf-section-gap) 0;
 }
 
-/*
- * Hardcoded rem/px shelf copy that skipped --studio-ui-scale (stayed 2560-px at 3840).
- * × scale is 1 @ 2560 — no visual change at the reference size.
- */
-html:not(.mobile-landing) .shelf .panel-hint.map-slots-hint,
-html:not(.mobile-landing) .shelf .panel-hint.advanced-import-hint,
-html:not(.mobile-landing) .shelf .panel-hint.advanced-glass-hint {
-  font-size: calc(0.78rem * var(--studio-ui-scale));
-}
-
-html:not(.mobile-landing) .shelf .shortcut-note,
-html:not(.mobile-landing) .shelf .shortcut-keys kbd {
-  font-size: calc(0.75rem * var(--studio-ui-scale));
-}
-
-html:not(.mobile-landing) .shelf .topology-warnings-tab {
-  font-size: calc(0.76rem * var(--studio-ui-scale));
-}
-
 html:not(.mobile-landing) .shelf .hdri-grid {
-  gap: var(--shelf-hdri-grid-gap-y) var(--shelf-hdri-grid-gap-x);
+  gap: var(--shelf-hdri-grid-gap);
   margin-bottom: var(--shelf-section-gap);
   padding: calc(0.75rem * var(--studio-ui-scale)) 0 0;
 }
@@ -5067,20 +5083,8 @@ html:not(.mobile-landing) .shelf .export-capture-preview-thumb img {
   max-height: calc(11.25rem * var(--studio-ui-scale));
 }
 
-html:not(.mobile-landing) .shelf .export-capture-preview-thumb-empty {
-  font-size: calc(0.72rem * var(--studio-ui-scale));
-}
-
 html:not(.mobile-landing) .shelf .export-capture-preview-thumb-empty i {
   font-size: calc(1.6rem * var(--studio-ui-scale));
-}
-
-html:not(.mobile-landing) .shelf .export-capture-preview-thumb-label {
-  font-size: calc(0.72rem * var(--studio-ui-scale));
-}
-
-html:not(.mobile-landing) .shelf .info-version-tag {
-  font-size: calc(0.69rem * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .shelf .info-orby-mark {
@@ -5096,15 +5100,7 @@ html:not(.mobile-landing) .shelf .info-orby-mark:focus-visible {
   outline-offset: calc(3px * var(--studio-ui-scale));
 }
 
-/* Information tab — prose/shortcuts use root rem or inline px */
-html:not(.mobile-landing) .shelf .panel[data-panel='info'] .about-content {
-  font-size: calc(0.9rem * var(--studio-ui-scale));
-}
-
-html:not(.mobile-landing) .shelf .panel[data-panel='info'] .about-content h4 {
-  font-size: calc(0.95rem * var(--studio-ui-scale));
-}
-
+/* Information tab — layout scale only (type uses ladder tokens) */
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .about-content ul.info-prose-nested {
   padding-left: calc(1.5rem * var(--studio-ui-scale));
 }
@@ -5121,7 +5117,7 @@ html:not(.mobile-landing) .shelf .panel[data-panel='info'] .about-content kbd {
   border-radius: calc(4px * var(--studio-ui-scale));
   background: rgba(255, 255, 255, 0.1);
   font-family: 'Geist Mono', 'SF Mono', ui-monospace, 'Menlo', 'Courier New', monospace;
-  font-size: calc(0.7rem * var(--studio-ui-scale));
+  font-size: var(--shelf-headline-font-size);
   font-weight: 500;
   line-height: 1;
   box-shadow: 0 calc(1px * var(--studio-ui-scale)) calc(2px * var(--studio-ui-scale))
@@ -5130,12 +5126,7 @@ html:not(.mobile-landing) .shelf .panel[data-panel='info'] .about-content kbd {
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .bug-report-panel-description {
-  font-size: calc(0.88rem * var(--studio-ui-scale));
   margin-bottom: var(--shelf-section-gap);
-}
-
-html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcut-note {
-  font-size: calc(0.75rem * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcuts-grid {
@@ -5168,7 +5159,6 @@ html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcut-keys kbd {
   min-width: calc(1.75rem * var(--studio-ui-scale));
   height: calc(1.75rem * var(--studio-ui-scale));
   padding: 0 calc(0.5rem * var(--studio-ui-scale));
-  font-size: calc(0.75rem * var(--studio-ui-scale));
   border-radius: calc(4px * var(--studio-ui-scale));
   box-shadow: 0 calc(1px * var(--studio-ui-scale)) calc(2px * var(--studio-ui-scale))
     rgba(0, 0, 0, 0.1);
@@ -5197,12 +5187,7 @@ html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-logotype {
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .microcopy {
-  font-size: calc(0.75rem * var(--studio-ui-scale));
   margin-bottom: var(--shelf-section-gap);
-}
-
-html:not(.mobile-landing) .shelf .panel[data-panel='info'] .panel-header p {
-  font-size: calc(0.65rem * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-panel-block--compact {
@@ -5373,7 +5358,7 @@ html:not(.mobile-landing) .viewport-load-spinner__elapsed {
 
 .shortcut-note {
   display: block;
-  font-size: 0.75rem;
+  font-size: var(--shelf-headline-font-size);
   color: var(--text-dim);
   margin-top: 0.1rem;
 }
@@ -5399,7 +5384,7 @@ html:not(.mobile-landing) .viewport-load-spinner__elapsed {
   border-radius: 4px;
   color: var(--text);
   font-family: 'Geist Mono', 'SF Mono', ui-monospace, 'Menlo', 'Courier New', monospace;
-  font-size: 0.75rem;
+  font-size: var(--shelf-headline-font-size);
   font-weight: 500;
   line-height: 1;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -5460,7 +5445,7 @@ html:not(.mobile-landing) .viewport-load-spinner__elapsed {
 
 .about-content {
   color: var(--text-dim);
-  font-size: 0.85rem;
+  font-size: var(--shelf-label-font-size);
   line-height: 1.6;
 }
 
@@ -5497,7 +5482,7 @@ a.about-highlight:focus-visible {
 }
 
 .microcopy {
-  font-size: 0.75rem;
+  font-size: var(--shelf-headline-font-size);
   color: var(--text-dim);
   margin: 0 0 var(--shelf-section-gap);
 }
@@ -5733,7 +5718,7 @@ a.about-highlight:focus-visible {
 
 .panel-header h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--shelf-block-title-font-size);
   letter-spacing: -0.01em;
   font-weight: 400;
 }
@@ -5742,13 +5727,13 @@ a.about-highlight:focus-visible {
   margin: 0.2rem 0 1rem;
   color: var(--text-dim);
   letter-spacing: -0.01em;
-  font-size: 0.65rem;
+  font-size: var(--shelf-headline-font-size);
 }
 
 .panel-block {
   border: none;
   border-radius: 6px;
-  padding: 28px var(--shelf-card-padding, 1.2rem);
+  padding: var(--shelf-card-padding-y, 28px) var(--shelf-card-padding, 1.2rem);
   /* Section-to-section gutter stays in sync with the shelf's right inset (--shelf-panel-gutter) */
   margin-bottom: var(--shelf-panel-gutter);
   background: var(--shelf-card-bg);
@@ -6416,7 +6401,7 @@ a.about-highlight:focus-visible {
 
 .panel-hint.map-slots-hint {
   margin: 0 0 var(--shelf-section-gap);
-  font-size: 0.78rem;
+  font-size: var(--shelf-headline-font-size);
   line-height: 1.35;
   color: var(--text-dim);
 }
@@ -6424,7 +6409,7 @@ a.about-highlight:focus-visible {
 .panel-hint.advanced-import-hint,
 .panel-hint.advanced-glass-hint {
   margin: 0 0 var(--shelf-section-gap);
-  font-size: 0.78rem;
+  font-size: var(--shelf-headline-font-size);
   line-height: 1.35;
   color: var(--text-dim);
 }
@@ -6490,7 +6475,7 @@ a.about-highlight:focus-visible {
   border-left: 2px solid var(--warning);
   border-radius: 0.35rem;
   background: color-mix(in srgb, var(--panel-alt) 72%, transparent);
-  font-size: 0.76rem;
+  font-size: var(--shelf-headline-font-size);
   line-height: 1.35;
   text-align: left;
   cursor: pointer;
@@ -6526,7 +6511,7 @@ a.about-highlight:focus-visible {
   padding: 0.45rem 0.55rem;
   border-radius: 0.35rem;
   background: color-mix(in srgb, var(--panel-alt) 72%, transparent);
-  font-size: 0.76rem;
+  font-size: var(--shelf-headline-font-size);
   line-height: 1.35;
 }
 
@@ -6556,7 +6541,7 @@ a.about-highlight:focus-visible {
 }
 
 .topology-warnings-list__mesh {
-  font-size: 0.72rem;
+  font-size: var(--shelf-headline-font-size);
   color: color-mix(in srgb, var(--text-dim) 88%, transparent);
 }
 
@@ -7961,7 +7946,7 @@ button.advanced-info-doc-btn {
 .svg-extrude-note {
   margin: 0 0 var(--shelf-section-gap);
   color: var(--text-dim);
-  font-size: 0.78rem;
+  font-size: var(--shelf-headline-font-size);
   line-height: 1.45;
 }
 
@@ -7974,7 +7959,7 @@ button.advanced-info-doc-btn {
 .info-version-tag {
   display: block;
   margin-top: var(--shelf-footer-outer-gap);
-  font-size: 0.69rem;
+  font-size: var(--shelf-headline-font-size);
   letter-spacing: -0.01em;
   text-align: center;
   color: var(--text-dim);
@@ -8344,7 +8329,7 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text, #fff);
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: var(--shelf-label-font-size);
   line-height: 1.3;
   transition:
     border-color 0.2s ease,
@@ -8756,7 +8741,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
 
 .export-gif-crop-width-hint {
   flex: 1 1 12rem;
-  font-size: 0.72rem;
+  font-size: var(--shelf-headline-font-size);
   color: var(--text-dim);
   line-height: 1.35;
 }
@@ -8768,7 +8753,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
 
 .export-gif-crop-reset {
   flex: 0 0 auto;
-  font-size: 0.72rem;
+  font-size: var(--shelf-headline-font-size);
   padding: 0.2rem 0.55rem;
 }
 
@@ -8789,7 +8774,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   border: 1px dashed color-mix(in srgb, var(--text-dim) 32%, transparent);
   background: var(--orby-black);
   color: var(--text-dim);
-  font-size: 0.72rem;
+  font-size: var(--shelf-headline-font-size);
   line-height: 1.3;
   text-align: center;
   padding: 0.5rem;
@@ -8820,7 +8805,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
 }
 
 .export-capture-preview-thumb-label {
-  font-size: 0.72rem;
+  font-size: var(--shelf-headline-font-size);
   color: var(--text-dim);
   line-height: 1.35;
 }
@@ -8881,20 +8866,25 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
 
 .hdri-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--shelf-hdri-grid-gap-y) var(--shelf-hdri-grid-gap-x);
+  /* Fixed tracks — equal H/V gaps (1fr columns stretched gaps after shelf widened) */
+  grid-template-columns: repeat(3, var(--shelf-hdri-sphere-ring));
+  justify-content: center;
+  justify-items: center;
+  align-items: center;
+  gap: var(--shelf-hdri-grid-gap);
   margin-bottom: var(--shelf-section-gap);
   /* Top inset only — card padding handles bottom inset (same as segmented / accent buttons) */
   padding: 0.75rem 0 0;
+  width: 100%;
 }
 
 .hdri-icon {
   position: relative;
   display: block;
   box-sizing: border-box;
-  /* Row height tracks the thumbnail (78px @ 2560); selection ring overflows into gap */
-  width: 100%;
-  height: var(--shelf-hdri-sphere-img);
+  /* Cell = selection ring; thumbnail centered inside (match Object Display) */
+  width: var(--shelf-hdri-sphere-ring);
+  height: var(--shelf-hdri-sphere-ring);
   cursor: pointer;
   border: none;
   background: none;
@@ -9240,7 +9230,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
 }
 
 .export-block p {
-  font-size: 0.75rem;
+  font-size: var(--shelf-headline-font-size);
   color: var(--text-dim);
   margin-top: var(--shelf-section-gap);
   letter-spacing: -0.01em;
@@ -9321,14 +9311,14 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
 .export-path-label {
   flex: 1;
   min-width: 0;
-  font-size: 0.75rem;
+  font-size: var(--shelf-headline-font-size);
   color: var(--text-dim);
   line-height: 1.35;
   word-break: break-word;
 }
 
 .export-length-clip-hint {
-  font-size: 0.75rem;
+  font-size: var(--shelf-headline-font-size);
   color: var(--text-dim);
   line-height: 1.35;
 }
@@ -9396,7 +9386,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
   border-radius: 999px;
   color: var(--text);
   letter-spacing: -0.01em;
-  font-size: 0.8rem;
+  font-size: var(--shelf-headline-font-size);
   font-weight: 500;
   line-height: 1.35;
   text-transform: none;
@@ -9476,7 +9466,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
 
 .toast-isometric-unlock-btn.orby-pill-btn {
   flex: 0 0 auto;
-  font-size: 0.75rem;
+  font-size: var(--ui-accent-action-font-size);
   padding: 0.52rem 0.9rem;
   letter-spacing: -0.01em;
 }
@@ -9547,7 +9537,7 @@ html.orby-home-scroll:not(.mobile-landing) .viewport-load-spinner {
   border: none;
   border-radius: 6px;
   color: var(--text);
-  font-size: 0.75rem;
+  font-size: var(--shelf-headline-font-size);
   letter-spacing: -0.01em;
   line-height: 1.4;
   white-space: nowrap;
@@ -9574,7 +9564,6 @@ html.orby-home-scroll:not(.mobile-landing) .viewport-load-spinner {
  * readable. ×1 @ 2560 leaves the reference size unchanged.
  */
 html:not(.mobile-landing) .tooltip {
-  font-size: calc(0.75rem * var(--studio-ui-scale));
   padding: calc(0.5rem * var(--studio-ui-scale)) calc(0.75rem * var(--studio-ui-scale));
   border-radius: calc(6px * var(--studio-ui-scale));
   max-width: calc(300px * var(--studio-ui-scale));
@@ -10854,6 +10843,7 @@ body.ui-hidden .shelf {
   font: inherit;
   cursor: pointer;
   text-align: center;
+  text-transform: uppercase;
   transition:
     color 0.15s ease,
     background 0.15s ease,
@@ -10888,9 +10878,9 @@ body.ui-hidden .shelf {
 }
 
 .lens-preset-btn__label {
-  font-size: var(--shelf-headline-font-size);
+  font-size: var(--shelf-caption-font-size);
   font-weight: 500;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
   line-height: 1.2;
   opacity: 0.9;
 }
@@ -11106,7 +11096,7 @@ body.ui-hidden .shelf {
 }
 
 .panel[data-panel='info'] .about-content {
-  font-size: 0.9rem;
+  font-size: var(--shelf-label-font-size);
   line-height: 1.6;
   color: var(--text-dim);
 }
@@ -11149,7 +11139,7 @@ body.ui-hidden .shelf {
 .panel[data-panel='info'] .about-content h4 {
   margin: 0 0 var(--info-prose-gap);
   color: var(--text);
-  font-size: 0.95rem;
+  font-size: var(--shelf-label-font-size);
   font-weight: 700;
 }
 
@@ -11238,7 +11228,7 @@ body.ui-hidden .shelf {
   color: white;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
-  font-size: 0.7rem;
+  font-size: var(--shelf-headline-font-size);
   font-weight: 700;
   pointer-events: none;
   z-index: 10;
@@ -11299,7 +11289,7 @@ body.ui-hidden .shelf {
   -webkit-text-fill-color: var(--text);
   caret-color: var(--text);
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: var(--shelf-label-font-size);
   line-height: 1.5;
   outline: none;
   box-sizing: border-box;
@@ -11371,7 +11361,7 @@ body.ui-hidden .shelf {
 }
 
 .font-extrude-typo-row--pair .select-line > span:first-child {
-  font-size: 0.73rem;
+  font-size: var(--shelf-headline-font-size);
   color: var(--text-dim);
 }
 
@@ -11509,7 +11499,6 @@ html:not(.mobile-landing) #orby-font-picker-portal .font-extrude-family-panel-he
 }
 
 html:not(.mobile-landing) #orby-font-picker-portal .font-extrude-family-search {
-  font-size: calc(0.85rem * var(--studio-ui-scale));
   min-height: calc(2.25rem * var(--studio-ui-scale));
   padding: calc(0.45rem * var(--studio-ui-scale)) calc(0.65rem * var(--studio-ui-scale));
 }
@@ -11582,7 +11571,7 @@ html:not(.mobile-landing) #orby-font-picker-portal .font-extrude-family-option-l
   background: rgba(255, 255, 255, 0.1);
   color: var(--text);
   font-family: inherit;
-  font-size: 0.88rem;
+  font-size: var(--shelf-label-font-size);
   padding: 0.5rem 0.65rem;
   outline: none;
 }

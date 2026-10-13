@@ -122,10 +122,10 @@
 .map-preview-panel {
   position: fixed;
   z-index: 120;
-  top: var(--shelf-inset, 48px);
-  left: var(--shelf-inset, 48px);
+  top: var(--shelf-inset, 24px);
+  left: var(--shelf-inset, 24px);
   width: auto;
-  max-width: calc(100vw - 2 * var(--shelf-inset, 48px));
+  max-width: calc(100vw - 2 * var(--shelf-inset, 24px));
   pointer-events: none;
   /* Match shelf show/hide (V) — panel slides left when UI is hidden */
   --shelf-reveal-dur: 0.45s;
@@ -297,9 +297,9 @@ body.ui-hidden .map-preview-panel:not([hidden]) .map-preview-panel__chrome {
 }
 
 html:not(.mobile-landing) .map-preview-panel {
-  top: calc(48px * var(--studio-ui-scale));
-  left: calc(48px * var(--studio-ui-scale));
-  max-width: calc(100vw - 96px * var(--studio-ui-scale));
+  top: var(--shelf-inset);
+  left: var(--shelf-inset);
+  max-width: calc(100vw - 2 * var(--shelf-inset));
 }
 
 html:not(.mobile-landing) .map-preview-panel__chrome {
@@ -331,7 +331,7 @@ html:not(.mobile-landing) .map-preview-panel__chrome {
   gap: 0.75rem 1rem;
   flex: 0 0 auto;
   margin: 0;
-  padding: calc(var(--shelf-inset, 48px) * 0.55) calc(var(--shelf-inset, 48px) * 0.75);
+  padding: calc(var(--shelf-inset, 24px) * 0.55) calc(var(--shelf-inset, 24px) * 0.75);
   border-bottom: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
   background: color-mix(in srgb, var(--orby-black) 92%, var(--panel));
 }
@@ -343,7 +343,7 @@ html:not(.mobile-landing) .map-preview-panel__chrome {
 .map-fullsize-view__meta-line {
   margin: 0;
   min-width: 0;
-  font-size: 0.82rem;
+  font-size: var(--shelf-label-font-size);
   line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
@@ -362,7 +362,7 @@ html:not(.mobile-landing) .map-preview-panel__chrome {
 
 .map-fullsize-view__hint {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: var(--shelf-headline-font-size);
   color: var(--text-dim);
   white-space: nowrap;
 }
