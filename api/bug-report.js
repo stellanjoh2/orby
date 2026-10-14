@@ -58,7 +58,7 @@ const APPS = {
   },
   ultrapilled: {
     label: 'UltraPilled',
-    requireTurnstile: false,
+    requireTurnstile: true,
     categories: {
       crash: 'Crash',
       rendering: 'Rendering',
