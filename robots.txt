@@ -1,0 +1,9 @@
+# https://orby.studio
+User-agent: *
+Allow: /
+
+# App shell — already noindex; keep crawlers off the viewer route
+Disallow: /mobile/app/
+Disallow: /api/
+
+Sitemap: https://orby.studio/sitemap.xml

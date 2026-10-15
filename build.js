@@ -9,6 +9,7 @@ import { readStitchedIndexHtml } from './scripts/stitchIndexHtml.mjs';
 import { stampStitchedHtmlBanner } from './scripts/stitchIndexInclude.js';
 import { verifyProductionBuild } from './scripts/verifyProductionEnv.mjs';
 import { shouldCopyAssetToDist } from './scripts/marketing/marketingBuildAssetFilter.js';
+import { toSeoSafeNotFoundHtml } from './scripts/seo/seoSafeNotFoundHtml.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -256,9 +257,9 @@ const updatedHtml = stampStitchedHtmlBanner(
   ),
 );
 writeFileSync(join(distDir, 'index.html'), updatedHtml);
-// GitHub Pages SPA fallback: serve app shell for unknown paths so route-aware
-// client entry (scripts/entry.js) can render the in-app 404 experience.
-writeFileSync(join(distDir, '404.html'), updatedHtml);
+// GitHub Pages SPA fallback: same app shell so route-aware entry can render the
+// in-app 404 — but strip homepage SEO signals so unknown URLs are not soft-404s.
+writeFileSync(join(distDir, '404.html'), toSeoSafeNotFoundHtml(updatedHtml));
 
 if (existsSync(join(__dirname, 'support'))) {
   cpSync('support', join(distDir, 'support'), { recursive: true });
@@ -524,6 +525,13 @@ if (existsSync(mobileSrcDir)) {
 // Copy CNAME for GitHub Pages
 if (existsSync('CNAME')) {
   cpSync('CNAME', join(distDir, 'CNAME'));
+}
+
+// SEO discovery files (must be real files — GH Pages 404.html would soft-404 them)
+for (const seoFile of ['robots.txt', 'sitemap.xml', 'site.webmanifest']) {
+  if (existsSync(seoFile)) {
+    cpSync(seoFile, join(distDir, seoFile));
+  }
 }
 
 console.log('✅ Build complete! Output in dist/ folder');
