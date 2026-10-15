@@ -526,6 +526,13 @@ if (existsSync('CNAME')) {
   cpSync('CNAME', join(distDir, 'CNAME'));
 }
 
+// SEO discovery files (must be real files — GH Pages 404.html would soft-404 them)
+for (const seoFile of ['robots.txt', 'sitemap.xml']) {
+  if (existsSync(seoFile)) {
+    cpSync(seoFile, join(distDir, seoFile));
+  }
+}
+
 console.log('✅ Build complete! Output in dist/ folder');
 console.log('📦 Minified bundle created');
 console.log('🚀 Ready to deploy');
