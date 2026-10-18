@@ -304,7 +304,7 @@
                       <select id="exportMeshAnimationSelect" aria-label="GLB animation for export"></select>
                     </label>
                     <div id="exportMeshMatchDurationWrap" class="slider-line" hidden>
-                      <span data-tooltip="Set export length to the selected clip duration. Length presets (5s / 10s / 15s) are ignored while this is on.">Match export length to clip</span>
+                      <span data-tooltip="Set export length to one playthrough of the selected clip at the current Playback speed. Length presets (5s / 10s / 15s) are ignored while this is on.">Match export length to clip</span>
                       <label class="effect-toggle">
                         <input type="checkbox" id="exportMeshMatchDurationToClip" />
                         <span class="effect-indicator" aria-hidden="true"></span>
@@ -312,7 +312,7 @@
                       </label>
                     </div>
                     <div id="exportMeshSyncCameraWrap" class="slider-line" hidden>
-                      <span data-tooltip="When off, camera and turntable moves keep your Length preset timing while the clip plays at normal speed over the export.">Sync camera move to duration</span>
+                      <span data-tooltip="When off, camera and turntable moves keep your Length preset timing while the clip still plays at the current Playback speed over the matched export length.">Sync camera move to duration</span>
                       <label class="effect-toggle">
                         <input type="checkbox" id="exportMeshSyncCameraToDuration" checked />
                         <span class="effect-indicator" aria-hidden="true"></span>

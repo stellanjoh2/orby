@@ -345,6 +345,8 @@ export function setupStudioComposer(scene) {
         const clip = scene.animationController?.animations?.[index];
         return clip?.duration ?? 0;
       },
+      getAnimationPlaybackSpeed: () =>
+        scene.animationController?.playbackSpeed ?? 1,
       getAnimationClipLabel: (index) => {
         const clip = scene.animationController?.animations?.[index];
         return clip?.name || (clip ? `Clip ${index + 1}` : null);
@@ -396,6 +398,8 @@ export function setupStudioComposer(scene) {
         const clip = scene.animationController?.animations?.[index];
         return clip?.duration ?? 0;
       },
+      getAnimationPlaybackSpeed: () =>
+        scene.animationController?.playbackSpeed ?? 1,
       beginExportCameraDrive: () => scene.cameraController?.beginExportCameraDrive?.(),
       applyExportCameraDriveFrame: (t, options) =>
         scene.cameraController?.applyExportCameraDriveFrame?.(t, options),

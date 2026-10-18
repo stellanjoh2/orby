@@ -582,6 +582,13 @@ export const SCENE_CONTROL_MANIFEST = [
   {
     event: 'animation:speed',
     apply: { controller: 'animationController', method: 'setPlaybackSpeed' },
+    afterApply: (scene) => {
+      // Match-export-length-to-clip uses wall time = clipDuration / playbackSpeed.
+      scene.ui?.meshControls?.syncExportDurationUi?.();
+      scene.syncExportVideoPreviewSettings?.(
+        scene._videoExportSettingsFromUi?.() ?? {},
+      );
+    },
   },
   {
     event: 'animation:reverse',

@@ -132,6 +132,7 @@ export class VideoExporter {
     getHdriBackgroundEnabled,
     getAnimationClipCount = () => 0,
     getAnimationClipDuration = () => 0,
+    getAnimationPlaybackSpeed = () => 1,
     getAnimationClipLabel = () => null,
     getFontTextRevealExportLabel = () => null,
     handleResize,
@@ -182,6 +183,7 @@ export class VideoExporter {
     this.getHdriBackgroundEnabled = getHdriBackgroundEnabled;
     this.getAnimationClipCount = getAnimationClipCount;
     this.getAnimationClipDuration = getAnimationClipDuration;
+    this.getAnimationPlaybackSpeed = getAnimationPlaybackSpeed;
     this.getAnimationClipLabel = getAnimationClipLabel;
     this.getFontTextRevealExportLabel = getFontTextRevealExportLabel;
     this.handleResize = handleResize;
@@ -238,7 +240,13 @@ export class VideoExporter {
     const clipDuration = meshAnimation.include
       ? this.getAnimationClipDuration?.(meshAnimation.clipIndex) ?? 0
       : 0;
-    const timing = resolveExportMeshAnimationTiming(settings, clipCount, clipDuration);
+    const playbackSpeed = this.getAnimationPlaybackSpeed?.() ?? 1;
+    const timing = resolveExportMeshAnimationTiming(
+      settings,
+      clipCount,
+      clipDuration,
+      playbackSpeed,
+    );
     const durationSec = timing.exportDurationSec;
     const cameraMovementDurationSec = timing.cameraMovementDurationSec;
     const format = normalizeVideoExportFormat(settings?.format);

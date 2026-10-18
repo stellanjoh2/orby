@@ -6223,6 +6223,10 @@ a.about-highlight:focus-visible {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.segmented.segmented--5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .segmented.segmented--2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }

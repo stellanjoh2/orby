@@ -565,6 +565,7 @@ export class SceneManager {
       clipCount,
       this.animationController?.animations?.[video.meshAnimationClipIndex ?? 0]
         ?.duration ?? 0,
+      this.animationController?.playbackSpeed ?? 1,
     );
     return mesh.exportDurationSec;
   }

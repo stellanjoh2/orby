@@ -404,16 +404,51 @@ export function resolveExportCameraMovementLinearT(
 }
 
 /**
+ * Studio / export playback rate (AnimationMixer timeScale magnitude).
+ * @param {unknown} speed
+ * @returns {number}
+ */
+export function normalizeAnimationPlaybackSpeed(speed) {
+  const n = Number(speed);
+  if (!Number.isFinite(n) || n <= 0) return 1;
+  return n;
+}
+
+/**
+ * Wall-clock seconds for one clip playthrough at the given playback speed.
+ * Matches AnimationController export drive: localTime = exportTimeSec * playbackSpeed.
+ * @param {number} clipDurationSec
+ * @param {number} [playbackSpeed]
+ */
+export function resolveMatchedClipExportDurationSec(
+  clipDurationSec,
+  playbackSpeed = 1,
+) {
+  const duration = Number(clipDurationSec);
+  const speed = normalizeAnimationPlaybackSpeed(playbackSpeed);
+  if (!Number.isFinite(duration) || duration <= 0) return 0;
+  return duration / speed;
+}
+
+/**
  * @param {Record<string, unknown>} [settings]
  * @param {number} [clipDurationSec]
+ * @param {number} [playbackSpeed]
  */
-export function resolveExportDurationSec(settings = {}, clipDurationSec = 0) {
+export function resolveExportDurationSec(
+  settings = {},
+  clipDurationSec = 0,
+  playbackSpeed = 1,
+) {
   const preset = normalizeExportSettingsDurationSec(settings);
   const include = settings.meshAnimationsInclude === true;
   const match = include && settings.meshMatchDurationToClip === true;
-  const clipDuration = Number(clipDurationSec);
-  if (match && Number.isFinite(clipDuration) && clipDuration > 0) {
-    return clipDuration;
+  const matchedDuration = resolveMatchedClipExportDurationSec(
+    clipDurationSec,
+    playbackSpeed,
+  );
+  if (match && matchedDuration > 0) {
+    return matchedDuration;
   }
   return preset;
 }
@@ -443,18 +478,25 @@ export function resolveExportCameraMovementDurationSec(
  * @param {Record<string, unknown>} [settings]
  * @param {number} [clipCount]
  * @param {number} [clipDurationSec]
+ * @param {number} [playbackSpeed] — studio Animation playback speed (affects match-to-clip length)
  */
 export function resolveExportMeshAnimationTiming(
   settings = {},
   clipCount = 0,
   clipDurationSec = 0,
+  playbackSpeed = 1,
 ) {
   const meshAnimation = normalizeExportMeshAnimationSettings(settings, clipCount);
+  const speed = normalizeAnimationPlaybackSpeed(playbackSpeed);
   const resolvedClipDuration =
     meshAnimation.include && Number(clipDurationSec) > 0
       ? Number(clipDurationSec)
       : 0;
-  const exportDurationSec = resolveExportDurationSec(settings, resolvedClipDuration);
+  const exportDurationSec = resolveExportDurationSec(
+    settings,
+    resolvedClipDuration,
+    speed,
+  );
   const cameraMovementDurationSec = resolveExportCameraMovementDurationSec(
     settings,
     exportDurationSec,
@@ -462,6 +504,7 @@ export function resolveExportMeshAnimationTiming(
 
   return {
     ...meshAnimation,
+    playbackSpeed: speed,
     clipDurationSec: resolvedClipDuration,
     exportDurationSec,
     cameraMovementDurationSec,

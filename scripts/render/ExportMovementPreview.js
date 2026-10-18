@@ -42,6 +42,7 @@ export class ExportMovementPreview {
     getCurrentModel,
     getAnimationClipCount = () => 0,
     getAnimationClipDuration = () => 0,
+    getAnimationPlaybackSpeed = () => 1,
     beginExportCameraDrive = () => {},
     applyExportCameraDriveFrame = () => {},
     endExportCameraDrive = () => {},
@@ -71,6 +72,7 @@ export class ExportMovementPreview {
     this.getCurrentModel = getCurrentModel;
     this.getAnimationClipCount = getAnimationClipCount;
     this.getAnimationClipDuration = getAnimationClipDuration;
+    this.getAnimationPlaybackSpeed = getAnimationPlaybackSpeed;
     this.beginExportCameraDrive = beginExportCameraDrive;
     this.applyExportCameraDriveFrame = applyExportCameraDriveFrame;
     this.endExportCameraDrive = endExportCameraDrive;
@@ -149,7 +151,13 @@ export class ExportMovementPreview {
     const clipDuration = mesh.include
       ? this.getAnimationClipDuration?.(mesh.clipIndex) ?? 0
       : 0;
-    return resolveExportMeshAnimationTiming(settings, clipCount, clipDuration);
+    const playbackSpeed = this.getAnimationPlaybackSpeed?.() ?? 1;
+    return resolveExportMeshAnimationTiming(
+      settings,
+      clipCount,
+      clipDuration,
+      playbackSpeed,
+    );
   }
 
   _syncPreviewStateToStore() {
@@ -256,7 +264,9 @@ export class ExportMovementPreview {
       nextTiming.include === this._meshAnimation.include
       && nextTiming.clipIndex === this._meshAnimation.clipIndex
       && nextTiming.matchDurationToClip === this._meshAnimation.matchDurationToClip
-      && nextTiming.syncCameraToDuration === this._meshAnimation.syncCameraToDuration;
+      && nextTiming.syncCameraToDuration === this._meshAnimation.syncCameraToDuration
+      && nextTiming.playbackSpeed === this._meshAnimation.playbackSpeed
+      && nextTiming.exportDurationSec === this._meshAnimation.exportDurationSec;
 
     if (meshUnchanged) {
       if (movementSettingsKey === this._movementSettingsKey) {

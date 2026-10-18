@@ -48,6 +48,25 @@ describe('AnimationController export drive restore', () => {
     assert.equal(controller.currentAction.enabled, true);
   });
 
+  it('export drive maps wall time through playback speed (2× plays a 2s clip in 1s)', () => {
+    const controller = new AnimationController();
+    const tracks = [
+      new THREE.VectorKeyframeTrack('.position', [0, 2], [0, 0, 0, 1, 0, 0]),
+    ];
+    const clip = new THREE.AnimationClip('swim', 2, tracks);
+    controller.setModel(new THREE.Object3D(), [clip]);
+    controller.setPlaybackSpeed(2);
+
+    controller.beginExportDrive({ include: true, clipIndex: 0 });
+    // Mid matched export: wall 0.5s × 2 = clip t=1
+    controller.applyExportDriveTime(0.5);
+    assert.ok(Math.abs(controller._exportAction.time - 1) < 1e-6);
+    // End of matched length (clipDuration/speed): LoopRepeat wraps to 0
+    controller.applyExportDriveTime(1);
+    assert.ok(Math.abs(controller._exportAction.time) < 1e-6);
+    controller.endExportDrive();
+  });
+
   it('endExportDrive restores a paused viewport clip after pose-hold export', () => {
     const controller = new AnimationController();
     const clip = new THREE.AnimationClip('swim', 2, []);

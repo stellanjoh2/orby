@@ -88,6 +88,33 @@ describe('export mesh animation timing', () => {
     );
   });
 
+  it('scales matched export length by playback speed (2× halves wall time)', () => {
+    assert.equal(
+      resolveExportDurationSec(
+        {
+          durationSec: 10,
+          meshAnimationsInclude: true,
+          meshMatchDurationToClip: true,
+        },
+        10,
+        2,
+      ),
+      5,
+    );
+    assert.equal(
+      resolveExportDurationSec(
+        {
+          durationSec: 10,
+          meshAnimationsInclude: true,
+          meshMatchDurationToClip: true,
+        },
+        10,
+        0.5,
+      ),
+      20,
+    );
+  });
+
   it('uses preset camera duration when match is on but sync is off', () => {
     const settings = {
       durationSec: 5,
@@ -126,6 +153,24 @@ describe('export mesh animation timing', () => {
       ),
       3.2,
     );
+  });
+
+  it('match + 2× speed shortens export and synced camera duration together', () => {
+    const timing = resolveExportMeshAnimationTiming(
+      {
+        durationSec: 5,
+        meshAnimationsInclude: true,
+        meshMatchDurationToClip: true,
+        meshSyncCameraToDuration: true,
+      },
+      1,
+      10,
+      2,
+    );
+    assert.equal(timing.playbackSpeed, 2);
+    assert.equal(timing.clipDurationSec, 10);
+    assert.equal(timing.exportDurationSec, 5);
+    assert.equal(timing.cameraMovementDurationSec, 5);
   });
 });
 

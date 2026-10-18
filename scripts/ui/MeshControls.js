@@ -1166,10 +1166,15 @@ export class MeshControls {
       const clipIndex = Number(video.meshAnimationClipIndex) || 0;
       const clipOption = select?.querySelector(`option[value="${clipIndex}"]`);
       const clipSeconds = Number(clipOption?.dataset?.seconds);
+      const speedInput = this.ui.dom.animationSpeedSegmented?.querySelector(
+        'input[name="animationPlaybackSpeed"]:checked',
+      );
+      const playbackSpeed = Number(speedInput?.value) || 1;
       const timing = resolveExportMeshAnimationTiming(
         video,
         clipCount,
         Number.isFinite(clipSeconds) && clipSeconds > 0 ? clipSeconds : 0,
+        playbackSpeed,
       );
       const matchDuration = timing.matchDurationToClip;
       const lengthGroup = this.ui.inputs.exportVideoLengthGroup;
@@ -1196,7 +1201,12 @@ export class MeshControls {
       if (hint) {
         if (matchDuration && timing.clipDurationSec > 0) {
           hint.hidden = false;
-          hint.textContent = `Export length: ${formatTime(timing.exportDurationSec)} (clip duration)`;
+          const speed = timing.playbackSpeed ?? 1;
+          const speedLabel = Number.isInteger(speed) ? speed.toFixed(1) : String(speed);
+          hint.textContent =
+            speed === 1
+              ? `Export length: ${formatTime(timing.exportDurationSec)} (clip duration)`
+              : `Export length: ${formatTime(timing.exportDurationSec)} (clip at ${speedLabel}×)`;
         } else {
           hint.hidden = true;
           hint.textContent = '';
