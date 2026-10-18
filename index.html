@@ -125,8 +125,15 @@
         display: none !important;
       }
     </style>
-<!-- Open Graph / Facebook -->
+<meta
+      name="description"
+      content="Free browser-based 3D viewer and virtual studio. Drop a GLB or SVG, light and grade locally, export stills and video — no account, no uploads."
+    />
+    <link rel="canonical" href="https://orby.studio/" />
+
+    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:title" content="Orby — 3D viewer and virtual studio in the browser" />
     <meta property="og:description" content="Drop a GLB or SVG. Light, grade, and export — locally, no account. Free at orby.studio" />
     <meta property="og:image" content="https://orby.studio/assets/images/orby-shareimage.jpg" />
@@ -134,22 +141,120 @@
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Orby — 3D viewer and virtual studio in the browser" />
     <meta property="og:url" content="https://orby.studio/" />
     <meta property="og:site_name" content="Orby" />
-    
+
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Orby — 3D viewer and virtual studio in the browser" />
     <meta name="twitter:description" content="Drop a GLB or SVG. Light, grade, and export — locally, no account. Free at orby.studio" />
     <meta name="twitter:image" content="https://orby.studio/assets/images/orby-shareimage.jpg" />
-    <meta name="twitter:image:alt" content="Orby - 3D Model Viewer" />
-    
+    <meta name="twitter:image:alt" content="Orby — 3D viewer and virtual studio in the browser" />
+
     <title>Orby — 3D viewer and virtual studio in the browser</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "name": "Orby",
+            "url": "https://orby.studio/",
+            "description": "Free browser-based 3D viewer and virtual studio. Drop a GLB or SVG, light and grade locally, export stills and video — no account, no uploads.",
+            "applicationCategory": "DesignApplication",
+            "operatingSystem": "Any",
+            "browserRequirements": "Requires JavaScript. Desktop browser recommended.",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "image": "https://orby.studio/assets/images/orby-shareimage.jpg",
+            "author": {
+              "@type": "Person",
+              "name": "Stellan Johansson"
+            }
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Who is Orby for?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Orby is built for 3D artists who need a fast, clean view without booting up a full DCC — and for designers who need to present 3D content without a pipeline. AI-generated models, product visuals, client presentations, logo extrusions. No setup, no commitment. Just your file and an instant virtual studio."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Do I need to create an account?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No. No account, no login, no email. Open the browser and drop your file."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Do my files get uploaded anywhere?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Never. Orby runs entirely in your browser — your files don't leave your device, ever. No servers, no cloud, no storage. Close the tab and the model is gone. What you load stays yours."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What formats does Orby support?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Orby is built and optimized for GLB and glTF — that's where you'll get the full experience. OBJ, FBX, and STL load with basic support. For best results, export as GLB."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I export my renders?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. You can export stills and video without leaving the tab. What you see is what you get — post-processing, lighting, materials and all."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Does it work on mobile?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Not yet. Orby is built for desktop — a proper screen, a mouse, and some GPU headroom. Mobile support is on the roadmap, but for now leave it at your desk."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Is it really free?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Completely. No hidden tiers, no export limits, no watermarks."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Why does Orby exist?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "I wanted a viewer with real lighting and export controls that ran in the browser. Orby started as a solo build; it kept growing into something worth sharing."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
     <link
       rel="icon"
       type="image/svg+xml"
       href="./assets/images/favicon.svg"
     />
+    <link rel="apple-touch-icon" href="./assets/images/apple-touch-icon.png" />
+    <link rel="manifest" href="./site.webmanifest" />
     <!-- Browser gate + platform classes before styles.css -->
     <script src="./scripts/orbyUnsupportedBrowserBoot.js"></script>
     <script src="./scripts/orbySafariBrowserBoot.js"></script>
