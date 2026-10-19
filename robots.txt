@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# App shells — indexed via meta noindex; keep crawlers off deep app URLs
+Disallow: /mobile/app/
+Disallow: /api/
+
+Sitemap: https://orby.studio/sitemap.xml

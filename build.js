@@ -526,6 +526,13 @@ if (existsSync('CNAME')) {
   cpSync('CNAME', join(distDir, 'CNAME'));
 }
 
+// Crawl discovery — must live at site root (not SPA-fallback HTML)
+for (const crawlFile of ['robots.txt', 'sitemap.xml']) {
+  if (existsSync(crawlFile)) {
+    cpSync(crawlFile, join(distDir, crawlFile));
+  }
+}
+
 console.log('✅ Build complete! Output in dist/ folder');
 console.log('📦 Minified bundle created');
 console.log('🚀 Ready to deploy');
