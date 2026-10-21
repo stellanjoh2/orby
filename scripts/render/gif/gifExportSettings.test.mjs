@@ -12,6 +12,7 @@ import {
 test('normalizeVideoExportFormat', () => {
   assert.equal(normalizeVideoExportFormat('gif'), 'gif');
   assert.equal(normalizeVideoExportFormat('png'), 'png');
+  assert.equal(normalizeVideoExportFormat('mov'), 'mov');
   assert.equal(normalizeVideoExportFormat('mp4'), 'mp4');
   assert.equal(normalizeVideoExportFormat('webm'), 'mp4');
 });
@@ -27,10 +28,13 @@ test('GIF resolution allows up to 1080p', () => {
   assert.deepEqual(getGifExportResolutionSize('1080p'), { width: 1920, height: 1080 });
 });
 
-test('GIF FPS clamps 60 → 30', () => {
-  assert.equal(normalizeGifExportFps(24), 24);
-  assert.equal(normalizeGifExportFps(30), 30);
-  assert.equal(normalizeGifExportFps(60), 30);
+test('GIF FPS allows 10 / 15 / 25 only', () => {
+  assert.equal(normalizeGifExportFps(10), 10);
+  assert.equal(normalizeGifExportFps(15), 15);
+  assert.equal(normalizeGifExportFps(25), 25);
+  assert.equal(normalizeGifExportFps(24), 15);
+  assert.equal(normalizeGifExportFps(30), 15);
+  assert.equal(normalizeGifExportFps(60), 15);
 });
 
 test('gifski quality presets match Mozayk medium=90', () => {

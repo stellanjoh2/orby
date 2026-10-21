@@ -4710,7 +4710,9 @@ export class SceneManager {
     }
     const exportSettings = this._videoExportSettingsFromUi(settings);
     if (
-      (exportSettings.format === 'png' || exportSettings.format === 'gif')
+      (exportSettings.format === 'png'
+        || exportSettings.format === 'gif'
+        || exportSettings.format === 'mov')
       && shouldBlockFisheyePngExport(this.stateStore, {
         transparent: !!exportSettings.movTransparent,
       })
@@ -4797,7 +4799,9 @@ export class SceneManager {
 
     const exportSettings = this._videoExportSettingsFromUi();
     if (
-      (exportSettings.format === 'png' || exportSettings.format === 'gif')
+      (exportSettings.format === 'png'
+        || exportSettings.format === 'gif'
+        || exportSettings.format === 'mov')
       && exportSettings.movTransparent
       && shouldBlockFisheyePngExport(this.stateStore, { transparent: true })
     ) {

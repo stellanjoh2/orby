@@ -841,6 +841,7 @@ export class UIManager {
       exportPngFolderLabel: q('#exportPngFolderLabel'),
       exportMp4Settings: q('#exportMp4Settings'),
       exportGifHint: q('#exportGifHint'),
+      exportMovHint: q('#exportMovHint'),
       exportZoomDistance: q('#exportZoomDistance'),
       exportZoomDistanceSettings: q('#exportZoomDistanceSettings'),
       exportTiltAngle: q('#exportTiltAngle'),
@@ -2932,6 +2933,7 @@ export class UIManager {
     syncWrap(this.inputs.exportImageTransparentFraming, imageEnabled);
 
     const videoFormat = this.exportSettings.video?.format;
+    // ProRes always encodes full frame (fixed canvas size); crop UI is PNG/GIF only.
     const videoEnabled =
       (videoFormat === 'png' || videoFormat === 'gif')
       && !!this.exportSettings.video?.movTransparent;

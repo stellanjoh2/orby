@@ -62,6 +62,8 @@ import {
   normalizeGifExportResolution,
   normalizeVideoExportFormat,
 } from './gif/gifExportSettings.js';
+import { createProResEncodeSession } from './prores/encodeProResFrames.js';
+import { videoExportSupportsAlpha } from './prores/proresExportSettings.js';
 import {
   applyTransparentCaptureSetup,
   cropTransparentTopDownRgbaToCanvas,
@@ -313,6 +315,16 @@ export class VideoExporter {
       .replace(/^_+|_+$/g, '')
       || 'orby';
     return `${safeBase}_${modeLabel}_${durationSec}s_${fps}fps_${resolution}.gif`;
+  }
+
+  _movFileName(baseName, modeLabel, durationSec, fps, resolution, transparent) {
+    const safeBase = (baseName || 'orby')
+      .replace(/\.[a-z0-9]+$/i, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      || 'orby';
+    const alpha = transparent ? '_alpha' : '';
+    return `${safeBase}_${modeLabel}_${durationSec}s_${fps}fps_${resolution}${alpha}.mov`;
   }
 
   _sequenceFolderName(
@@ -1513,7 +1525,7 @@ export class VideoExporter {
 
     const format = normalizeVideoExportFormat(settings?.format ?? params.format);
     const shouldUseTransparentFrames =
-      (format === 'png' || format === 'gif') && !!settings?.movTransparent;
+      videoExportSupportsAlpha(format) && !!settings?.movTransparent;
     const gifCropEditable =
       format === 'gif'
       && shouldUseTransparentFrames
@@ -1702,7 +1714,7 @@ export class VideoExporter {
   async exportVideo(settings = {}) {
     this._exportCancelRequested = false;
     // Static camera/object (zero spins) is valid for every video format —
-    // MP4, PNG sequence, and GIF share _resolveVideoExportParams.
+    // MP4, ProRes, PNG sequence, and GIF share _resolveVideoExportParams.
     const params = this._resolveVideoExportParams(settings);
     if (!params) {
       this.ui?.showToast?.('Load a mesh before exporting video');
@@ -1744,18 +1756,25 @@ export class VideoExporter {
     const originalClearAlpha = this.renderer.getClearAlpha();
     const originalClearColor = this.renderer.getClearColor(new THREE.Color()).clone();
     const shouldUseTransparentFrames =
-      (format === 'png' || format === 'gif') && movTransparent;
+      videoExportSupportsAlpha(format) && movTransparent;
     const resolutionLabel = format === 'gif'
       ? getGifExportResolutionPixelLabel(resolution)
       : getExportVideoResolutionPixelLabel(resolution, aspectRatio);
-    if (format === 'mp4' && resolution === '2160p' && (fps >= 60 || mp4Quality === 'high')) {
+    if (
+      (format === 'mp4' || format === 'mov')
+      && resolution === '2160p'
+      && (fps >= 60 || mp4Quality === 'high')
+    ) {
       this.ui?.showToast?.(
-        '4K export is heavy on this browser/GPU and may use fallback encoding',
+        format === 'mov'
+          ? '4K ProRes is very large and slow to encode in the browser'
+          : '4K export is heavy on this browser/GPU and may use fallback encoding',
       );
     }
     const isOfflinePngSequence = format === 'png';
     const isOfflineGif = format === 'gif';
-    const isOfflineExport = isOfflinePngSequence || isOfflineGif;
+    const isOfflineMov = format === 'mov';
+    const isOfflineExport = isOfflinePngSequence || isOfflineGif || isOfflineMov;
     if (isOfflineExport) {
       const sequenceFolderName = this._sequenceFolderName(
         baseName,
@@ -1807,13 +1826,28 @@ export class VideoExporter {
           gifFileName: isOfflineGif
             ? this._gifFileName(baseName, modeLabel, durationSec, fps, resolution)
             : null,
+          movFileName: isOfflineMov
+            ? this._movFileName(
+              baseName,
+              modeLabel,
+              durationSec,
+              fps,
+              resolution,
+              shouldUseTransparentFrames,
+            )
+            : null,
         },
       });
+      const offlineTitle = isOfflineGif
+        ? 'Rendering GIF'
+        : isOfflineMov
+          ? 'Rendering ProRes'
+          : 'Rendering PNG sequence';
       this.ui?.showOfflineExportOverlay?.(summary, {
         cancellable: true,
         onCancelExport: () => this.requestCancelExport(),
         assetFilename: baseName,
-        title: isOfflineGif ? 'Rendering GIF' : 'Rendering PNG sequence',
+        title: offlineTitle,
       });
       this.ui?.updateOfflineExportOverlayProgress?.({ frameIndex: 0, totalFrames });
       await this._yieldUntilPaintCommitted();
@@ -1914,7 +1948,9 @@ export class VideoExporter {
       this.ui?.showToast?.(
         isOfflineGif
           ? `Rendering ${totalFrames} GIF frames…`
-          : `Rendering ${totalFrames} frames…`,
+          : isOfflineMov
+            ? `Rendering ${totalFrames} ProRes frames…`
+            : `Rendering ${totalFrames} frames…`,
       );
       let transparentSetupSnapshot = null;
       let sequenceDirHandle = null;
@@ -1925,7 +1961,103 @@ export class VideoExporter {
           transparentSetupSnapshot = this._applyTransparentFrameSetup();
         }
 
-        if (isOfflineGif) {
+        if (isOfflineMov) {
+          const movWidth = outputSize.width;
+          const movHeight = outputSize.height;
+          let exportCancelled = false;
+          let session = null;
+          try {
+            session = await createProResEncodeSession({
+              width: movWidth,
+              height: movHeight,
+              fps,
+              transparent: shouldUseTransparentFrames,
+              qualityPreset: mp4Quality,
+            });
+            for (let i = 0; i < totalFrames; i += 1) {
+              if (this._exportCancelRequested) {
+                exportCancelled = true;
+                break;
+              }
+              const t = this._cameraMovementLinearT(i, fps, cameraMovementDurationSec);
+              const { blob } = await captureVideoExportFrameBlob(
+                this,
+                {
+                  movements,
+                  t,
+                  movementEasing,
+                  objectSpinSettings,
+                  cameraSpinSettings,
+                  hdriRotationSettings,
+                  startRotationY,
+                  startLightsRotation,
+                  startHdriRotation,
+                  lightsAutoRotate,
+                  durationSec,
+                  cameraMovementDurationSec,
+                  frameIndex: i,
+                  fps,
+                  meshAnimation,
+                },
+                {
+                  transparent: shouldUseTransparentFrames,
+                  exportWidth: this._exportCaptureSize?.width,
+                  exportHeight: this._exportCaptureSize?.height,
+                  // ProRes needs a fixed frame size — always full canvas.
+                  transparentFraming: 'full',
+                },
+              );
+              this.ui?.setOfflineExportPreviewFrame?.(blob);
+              let imageData = await imageBlobToImageData(blob);
+              if (imageData.width !== movWidth || imageData.height !== movHeight) {
+                imageData = downscaleImageData(imageData, movWidth, movHeight);
+              }
+              await session.addFrameRgba(imageData.data);
+              this.ui?.updateOfflineExportOverlayProgress?.({
+                frameIndex: i + 1,
+                totalFrames,
+              });
+              this.ui?.setOfflineExportElapsedFromStart?.();
+              await this._yieldUntilPaintCommitted();
+            }
+
+            if (exportCancelled) {
+              offlineExportCancelled = true;
+              this.ui?.setOfflineExportOverlayCancelled?.();
+              this.ui?.showToast?.('ProRes export cancelled', 3200, { notification: false });
+            } else if (session) {
+              this.ui?.showToast?.('Muxing ProRes…');
+              const blob = await session.finalizeToBlob();
+              const fileName = this._movFileName(
+                baseName,
+                modeLabel,
+                durationSec,
+                fps,
+                resolution,
+                shouldUseTransparentFrames,
+              );
+              this._downloadBlob(blob, fileName);
+              this.ui?.uiSounds?.playRenderFinished();
+              const sizeMb = blob.size / (1024 * 1024);
+              const sizeLabel = sizeMb >= 1
+                ? `${sizeMb.toFixed(1)} MB`
+                : `${Math.max(1, Math.round(blob.size / 1024))} KB`;
+              const notes = [session.profileLabel];
+              if (shouldUseTransparentFrames) notes.push('transparent');
+              this.ui?.showToast?.(
+                `ProRes exported (${totalFrames} frames, ${sizeLabel}, ${notes.join(', ')})`,
+                4200,
+                { notification: false },
+              );
+            }
+          } finally {
+            try {
+              await session?.destroy?.();
+            } catch (error) {
+              console.warn('ProRes encoder cleanup failed', error);
+            }
+          }
+        } else if (isOfflineGif) {
           const gifImages = [];
           let exportCancelled = false;
           const gifWidth = outputSize.width;

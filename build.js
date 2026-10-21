@@ -172,6 +172,7 @@ await esbuild.build({
   legalComments: 'none',
 });
 await import('./scripts/dev/vendorGifski.mjs');
+await import('./scripts/dev/vendorProres.mjs');
 
 // Build JavaScript bundle
 // Note: Three.js is kept external (loaded via import map in HTML)

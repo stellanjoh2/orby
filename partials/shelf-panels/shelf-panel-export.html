@@ -324,8 +324,9 @@
                   <div class="block-title export-section-title">Output</div>
                   <div class="export-option-group">
                     <span class="export-label">Format</span>
-                    <div class="export-button-group export-button-group--triple">
+                    <div class="export-button-group export-button-group--quad">
                       <button data-video-format="mp4" class="export-option-btn active" data-tooltip="Encoded .MP4 export">.MP4</button>
+                      <button data-video-format="mov" class="export-option-btn" data-tooltip="Offline ProRes .MOV — editor-ready master, optional alpha (4444)">.MOV</button>
                       <button data-video-format="png" class="export-option-btn" data-tooltip="Numbered PNG sequence">.PNG</button>
                       <button data-video-format="gif" class="export-option-btn" data-tooltip="Offline animated GIF — seamless loop, optional transparency">.GIF</button>
                     </div>
@@ -335,7 +336,7 @@
                       <span class="export-label">Transparent</span>
                       <div class="export-button-group">
                         <button type="button" data-video-mov-transparent="false" class="export-option-btn active" disabled data-tooltip="Solid background">NO</button>
-                        <button type="button" data-video-mov-transparent="true" class="export-option-btn is-disabled" disabled data-tooltip="Transparent background for compositing (PNG sequence or GIF)">YES</button>
+                        <button type="button" data-video-mov-transparent="true" class="export-option-btn is-disabled" disabled data-tooltip="Transparent background for compositing (PNG sequence, GIF, or ProRes 4444)">YES</button>
                       </div>
                     </div>
                   </div>
@@ -369,6 +370,9 @@
                   </div>
                   <p id="exportGifHint" class="export-format-sub" hidden>
                     GIF is offline-baked and loops forever. Caps at 1080p / 25 FPS. With Crop to asset, scrub the preview and drag the width handles — export uses the wider of your width and the full motion union.
+                  </p>
+                  <p id="exportMovHint" class="export-format-sub" hidden>
+                    ProRes is offline-baked for Premiere, After Effects, Final Cut, and Resolve. Transparent uses 4444 alpha (full frame). Files are large — prefer short lengths for masters.
                   </p>
                   <div id="exportVideoLengthGroup" class="export-option-group">
                     <span class="export-label">Length</span>
@@ -544,7 +548,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.1087 · 2026-10-21 11:01:56 UTC</div>
+              <div class="info-version-tag">v0.5.1088 · 2026-10-21 16:38:56 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>

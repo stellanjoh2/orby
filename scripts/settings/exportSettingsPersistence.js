@@ -121,7 +121,12 @@ export function applySavedExportSettings(target, saved) {
   target.video.fovOffset = movements.fovOffset;
   target.video.pitchOffset = movements.pitchOffset;
 
-  if (video.format === 'mp4' || video.format === 'png' || video.format === 'gif') {
+  if (
+    video.format === 'mp4'
+    || video.format === 'png'
+    || video.format === 'gif'
+    || video.format === 'mov'
+  ) {
     target.video.format = video.format;
   }
   if (video.durationSec !== undefined) {

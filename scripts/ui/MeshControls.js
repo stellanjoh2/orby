@@ -88,6 +88,7 @@ import {
   normalizeGifExportResolution,
   normalizeVideoExportFormat,
 } from '../render/gif/gifExportSettings.js';
+import { videoExportSupportsAlpha } from '../render/prores/proresExportSettings.js';
 import { IMPORT_MESH_SMOOTHING_ENABLED } from '../import/stlNormalSmoothing.js';
 import {
   MESH_CHECKBOX_UI_MANIFEST,
@@ -921,7 +922,7 @@ export class MeshControls {
       const wrap = this.ui.inputs.exportPngTransparentSettings;
       if (!wrap) return;
       const format = normalizeVideoExportFormat(this.ui.exportSettings.video?.format);
-      const enabled = format === 'png' || format === 'gif';
+      const enabled = videoExportSupportsAlpha(format);
       wrap.classList.toggle('is-muted', !enabled);
       wrap.querySelectorAll('[data-video-mov-transparent]').forEach((el) => {
         if ('disabled' in el) el.disabled = !enabled;
@@ -934,7 +935,7 @@ export class MeshControls {
       const wrap = this.ui.inputs.exportMp4Settings;
       if (!wrap) return;
       const f = normalizeVideoExportFormat(this.ui.exportSettings.video?.format);
-      const showCompression = f === 'mp4' || f === 'gif';
+      const showCompression = f === 'mp4' || f === 'gif' || f === 'mov';
       wrap.hidden = !showCompression;
       wrap.classList.toggle('is-muted', !showCompression);
       wrap.querySelectorAll('[data-video-mp4-quality]').forEach((btn) => {
@@ -943,6 +944,8 @@ export class MeshControls {
       });
       const gifHint = this.ui.inputs.exportGifHint;
       if (gifHint) gifHint.hidden = f !== 'gif';
+      const movHint = this.ui.inputs.exportMovHint;
+      if (movHint) movHint.hidden = f !== 'mov';
     };
     const syncExportVideoFormatUi = () => {
       const format = normalizeVideoExportFormat(this.ui.exportSettings.video?.format);
@@ -1223,7 +1226,12 @@ export class MeshControls {
     document.querySelectorAll('[data-video-format]').forEach((button) => {
       button.addEventListener('click', () => {
         const format = button.dataset.videoFormat;
-        if (format !== 'mp4' && format !== 'png' && format !== 'gif') return;
+        if (
+          format !== 'mp4'
+          && format !== 'png'
+          && format !== 'gif'
+          && format !== 'mov'
+        ) return;
         this.ui.exportSettings.video.format = format;
         syncExportVideoFormatUi();
         notifyExportPreviewSettingsChanged();

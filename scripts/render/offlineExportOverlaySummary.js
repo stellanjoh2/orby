@@ -30,6 +30,10 @@ import {
   normalizeGifExportFps,
   normalizeGifExportResolution,
 } from './gif/gifExportSettings.js';
+import {
+  proresProfileFromSettings,
+  proresProfileLabel,
+} from './prores/proresExportSettings.js';
 
 /** Default export job for dropzone / URL overlay preview. */
 export const OFFLINE_EXPORT_OVERLAY_PREVIEW_JOB = {
@@ -161,6 +165,7 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
     exportJob.clipCount ?? 0,
   );
   const isGif = exportJob.format === 'gif';
+  const isMov = exportJob.format === 'mov';
   const resolution = isGif
     ? normalizeGifExportResolution(exportJob.resolution)
     : normalizeExportVideoResolution(exportJob.resolution);
@@ -186,6 +191,8 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
     typeof renderContext.zipFileName === 'string' ? renderContext.zipFileName.trim() : '';
   const gifFileName =
     typeof renderContext.gifFileName === 'string' ? renderContext.gifFileName.trim() : '';
+  const movFileName =
+    typeof renderContext.movFileName === 'string' ? renderContext.movFileName.trim() : '';
   const exportWidth =
     Number(renderContext.exportWidth)
     || defaultSize?.width
@@ -209,6 +216,20 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
     const quality = exportJob.mp4Quality === 'low' || exportJob.mp4Quality === 'high'
       ? exportJob.mp4Quality
       : 'medium';
+    addRow(rows, 'Quality', quality === 'low' ? 'Low' : quality === 'high' ? 'High' : 'Medium');
+  } else if (isMov) {
+    addRow(rows, 'Output', 'ProRes .MOV download');
+    if (movFileName) {
+      addRow(rows, 'MOV file', movFileName);
+    }
+    const quality = exportJob.mp4Quality === 'low' || exportJob.mp4Quality === 'high'
+      ? exportJob.mp4Quality
+      : 'medium';
+    const profile = proresProfileFromSettings({
+      transparent: !!exportJob.movTransparent,
+      qualityPreset: quality,
+    });
+    addRow(rows, 'Format', proresProfileLabel(profile));
     addRow(rows, 'Quality', quality === 'low' ? 'Low' : quality === 'high' ? 'High' : 'Medium');
   } else {
     addRow(
@@ -257,6 +278,9 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
         ? 'Crop to asset (union of all frames)'
         : 'Full frame',
     );
+  }
+  if (exportJob.movTransparent && isMov) {
+    addRow(rows, 'Framing', 'Full frame');
   }
   addRow(
     rows,

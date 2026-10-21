@@ -29,10 +29,10 @@ export const GIF_EXPORT_DURATION_SET = new Set(GIF_EXPORT_DURATIONS_SEC);
 
 /**
  * @param {unknown} format
- * @returns {'mp4' | 'png' | 'gif'}
+ * @returns {'mp4' | 'png' | 'gif' | 'mov'}
  */
 export function normalizeVideoExportFormat(format) {
-  if (format === 'png' || format === 'gif') return format;
+  if (format === 'png' || format === 'gif' || format === 'mov') return format;
   return 'mp4';
 }
 
