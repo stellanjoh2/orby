@@ -368,7 +368,12 @@ export function applyCreativeLookPostFxUiBlocks(state, api) {
   clearShaderLabBlockedMarks();
   const blocks = getCreativeLookPostFxUiBlocks(state);
   if (!blocks) {
-    // Shader Lab previously set disabled on master toggles; re-enable when it is off.
+    // Color & Tone has no section master toggle — applyToggleSectionMute never
+    // clears its mute / disabled inputs after Vectrex / watercolour / etc.
+    api.setMuted('color-tone', false);
+    api.setControlsDisabled([...COLOR_TONE_INPUTS], false);
+    // toneMapping is disabled by flat-post / artistic presets; sync only writes value.
+    api.setControlsDisabled(['toneMapping'], false);
     api.setControlsDisabled([...SHADER_LAB_MASTER_TOGGLES], false);
     return;
   }
