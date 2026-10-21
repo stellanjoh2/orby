@@ -1,5 +1,6 @@
 /**
- * Offline ProRes .MOV encode via vendored prores-wasm-encoder.
+ * Offline ProRes .MOV encode via vendored prores-wasm-encoder
+ * (https://github.com/OlivierEstevez/ProRes-WASM-encoder — Olivier Estevez, LGPL-2.1+).
  * Streams frames into the encoder (constant memory vs buffering every RGBA frame).
  */
 

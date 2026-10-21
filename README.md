@@ -100,7 +100,7 @@ Orby is **vanilla ES modules** — no React/Vue framework. Full library attribut
 | **Vector animation** | [Lottie Web](https://github.com/airbnb/lottie-web) — SVG logotype animations |
 | **Icons** | [Font Awesome](https://fontawesome.com/) — subset build |
 | **Extrude geometry** | [cdt2d](https://www.npmjs.com/package/cdt2d) + Earcut — SVG & font cap triangulation |
-| **Export** | [JSZip](https://stuk.github.io/jszip/) — turntable PNG sequences; [ImageTracer.js](https://github.com/jankovicsandras/imagetracerjs) — raster utilities |
+| **Export** | [JSZip](https://stuk.github.io/jszip/) — turntable PNG sequences; [gifski-wasm](https://www.npmjs.com/package/gifski-wasm) — GIF; [prores-wasm-encoder](https://github.com/OlivierEstevez/ProRes-WASM-encoder) (Olivier Estevez) — ProRes .MOV; [ImageTracer.js](https://github.com/jankovicsandras/imagetracerjs) — raster utilities |
 | **Typography** | Mattone (Collletttivo), Geist (Vercel) |
 
 ### Tooling & deploy
@@ -703,7 +703,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Full acknowledgements (libraries, fonts, sounds, shaders, licensed HDRIs, and more) live on the **[Credits page](credits/)**.
 
-Highlights include Three.js, GSAP, Lottie Web, N8AO, Font Awesome, JSZip, ImageTracer.js, community lens effects, Maxime Roz HDRIs (licensed separately — see [ASSETS_LICENSE.md](ASSETS_LICENSE.md)), and open fonts from Collletttivo and Vercel.
+Highlights include Three.js, GSAP, Lottie Web, N8AO, Font Awesome, JSZip, ImageTracer.js, [ProRes-WASM-encoder](https://github.com/OlivierEstevez/ProRes-WASM-encoder) by Olivier Estevez (ProRes .MOV export, LGPL-2.1+), community lens effects, Maxime Roz HDRIs (licensed separately — see [ASSETS_LICENSE.md](ASSETS_LICENSE.md)), and open fonts from Collletttivo and Vercel.
 
 ---
 

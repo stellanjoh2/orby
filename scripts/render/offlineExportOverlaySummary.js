@@ -229,7 +229,7 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
       transparent: !!exportJob.movTransparent,
       qualityPreset: quality,
     });
-    addRow(rows, 'Format', proresProfileLabel(profile));
+    addRow(rows, 'Format', `${proresProfileLabel(profile)} (ProRes-WASM-encoder)`);
     addRow(rows, 'Quality', quality === 'low' ? 'Low' : quality === 'high' ? 'High' : 'Medium');
   } else {
     addRow(
