@@ -280,7 +280,13 @@ function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
     );
   }
   if (exportJob.movTransparent && isMov) {
-    addRow(rows, 'Framing', 'Full frame');
+    addRow(
+      rows,
+      'Framing',
+      isTransparentCropToAsset(exportJob.transparentFraming)
+        ? 'Crop to asset (union of all frames)'
+        : 'Full frame',
+    );
   }
   addRow(
     rows,

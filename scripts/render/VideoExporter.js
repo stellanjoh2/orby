@@ -1964,16 +1964,23 @@ export class VideoExporter {
         if (isOfflineMov) {
           const movWidth = outputSize.width;
           const movHeight = outputSize.height;
+          // Crop needs one fixed size for every frame — bake full, then union-crop like GIF.
+          const wantUnionCrop =
+            shouldUseTransparentFrames
+            && isTransparentCropToAsset(settings?.transparentFraming);
           let exportCancelled = false;
           let session = null;
+          const movImages = wantUnionCrop ? [] : null;
           try {
-            session = await createProResEncodeSession({
-              width: movWidth,
-              height: movHeight,
-              fps,
-              transparent: shouldUseTransparentFrames,
-              qualityPreset: mp4Quality,
-            });
+            if (!wantUnionCrop) {
+              session = await createProResEncodeSession({
+                width: movWidth,
+                height: movHeight,
+                fps,
+                transparent: shouldUseTransparentFrames,
+                qualityPreset: mp4Quality,
+              });
+            }
             for (let i = 0; i < totalFrames; i += 1) {
               if (this._exportCancelRequested) {
                 exportCancelled = true;
@@ -2003,7 +2010,7 @@ export class VideoExporter {
                   transparent: shouldUseTransparentFrames,
                   exportWidth: this._exportCaptureSize?.width,
                   exportHeight: this._exportCaptureSize?.height,
-                  // ProRes needs a fixed frame size — always full canvas.
+                  // Always capture full canvas; union-crop after if Framing = crop.
                   transparentFraming: 'full',
                 },
               );
@@ -2012,13 +2019,42 @@ export class VideoExporter {
               if (imageData.width !== movWidth || imageData.height !== movHeight) {
                 imageData = downscaleImageData(imageData, movWidth, movHeight);
               }
-              await session.addFrameRgba(imageData.data);
+              if (movImages) {
+                movImages.push(imageData);
+              } else {
+                await session.addFrameRgba(imageData.data);
+              }
               this.ui?.updateOfflineExportOverlayProgress?.({
                 frameIndex: i + 1,
                 totalFrames,
               });
               this.ui?.setOfflineExportElapsedFromStart?.();
               await this._yieldUntilPaintCommitted();
+            }
+
+            let encodeWidth = movWidth;
+            let encodeHeight = movHeight;
+            let unionCropped = false;
+            if (!exportCancelled && movImages?.length) {
+              const cropped = applyGifUnionCrop(movImages);
+              encodeWidth = cropped.width;
+              encodeHeight = cropped.height;
+              unionCropped = cropped.cropped;
+              session = await createProResEncodeSession({
+                width: encodeWidth,
+                height: encodeHeight,
+                fps,
+                transparent: true,
+                qualityPreset: mp4Quality,
+              });
+              this.ui?.showToast?.('Encoding ProRes…');
+              for (let i = 0; i < cropped.frames.length; i += 1) {
+                if (this._exportCancelRequested) {
+                  exportCancelled = true;
+                  break;
+                }
+                await session.addFrameRgba(cropped.frames[i].data);
+              }
             }
 
             if (exportCancelled) {
@@ -2044,6 +2080,7 @@ export class VideoExporter {
                 : `${Math.max(1, Math.round(blob.size / 1024))} KB`;
               const notes = [session.profileLabel];
               if (shouldUseTransparentFrames) notes.push('transparent');
+              if (unionCropped) notes.push(`${encodeWidth}×${encodeHeight} union crop`);
               this.ui?.showToast?.(
                 `ProRes exported (${totalFrames} frames, ${sizeLabel}, ${notes.join(', ')})`,
                 4200,

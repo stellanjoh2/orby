@@ -2913,7 +2913,7 @@ export class UIManager {
     }
   }
 
-  /** Framing row(s) for transparent still + video PNG — shared `transparentFraming` state. */
+  /** Framing row(s) for transparent still + video PNG / GIF / ProRes — shared `transparentFraming` state. */
   syncTransparentFramingUi() {
     const framing = normalizeTransparentFraming(this.exportSettings.transparentFraming);
     const syncWrap = (wrap, enabled) => {
@@ -2933,9 +2933,9 @@ export class UIManager {
     syncWrap(this.inputs.exportImageTransparentFraming, imageEnabled);
 
     const videoFormat = this.exportSettings.video?.format;
-    // ProRes always encodes full frame (fixed canvas size); crop UI is PNG/GIF only.
+    // Crop / full framing for transparent PNG, GIF, and ProRes (union crop for motion).
     const videoEnabled =
-      (videoFormat === 'png' || videoFormat === 'gif')
+      (videoFormat === 'png' || videoFormat === 'gif' || videoFormat === 'mov')
       && !!this.exportSettings.video?.movTransparent;
     syncWrap(this.inputs.exportVideoTransparentFraming, videoEnabled);
     if (

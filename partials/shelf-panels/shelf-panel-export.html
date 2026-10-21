@@ -344,7 +344,7 @@
                     <div class="export-option-group">
                       <span class="export-label">Framing</span>
                       <div class="export-button-group">
-                        <button type="button" data-export-transparent-framing="crop" class="export-option-btn active" data-tooltip="Trim empty pixels around the mesh. GIF uses a fixed union crop across all frames so motion never clips.">CROP TO ASSET</button>
+                        <button type="button" data-export-transparent-framing="crop" class="export-option-btn active" data-tooltip="Trim empty pixels around the mesh. GIF and ProRes use a fixed union crop across all frames so motion never clips.">CROP TO ASSET</button>
                         <button type="button" data-export-transparent-framing="full" class="export-option-btn" data-tooltip="Keep the export canvas with transparent margins — best for overlays and motion graphics">FULL FRAME</button>
                       </div>
                     </div>
@@ -372,7 +372,7 @@
                     GIF is offline-baked and loops forever. Caps at 1080p / 25 FPS. With Crop to asset, scrub the preview and drag the width handles — export uses the wider of your width and the full motion union.
                   </p>
                   <p id="exportMovHint" class="export-format-sub" hidden>
-                    ProRes is offline-baked for Premiere, After Effects, Final Cut, and Resolve. Transparent uses 4444 alpha (full frame). Files are large — prefer short lengths for masters. Encoder:
+                    ProRes is offline-baked for Premiere, After Effects, Final Cut, and Resolve. Transparent NO keeps HDRI / studio backdrop (422). Transparent YES uses 4444 alpha — pick Crop to asset or Full frame. Files are large — prefer short lengths for masters. Encoder:
                     <a href="https://github.com/OlivierEstevez/ProRes-WASM-encoder" target="_blank" rel="noopener noreferrer">ProRes-WASM-encoder</a>
                     by Olivier Estevez (LGPL-2.1+).
                   </p>
@@ -550,7 +550,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.1089 · 2026-10-21 16:46:28 UTC</div>
+              <div class="info-version-tag">v0.5.1090 · 2026-10-21 16:58:22 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
