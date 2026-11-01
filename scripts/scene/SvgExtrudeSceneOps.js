@@ -172,6 +172,17 @@ export function rebuildSvgExtrudeMeshesAfterImporterChange(scene) {
     );
   }
   scene.setReverseNormals(scene.stateStore.getState().advanced?.reverseNormals ?? false);
+  // Depth / bevel rebuilds change local bounds (half-depth offset). Recompute the
+  // font pivot without jumping ink — preserveWorld when multiple assets share the scene.
+  // Skip during spawn scale-in (same lock as FontExtrudeUI generate).
+  if (isFont && !scene._fontSpawnPlacementLock) {
+    scene.finalizeFontModelStudioPlacement?.({
+      model: scene.currentModel,
+      force: true,
+      preserveWorld: !!scene.sceneObjects?.isMulti?.(),
+    });
+    scene.sceneObjects?.commitActive?.();
+  }
   scene.refreshBoneHelpers();
   scene.cameraController?.refreshModelBounds?.(scene.currentModel);
   scene._syncShadowCameraBounds?.();

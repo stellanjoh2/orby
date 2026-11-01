@@ -149,8 +149,10 @@ export function initStudioShell(scene, initialState) {
         if (!bound || bound !== scene.currentModel) return;
         scene.finalizeFontModelStudioPlacement({
           model: bound,
-          // Multi-object texts must keep world placement; only the local pivot recenters.
-          preserveWorld: !!scene.sceneObjects?.isMulti?.(),
+          // Typography already moved glyphs in place — do not replay the old
+          // pivot delta (that jumps the block), just refresh the pivot.
+          preserveWorld: true,
+          skipUndo: true,
         });
       },
       reapplyMaterialEmissive: () => {

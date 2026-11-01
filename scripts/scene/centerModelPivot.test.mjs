@@ -6,6 +6,7 @@ import {
   captureAndApplyCenterFontPivot,
   centerModelGeometryOnRoot,
   centerFontModelGeometryOnRoot,
+  undoCenterPivot,
   FONT_STUDIO_GRID_CLEARANCE,
 } from './centerModelPivot.js';
 
@@ -175,4 +176,66 @@ test('captureAndApplyCenterFontPivot keeps world ink center while fixing local p
   const localCenter = pivot.worldToLocal(centerAfter.clone());
   assert.ok(Math.abs(localCenter.x) < 1e-5, `expected local X ~0, got ${localCenter.x}`);
   assert.ok(Math.abs(localCenter.z) < 1e-5, `expected local Z ~0, got ${localCenter.z}`);
+});
+
+test('undoing a stale pivot delta after letter-spacing expand jumps the left edge', () => {
+  // Mirrors finalizeFontModelStudioPlacement after live tracking: glyphs move
+  // first, then a stale orbyPivotCenterDelta is undone — that slides the block.
+  const pivot = new THREE.Group();
+  const model = new THREE.Group();
+  const left = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.2));
+  const right = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.2));
+  left.position.set(0.5, 0.5, 0);
+  right.position.set(2.5, 0.5, 0);
+  model.add(left, right);
+  pivot.add(model);
+  pivot.updateMatrixWorld(true);
+
+  const delta = centerFontModelGeometryOnRoot(pivot, model);
+  assert.ok(delta);
+  const leftBefore = new THREE.Box3().setFromObject(left).min.x;
+
+  // Live letter-spacing: keep left glyph, push the right one out.
+  right.position.x += 1.5;
+  model.updateMatrixWorld(true);
+  const leftAfterExpand = new THREE.Box3().setFromObject(left).min.x;
+  assert.ok(
+    Math.abs(leftAfterExpand - leftBefore) < 1e-6,
+    'tracking alone must not move the left edge',
+  );
+
+  // Broken path: undo old delta under the new layout, then preserveWorld.
+  undoCenterPivot(pivot, model, delta);
+  captureAndApplyCenterFontPivot(pivot, model);
+  const leftAfterBroken = new THREE.Box3().setFromObject(left).min.x;
+  assert.ok(
+    Math.abs(leftAfterBroken - leftBefore) > 0.2,
+    'stale undo + preserveWorld must jump (documents the bug)',
+  );
+});
+
+test('skip-undo pivot refresh after letter-spacing keeps the left edge', () => {
+  const pivot = new THREE.Group();
+  const model = new THREE.Group();
+  const left = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.2));
+  const right = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.2));
+  left.position.set(0.5, 0.5, 0);
+  right.position.set(2.5, 0.5, 0);
+  model.add(left, right);
+  pivot.add(model);
+  pivot.updateMatrixWorld(true);
+
+  centerFontModelGeometryOnRoot(pivot, model);
+  const leftBefore = new THREE.Box3().setFromObject(left).min.x;
+
+  right.position.x += 1.5;
+  model.updateMatrixWorld(true);
+
+  // Fixed path: drop the stale delta without undoing, re-anchor in place.
+  captureAndApplyCenterFontPivot(pivot, model);
+  const leftAfter = new THREE.Box3().setFromObject(left).min.x;
+  assert.ok(
+    Math.abs(leftAfter - leftBefore) < 1e-5,
+    `left edge must stay put (delta ${leftAfter - leftBefore})`,
+  );
 });

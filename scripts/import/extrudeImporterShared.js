@@ -4,6 +4,11 @@ import {
   toCreasedNormals,
 } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 import { applyExtrudeBoxUvs } from './extrudeBoxUvs.js';
+export {
+  disposeExtrudeMeshNode,
+  preserveExtrudeGroupOnRebuild,
+  replaceExtrudeGroupChildren,
+} from './extrudeGroupRebuild.js';
 
 export const DEFAULT_EXTRUDE_DEPTH = 0.2;
 export const MIN_EXTRUDE_DEPTH = 0.01;
@@ -78,54 +83,6 @@ export function clampExtrudeColorOffset(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;
   return Math.max(MIN_EXTRUDE_COLOR_OFFSET, Math.min(MAX_EXTRUDE_COLOR_OFFSET, numeric));
-}
-
-/**
- * @param {THREE.Object3D} node
- */
-export function disposeExtrudeMeshNode(node) {
-  node.traverse?.((child) => {
-    if (!child.isMesh) return;
-    child.geometry?.dispose?.();
-    if (Array.isArray(child.material)) {
-      child.material.forEach((mat) => mat?.dispose?.());
-    } else {
-      child.material?.dispose?.();
-    }
-  });
-}
-
-/**
- * @param {THREE.Group} targetGroup
- * @param {THREE.Group} sourceGroup
- */
-export function replaceExtrudeGroupChildren(targetGroup, sourceGroup) {
-  while (targetGroup.children.length) {
-    const child = targetGroup.children[0];
-    disposeExtrudeMeshNode(child);
-    targetGroup.remove(child);
-  }
-
-  while (sourceGroup.children.length) {
-    targetGroup.add(sourceGroup.children[0]);
-  }
-
-  targetGroup.name = sourceGroup.name;
-  targetGroup.userData = { ...sourceGroup.userData };
-  targetGroup.scale.copy(sourceGroup.scale);
-  targetGroup.position.copy(sourceGroup.position);
-  targetGroup.rotation.copy(sourceGroup.rotation);
-}
-
-/**
- * @param {THREE.Group | null} existingGroup
- * @param {THREE.Group} rebuiltGroup
- * @returns {THREE.Group}
- */
-export function preserveExtrudeGroupOnRebuild(existingGroup, rebuiltGroup) {
-  if (!existingGroup) return rebuiltGroup;
-  replaceExtrudeGroupChildren(existingGroup, rebuiltGroup);
-  return existingGroup;
 }
 
 /**

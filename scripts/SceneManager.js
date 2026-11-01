@@ -3133,6 +3133,7 @@ export class SceneManager {
    *   model?: import('three').Object3D | null,
    *   force?: boolean,
    *   preserveWorld?: boolean,
+   *   skipUndo?: boolean,
    * }} [options]
    */
   finalizeFontModelStudioPlacement(options = {}) {
@@ -3143,11 +3144,14 @@ export class SceneManager {
 
     const pivotRoot = this._pivotRootForModel(model);
     // Undo only this mesh's own delta — never another asset's parked scene delta.
+    // skipUndo: glyph layout already changed under the current pose (tracking /
+    // align / line-height). Replaying the old delta jumps the ink; drop it and
+    // re-anchor from the live pose instead.
     const prevDelta = model.userData?.orbyPivotCenterDelta ?? null;
-    if (prevDelta) {
+    if (prevDelta && !options.skipUndo) {
       undoCenterPivot(pivotRoot, model, prevDelta);
-      model.userData.orbyPivotCenterDelta = null;
     }
+    model.userData.orbyPivotCenterDelta = null;
     if (this.currentModel === model) this._pivotCenterDelta = null;
 
     const delta = options.preserveWorld
