@@ -11,6 +11,7 @@
 /** @type {ReadonlySet<string>} Relative to `assets/marketing/` */
 export const MARKETING_BUILD_EXCLUDE = new Set([
   'Comp-1_00000.jpg',
+  'Screenshot 2026-10-09 at 00.18.15.png',
   'custom-hdri-placeholder.png',
   'export-golden-look.png',
   'feature-ui-placeholder.png',

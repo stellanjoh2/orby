@@ -62,3 +62,36 @@ sphere.obj
 /assets/marketing/featureloop-letterB.png
 /assets/marketing/featureloop-goblingirl.png
 /assets/marketing/featureloop-newbalance574.png
+
+# Unused marketing sources — keep locally; stripped from dist via MARKETING_BUILD_EXCLUDE
+/assets/marketing/Comp-1_00000.jpg
+/assets/marketing/Screenshot 2026-10-09 at 00.18.15.png
+/assets/marketing/custom-hdri-placeholder.png
+/assets/marketing/export-golden-look.png
+/assets/marketing/feature-ui-placeholder.png
+/assets/marketing/import-orbit-placeholder.mp4
+/assets/marketing/intro-asset-left.png
+/assets/marketing/intro-asset-right.png
+/assets/marketing/model_47a_-_loggerhead_sea_turtle-transparent.png
+/assets/marketing/orby-feature-3dlogo.mp4
+/assets/marketing/orby-feature-lensflare-backup.mp4
+/assets/marketing/orby-marketing-colorchecker.jpg
+/assets/marketing/orby-marketing-microreel.mp4
+/assets/marketing/orby-marketing-trailer-koala.jpg
+/assets/marketing/orby-section-pro-meshdiagnostics01.jpg
+/assets/marketing/pro-feature1-shoes-UV.jpg
+/assets/marketing/pro-feature1-shoes.jpg
+/assets/marketing/pro-feature1-shoes01.jpg
+/assets/marketing/pro-feature1-shoes02.jpg
+/assets/marketing/pro-feature1-shoes03.jpg
+/assets/marketing/pro-feature2-export.jpg
+/assets/marketing/pro-feature4-color-checker.jpg
+/assets/marketing/pro-feature5-isometric.jpg
+/assets/marketing/rfrct.png
+/assets/marketing/showcase/showcase-01-etron-gt.jpg
+/assets/marketing/showcase/showcase-02-etron-detail.jpg
+/assets/marketing/showcase/showcase-03-jeep-rubicon.jpg
+/assets/marketing/showcase/showcase-04-new-balance.jpg
+/assets/marketing/skull_salazar_downloadable-transparent (1).png
+/assets/marketing/skull_salazar_downloadable-transparent.png
+/assets/marketing/used_new_balance_574_classic______free-transparent (2).png
