@@ -64,7 +64,7 @@ export const INTV_BG_HEX = parseInt(APP_BACKGROUND.slice(1), 16);
 
 /**
  * Mesh prepass — colormap × cel form before STIC 16-color crush.
- * Tan/brown shadow accents match classic INTV title art.
+ * Shade multiplies the mesh color so saturated hues are not lifted into yellow.
  */
 export const INTV_PREP_FRAGMENT = /* glsl */ `
 varying vec3 vWorldNormal;
@@ -110,24 +110,8 @@ void main() {
   form = pow(clamp(form, 0.0, 1.0), 1.08);
   form = smoothstep(0.03, 0.9, form);
 
-  const vec3 INTV_LUMA = vec3(0.2126, 0.7152, 0.0722);
-  float srcLum = max(dot(baseCol, INTV_LUMA), 1e-4);
-  float shadeLum = mix(0.38, 1.0, form);
-  vec3 lit = baseCol * (shadeLum / srcLum);
-
-  float shadowAmt = pow(1.0 - form, 1.35);
-  vec3 n = baseCol / srcLum;
-  vec3 shadowAccent = vec3(0.235, 0.345, 0.0); // brown
-  if (n.b > n.r + 0.08 && n.b > n.g * 0.9) {
-    shadowAccent = vec3(0.0, 0.176, 1.0); // blue
-  } else if (n.r > n.g + 0.12 && n.r > n.b + 0.1) {
-    shadowAccent = vec3(1.0, 0.243, 0.0); // red
-  } else if (n.g > n.r + 0.06) {
-    shadowAccent = vec3(0.0, 0.471, 0.059); // dark green
-  } else if (srcLum > 0.45) {
-    shadowAccent = vec3(0.788, 0.831, 0.392); // tan highlight roll-off
-  }
-  lit = mix(lit, mix(lit, shadowAccent, 0.52), shadowAmt);
+  float shade = mix(0.42, 1.0, form);
+  vec3 lit = baseCol * shade;
 
   gl_FragColor = vec4(clamp(lit, vec3(0.0), vec3(1.0)), uOpacity * mapAlpha);
 }
@@ -202,11 +186,24 @@ float intvPalSat(vec3 c) {
   return length(c - vec3(l));
 }
 
+float intvHueMismatch(vec3 a, vec3 b) {
+  vec3 ca = a - vec3(intvPalLuma(a));
+  vec3 cb = b - vec3(intvPalLuma(b));
+  float la = length(ca);
+  float lb = length(cb);
+  if (la < 0.05 || lb < 0.05) return 0.0;
+  float align = dot(ca, cb) / (la * lb);
+  return clamp(1.0 - align, 0.0, 2.0);
+}
+
 vec3 quantizeIntv(vec3 rgb, float dither) {
+  float peak = max(rgb.r, max(rgb.g, rgb.b));
+  if (peak > 1.0) rgb /= peak;
+  rgb = clamp(rgb, vec3(0.0), vec3(1.0));
   rgb = applyFlatPostMasterHue(rgb);
   float srcLum = intvPalLuma(rgb);
   float srcSat = intvPalSat(rgb);
-  float targetLum = clamp(srcLum + (dither - 0.5) * 0.12, 0.0, 1.0);
+  float targetLum = clamp(srcLum + (dither - 0.5) * 0.08, 0.0, 1.0);
 
   int bestIdx = 0;
   int secondIdx = 1;
@@ -218,26 +215,23 @@ vec3 quantizeIntv(vec3 rgb, float dither) {
     float palLum = intvPalLuma(pal);
     float lumDiff = abs(palLum - targetLum);
     float colDist = distance(rgb, pal);
-
     float palSat = intvPalSat(pal);
+
     float neutralPenalty = 0.0;
-    if (srcSat > 0.045 && palSat < 0.035) {
-      neutralPenalty = 0.2 + srcSat * 0.8;
+    if (srcSat > 0.16 && palSat < 0.04) {
+      neutralPenalty += 0.12 + srcSat * 0.35;
     }
-    if (i == 0 && srcLum > 0.08) {
-      neutralPenalty += 0.24;
+    if (srcSat < 0.16 && palSat > 0.09) {
+      neutralPenalty += 0.2 + palSat * 0.7;
     }
-    if (i == 8 && srcSat > 0.05) {
-      neutralPenalty += 0.16 + srcSat * 0.4;
+    if (i == 0 && srcLum > 0.16 && srcSat > 0.1) {
+      neutralPenalty += 0.16;
     }
-    if ((i == 3 || i == 11) && srcSat > 0.08) {
-      neutralPenalty += srcSat * 0.22;
-    }
-    if (i == 7 && srcLum < 0.72) {
-      neutralPenalty += 0.12;
+    if (i == 7 && srcLum < 0.62 && srcSat > 0.12) {
+      neutralPenalty += 0.1;
     }
 
-    float score = lumDiff * 0.54 + colDist * 0.36 + neutralPenalty;
+    float score = lumDiff * 0.22 + colDist * 0.42 + intvHueMismatch(rgb, pal) * 0.72 + neutralPenalty;
     if (score < bestScore) {
       secondScore = bestScore;
       secondIdx = bestIdx;

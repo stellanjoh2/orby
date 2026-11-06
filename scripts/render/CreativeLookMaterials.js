@@ -421,7 +421,7 @@ export function prepareCreativeLookWirePulseGeometry(geometry) {
   return working;
 }
 
-/** Shader Lab presets that preserve import alpha (vehicle glass, hologram shells, etc.). */
+/** Presets that may keep import alpha (decals, cutouts, hologram shells). Imported glass is forced opaque while Shader Lab is on. */
 export const CREATIVE_LOOK_TRANSPARENT_PRESETS = /** @type {const} */ ([
   'glass',
   'holo-glass',
@@ -1572,9 +1572,10 @@ export function syncCreativeLookGlassPhysical(material, opts = {}) {
   material.specularIntensity = CREATIVE_GLASS_BASE_SPECULAR_INTENSITY * crushMul;
   material.attenuationDistance = CREATIVE_GLASS_BASE_ATTENUATION_DISTANCE
     * Math.max(crushMul, 0.35);
-  material.transparent = true;
+  material.transparent = false;
   material.opacity = 1;
-  material.depthWrite = false;
+  material.depthWrite = true;
+  material.depthTest = true;
   material.userData.orbyCreativeLookBaseRoughness = material.roughness;
 }
 
@@ -4358,14 +4359,14 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       sheenRoughness: 0.84,
       sheenColor: new THREE.Color(0xc8c8c8),
       envMapIntensity: CREATIVE_GLASS_ENV_MAP_MUL * crushMul,
-      transparent: true,
+      transparent: false,
       opacity: 1,
       attenuationColor: new THREE.Color(0xd4d4d4),
       attenuationDistance: CREATIVE_GLASS_BASE_ATTENUATION_DISTANCE
         * Math.max(crushMul, 0.35),
       side,
       toneMapped: true,
-      depthWrite: false,
+      depthWrite: true,
     });
     return finishPhysical(mat, 'glass');
   }
@@ -4393,13 +4394,13 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       sheenRoughness: 0.78,
       sheenColor: new THREE.Color(0xb8c8e8),
       envMapIntensity: CREATIVE_HOLO_GLASS_ENV_MAP_MUL,
-      transparent: true,
+      transparent: false,
       opacity: 1,
       attenuationColor: new THREE.Color(0xd0d8e8),
       attenuationDistance: 1.55,
       side,
       toneMapped: true,
-      depthWrite: false,
+      depthWrite: true,
     });
     attachCreativeLookHoloGlassShader(mat, {
       time,
@@ -4429,13 +4430,13 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       sheenRoughness: 0.92,
       sheenColor: new THREE.Color(0x88c8e8),
       envMapIntensity: CREATIVE_CRYSTAL_GEM_ENV_MAP_MUL,
-      transparent: true,
+      transparent: false,
       opacity: 1,
       attenuationColor: new THREE.Color(0x041828),
       attenuationDistance,
       side,
       toneMapped: true,
-      depthWrite: false,
+      depthWrite: true,
     });
     attachCreativeLookCrystalGemShader(mat, {
       time,

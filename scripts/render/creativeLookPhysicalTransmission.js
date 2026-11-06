@@ -149,8 +149,9 @@ export function patchCreativeLookTransmissionViewBlurFragment(fragmentShader) {
       `#include <normal_fragment_maps>
 #ifdef USE_TRANSMISSION
   if ( ${SOLID_MESH_UNIFORM} > 0.5 ) {
+    vec3 orbyN = inverseTransformDirection( normal, viewMatrix );
     vec3 orbyOutward = normalize( vWorldPosition - ${SOLID_CENTER_UNIFORM} );
-    float orbyShellFacing = dot( normalize( normal ), orbyOutward );
+    float orbyShellFacing = dot( normalize( orbyN ), orbyOutward );
     if ( orbyShellFacing < ${SOLID_CULL_UNIFORM} ) discard;
   }
 #endif`,
@@ -364,6 +365,15 @@ export function applyCreativeLookPhysicalTransmissionTuning(material, opts = {})
     || prev.solidMeshGlass !== solidMeshGlass
     || prev.dispersion !== normalizeCreativeLookTransmissionDispersion(opts.dispersion);
 
+  // Transmission still draws in its own pass. `transparent: true` alpha-blends that
+  // pass, so every glass part (body, seats, wheels) shows through. Opaque replace
+  // keeps the nearest shell. Must run before the early return — callers reset these
+  // flags every frame, and an unchanged sample count would otherwise leave them.
+  material.transparent = false;
+  material.opacity = 1;
+  material.depthWrite = true;
+  material.depthTest = true;
+
   if (!sideChanged && !roughnessChanged && !dispersionChanged && !tuningChanged
     && material.userData.orbyTransmissionPatch?.viewBlur === viewBlur
     && material.userData.orbyTransmissionPatch?.solidMeshGlass === solidMeshGlass
@@ -375,8 +385,6 @@ export function applyCreativeLookPhysicalTransmissionTuning(material, opts = {})
   material.roughness = nextRoughness;
   material.side = side;
   material.forceSinglePass = !doubleSide;
-  material.transparent = true;
-  material.depthWrite = false;
   material.dispersion = dispersion;
   if (solidMeshGlass && 'specularIntensity' in material) {
     const baseSpec = Number.isFinite(material.userData.orbyCreativeLookBaseSpecular)

@@ -83,6 +83,7 @@ vec4 transmitted = getIBLVolumeRefraction(
   assert.match(patched, /uOrbyTransmissionViewBlur/);
   assert.match(patched, /uOrbySolidMeshMinTransRoughness/);
   assert.match(patched, /orbyShellFacing/);
+  assert.match(patched, /inverseTransformDirection\( normal, viewMatrix \)/);
 });
 
 test('applyImportPhysicalTransmissionMeshPatch enables solid-mesh transmission blur', () => {
@@ -103,6 +104,21 @@ test('applyCreativeLookPhysicalTransmissionTuning uses roughness + forceSinglePa
   });
   assert.equal(mat.side, THREE.DoubleSide);
   assert.equal(mat.forceSinglePass, false);
+  assert.equal(mat.transparent, false);
+  assert.equal(mat.opacity, 1);
+  assert.equal(mat.depthWrite, true);
+  assert.equal(mat.depthTest, true);
+
+  mat.transparent = true;
+  mat.depthWrite = false;
+  applyCreativeLookPhysicalTransmissionTuning(mat, {
+    samples: 2,
+    doubleSide: true,
+    baseRoughness: 0.05,
+    dispersion: 0.4,
+  });
+  assert.equal(mat.transparent, false);
+  assert.equal(mat.depthWrite, true);
   assert.ok(mat.roughness > 0.05);
   assert.ok(mat.dispersion > 0);
   assert.equal(mat.userData.orbyTransmissionPatchPatched, true);

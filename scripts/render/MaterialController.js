@@ -960,6 +960,11 @@ export class MaterialController {
   _applyImportGltfGlassPresentation(m, opts = {}) {
     if (!m || !this._materialHasImportTransmission(m)) return m;
     if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return m;
+    // Shader Lab glass is transmission too. On a file that already has glass, the
+    // per-frame import restore was matching that transmission and rewriting the
+    // look into window glass (transparent, depthWrite off) — the x-ray. Solid
+    // files never enter this restore, which is why they already looked right.
+    if (isPhysicalTransmissionCreativeLookPreset(m.userData?.orbyCreativeLook)) return m;
     if (this._usePhysicalGlassTransmission()) {
       return this._applyImportGltfPhysicalGlassPresentation(m, opts);
     }
@@ -1953,6 +1958,9 @@ export class MaterialController {
         const live = liveMats[i];
         const imp = importMats[i] ?? importMats[0];
         if (!live?.isMeshStandardMaterial && !live?.isMeshPhysicalMaterial) continue;
+        if (isPhysicalTransmissionCreativeLookPreset(live.userData?.orbyCreativeLook)) {
+          continue;
+        }
         if (
           this._materialHadImportTransmission(imp) ||
           this._materialHadImportTransmission(live) ||
@@ -1985,6 +1993,9 @@ export class MaterialController {
         const live = liveMats[i];
         const imp = importMats[i] ?? importMats[0];
         if (!live?.isMeshStandardMaterial && !live?.isMeshPhysicalMaterial) continue;
+        if (isPhysicalTransmissionCreativeLookPreset(live.userData?.orbyCreativeLook)) {
+          continue;
+        }
         if (
           !this._materialHadImportTransmission(imp) &&
           !this._materialHadImportTransmission(live) &&
@@ -2753,19 +2764,12 @@ export class MaterialController {
   }
 
   /**
-   * Shader Lab stylized presets (everything except Glass / Chrome / PS2 Crush / Scanline Hologram)
-   * force opaque draws and must not run the glTF transmission / window glass restore pipeline on live meshes.
+   * Shader Lab replaces the mesh, including imported windows. The glTF transmission /
+   * window-glass restore must stay off until the preset is turned off (sketch raster 0
+   * counts as off).
    */
   _shaderLabBypassesGlassPresentation() {
-    if (!this.creativeLookSettings?.enabled) return false;
-    const preset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
-    if (
-      isSketchFamilyCreativeLookPreset(preset)
-      && !this._creativeLookSketchMaterialsActive()
-    ) {
-      return false;
-    }
-    return preset !== 'glass' && preset !== 'holo-glass' && preset !== 'crystal-gem' && preset !== 'chrome';
+    return this._shouldApplyCreativeLookMaterials();
   }
 
   /** Sketch / Sketch Colour — raster size 0 turns the effect off while the preset stays selected. */
@@ -3169,7 +3173,8 @@ export class MaterialController {
       const original = this.originalMaterials.get(child);
       if (!original) return;
       const isGlass = this._isProtectedGlassMesh(child, original);
-      // Window / KHR glass keep import presentation until Shader Lab replaces them.
+      // Imported glass stays out of the shaded rebuild while Shader Lab is on.
+      // The creative-look pass replaces it and the glass stays off.
       if (isGlass && this._shaderLabBypassesGlassPresentation()) return;
 
       const disposeIfTransient = () => {
@@ -3694,9 +3699,10 @@ export class MaterialController {
           ? Math.min(1, Math.max(0, Number(rawOp)))
           : 1;
         // Most stylized presets force opaque draws so GLTF “almost opaque” blend shells do not
-        // vanish in the transparent pass. PS2 Crush / PSX / Scanline Hologram / Glass / Chrome keep
-        // real alpha for vehicle glass and showcase materials.
+        // vanish in the transparent pass. Presets that opt in still keep decal / cutout alpha.
+        // Imported glass does not: Shader Lab turns that glass off and the mesh takes the preset.
         const allowTransparency = creativeLookAllowsTransparency(preset);
+        const importedGlass = this._isProtectedGlassMesh(child, origMat);
         const alphaRelevant =
           opacity < GLTF_FULL_OPACITY_BLEND_THRESHOLD ||
           !!origMat?.transparent ||
@@ -3710,7 +3716,7 @@ export class MaterialController {
           this._materialIsFalseBlendShell(origMat);
         const useTransparentSort =
           creativeLookForceTransparentDraw(preset) ||
-          (allowTransparency && alphaRelevant && !falseBlendShell);
+          (!importedGlass && allowTransparency && alphaRelevant && !falseBlendShell);
         const drawOpacity = useTransparentSort ? opacity : 1;
         const state = this.stateStore?.getState();
         const hdriBlur = Number(state?.hdriBlurriness ?? 0);
@@ -7006,9 +7012,7 @@ export class MaterialController {
           material.roughness = roughness;
           material.iridescence = iridescence;
           material.iridescenceThicknessRange = iridescenceThicknessRange;
-          material.transparent = true;
           material.opacity = 1;
-          material.depthWrite = false;
           material.userData.orbyCreativeLookBaseRoughness = roughness;
           this._applyCreativeLookTransmissionTuningFromState(material);
           material.needsUpdate = true;
@@ -7043,9 +7047,6 @@ export class MaterialController {
           material.attenuationDistance = attenuationDistance;
           material.userData.orbyCreativeLookBaseRoughness = roughness;
           this._applyCreativeLookTransmissionTuningFromState(material);
-          material.transparent = true;
-          material.opacity = 1;
-          material.depthWrite = false;
           material.needsUpdate = true;
           return;
         }

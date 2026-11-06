@@ -246,7 +246,10 @@ vec3 ditherCrush(vec3 rgb, float bayer, float intensity) {
     tierLum = midTier;
   }
 
-  vec3 outCol = clamp(rgb * (tierLum / srcLum), 0.0, 1.0);
+  vec3 outCol = rgb * (tierLum / srcLum);
+  float outPeak = max(outCol.r, max(outCol.g, outCol.b));
+  if (outPeak > 1.0) outCol /= outPeak;
+  outCol = clamp(outCol, 0.0, 1.0);
   float outLum = dot(outCol, DITHER_LUMA);
   outCol = mix(vec3(outLum), outCol, mix(1.0, 1.22, t));
   return clamp(outCol, 0.0, 1.0);
@@ -285,7 +288,7 @@ float ditherBayer4(ivec2 p) {
 }
 `;
 
-/** Extreme 8-color crosshatch crush — chunky pixels + transposed Bayer lattice. */
+/** Crosshatch — chunky pixels + transposed Bayer lattice, mesh hue kept. */
 export const DITHER_CROSSHATCH_POST_FRAGMENT = /* glsl */ `
 uniform sampler2D tDiffuse;
 uniform vec2 uResolution;
@@ -301,104 +304,24 @@ ${CREATIVE_LOOK_LIFT_CRUSH_GLSL}
 ${DITHER_CROSSHATCH4_GLSL}
 
 const vec3 DITHER_LUMA = vec3(0.2126, 0.7152, 0.0722);
-const int CRUNCH_PAL_MAX = 8;
-
-const vec3 CRUNCH_0 = vec3(0.031, 0.031, 0.031);
-const vec3 CRUNCH_1 = vec3(0.082, 0.059, 0.165);
-const vec3 CRUNCH_2 = vec3(0.102, 0.157, 0.282);
-const vec3 CRUNCH_3 = vec3(0.157, 0.345, 0.408);
-const vec3 CRUNCH_4 = vec3(0.282, 0.471, 0.533);
-const vec3 CRUNCH_5 = vec3(0.408, 0.345, 0.533);
-const vec3 CRUNCH_6 = vec3(0.784, 0.722, 0.408);
-const vec3 CRUNCH_7 = vec3(0.925, 0.910, 0.847);
-
-vec3 crunchColor(int idx) {
-  vec3 c;
-  if (idx == 0) c = CRUNCH_0;
-  else if (idx == 1) c = CRUNCH_1;
-  else if (idx == 2) c = CRUNCH_2;
-  else if (idx == 3) c = CRUNCH_3;
-  else if (idx == 4) c = CRUNCH_4;
-  else if (idx == 5) c = CRUNCH_5;
-  else if (idx == 6) c = CRUNCH_6;
-  else c = CRUNCH_7;
-  return applyFlatPostMasterHue(c);
-}
-
-float crunchPalLuma(vec3 c) {
-  return dot(c, DITHER_LUMA);
-}
-
-float crunchPalSat(vec3 c) {
-  float l = crunchPalLuma(c);
-  return length(c - vec3(l));
-}
-
-vec3 quantizeCrunch(vec3 rgb, float dither, float crush) {
-  float srcLum = crunchPalLuma(rgb);
-  float srcSat = crunchPalSat(rgb);
-  float spread = mix(0.12, 0.24, crush);
-  float targetLum = clamp(srcLum + (dither - 0.5) * spread, 0.0, 1.0);
-
-  int bestIdx = 0;
-  int secondIdx = 1;
-  float bestScore = 1e6;
-  float secondScore = 1e6;
-
-  for (int i = 0; i < CRUNCH_PAL_MAX; i++) {
-    vec3 pal = crunchColor(i);
-    float palLum = crunchPalLuma(pal);
-    float lumDiff = abs(palLum - targetLum);
-    float colDist = distance(rgb, pal);
-
-    float palSat = crunchPalSat(pal);
-    float neutralPenalty = 0.0;
-    if (srcSat > 0.04 && palSat < 0.035) {
-      neutralPenalty = 0.22 + srcSat * 0.85;
-    }
-    if (i == 0 && srcLum > 0.07) {
-      neutralPenalty += 0.28;
-    }
-    if (i == 7 && srcLum < 0.68) {
-      neutralPenalty += 0.14;
-    }
-
-    float score = lumDiff * 0.58 + colDist * 0.34 + neutralPenalty;
-    if (score < bestScore) {
-      secondScore = bestScore;
-      secondIdx = bestIdx;
-      bestScore = score;
-      bestIdx = i;
-    } else if (score < secondScore) {
-      secondScore = score;
-      secondIdx = i;
-    }
-  }
-
-  if (secondScore < bestScore * 1.22 && secondIdx != bestIdx) {
-    vec3 a = crunchColor(bestIdx);
-    vec3 b = crunchColor(secondIdx);
-    if (crunchPalLuma(b) < crunchPalLuma(a)) {
-      return dither > 0.5 ? b : a;
-    }
-    return dither > 0.5 ? a : b;
-  }
-  return crunchColor(bestIdx);
-}
 
 vec3 ditherCrush(vec3 rgb, float bayer, float intensity) {
+  float peak = max(rgb.r, max(rgb.g, rgb.b));
+  if (peak > 1.0) rgb /= peak;
+  rgb = clamp(rgb, vec3(0.0), vec3(1.0));
   rgb = applyFlatPostMasterHue(rgb);
   float crush = clamp(intensity / 2.0, 0.0, 1.0);
 
-  float lum = dot(rgb, DITHER_LUMA);
-  lum = pow(clamp(lum, 0.0, 1.0), mix(1.0, 1.7, crush));
-  lum = (lum - 0.5) * mix(1.0, 1.75, crush) + 0.5;
-  lum = clamp(lum, 0.0, 1.0);
-
   float srcLum = max(dot(rgb, DITHER_LUMA), 1e-4);
-  rgb = clamp(rgb * (lum / srcLum), 0.0, 1.0);
+  float levels = mix(8.0, 4.0, crush);
+  float lum = pow(clamp(srcLum, 0.0, 1.0), mix(1.0, 1.35, crush));
+  float q = floor(lum * levels + bayer) / levels;
+  q = clamp(q, 0.0, 1.0);
 
-  return quantizeCrunch(rgb, bayer, crush);
+  vec3 outCol = rgb * (q / srcLum);
+  float outPeak = max(outCol.r, max(outCol.g, outCol.b));
+  if (outPeak > 1.0) outCol /= outPeak;
+  return clamp(outCol, 0.0, 1.0);
 }
 
 ${DITHER_POST_MAIN_GLSL}
@@ -473,8 +396,12 @@ void main() {
   dotCol *= mix(1.62, 1.0, t);
   float dotLum = max(dot(dotCol, DITHER_LUMA), 1e-4);
   float minDotLum = mix(0.68, 0.28, t);
-  dotCol = clamp(dotCol * max(minDotLum / dotLum, 1.0), 0.0, 1.0);
+  dotCol *= max(minDotLum / dotLum, 1.0);
+  float dotPeak = max(dotCol.r, max(dotCol.g, dotCol.b));
+  if (dotPeak > 1.0) dotCol /= dotPeak;
   dotCol *= mix(0.90, 1.08, depthT);
+  dotPeak = max(dotCol.r, max(dotCol.g, dotCol.b));
+  if (dotPeak > 1.0) dotCol /= dotPeak;
   dotCol = clamp(dotCol, 0.0, 1.0);
 
   vec3 outCol = mix(uBgColor, dotCol, inDot);

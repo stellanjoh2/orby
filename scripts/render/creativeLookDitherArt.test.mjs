@@ -14,12 +14,18 @@ test('dither prep shades albedo instead of killing metal diffuse', () => {
   assert.doesNotMatch(DITHER_NEUTRAL_PREP_FRAGMENT, /diffFloor/);
 });
 
-test('dither tritone and crosshatch keep milder luma curves than the old crush', () => {
+test('dither tritone keeps a milder luma curve and does not clip hue', () => {
   assert.match(DITHER_TRITONE_POST_FRAGMENT, /mix\(1\.0, 1\.65, t\)/);
   assert.match(DITHER_TRITONE_POST_FRAGMENT, /mix\(0\.22, 0\.14, t\)/);
   assert.doesNotMatch(DITHER_TRITONE_POST_FRAGMENT, /mix\(1\.0, 2\.45, t\)/);
-  assert.match(DITHER_CROSSHATCH_POST_FRAGMENT, /mix\(1\.0, 1\.7, crush\)/);
-  assert.doesNotMatch(DITHER_CROSSHATCH_POST_FRAGMENT, /mix\(1\.0, 2\.55, crush\)/);
+  assert.match(DITHER_TRITONE_POST_FRAGMENT, /if \(outPeak > 1\.0\) outCol \/= outPeak/);
+});
+
+test('dither crosshatch posters the mesh hue instead of a fixed blue palette', () => {
+  assert.match(DITHER_CROSSHATCH_POST_FRAGMENT, /rgb \* \(q \/ srcLum\)/);
+  assert.match(DITHER_CROSSHATCH_POST_FRAGMENT, /if \(outPeak > 1\.0\) outCol \/= outPeak/);
+  assert.doesNotMatch(DITHER_CROSSHATCH_POST_FRAGMENT, /CRUNCH_2/);
+  assert.doesNotMatch(DITHER_CROSSHATCH_POST_FRAGMENT, /quantizeCrunch/);
 });
 
 test('dither raster keeps a higher floor on dot luminance', () => {
