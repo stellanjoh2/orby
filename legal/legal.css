@@ -755,6 +755,16 @@ body.legal-doc--about .legal-foot a:focus-visible {
   margin-top: 0;
 }
 
+.legal-about__video {
+  margin: 0 0 calc(var(--legal-about-section-break) / 2);
+  padding: 0;
+}
+
+.legal-about__video iframe {
+  display: block;
+  background: #000;
+}
+
 .legal-about__section--intro p {
   font-size: var(--legal-about-intro-size);
   font-weight: 400;
