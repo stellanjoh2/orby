@@ -760,9 +760,29 @@ body.legal-doc--about .legal-foot a:focus-visible {
   padding: 0;
 }
 
-.legal-about__video iframe {
-  display: block;
+.legal-about__video-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
   background: #000;
+}
+
+.legal-about__video-frame iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.legal-about__video-caption {
+  margin: 0.75rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--legal-muted);
 }
 
 .legal-about__section--intro p {
