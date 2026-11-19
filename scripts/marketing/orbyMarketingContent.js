@@ -99,6 +99,7 @@
  * @property {string} [footerGithubHref]
  * @property {string} [footerInstagramHref]
  * @property {string} [footerXHref]
+ * @property {string} [footerSiteHref]
  * @property {string} [footerLicenseHref]
  */
 
@@ -636,6 +637,7 @@ export const MARKETING_SECTIONS = [
     footerGithubHref: 'https://github.com/stellanjoh2/orby',
     footerInstagramHref: 'https://www.instagram.com/dropittoorby',
     footerXHref: 'https://x.com/johstell',
+    footerSiteHref: 'https://stellanjohansson.com/',
     footerLicenseHref: './LICENSE',
   },
   {

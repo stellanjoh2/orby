@@ -604,6 +604,9 @@ const FOOTER_X_ICON =
 const FOOTER_GITHUB_ICON =
   '<span class="orby-marketing__footer-social-icon orby-marketing__footer-social-icon--github" aria-hidden="true"></span>';
 
+const FOOTER_SITE_ICON =
+  '<span class="orby-marketing__footer-social-icon orby-marketing__footer-social-icon--site" aria-hidden="true"></span>';
+
 /**
  * @typedef {Object} MarketingSiteNavFields
  * @property {string} contactEmail
@@ -616,6 +619,7 @@ const FOOTER_GITHUB_ICON =
  * @property {string} githubHref
  * @property {string} instagramHref
  * @property {string} xHref
+ * @property {string} siteHref
  * @property {string} licenseHref
  */
 
@@ -635,6 +639,7 @@ export function getMarketingFooterFields(section) {
     githubHref: section.footerGithubHref?.trim() || 'https://github.com/stellanjoh2/orby',
     instagramHref: section.footerInstagramHref?.trim() || '',
     xHref: section.footerXHref?.trim() || '',
+    siteHref: section.footerSiteHref?.trim() || 'https://stellanjohansson.com/',
     licenseHref: section.footerLicenseHref?.trim() || './LICENSE',
   };
 }
@@ -673,6 +678,7 @@ export function resolveMarketingSiteNavFields(section, base = './') {
     githubHref: fields.githubHref,
     instagramHref: fields.instagramHref,
     xHref: fields.xHref,
+    siteHref: fields.siteHref,
     licenseHref: prefixMarketingSiteHref(fields.licenseHref, base),
   };
 }
@@ -841,6 +847,9 @@ function renderFooterMeta(section, options = {}) {
       ? `<a class="orby-marketing__footer-social-link" href="${escapeMarketingHtml(fields.xHref)}" target="_blank" rel="noopener noreferrer" aria-label="X">${FOOTER_X_ICON}</a>`
       : '',
     `<a class="orby-marketing__footer-social-link" href="${escapeMarketingHtml(fields.githubHref)}" target="_blank" rel="noopener noreferrer" aria-label="GitHub">${FOOTER_GITHUB_ICON}</a>`,
+    fields.siteHref
+      ? `<a class="orby-marketing__footer-social-link" href="${escapeMarketingHtml(fields.siteHref)}" target="_blank" rel="noopener noreferrer" aria-label="stellanjohansson.com">${FOOTER_SITE_ICON}</a>`
+      : '',
   ]
     .filter(Boolean)
     .join('');
