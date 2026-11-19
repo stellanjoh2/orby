@@ -5,7 +5,7 @@ const isSafari =
   !/Chrome|CriOS|Chromium|Edg|EdgiOS|OPR|OPiOS|Firefox|FxiOS|SamsungBrowser/i.test(ua);
 if (isSafari) document.documentElement.classList.add('safari-browser');
 
-const GALLERY_CYCLE_MS = 500;
+const GALLERY_CYCLE_MS = 750;
 const GALLERY_PRELOAD_AHEAD = 2;
 
 /**
