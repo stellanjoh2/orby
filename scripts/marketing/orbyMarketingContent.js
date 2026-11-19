@@ -357,13 +357,13 @@ export const MARKETING_SECTIONS = [
     type: 'split',
     id: 'orby-marketing-export',
     eyebrow: 'Send it',
-    title: 'Deliverables without a pipeline',
+    title: 'Set the shot.\nExport everything.',
     lede:
-      'Frame the hero angle once, then export production-ready stills, vectors, turntable video, or GLB from SVG extrusions.',
+      'Whatever’s on screen is what you get: lighting, materials, and post effects included. Export stills, vectors, turntable video, or GLB from SVG extrusions, then move the camera and do it again.',
     bullets: [
-      'PNG stills at 1× or 2× with optional transparency',
-      'MP4 turntable video and numbered PNG sequences in a zip',
-      'SVG silhouette or flat color, plus GLB from SVG extrude',
+      'Stills: PNG, JPEG or WebP at 1× or 2×, with transparency',
+      'Motion: Turntable MP4, or a numbered PNG sequence in a zip',
+      'Vector & 3D: SVG silhouette or flat color, plus GLB from SVG extrusions',
     ],
     layout: 'media-left',
     imageSrc: './assets/marketing/orby-feature-sendit.jpg',
@@ -643,18 +643,16 @@ export const MARKETING_SECTIONS = [
     id: 'orby-marketing-in-progress',
     projects: [
       {
-        id: 'orby-marketing-in-progress-rfrct',
+        id: 'orby-marketing-in-progress-ultrapilled',
         eyebrow: 'Other projects',
-        title: 'Rfrct — Distort type and visuals in the browser',
+        title: 'Ultrapilled — Physics-driven layouts',
         lede:
-          'Rfrct™ is a free browser tool for distorting type and building audio-reactive visuals — made for events, VJs, and anyone who wants to tear a design apart. Bend letters through glass, push them through waves, and see how weird you can get. Currently in development.',
+          'Ultrapilled™ is a free browser physics playground that makes your designs move. Drop in text pills, icons, images, GIFs, and video clips, then watch it all bounce, stack, and pile up. Restyle with palettes and look FX, then export stills, GIF, MP4, ProRes MOV, or a temporary share link with your friends.',
         layout: 'media-right',
-        imageSrc: './assets/marketing/rfrct.jpg',
-        videoSrc: './assets/marketing/rfrct.mp4',
-        videoPoster: true,
-        imageAlt: 'Rfrct design tool — distorted type in the browser',
-        ctaLabel: 'Request preview',
-        ctaHref: 'mailto:hello@rfrct.app?subject=Rfrct%20early%20access',
+        videoSrc: './assets/marketing/ultrapilled-promo.mp4',
+        imageAlt: 'Ultrapilled physics playground — text pills and media in motion',
+        ctaLabel: 'Launch application',
+        ctaHref: 'https://ultrapilled.com',
       },
       {
         id: 'orby-marketing-in-progress-gridlock',
@@ -678,7 +676,7 @@ export const MARKETING_SECTIONS = [
         videoSrc: './assets/marketing/mozayk-promo.mp4',
         imageAlt: 'Mozayk mosaic generator — abstract grid mosaics',
         ctaLabel: 'Launch application',
-        ctaHref: 'https://stellanjoh2.github.io/mozayk/',
+        ctaHref: 'https://mozayk.design/',
       },
       {
         id: 'orby-marketing-in-progress-lx01',

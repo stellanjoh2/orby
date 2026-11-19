@@ -113,6 +113,9 @@ body.legal-doc {
   color: var(--legal-text);
   background: var(--legal-bg);
   -webkit-font-smoothing: antialiased;
+  /* Subpage inline links: Orby lime (studio keeps blue via brand tokens) */
+  --text-link: var(--orby-lime);
+  --text-link-hover: color-mix(in srgb, var(--orby-lime) 50%, white);
 }
 
 @media (max-width: 768px) {
@@ -708,7 +711,7 @@ body.legal-doc--about {
   line-height: var(--legal-about-body-line);
 }
 
-/* About — standard inline links: blue default, lime hover (matches marketing / --text-link) */
+/* About — inline links follow body.legal-doc lime tokens */
 body.legal-doc--about .legal-about a:not(.orby-magic-btn),
 body.legal-doc--about .legal-foot a {
   color: var(--text-link);
@@ -753,10 +756,12 @@ body.legal-doc--about .legal-foot a:focus-visible {
 
 .legal-about__section--maker-intro {
   margin-top: 0;
+  margin-bottom: 0; /* video owns the gap below */
 }
 
 .legal-about__video {
-  margin: 0 0 calc(var(--legal-about-section-break) / 2);
+  /* Same half section-break as the hr — equal breath above/below the embed */
+  margin: calc(var(--legal-about-section-break) / 2) 0;
   padding: 0;
 }
 

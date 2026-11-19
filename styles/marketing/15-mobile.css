@@ -902,7 +902,7 @@ html.mobile-landing
   object-position: center center;
 }
 
-/* In Progress (rfrct) — center-crop the logotype; other split media keep right-pan crop */
+/* In Progress — center-crop figure media; other split media keep right-pan crop */
 html.mobile-landing .orby-marketing__section--in-progress .orby-marketing__figure-media {
   left: 0;
   right: 0;

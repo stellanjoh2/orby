@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-10-02T12:53:57.809Z",
+    "generatedAt": "2026-11-19T11:09:10.511Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -210,15 +210,16 @@
       "type": "split",
       "id": "orby-marketing-export",
       "eyebrow": "Send it",
-      "title": "Deliverables without a pipeline",
+      "title": "Set the shot.\nExport everything.",
       "titleLines": [
-        "Deliverables without a pipeline"
+        "Set the shot.",
+        "Export everything."
       ],
-      "lede": "Frame the hero angle once, then export production-ready stills, vectors, turntable video, or GLB from SVG extrusions.",
+      "lede": "Whatever’s on screen is what you get: lighting, materials, and post effects included. Export stills, vectors, turntable video, or GLB from SVG extrusions, then move the camera and do it again.",
       "bullets": [
-        "PNG stills at 1× or 2× with optional transparency",
-        "MP4 turntable video and numbered PNG sequences in a zip",
-        "SVG silhouette or flat color, plus GLB from SVG extrude"
+        "Stills: PNG, JPEG or WebP at 1× or 2×, with transparency",
+        "Motion: Turntable MP4, or a numbered PNG sequence in a zip",
+        "Vector & 3D: SVG silhouette or flat color, plus GLB from SVG extrusions"
       ],
       "cta": null,
       "imageCredit": {
@@ -287,8 +288,8 @@
           "body": "Switch to isometric view, step 45° around your model, and export 2D game assets exactly as they'll appear in your world."
         },
         {
-          "title": "Look Filters",
-          "body": "Cinematic presets, luminance curve, and full color grade — everything you need to land the mood before export. No round trip through Lightroom."
+          "title": "Multiple assets",
+          "body": "Review or present multiple assets at once — load several models in one scene and compare looks without juggling separate files."
         },
         {
           "title": "Lens Effects",
@@ -389,17 +390,17 @@
       "id": "orby-marketing-in-progress",
       "projects": [
         {
-          "id": "orby-marketing-in-progress-rfrct",
+          "id": "orby-marketing-in-progress-ultrapilled",
           "eyebrow": "Other projects",
-          "title": "Rfrct — Distort type and visuals in the browser",
+          "title": "Ultrapilled — Physics-driven layouts",
           "titleLines": [
-            "Rfrct — Distort type and visuals in the browser"
+            "Ultrapilled — Physics-driven layouts"
           ],
-          "lede": "Rfrct™ is a free browser tool for distorting type and building audio-reactive visuals — made for events, VJs, and anyone who wants to tear a design apart. Bend letters through glass, push them through waves, and see how weird you can get. Currently in development.",
+          "lede": "Ultrapilled™ is a free browser physics playground that makes your designs move. Drop in text pills, icons, images, GIFs, and video clips, then watch it all bounce, stack, and pile up. Restyle with palettes and look FX, then export stills, GIF, MP4, ProRes MOV, or a temporary share link with your friends.",
           "layout": "media-right",
           "cta": {
-            "label": "Request preview",
-            "href": "mailto:hello@rfrct.app?subject=Rfrct%20early%20access"
+            "label": "Launch application",
+            "href": "https://ultrapilled.com"
           }
         },
         {
@@ -427,7 +428,7 @@
           "layout": "media-right",
           "cta": {
             "label": "Launch application",
-            "href": "https://stellanjoh2.github.io/mozayk/"
+            "href": "https://mozayk.design/"
           }
         },
         {

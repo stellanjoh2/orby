@@ -40,12 +40,12 @@ export const ROADMAP_Q2_2026_START_GRID = 16;
 /** Grid index for the start of Q3 2026 (quarter boundary). */
 export const ROADMAP_Q3_2026_START_GRID = 20;
 
-/** Grid index for public launch — start of Q3 2026. */
-export const ROADMAP_LAUNCH_GRID = ROADMAP_Q3_2026_START_GRID;
+/** Grid index for V1 launch — sticky at the start of Q2 2026 (does not track "today"). */
+export const ROADMAP_LAUNCH_GRID = ROADMAP_Q2_2026_START_GRID;
 
 /** @type {{ label: string, grid: number }} */
 export const ROADMAP_LAUNCH_MILESTONE = {
-  label: 'Launch',
+  label: 'V1 Launch',
   grid: ROADMAP_LAUNCH_GRID,
 };
 
@@ -78,7 +78,7 @@ export const ROADMAP_TASK_GRID_DEFS = [
   { label: 'SVG extrude', startGrid: 14, endGrid: 16, status: 'done' },
   { label: 'Scene presets', startGrid: 14, endGrid: 16, status: 'done' },
 
-  /* Q2 2026 — pre-launch (grid 16–20) */
+  /* Q2 2026 — V1 launch @ grid 16 (grid 16–20) */
   { label: 'Stability & QA', startGrid: 16, endGrid: 20, status: 'active' },
   { label: 'Performance pass', startGrid: 16, endGrid: 28, status: 'active' },
   { label: 'Mobile Version', startGrid: 16, endGrid: 24, status: 'active' },
@@ -86,7 +86,7 @@ export const ROADMAP_TASK_GRID_DEFS = [
   { label: 'Rendering Quality', startGrid: 16, endGrid: 24, status: 'priority' },
   { label: 'Presskit', startGrid: 16, endGrid: 18, status: 'todo' },
 
-  /* Q3 2026 (grid 20–24) — launch milestone @ grid 20 */
+  /* Q3 2026 (grid 20–24) */
   { label: 'Bevels V2', startGrid: 21, endGrid: 24, status: 'priority' },
   { label: 'BUG FIXES', startGrid: 20, endGrid: 24, status: 'priority' },
   { label: 'Scene sharing', startGrid: 20, endGrid: 23, status: 'todo' },
