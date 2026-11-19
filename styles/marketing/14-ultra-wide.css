@@ -192,3 +192,15 @@
     gap: calc(var(--orby-magic-btn-inner-gap, 0.5rem) * var(--orby-ultra-wide-factor));
   }
 }
+
+/*
+ * CTA hummingbird fine-tune — 3840 only (2561–3839 keep ramped anchors above).
+ * +250px down, +150px right so the upper wing bleeds past the lime edge.
+ */
+@media (min-width: 3840px) {
+  #orby-marketing .orby-marketing__section--cta,
+  #orby-marketing .orby-marketing__section--cta .orby-marketing__cta-stage {
+    --orby-cta-hummingbird-offset-x: calc(100px * var(--orby-ultra-wide-factor) - 150px);
+    --orby-cta-hummingbird-offset-y: 50px;
+  }
+}
