@@ -706,6 +706,10 @@ body.legal-doc--about {
   --legal-about-intro-size: 1.625rem; /* 26px */
   --legal-about-intro-line: 1.52;
   --legal-about-section-break: calc(3.5rem + var(--legal-about-body-size) * var(--legal-about-body-line));
+  --legal-about-media-gap: var(--legal-about-section-break);
+  /* Editorial media wider than text measure; pad matches .legal-wrap gutters */
+  --legal-about-media-pad: 1.35rem;
+  --legal-about-media-max: 72rem;
   --legal-about-break-border: rgba(255, 255, 255, 0.14);
   font-size: var(--legal-about-body-size);
   line-height: var(--legal-about-body-line);
@@ -756,13 +760,65 @@ body.legal-doc--about .legal-foot a:focus-visible {
 
 .legal-about__section--maker-intro {
   margin-top: 0;
-  margin-bottom: 0; /* video owns the gap below */
+  margin-bottom: 0; /* media owns the gap below */
 }
 
-.legal-about__video {
-  /* Same half section-break as the hr — equal breath above/below the embed */
-  margin: calc(var(--legal-about-section-break) / 2) 0;
+/* Stack that ends into media — media owns the gap below */
+.legal-about__section--stack:has(+ .legal-about__gallery) {
+  margin-bottom: 0;
+}
+
+/*
+ * Editorial breakout — video / gallery sit wider than the text column.
+ * Reuse .legal-about__media on any figure in the about article.
+ */
+.legal-about__media {
+  width: min(
+    var(--legal-about-media-max),
+    calc(100vw - 2 * var(--legal-about-media-pad))
+  );
+  max-width: none;
+  margin: var(--legal-about-media-gap) 0;
+  margin-left: 50%;
   padding: 0;
+  transform: translateX(-50%);
+}
+
+@media (min-width: 640px) {
+  body.legal-doc--about {
+    --legal-about-media-pad: 2rem;
+  }
+}
+
+.legal-about__gallery-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #000;
+}
+
+.legal-about__gallery-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+
+.legal-about__gallery-img.is-active {
+  opacity: 1;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .legal-about__gallery-img {
+    transition: none;
+  }
 }
 
 .legal-about__video-frame {
@@ -783,7 +839,7 @@ body.legal-doc--about .legal-foot a:focus-visible {
   display: block;
 }
 
-.legal-about__video-caption {
+.legal-about__media-caption {
   margin: 0.75rem 0 0;
   font-size: 0.9375rem;
   line-height: 1.4;

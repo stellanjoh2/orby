@@ -63,6 +63,9 @@ sphere.obj
 /assets/marketing/featureloop-goblingirl.png
 /assets/marketing/featureloop-newbalance574.png
 
+# Ritual site source archive (local backup from madebyritual.com — not for shipping)
+/assets/marketing/ritual-site-source/
+
 # Unused marketing sources — keep locally; stripped from dist via MARKETING_BUILD_EXCLUDE
 /assets/marketing/Comp-1_00000.jpg
 /assets/marketing/Screenshot 2026-10-09 at 00.18.15.png
