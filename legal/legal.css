@@ -710,6 +710,8 @@ body.legal-doc--about {
   /* Editorial media wider than text measure; pad matches .legal-wrap gutters */
   --legal-about-media-pad: 1.35rem;
   --legal-about-media-max: 72rem;
+  /* Match marketing --orby-marketing-media-radius (split / showcase figures) */
+  --legal-about-media-radius: clamp(12px, 1.667vw, 24px);
   --legal-about-break-border: rgba(255, 255, 255, 0.14);
   font-size: var(--legal-about-body-size);
   line-height: var(--legal-about-body-line);
@@ -790,11 +792,13 @@ body.legal-doc--about .legal-foot a:focus-visible {
   }
 }
 
-.legal-about__gallery-frame {
+.legal-about__gallery-frame,
+.legal-about__video-frame {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
   overflow: hidden;
+  border-radius: var(--legal-about-media-radius);
   background: #000;
 }
 
@@ -819,14 +823,6 @@ body.legal-doc--about .legal-foot a:focus-visible {
   .legal-about__gallery-img {
     transition: none;
   }
-}
-
-.legal-about__video-frame {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  background: #000;
 }
 
 .legal-about__video-frame iframe {
@@ -939,6 +935,13 @@ body.legal-doc a.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
     --legal-about-body-line: 1.82;
     --legal-about-intro-size: 1.75rem; /* 28px */
     --legal-about-intro-line: 1.5;
+  }
+}
+
+@media (min-width: 2561px) {
+  body.legal-doc--about {
+    /* Same ultra ramp as marketing media corners */
+    --legal-about-media-radius: calc(24px * var(--orby-ultra-wide-factor, 1));
   }
 }
 
